@@ -84,6 +84,30 @@ lemma call_string_depth_verdicts:
      = Some [Decided Check_Proved, Decided Check_Proved]"
   by eval+
 
+subsection \<open>The order analysis asks Interval\<close>
+
+text \<open>\<open>f\<close> is called with both outcomes of its guard and analyzed in one context. Both
+  branches leave \<open>x\<close> below \<open>y\<close>, but at different values, so Interval's join
+  (\<open>x \<in> [0, 20]\<close>, \<open>y \<in> [10, 30]\<close>) cannot decide \<open>x <= y\<close>. The order analysis records the
+  pair when it learns it, and it learns it by asking Interval at each assignment how the
+  new value compares with the other variable. Alone it has no one to ask.\<close>
+
+definition order_asks_prog :: imp_prog where
+  "order_asks_prog = program {
+     fun f(c) {
+       if (c > 0) { x = 0; y = 10; } else { x = 20; y = 30; }
+       __voblint_check(x <= y); }
+     fun main() { f(1); f(0); } }"
+
+lemma order_asks_interval_verdicts:
+  "verdicts (prec_conf [Interval] (Call_String 0) default_sem_conf) order_asks_prog
+     = Some [Decided Check_Unknown]"
+  "verdicts (prec_conf [Order] (Call_String 0) default_sem_conf) order_asks_prog
+     = Some [Decided Check_Unknown]"
+  "verdicts (prec_conf [Interval, Order] (Call_String 0) default_sem_conf) order_asks_prog
+     = Some [Decided Check_Proved]"
+  by eval+
+
 subsection \<open>Signed overflow\<close>
 
 text \<open>

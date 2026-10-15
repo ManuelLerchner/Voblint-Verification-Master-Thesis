@@ -138,3 +138,8 @@ theory = "Voblint_Framework.DG_Indexed_Generator"
 why = "Chapter 5, the guard refinement drops no store that passes the guard."
 session = "Voblint_Nonrelational"
 theory = "Voblint_Nonrelational.Nonrelational_Transfer"
+
+[facts.update_rules_example]
+why = "Solving chapter, update-rule figure: one global under each rule after each of four contributions."
+session = "Voblint_Examples_Tooling"
+theory = "Voblint_Examples_Tooling.Example_Update_Rule_Steps"

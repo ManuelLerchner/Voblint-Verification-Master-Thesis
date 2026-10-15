@@ -292,9 +292,9 @@ and for join and widening Goblint makes the same choice. For narrowing,
 Voblint's solver contract forces the choice. The verified solver relies on the
 bracket laws $b lle a narrow b lle a$ for $b lle a$ (@sec:widening), and
 reduction, which can make a value smaller, can push a narrowed value below $b$.
-// TODO: restore post_narrow_refinement_would_violate_narrow_ge (removed with
-// the untyped Int analysis; docs/theorem-migration.toml) or an int_tuple
-// counterpart, and cite it here as the evaluated witness.
+An evaluated witness for the four-component product of the domain libraries
+shows a refinement after narrowing leaving the bracket
+(#isathm("post_narrow_refinement_would_violate_narrow_ge")).
 Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5503dec/src/cdomain/value/cdomains/int/intDomTuple.ml#L421-L431",

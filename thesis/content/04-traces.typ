@@ -422,9 +422,9 @@ once. A context function of the call cannot express this, so a Voblint policy
 returns, for each concrete call, a set of callee contexts. The analyses
 shipped with Voblint return one alternative per call, so for them the set has
 at most one element for a fixed caller context. An entry operation that
-returned two overlapping alternatives would admit one concrete call in two
-contexts.
-// TODO: restore ov_two_contexts_admitted (removed in M3; docs/theorem-migration.toml)
+returns two overlapping alternatives admits one concrete call in two contexts
+(#isathm("ov_two_contexts_admitted"), evaluated for a hand-built Interval
+specification).
 The set may also be empty. Under entry-state contexts it is empty for every
 caller store that the analysis's state at the call site does not describe, for
 instance at a call that the analysis considers unreachable. No alternative
@@ -432,8 +432,8 @@ describes such a store, so no context is admitted for it. Emptiness is
 harmless there, because the claim contains no such store. It is harmful at a call that the program actually makes. An entry operation
 that returned no alternative there would leave the callee unanalyzed and the
 continuation at $lbot$, although a program without branches reaches the
-continuation.
-// TODO: restore ov_empty_no_callee_context and ov_empty_continuation_bot (removed in M3; docs/theorem-migration.toml) The coverage contract rules this out
+continuation (#isathm("ov_empty_no_callee_context"),
+#isathm("ov_empty_continuation_bot")). The coverage contract rules this out
 through #oblig("TOTAL") (@sec:contract).
 
 #block(breakable: false)[

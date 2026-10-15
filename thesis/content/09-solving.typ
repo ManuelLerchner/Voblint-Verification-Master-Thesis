@@ -671,8 +671,6 @@ No rule is more precise on every program, and the rules also differ in
 termination. @sec:eval-precision compares them on the programs of
 @fig:rules-programs.
 
-// TODO: restore update_rules_example (removed in M3; docs/theorem-migration.toml) and cite
-// it in the caption; until then the cells come from the last generated facts.json.
 #let _rule-steps = update-rule-steps()
 
 #figure(

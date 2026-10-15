@@ -151,9 +151,9 @@ only.
 
 *Contexts.* _Evidence: executable._ @fig:eq-policies showed
 which calls each context policy separates.
-// TODO: restore sign_k2_strictly_more_precise_than_k1_at_g through run_voblint
-// (removed in M3; docs/theorem-migration.toml) before claiming an evaluated
-// strict separation between call strings of length 1 and 2 again.
+A nested call separates call strings of length 1 and 2: through
+#isaconst("run_voblint"), length 2 proves two checks that length 1 leaves
+unknown (#isathm("call_string_depth_verdicts")).
 
 The gain from contexts is not proportional to their cost. `down(100)` recurses to `down(0)`, so `n >= 0`
 holds at every call. Call strings of length 100 give
@@ -241,9 +241,10 @@ and `p(2)` publish to the same entry seed. Warrow joins the two contributions
 before widening, so the second looks like growth, and the upper bound goes to
 $+infinity$. Per-origin warrowing widens each call site's contribution
 separately. Each origin writes one constant, so nothing grows.
-// TODO: restore two_writer_slot_warrow_loses_upper_bound and
-// two_writer_slot_warrow_per_origin_exact (removed in M3;
-// docs/theorem-migration.toml) to back this effect by evaluation again.
+Evaluation pins the effect on two producers of one global: warrowing after
+the join loses the upper bound, and per-origin warrowing keeps it
+(#isathm("two_writer_slot_warrow_loses_upper_bound"),
+#isathm("two_writer_slot_warrow_per_origin_exact")).
 No rule is best on every row. In the last row the
 fixture header attributes the loss to the recursive call's own contribution:
 per-origin warrowing widens it to $-infinity$, `a + 2` may then be zero, and
@@ -308,9 +309,9 @@ check is #verdict(_z("coop-mutual-both").at(3)) (claims
 the answer is decisive. On a check of `x <= y` itself, the order analysis
 would answer the check directly, though it still needs Int's answers at the
 assignments to `y`.
-// TODO: restore coop_demo_needs_both and the order_asks_* lemmas (removed in M3;
-// docs/theorem-migration.toml) to show by evaluation that each direction needs
-// both analyses.
+For one program, evaluation shows that a check needs both analyses: Interval
+and Order together prove it, and each alone leaves it unknown
+(#isathm("coop_verdicts")).
 
 == Tests of the unverified parts <sec:eval-corpus>
 
