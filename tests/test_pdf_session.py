@@ -68,8 +68,8 @@ class PdfInventoryTests(unittest.TestCase):
                 "name": "Voblint_Examples",
                 "theories": [
                     {
-                        "name": "Example_End_To_End_Certificate",
-                        "path": "src/Examples/Capstone/Example_End_To_End_Certificate.thy",
+                        "name": "Example_Non_Vacuity",
+                        "path": "src/Examples/Capstone/Example_Non_Vacuity.thy",
                     },
                     {"name": "Voblint", "path": "src/Examples/Capstone/Voblint.thy"},
                 ],
@@ -107,7 +107,7 @@ class PdfInventoryTests(unittest.TestCase):
         self.assertNotIn(r"\input{Example_Sign.tex}", main_contents)
         self.assertNotIn(r"\input{Voblint.tex}", main_contents)
         self.assertEqual(
-            main_contents.count(r"\input{Example_End_To_End_Certificate.tex}"), 1
+            main_contents.count(r"\input{Example_Non_Vacuity.tex}"), 1
         )
         self.assertIn(r"\appendix", main_contents)
         self.assertNotIn(r"\appendix", full_contents)
@@ -130,7 +130,7 @@ class PdfInventoryTests(unittest.TestCase):
         )[0]
         self.assertNotIn("Voblint_Examples_Sign.Example_Sign", main_exports)
         self.assertIn("Voblint_Base.Entry", main_exports)
-        self.assertIn("Voblint_Examples.Example_End_To_End_Certificate", main_exports)
+        self.assertIn("Voblint_Examples.Example_Non_Vacuity", main_exports)
 
     def test_missing_certificate_is_reported(self):
         with self.assertRaisesRegex(ValueError, "certificate appendix"):
