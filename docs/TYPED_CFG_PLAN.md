@@ -405,6 +405,25 @@ Every checkpoint: full batch build, `isar-check`, codegen and drift checks, CLI,
 regression and property tests; no `sorry`, `oops` or new axioms; local commit;
 no push without approval.
 
+### Stage 7 breakdown (decided 2026-10-15)
+
+Supersedes the naming part of row 7 above: the generic locale constants keep their
+`g` names (`gpstep`, `gcstep`, `gnode_collect`, ...) and the one machine-integer
+instance takes the plain name (`tpstep` becomes `pstep`). Notation moves to the
+instance, with the kind environment `κ` where the untyped instance had `𝒢`.
+
+| Step | Content | Status |
+| --- | --- | --- |
+| M1-M3 | Delete the untyped CLI interface, the untyped analysis instances and their example sessions; keep the mathematical domain libraries | committed (`22be95e7f`, `240a6e6b7`, `7747a8144`) |
+| M4 | Delete the untyped `global_interpretation`s, locales and lemmas with no consumer on the canonical chain | in progress |
+| M5 | Delete the mathematical `pstep`, `tstep`, the lowering (`Typed_Lower`), the `tstep`-to-`pstep` simulation, `typed_table`, `typed_prog` and its export root, after checking for proof consumers | planned |
+| M6 | Consolidate the trusted language into `Voblint_VIMP`: machine kinds, variable identities, surface syntax, core expressions and commands, elaboration, evaluation, conversion, the generic step rules and the canonical `pstep`, initial stores, well-formedness. Nothing there depends on CFG or analysis theories. CFG construction, CFG execution, simulation and collecting semantics stay in their derived sessions | planned |
+| M7 | Rename: the elaborated language takes the plain names (`texp`/`tcom`/`teval` to `exp`/`com`/`eval`, `tpstep` to `pstep`, `tstore` to `store`, ...), the parser-facing syntax becomes `src_exp`/`src_com`; drop `Typed_` from sessions, theories and constants, merging each `Voblint_Typed_<D>` into `Voblint_Analysis_<D>`; rename semantic concepts only, not every identifier that starts with `t`; restore the mixfix notations on the canonical constants; generate a complete old-to-new map into `docs/theorem-migration.toml` and check that no theorem statement changed beyond the renaming | planned |
+| M8 | Thesis, site and docs: terminology "surface syntax" and "core VIMP"; the adequacy argument covers the whole `Voblint_VIMP` session (evaluation, kind normalization, implicit conversions, elaboration, declarations, well-formedness), with `pstep` as its central relation; the parser and its scope resolution stay trusted and outside the proof. Thesis prose is proposed for review before it is committed | planned |
+
+Each step is its own local commit with a full build of every session, the code export
+and the CLI checks.
+
 ## 4. Risks
 
 - Stage 1 touches about 9,000 lines of proved compiler and simulation theories
