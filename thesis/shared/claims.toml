@@ -232,11 +232,7 @@ why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns
 # per step of the Sign -> Interval -> Parity -> Congruence -> product ladder.
 
 [claims.dom-guard-interval]
-argv = [
-  "--analysis",
-  "interval",
-  "thesis/shared/programs/guard-interval.vimp",
-]
+argv = ["--analysis", "interval", "thesis/shared/programs/guard-interval.vimp"]
 why = "Backward filtering of 0 < x lets Interval prove y >= 0 after both arms, with y=[0,1000]; x is bounded first so that -x cannot wrap."
 
 [claims.dom-query-tree-sign]
