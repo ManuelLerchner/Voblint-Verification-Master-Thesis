@@ -30,8 +30,9 @@ let contextual_verdict_name = function
 (* What a diagnostic reports, worded after Goblint's messages: a division or
    remainder whose divisor is, or may be, zero; a signed operation whose
    mathematical result lies, or may lie, outside its kind; a conversion whose value
-   the target kind does, or may, not represent. A REFUTED verdict holds for every
-   execution that evaluates the operation; an UNKNOWN one is only possible. *)
+   the target kind does, or may, not represent, including a library min or max result
+   written to its destination. A REFUTED verdict holds for every execution that
+   evaluates the operation; an UNKNOWN one is only possible. *)
 let operator_name = function
   | C.AAdd -> "+"
   | C.ASub -> "-"
@@ -39,9 +40,27 @@ let operator_name = function
   | C.ADiv -> "/"
   | C.AMod -> "%"
 
+(* A library result's obligation holds the conversion of its first argument and, as
+   operand, its second; it prints as the converted call. *)
+let obligation_text obligation =
+  let operation = C.arithmetic_operation obligation in
+  let call name =
+    match operation with
+    | C.TCast (k, a) ->
+        "(" ^ Vimp_printer.string_of_kind k ^ ") " ^ name ^ "("
+        ^ Typed_printer.string_of_texp a ^ ", "
+        ^ Typed_printer.string_of_texp (C.arithmetic_operand obligation)
+        ^ ")"
+    | _ -> Typed_printer.string_of_texp operation
+  in
+  match C.arithmetic_hazard obligation with
+  | C.Min_Conversion_Overflow -> call "min"
+  | C.Max_Conversion_Overflow -> call "max"
+  | _ -> Typed_printer.string_of_texp operation
+
 let obligation_message verdict obligation =
   let operation = C.arithmetic_operation obligation in
-  let text = Typed_printer.string_of_texp operation in
+  let text = obligation_text obligation in
   let what =
     match (C.arithmetic_hazard obligation, operation) with
     | C.Division_By_Zero, C.TArith (_, C.AMod, _, _) -> "remainder by zero"
@@ -49,10 +68,13 @@ let obligation_message verdict obligation =
     | C.Signed_Overflow, C.TArith (_, op, _, _) ->
         "signed integer overflow in " ^ operator_name op
     | C.Signed_Overflow, _ -> "signed integer overflow"
-    | C.Conversion_Overflow, (C.TCast (k, _) | C.TN (k, _)) ->
+    | ( (C.Conversion_Overflow | C.Min_Conversion_Overflow | C.Max_Conversion_Overflow),
+        (C.TCast (k, _) | C.TN (k, _)) ) ->
         (if C.ik_signed k then "signed" else "unsigned")
         ^ " integer overflow in conversion"
-    | C.Conversion_Overflow, _ -> "integer overflow in conversion"
+    | (C.Conversion_Overflow | C.Min_Conversion_Overflow | C.Max_Conversion_Overflow), _
+      ->
+        "integer overflow in conversion"
   in
   match verdict with
   | C.Check_Refuted -> what ^ " whenever this operation is evaluated: " ^ text

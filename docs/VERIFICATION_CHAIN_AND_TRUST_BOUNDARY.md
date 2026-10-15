@@ -198,8 +198,8 @@ in general. That the run solved enough keys is no premise either:
 
 `SAFE` at a point means every obligation `obligations_at` lists there holds for every
 covered execution (`run_voblint_SAFE`). The obligations are defined in `Run_Report.thy`
-(`arith_obligations`); they are a deliberate policy, not a model of C's undefined
-behaviour:
+(`arith_obligations`, `return_sites`, `special_sites`); they are a deliberate policy,
+not a model of C's undefined behaviour:
 
 | Operation | Obligation | C (ISO/IEC 9899) |
 | --- | --- | --- |
@@ -210,6 +210,8 @@ behaviour:
 | conversion to an unsigned kind that does not fit | raised | defined wraparound (6.3.1.3p2) |
 | conversion to a signed kind that does not fit | raised | implementation-defined (6.3.1.3p3) |
 | conversion that widens into its target | not raised | value preserved |
+| `min`/`max` result written to a kind that does not hold both arguments' kinds | raised, exactly when the result does not fit (`min(300, 1)` into `u8` holds) | library result converted on assignment (6.3.1.3) |
+| `__voblint_nondet_int()` result | not raised: any value of the destination's kind | (declaration without initializer) |
 | operands under `&&`, `\|\|` | raised for both operands | second operand evaluated only if needed (6.5.13p4, 6.5.14p4) |
 
 So a warning is not a proof of undefined behaviour, and `SAFE` is stronger than C requires

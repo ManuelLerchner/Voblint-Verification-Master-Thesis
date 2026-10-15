@@ -71,7 +71,8 @@ definition arith_condition :: "exp arithmetic_obligation \<Rightarrow> exp" wher
 text \<open>
   An overflow obligation is about the value an operation computes before its kind
   wraps it: the mathematical result of an arithmetic node, the converted value of a
-  conversion. It is safe when that value lies in the node's kind. The statement does
+  conversion, and the minimum or maximum of a library result's two arguments. It is safe
+  when that value lies in the kind converted to. The statement does
   not depend on the overflow policy: the policy decides how an analysis abstracts a
   wrapped result, never what the program computes.
 \<close>
@@ -84,9 +85,13 @@ fun unwrapped :: "exp \<Rightarrow> store \<Rightarrow> int" where
 
 definition obligation_holds :: "exp arithmetic_obligation \<Rightarrow> store \<Rightarrow> bool" where
   "obligation_holds ob t \<longleftrightarrow>
-     (case arithmetic_hazard ob of
-        Division_By_Zero \<Rightarrow> eval (arithmetic_operand ob) t \<noteq> 0
-      | _ \<Rightarrow> unwrapped (arithmetic_operation ob) t \<in> ik_range (exp_kind (arithmetic_operation ob)))"
+     (let k = exp_kind (arithmetic_operation ob); m = unwrapped (arithmetic_operation ob) t;
+          n = eval (arithmetic_operand ob) t
+      in case arithmetic_hazard ob of
+           Division_By_Zero \<Rightarrow> n \<noteq> 0
+         | Min_Conversion_Overflow \<Rightarrow> min m n \<in> ik_range k
+         | Max_Conversion_Overflow \<Rightarrow> max m n \<in> ik_range k
+         | _ \<Rightarrow> m \<in> ik_range k)"
 
 abbreviation satisfies :: "store \<Rightarrow> exp arithmetic_obligation \<Rightarrow> bool" (infix "\<Turnstile>" 50) where
   "s \<Turnstile> ob \<equiv> obligation_holds ob s"
@@ -130,6 +135,7 @@ fun unwrapped_ivl :: "exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
 lemma unwrapped_ivl_sound:
   assumes "geval_query.channel_holds eval ch t"
   shows "unwrapped e t \<in> gamma_ivl (unwrapped_ivl ch e)"
+    and "eval e t \<in> gamma_ivl (operand_ivl ch e)"
 proof -
   have answer: "eval a t \<in> gamma_ivl (answer_ivl (ch (EvalInt a)))" for a
     using geval_query.channel_holdsD[OF assms, of "EvalInt a"] by (auto intro: answer_ivl_sound)
@@ -141,10 +147,36 @@ proof -
   have ans: "eval a t \<in> gamma_ivl (operand_ivl ch a)" for a
     using answer[of a] truth[of a]
     by (cases a) (auto simp: less_eq_eint_def gamma_inf_ivl)
-  show ?thesis
+  show "unwrapped e t \<in> gamma_ivl (unwrapped_ivl ch e)"
   proof (cases e)
     case (TN k n) then show ?thesis by (simp add: less_eq_eint_def)
   qed (simp_all only: unwrapped.simps unwrapped_ivl.simps ans ivl_aop_sound)
+  show "eval e t \<in> gamma_ivl (operand_ivl ch e)" by (rule ans)
+qed
+
+text \<open>The minimum and the maximum of two intervals' members lie in their
+  \<^const>\<open>ivl_min\<close> and \<^const>\<open>ivl_max\<close>.\<close>
+
+lemma ivl_min_max_sound:
+  assumes "m \<in> gamma_ivl i" and "n \<in> gamma_ivl j"
+  shows "min m n \<in> gamma_ivl (ivl_min i j)" and "max m n \<in> gamma_ivl (ivl_max i j)"
+proof -
+  obtain l1 u1 l2 u2 where ij: "i = Ivl l1 u1" "j = Ivl l2 u2" by (cases i; cases j) blast
+  have m: "l1 \<le> Fin m" "Fin m \<le> u1" and n: "l2 \<le> Fin n" "Fin n \<le> u2"
+    using assms by (simp_all add: ij del: less_eq_eint_def)
+  have mono: "x \<le> y \<Longrightarrow> Fin x \<le> Fin y" for x y :: int by simp
+  have "min l1 l2 \<le> Fin (min m n) \<and> Fin (min m n) \<le> min u1 u2"
+    using m n mono[of m n] mono[of n m]
+    by (cases "m \<le> n") (auto simp: min_def[of m n] min_le_iff_disj min.bounded_iff
+        simp del: less_eq_eint_def dest: order_trans)
+  then show "min m n \<in> gamma_ivl (ivl_min i j)"
+    by (simp add: ij normalize_ivl_gamma del: less_eq_eint_def)
+  have "max l1 l2 \<le> Fin (max m n) \<and> Fin (max m n) \<le> max u1 u2"
+    using m n mono[of m n] mono[of n m]
+    by (cases "m \<le> n") (auto simp: max_def[of m n] le_max_iff_disj max.bounded_iff
+        simp del: less_eq_eint_def dest: order_trans)
+  then show "max m n \<in> gamma_ivl (ivl_max i j)"
+    by (simp add: ij normalize_ivl_gamma del: less_eq_eint_def)
 qed
 
 definition fits_verdict :: "ikind \<Rightarrow> ivl \<Rightarrow> check_result" where
@@ -167,14 +199,20 @@ proof -
     by (auto simp: fits_verdict_def is_bottom_ivl_correct gamma_inf_ivl split: if_splits)
 qed
 
+text \<open>A library result's obligation is decided from the minimum or maximum of its
+  arguments' intervals.\<close>
+
 definition obligation_classify ::
     "sem_conf \<Rightarrow> kind_decls \<Rightarrow> analysis list \<Rightarrow> exp arithmetic_obligation \<Rightarrow> mcp_val
        \<Rightarrow> check_result" where
   "obligation_classify sem ds as ob v =
-     (case arithmetic_hazard ob of
-        Division_By_Zero \<Rightarrow> mcp_classify sem ds as (arith_condition ob) v
-      | _ \<Rightarrow> fits_verdict (exp_kind (arithmetic_operation ob))
-              (unwrapped_ivl (mcp_ask sem ds as v) (arithmetic_operation ob)))"
+     (let ch = mcp_ask sem ds as v; e = arithmetic_operation ob;
+          i = unwrapped_ivl ch e; j = operand_ivl ch (arithmetic_operand ob)
+      in case arithmetic_hazard ob of
+           Division_By_Zero \<Rightarrow> mcp_classify sem ds as (arith_condition ob) v
+         | Min_Conversion_Overflow \<Rightarrow> fits_verdict (exp_kind e) (ivl_min i j)
+         | Max_Conversion_Overflow \<Rightarrow> fits_verdict (exp_kind e) (ivl_max i j)
+         | _ \<Rightarrow> fits_verdict (exp_kind e) i)"
 
 lemma obligation_classify_sound:
   assumes t: "t \<in> mcp.act_gamma ds as v"
@@ -183,15 +221,19 @@ lemma obligation_classify_sound:
 proof -
   have ch: "geval_query.channel_holds eval (mcp_ask sem ds as v) t"
     by (rule mcp.mcp_ask_sound[OF t])
-  note fits = fits_verdict_sound[OF unwrapped_ivl_sound[OF ch]]
+  note fits = fits_verdict_sound[OF unwrapped_ivl_sound(1)[OF ch]]
+    and fits_min = fits_verdict_sound[OF ivl_min_max_sound(1)[OF unwrapped_ivl_sound[OF ch]]]
+    and fits_max = fits_verdict_sound[OF ivl_min_max_sound(2)[OF unwrapped_ivl_sound[OF ch]]]
   have ne: "truthy (eval (arith_condition ob) t) \<longleftrightarrow> eval (arithmetic_operand ob) t \<noteq> 0"
     by (simp add: arith_condition_def)
   show "obligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> t \<Turnstile> ob"
-    using fits(1) mcp.mcp_classify_proved[OF t] ne
-    by (auto simp: obligation_classify_def obligation_holds_def split: arithmetic_hazard.splits)
+    using fits(1) fits_min(1) fits_max(1) mcp.mcp_classify_proved[OF t] ne
+    by (auto simp: obligation_classify_def obligation_holds_def Let_def
+        split: arithmetic_hazard.splits)
   show "obligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> t \<Turnstile> ob"
-    using fits(2) mcp.mcp_classify_refuted[OF t] ne
-    by (auto simp: obligation_classify_def obligation_holds_def split: arithmetic_hazard.splits)
+    using fits(2) fits_min(2) fits_max(2) mcp.mcp_classify_refuted[OF t] ne
+    by (auto simp: obligation_classify_def obligation_holds_def Let_def
+        split: arithmetic_hazard.splits)
 qed
 
 subsection \<open>Where the obligations are decided\<close>
@@ -202,8 +244,10 @@ text \<open>
   the caller writes to its destination at the destination's kind. Its obligation is
   decided where the callee returns, on the returned expression, once for each kind a
   caller converts it to. A returned value whose kind widens into the destination's
-  raises none. A library call's result, such as \<open>min\<close>'s, is converted without an
-  obligation.
+  raises none. A library call's result is written to its destination as well. That of
+  \<open>min\<close> or \<open>max\<close> is decided where the call is, unless both arguments' kinds widen into
+  the destination's: the result is one of the arguments. That of the call a declaration
+  without an initializer makes is any value of the destination's kind and raises none.
 \<close>
 
 definition return_sites ::
@@ -220,10 +264,26 @@ definition return_sites ::
              | _ \<Rightarrow> []) (cfg_intra_list g)))
          (cfg_calls_list g))))"
 
+fun special_obligations :: "ikind \<Rightarrow> exp gspecial_call \<Rightarrow> exp arithmetic_obligation list" where
+  "special_obligations k (Min a b) =
+     (if ik_widens (exp_kind a) k \<and> ik_widens (exp_kind b) k then []
+      else [Arithmetic_Obligation Min_Conversion_Overflow (TCast k a) b])"
+| "special_obligations k (Max a b) =
+     (if ik_widens (exp_kind a) k \<and> ik_widens (exp_kind b) k then []
+      else [Arithmetic_Obligation Max_Conversion_Overflow (TCast k a) b])"
+| "special_obligations k Nondet_Int = []"
+
+definition special_sites ::
+    "kind_decls \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
+  "special_sites ds p =
+     [(v, special_obligations (kenv_of ds x) sc).
+        (v, EA_Special sc x, w) \<leftarrow> cfg_intra_list (elab_cfg p ds),
+        special_obligations (kenv_of ds x) sc \<noteq> []]"
+
 definition prog_obligation_sites ::
   "kind_decls \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
   "prog_obligation_sites ds p =
-     obligation_sites arith_obligations (elab_cfg p ds) @ return_sites ds p"
+     obligation_sites arith_obligations (elab_cfg p ds) @ return_sites ds p @ special_sites ds p"
 
 text \<open>The obligations a typed report decides at a point, and what it means for a store
   to meet one: \<open>s \<Turnstile> ob\<close>.\<close>
@@ -706,8 +766,9 @@ lemma report_check_row:
   using report_run_sound[OF wf run] edge unfolding report_sound_def by blast
 
 text \<open>Every obligation of an expression an edge or a call evaluates is one the report
-  decides at the edge's or the call's source, and every conversion of a call's result
-  is one it decides where the callee returns.\<close>
+  decides at the edge's or the call's source, every conversion of a call's result is
+  one it decides where the callee returns, and every conversion of a library result one
+  it decides at the library call.\<close>
 
 lemma prog_obligation_site:
   assumes "(v, es) \<in> set (arithmetic_expression_sites (elab_cfg p ds))"
@@ -748,22 +809,42 @@ proof -
     using dst narrows by (force simp: image_iff)
 qed
 
+lemma prog_obligation_site_special:
+  assumes "(v, EA_Special sc x, w) \<in> intra (elab_cfg p ds)"
+    and "ob \<in> set (special_obligations (kenv_of ds x) sc)"
+  shows "(v, special_obligations (kenv_of ds x) sc) \<in> set (prog_obligation_sites ds p)"
+proof -
+  have mem: "(v, EA_Special sc x, w) \<in> set (cfg_intra_list (elab_cfg p ds))"
+    using assms(1) by (simp add: elab_cfg_def compile_prog_finite)
+  have "special_obligations (kenv_of ds x) sc \<noteq> []" using assms(2) by auto
+  then have "(v, special_obligations (kenv_of ds x) sc) \<in> set (special_sites ds p)"
+    unfolding special_sites_def by (auto intro!: bexI[OF _ mem])
+  then show ?thesis by (simp add: prog_obligation_sites_def)
+qed
+
 text \<open>What an obligation of each hazard says about a store.\<close>
 
 lemma obligation_holds_overflow [simp]:
   "t \<Turnstile> Arithmetic_Obligation Signed_Overflow (TArith k op a b) x
      \<longleftrightarrow> aop_eval op (eval a t) (eval b t) \<in> ik_range k"
-  by (simp add: obligation_holds_def)
+  by (simp add: obligation_holds_def Let_def)
 
 lemma obligation_holds_conversion [simp]:
   "t \<Turnstile> Arithmetic_Obligation Conversion_Overflow (TCast k a) x
      \<longleftrightarrow> eval a t \<in> ik_range k"
   "t \<Turnstile> Arithmetic_Obligation Conversion_Overflow (TN k n) x \<longleftrightarrow> n \<in> ik_range k"
-  by (simp_all add: obligation_holds_def)
+  by (simp_all add: obligation_holds_def Let_def)
+
+lemma obligation_holds_min_max [simp]:
+  "t \<Turnstile> Arithmetic_Obligation Min_Conversion_Overflow (TCast k a) b
+     \<longleftrightarrow> min (eval a t) (eval b t) \<in> ik_range k"
+  "t \<Turnstile> Arithmetic_Obligation Max_Conversion_Overflow (TCast k a) b
+     \<longleftrightarrow> max (eval a t) (eval b t) \<in> ik_range k"
+  by (simp_all add: obligation_holds_def Let_def)
 
 lemma obligation_holds_division [simp]:
   "t \<Turnstile> Arithmetic_Obligation Division_By_Zero e b \<longleftrightarrow> eval b t \<noteq> 0"
-  by (simp add: obligation_holds_def)
+  by (simp add: obligation_holds_def Let_def)
 
 text \<open>An expression raises an obligation for each of its nodes that can fail, at any
   depth.\<close>

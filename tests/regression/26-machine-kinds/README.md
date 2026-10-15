@@ -14,7 +14,9 @@ converts each argument to its formal's kind; `04` and `20` check that, `20`
 also through a global and a recursive call. A local without an initializer is
 fresh on every activation: `21` calls the same procedure twice, `22` recurses
 with locals of three kinds, and `23` checks that an initializer replaces the
-arbitrary value each time.
+arbitrary value each time. `24` checks the conversion of a library `min` or
+`max` result: an error, a warning or silence by whether the result itself fits
+the destination's kind.
 
 Isabelle elaborates the parsed program (`elab_ptable`, an Isabelle definition):
 every operation computes at its C kind, every conversion becomes an explicit

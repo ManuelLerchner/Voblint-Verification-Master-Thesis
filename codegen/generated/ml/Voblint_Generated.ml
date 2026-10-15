@@ -131,7 +131,7 @@ module Generated : sig
   type ('a, 'b, 'c, 'd) gproc_decl_ext =
     Gproc_decl_ext of 'b list * ('a, 'b, 'c) gcom * 'd
   type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
-    Conversion_Overflow
+    Conversion_Overflow | Min_Conversion_Overflow | Max_Conversion_Overflow
   type 'a arithmetic_obligation
   type 'a trace_key = Trace_Buffer | Trace_Global of string |
     Trace_Seed of cfg_node * 'a
@@ -201,8 +201,8 @@ module Generated : sig
   val elab_cfg :
     unit imp_prog_ext -> (var_id * ikind) list -> (var_id, exp, unit) gcfg_ext
   val arithmetic_operation : 'a arithmetic_obligation -> 'a
-  val arithmetic_hazard : 'a arithmetic_obligation -> arithmetic_hazard
   val arithmetic_operand : 'a arithmetic_obligation -> 'a
+  val arithmetic_hazard : 'a arithmetic_obligation -> arithmetic_hazard
   val string_of_report_value : report_value -> string
   val var_label : var_id -> string
   val conf_context : 'a voblint_conf_ext -> context_policy
@@ -6007,15 +6007,32 @@ let rec equal_gproc_decl_ext _A _B _C _D =
     ('a, 'b, 'c, 'd) gproc_decl_ext equal);;
 
 type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
-  Conversion_Overflow;;
+  Conversion_Overflow | Min_Conversion_Overflow | Max_Conversion_Overflow;;
 
 let rec equal_arithmetic_hazard
-  x0 x1 = match x0, x1 with Signed_Overflow, Conversion_Overflow -> false
+  x0 x1 = match x0, x1 with
+    Min_Conversion_Overflow, Max_Conversion_Overflow -> false
+    | Max_Conversion_Overflow, Min_Conversion_Overflow -> false
+    | Conversion_Overflow, Max_Conversion_Overflow -> false
+    | Max_Conversion_Overflow, Conversion_Overflow -> false
+    | Conversion_Overflow, Min_Conversion_Overflow -> false
+    | Min_Conversion_Overflow, Conversion_Overflow -> false
+    | Signed_Overflow, Max_Conversion_Overflow -> false
+    | Max_Conversion_Overflow, Signed_Overflow -> false
+    | Signed_Overflow, Min_Conversion_Overflow -> false
+    | Min_Conversion_Overflow, Signed_Overflow -> false
+    | Signed_Overflow, Conversion_Overflow -> false
     | Conversion_Overflow, Signed_Overflow -> false
+    | Division_By_Zero, Max_Conversion_Overflow -> false
+    | Max_Conversion_Overflow, Division_By_Zero -> false
+    | Division_By_Zero, Min_Conversion_Overflow -> false
+    | Min_Conversion_Overflow, Division_By_Zero -> false
     | Division_By_Zero, Conversion_Overflow -> false
     | Conversion_Overflow, Division_By_Zero -> false
     | Division_By_Zero, Signed_Overflow -> false
     | Signed_Overflow, Division_By_Zero -> false
+    | Max_Conversion_Overflow, Max_Conversion_Overflow -> true
+    | Min_Conversion_Overflow, Min_Conversion_Overflow -> true
     | Conversion_Overflow, Conversion_Overflow -> true
     | Signed_Overflow, Signed_Overflow -> true
     | Division_By_Zero, Division_By_Zero -> true;;
@@ -10195,6 +10212,31 @@ let rec arith_obligations
     | TAnd (a, b) -> arith_obligations a @ arith_obligations b
     | TOr (a, b) -> arith_obligations a @ arith_obligations b;;
 
+let rec special_obligations
+  k x1 = match k, x1 with
+    k, Min (a, b) ->
+      (if ik_widens (exp_kind a) k && ik_widens (exp_kind b) k then []
+        else [Arithmetic_Obligation (Min_Conversion_Overflow, TCast (k, a), b)])
+    | k, Max (a, b) ->
+        (if ik_widens (exp_kind a) k && ik_widens (exp_kind b) k then []
+          else [Arithmetic_Obligation
+                  (Max_Conversion_Overflow, TCast (k, a), b)])
+    | k, Nondet_Int -> [];;
+
+let rec special_sites
+  ds p =
+    maps (fun a ->
+           (match a with (_, (EA_Nop, _)) -> []
+             | (_, (EA_Assign (_, _), _)) -> []
+             | (v, (EA_Special (sc, x), _)) ->
+               (if not (null (special_obligations (kenv_of ds x) sc))
+                 then [(v, special_obligations (kenv_of ds x) sc)] else [])
+             | (_, (EA_Assume _, _)) -> [] | (_, (EA_AssumeNot _, _)) -> []
+             | (_, (EA_Body _, _)) -> [] | (_, (EA_Ret (_, _), _)) -> []
+             | (_, (EA_Check (_, _), _)) -> []))
+      (cfg_intra_list (equal_var_id, linorder_var_id) (equal_exp, linorder_exp)
+        (elab_cfg p ds));;
+
 let rec callee_of_entry = function FunctionEntry p -> p
                           | Statement v -> ""
                           | FunctionResult v -> "";;
@@ -10232,13 +10274,21 @@ let rec prog_obligation_sites
   ds p =
     obligation_sites (equal_exp, linorder_exp) (equal_var_id, linorder_var_id)
       arith_obligations (elab_cfg p ds) @
-      return_sites ds p;;
+      return_sites ds p @ special_sites ds p;;
 
 let rec arithmetic_operation (Arithmetic_Obligation (x1, x2, x3)) = x2;;
 
+let rec arithmetic_operand (Arithmetic_Obligation (x1, x2, x3)) = x3;;
+
 let rec arithmetic_hazard (Arithmetic_Obligation (x1, x2, x3)) = x1;;
 
-let rec arithmetic_operand (Arithmetic_Obligation (x1, x2, x3)) = x3;;
+let rec ivl_min
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (min ord_eint l1 l2, min ord_eint u1 u2));;
+
+let rec ivl_max
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (max ord_eint l1 l2, max ord_eint u1 u2));;
 
 let rec arith_condition
   ob = TCmp (CNe, arithmetic_operand ob,
@@ -10436,14 +10486,16 @@ let rec fits_verdict
 
 let rec obligation_classify
   sem ds asa ob v =
-    (match arithmetic_hazard ob
-      with Division_By_Zero -> mcp_classify sem ds asa (arith_condition ob) v
-      | Signed_Overflow ->
-        fits_verdict (exp_kind (arithmetic_operation ob))
-          (unwrapped_ivl (mcp_ask sem ds asa v) (arithmetic_operation ob))
-      | Conversion_Overflow ->
-        fits_verdict (exp_kind (arithmetic_operation ob))
-          (unwrapped_ivl (mcp_ask sem ds asa v) (arithmetic_operation ob)));;
+    (let ch = mcp_ask sem ds asa v in
+     let e = arithmetic_operation ob in
+     let i = unwrapped_ivl ch e in
+     let j = operand_ivl ch (arithmetic_operand ob) in
+      (match arithmetic_hazard ob
+        with Division_By_Zero -> mcp_classify sem ds asa (arith_condition ob) v
+        | Signed_Overflow -> fits_verdict (exp_kind e) i
+        | Conversion_Overflow -> fits_verdict (exp_kind e) i
+        | Min_Conversion_Overflow -> fits_verdict (exp_kind e) (ivl_min i j)
+        | Max_Conversion_Overflow -> fits_verdict (exp_kind e) (ivl_max i j)));;
 
 let rec arithmetic_diagnostic_of
   v i obligation x3 = match v, i, obligation, x3 with

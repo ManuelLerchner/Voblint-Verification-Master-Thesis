@@ -109,8 +109,9 @@ subsection \<open>What the arithmetic diagnostics guarantee\<close>
 
 text \<open>
   A point the report's diagnostics do not name is safe: at every store that reaches it,
-  every obligation of every expression an edge or a call there evaluates holds, and
-  every value returned there fits the kind each caller converts it to. No divisor is
+  every obligation of every expression an edge or a call there evaluates holds, every
+  value returned there fits the kind each caller converts it to, and every \<open>min\<close> or
+  \<open>max\<close> computed there fits the kind of its destination. No divisor is
   zero, no signed operation computes a result outside its kind, and no conversion
   narrower than its source kind converts a value outside its target. A
   diagnostic says nothing on its own unless it is refuted: then its obligation fails at
@@ -134,6 +135,14 @@ theorem run_voblint_arithmetic_safe:
          \<Longrightarrow> (v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> intra (elab_cfg p ds)
          \<Longrightarrow> \<not> ik_widens (exp_kind e) (kenv_of ds x)
          \<Longrightarrow> eval e s \<in> ik_range (kenv_of ds x)"
+    and run_voblint_arithmetic_safe_min:
+      "(v, EA_Special (Min e1 e2) x, w) \<in> intra (elab_cfg p ds)
+         \<Longrightarrow> \<not> (ik_widens (exp_kind e1) (kenv_of ds x) \<and> ik_widens (exp_kind e2) (kenv_of ds x))
+         \<Longrightarrow> min (eval e1 s) (eval e2 s) \<in> ik_range (kenv_of ds x)"
+    and run_voblint_arithmetic_safe_max:
+      "(v, EA_Special (Max e1 e2) x, w) \<in> intra (elab_cfg p ds)
+         \<Longrightarrow> \<not> (ik_widens (exp_kind e1) (kenv_of ds x) \<and> ik_widens (exp_kind e2) (kenv_of ds x))
+         \<Longrightarrow> max (eval e1 s) (eval e2 s) \<in> ik_range (kenv_of ds x)"
 proof -
   from run have wf: "wf_program_compile_input p"
     and rep: "report_run conf ds p = Some res"
@@ -152,6 +161,26 @@ proof -
       "(v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> intra (elab_cfg p ds)"
       "\<not> ik_widens (exp_kind e) (kenv_of ds x)"
     using safe[OF prog_obligation_site_return[OF that]] by simp
+  show "min (eval e1 s) (eval e2 s) \<in> ik_range (kenv_of ds x)"
+    if edge: "(v, EA_Special (Min e1 e2) x, w) \<in> intra (elab_cfg p ds)"
+      and narrows:
+        "\<not> (ik_widens (exp_kind e1) (kenv_of ds x) \<and> ik_widens (exp_kind e2) (kenv_of ds x))"
+  proof -
+    have ob: "Arithmetic_Obligation Min_Conversion_Overflow (TCast (kenv_of ds x) e1) e2
+        \<in> set (special_obligations (kenv_of ds x) (Min e1 e2))"
+      using narrows by simp
+    show ?thesis using safe[OF prog_obligation_site_special[OF edge ob] ob] by simp
+  qed
+  show "max (eval e1 s) (eval e2 s) \<in> ik_range (kenv_of ds x)"
+    if edge: "(v, EA_Special (Max e1 e2) x, w) \<in> intra (elab_cfg p ds)"
+      and narrows:
+        "\<not> (ik_widens (exp_kind e1) (kenv_of ds x) \<and> ik_widens (exp_kind e2) (kenv_of ds x))"
+  proof -
+    have ob: "Arithmetic_Obligation Max_Conversion_Overflow (TCast (kenv_of ds x) e1) e2
+        \<in> set (special_obligations (kenv_of ds x) (Max e1 e2))"
+      using narrows by simp
+    show ?thesis using safe[OF prog_obligation_site_special[OF edge ob] ob] by simp
+  qed
 qed
 
 theorem run_voblint_arithmetic_refuted:
@@ -216,9 +245,10 @@ text \<open>
 
   \<open>SAFE\<close> is only as strong as the obligations it covers: those of every expression
   an edge or a call at \<open>v\<close> evaluates and of every value returned there that a
-  caller converts to a narrower kind (\<open>run_voblint_obligations_cover\<close>). It says
-  nothing about a hazard Voblint does not check, such as the conversion of a
-  library call's result.
+  caller converts to a narrower kind, and of every library \<open>min\<close> or \<open>max\<close> result
+  written there to a kind that does not hold both arguments' kinds
+  (\<open>run_voblint_obligations_cover\<close>). It says nothing about a hazard Voblint does not
+  check.
 \<close>
 
 theorem run_voblint_report_sound:
@@ -531,8 +561,9 @@ proof -
           conjunct2[OF chain, unfolded g_def S_def, rule_format]])
 qed
 
-text \<open>Every obligation of an expression evaluated at \<open>v\<close>, and every narrowing
-  conversion of a value returned at \<open>v\<close>, is one the report decides there.\<close>
+text \<open>Every obligation of an expression evaluated at \<open>v\<close>, every narrowing
+  conversion of a value returned at \<open>v\<close>, and every narrowing conversion of a library
+  result written at \<open>v\<close> is one the report decides there.\<close>
 
 lemma run_voblint_obligations_cover:
   shows "(v, a, w) \<in> intra (elab_cfg p ds) \<Longrightarrow> e \<in> set (edge_expressions a)
@@ -544,7 +575,10 @@ lemma run_voblint_obligations_cover:
            \<Longrightarrow> \<not> ik_widens (exp_kind e) (kenv_of ds x)
            \<Longrightarrow> Arithmetic_Obligation Conversion_Overflow (TCast (kenv_of ds x) e) e
                  \<in> obligations_at ds p v"
-  by (auto simp: mem_obligations_at dest: prog_obligation_site_intra prog_obligation_site_call
-      intro: prog_obligation_site_return)
+    and "(v, EA_Special sc x, w) \<in> intra (elab_cfg p ds)
+           \<Longrightarrow> set (special_obligations (kenv_of ds x) sc) \<subseteq> obligations_at ds p v"
+     apply (auto simp: mem_obligations_at dest: prog_obligation_site_intra prog_obligation_site_call
+       intro: prog_obligation_site_return)[3]
+  using prog_obligation_site_special by (fastforce simp: mem_obligations_at)
 
 end

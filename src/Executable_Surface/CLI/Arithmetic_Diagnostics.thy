@@ -15,11 +15,14 @@ text \<open>
   as C requires (ISO/IEC 9899 6.5p5); its operand is the operation itself. A conversion
   must convert a value the target kind represents, the categories Goblint separates as
   arithmetic and cast overflow (\<^verbatim>\<open>Checks.Category\<close> at \<open>0dc12d355\<close>); its operand is
-  the converted expression. Which hazards a language raises, and when one is safe, is
-  the language's; the report treats them alike.
+  the converted expression. The result of a library \<open>min\<close> or \<open>max\<close> is converted as
+  well, but has no expression of its own: its obligation names the conversion of the
+  first argument and, as operand, the second. Which hazards a language raises, and when
+  one is safe, is the language's; the report treats them alike.
 \<close>
 
 datatype arithmetic_hazard = Division_By_Zero | Signed_Overflow | Conversion_Overflow
+  | Min_Conversion_Overflow | Max_Conversion_Overflow
 
 datatype 'e arithmetic_obligation = Arithmetic_Obligation
   (arithmetic_hazard: arithmetic_hazard)

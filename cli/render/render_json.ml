@@ -692,6 +692,8 @@ let hazard_json = function
   | C.Division_By_Zero -> tagged "Division_By_Zero" []
   | C.Signed_Overflow -> tagged "Signed_Overflow" []
   | C.Conversion_Overflow -> tagged "Conversion_Overflow" []
+  | C.Min_Conversion_Overflow -> tagged "Min_Conversion_Overflow" []
+  | C.Max_Conversion_Overflow -> tagged "Max_Conversion_Overflow" []
 
 let obligation_json o =
   json_object
