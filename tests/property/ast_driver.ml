@@ -193,7 +193,7 @@ let () =
       print_string source_text;
       exit 0);
     match Vimp_frontend.program "<generated>" source_text with
-    | reparsed, _, _ when mode = "--print-reprinted" ->
+    | reparsed, _, _, _ when mode = "--print-reprinted" ->
         (* Prints pretty(parse(pretty(original))) -- the print/parse/print
          invariant is implied by original = reparsed (the printer
          is a pure function, so structurally equal ASTs print identically),
@@ -202,7 +202,7 @@ let () =
          assumption) breaking silently. *)
         print_string (source_text_of_program reparsed);
         exit 0
-    | reparsed, _, _ ->
+    | reparsed, _, _, _ ->
         if erase_program_labels original = erase_program_labels reparsed then
           print_endline "OK"
         else begin
