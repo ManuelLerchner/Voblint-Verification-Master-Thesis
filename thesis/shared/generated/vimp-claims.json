@@ -313,6 +313,26 @@
       "placement": "flow-sensitive"
     }
   },
+  "dom-kinds-congruence": {
+    "fixture": "thesis/shared/programs/domain-kinds.vimp",
+    "program": "fun main() {\n  i32 x;\n  u32 n;\n  if (x >= 0) {\n    i32 y = x + 1;\n    __voblint_check(y > 0);\n  }\n  u32 a = 4 * n;\n  u32 b = 3 * n;\n  __voblint_check(a != 1);\n  __voblint_check(b != 1);\n}",
+    "settings": {
+      "analysis": "congruence",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "dom-kinds-interval": {
+    "fixture": "thesis/shared/programs/domain-kinds.vimp",
+    "program": "fun main() {\n  i32 x;\n  u32 n;\n  if (x >= 0) {\n    i32 y = x + 1;\n    __voblint_check(y > 0);\n  }\n  u32 a = 4 * n;\n  u32 b = 3 * n;\n  __voblint_check(a != 1);\n  __voblint_check(b != 1);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "dom-query-tree-sign": {
     "fixture": "tests/regression/07-sign-precision/precision/13-query_combines_less_and_eq.vimp",
     "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if (x <= 0) {\n    if (0 < y) {\n      __voblint_check(x <= y && y != 0);\n    }\n  }\n}",

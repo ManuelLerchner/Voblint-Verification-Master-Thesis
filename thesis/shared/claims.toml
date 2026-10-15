@@ -936,3 +936,11 @@ argv = [
 ]
 json_path = "raw"
 why = "Chapter 12, the shell figure: the call run_voblint receives and the answer it returns, as the browser adapter serializes them."
+
+[claims.dom-kinds-interval]
+argv = ["--analysis", "interval", "thesis/shared/programs/domain-kinds.vimp"]
+why = "At i32, x + 1 may wrap, so Interval gives y the whole range and leaves y > 0 UNKNOWN; the check fails at x = 2^31 - 1."
+
+[claims.dom-kinds-congruence]
+argv = ["--analysis", "congruence", "thesis/shared/programs/domain-kinds.vimp"]
+why = "At u32, 4 * n keeps the class 4Z through wrapping (4 divides 2^32), so a != 1 is PROVED; 3 * n loses 3Z (gcd(3, 2^32) = 1), and b != 1 fails at n = 2863311531."

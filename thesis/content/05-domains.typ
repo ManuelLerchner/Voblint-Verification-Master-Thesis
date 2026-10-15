@@ -1,9 +1,10 @@
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 #import "../lib/math.typ": *
 #import "../lib/code.typ": (
-  decode-isabelle, isabelle-scripts, isaconst, isai, isalocale, isathm, isatype, listing, oblig,
-  thy-badge,
+  decode-isabelle, fixture, isabelle-scripts, isaconst, isai, isalocale, isathm, isatype, listing,
+  oblig, thy-badge,
 )
+#import "../lib/figures.typ": check-row, verdict
 #import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": definition, lemma, theorem
 #import "../lib/theme.typ": vb
@@ -530,6 +531,230 @@ The narrowing #isaconst("narrow_ivl_td") refines only infinite bounds and
 keeps finite ones, so $ivl(0, +infinity) narrow ivl(0, 10) = ivl(0, 10)$. Each
 bound leaves infinity at most once, so a narrowing sequence is finite.
 
+== Values at a machine kind #thy-badge("Voblint_Domain", "Kind_Lifted") <sec:domain-kinds>
+
+The domains of @sec:domain-carrier-laws are the classical ones. Their values
+denote sets of mathematical integers, and their operations are the arithmetic
+of $ZZ$. A VIMP variable, however, holds a value of its machine kind $k$, and
+every arithmetic node wraps its mathematical result into the kind's range
+#isaconst("ik_range") with #isaconst("ik_norm") (@sec:vimp). An analyzer that
+used the classical operations unchanged would therefore be unsound. In the
+program of @fig:domain-kinds, interval arithmetic over $ZZ$ bounds $x$ by
+$ivl(0, +infinity)$ after the guard, hence $y$ by $ivl(1, +infinity)$, and
+would prove `y > 0`. At `i32` the check fails for $x = 2^31 - 1$, where
+`x + 1` wraps to $-2^31$.
+
+Wrapping does not destroy every fact, however, and which facts survive depends
+on the domain. For a 32-bit unsigned `n`, the program computes
+$a = 4n mod 2^32$ and $b = 3n mod 2^32$. Wrapping subtracts a multiple of
+$2^32$. Since $4$ divides $2^32$, $a$ stays a multiple of $4$, and `a != 1`
+holds in every run. Since $3$ does not divide $2^32$, $b$ loses its
+divisibility by $3$. For $n = 2863311531$ we get $3n = 2 dot 2^32 + 1$, so
+$b = 1$ and the last check fails. This section asks how a classical domain
+is used at machine kinds, so that its results describe the wrapped values and
+still keep the facts that wrapping preserves where the domain can express
+them.
+
+#let _ki(loc) = check-row("dom-kinds-interval", loc: loc)
+#let _kc(loc) = check-row("dom-kinds-congruence", loc: loc)
+#figure(
+  align(center, block(width: 60%, {
+    show raw: set text(size: 6.5pt)
+    listing(
+      lang: "c",
+      claim: "dom-kinds-interval",
+      ```
+      fun main() {
+        i32 x;
+        u32 n;
+        if (x >= 0) {
+          i32 y = x + 1;
+          __voblint_check(y > 0);
+        }
+        u32 a = 4 * n;
+        u32 b = 3 * n;
+        __voblint_check(a != 1);
+        __voblint_check(b != 1);
+      }
+      ```.text,
+    )
+  })),
+  kind: image,
+  placement: none,
+  caption: [Arithmetic at machine kinds. The first and last checks fail in some
+    run, and `a != 1` holds in every run. Interval reports `y > 0`
+    #verdict(_ki("6:5").verdict) with #raw(_ki("6:5").state) (claim
+    #claim-ref("dom-kinds-interval")). Congruence reports `a != 1`
+    #verdict(_kc("10:3").verdict) with #raw(_kc("10:3").state) and `b != 1`
+    #verdict(_kc("11:3").verdict) with #raw(_kc("11:3").state) (claim
+    #claim-ref("dom-kinds-congruence")).],
+) <fig:domain-kinds>
+
+Voblint keeps the carriers of @sec:domain-carrier-laws and attaches the kind
+outside them. A value of type #isatype("kd") is #ctor("KBot"), #ctor("KTop"),
+or a carrier value $a$ tagged with a kind $k$. The tagged value denotes the
+integers of $conc(a)$ that $k$ represents (#isaconst("gamma_kd")):
+$
+  conc(ctor("KD")(k, a)) = conc(a) inter #isaconst("ik_range") thin k, quad
+  conc(ctor("KBot")) = emptyset, quad conc(ctor("KTop")) = ZZ.
+$
+Two tagged values are comparable only at the same kind, and the join of
+values of different kinds is #ctor("KTop") (#isaconst("sup_kd")). Goblint
+likewise parameterizes every operation of its integer domains by the kind it
+computes at.
+// TODO: the register records only this; the attribution of the tag itself to
+// Goblint's IntDomLifter comes from the Kind_Lifted theory text and needs a
+// register row before it is printed.
+
+An operation at kind $k$ first computes the classical result and then
+_normalizes_ it to $k$. Normalization is the abstract counterpart of
+#isaconst("ik_norm"). If an integer $n$ lies in $conc(a)$, then
+$#isaconst("ik_norm") thin k thin n$ lies in the concretization of the
+normalized value. A result that lies in the kind's range needs no change,
+since #isaconst("ik_norm") is the identity there (#isathm("ik_norm_id")).
+For a result that may leave the range, the domain must describe the wrapped
+values.
+
+For an unsigned kind, wrapping is what C prescribes. For a signed kind, C
+leaves overflow undefined, and VIMP gives it the wrapping meaning
+(@sec:vimp-vs-c). An analysis may follow this wrap or give up on a result
+that may leave the range. Voblint makes the choice an analysis option, the
+signed-overflow policy (#isatype("signed_overflow_policy")), after Goblint's
+option `sem.int.signed_overflow`. Under the default #ctor("Assume_Top"), a
+signed result that may leave its range becomes the kind's top. Under
+#ctor("Assume_Wraparound"), it wraps as an unsigned result always does
+(#isaconst("should_wrap")).
+// TODO: cite Goblint's default (assume_top) from src/config/options.schema.json
+// at the pinned revision; the register records should_wrap but not the default.
+Both choices are sound. The concrete semantics wraps under either policy, and
+the kind's top contains every value of the kind, the wrapped one included.
+The policy is a field of the configuration #isatype("sem_conf"), which the
+evaluator and every transfer take as a parameter, and every soundness theorem
+holds for each value of it, from forward evaluation
+(#isathm("aeval_sound")) to the source-level theorem
+(#isathm("run_voblint_source_sound"), whose configuration carries the
+policy in #isaconst("conf_sem")). Goblint's third setting, which assumes that
+no signed overflow occurs, has no counterpart, since it would drop values the
+semantics produces. A possible signed overflow is reported as a diagnostic
+under both policies (@sec:verdict-meaning).
+
+Each domain normalizes according to what its values can express.
+Interval (#isaconst("norm_ivl_ik")) keeps a result inside the range.
+Otherwise, if the kind wraps under the policy, it wraps a finite interval
+that is narrower than the modulus $2^w$ and whose wrapped endpoints stay
+ordered. Wrapping shifts such an interval as a whole by one multiple of $2^w$
+(#isathm("ik_norm_interval_shift")), so converting $ivl(260, 265)$ to `u8`
+gives exactly $ivl(4, 9)$. Every other overflow gives the kind's whole range.
+In @fig:domain-kinds, `x + 1` with $x in ivl(0, 2^31 - 1)$ yields
+$ivl(1, 2^31)$, which wraps to $ivl(1, 2^31 - 1)$ together with $-2^31$, so $y$
+gets the whole range under both policies.
+
+Congruence (#isaconst("norm_cong_ik")) relies on the same shift. Wrapping
+changes a value by a multiple of $2^w$, so a class $c + m ZZ$ survives
+modulo $g = gcd(m, 2^w)$. A modulus that divides $2^w$ and is smaller than it
+survives unchanged. If $g = 2^w$, as for a constant ($m = 0$), the class
+contains a single value of the kind and becomes that constant. In
+@fig:domain-kinds, $4n$ has class
+$4 ZZ$ with $gcd(4, 2^32) = 4$, while $3n$ has class $3 ZZ$ with
+$gcd(3, 2^32) = 1$, so its class becomes $ZZ$. Under #ctor("Assume_Top") at a
+signed kind, Congruence cannot tell whether a sum or product wraps and
+returns its top, keeping a class only for a remainder, a quotient by a divisor
+other than $-1$, and a difference of constants that lies in the range
+(#isaconst("cong_arith_ik")). For example, `a + 1` with $a = 2^31 - 1$ is
+$-2^31$ under #ctor("Assume_Wraparound") and $top$ under #ctor("Assume_Top")
+(#fixture("27-signed-overflow/precision/02-congruence_wraparound.vimp", label: "02-congruence_wraparound")
+and its #fixture("27-signed-overflow/known-imprecision/02-congruence_assume_top.vimp", label: "assume_top twin")).
+
+Sign (#isaconst("sign_cast")) carries no magnitude, so it can never rule out
+a wrap. A nonzero sign normalizes to the kind's top, which is #signval($top$)
+at a signed kind and #signval("≥0") at an unsigned one, and only zero survives.
+Sign keeps the classical result only for operations that cannot leave a
+signed range whatever their operands' magnitudes, such as a sum of operands
+with opposite signs or a product with zero (#isaconst("sign_safe")). The
+policy makes no difference here, since a wrapped nonzero value can land on
+either side of zero. Parity is the opposite case. Wrapping subtracts a
+multiple of an even modulus, which preserves parity
+(#isathm("even_ik_norm_iff")), so Parity computes classically at every kind
+and under both policies. Stepping by $2$ from $0$ at `u8`, for instance, keeps
+$x$ even across every wrap (#isathm("parity_value")).
+
+The domain interface states these requirements as one law per primitive,
+quantified over the policy $p$. For arithmetic it reads
+(#isathm("arith_ik_sound"))
+$
+  m in conc(a) and n in conc(b) ==>
+  #isaconst("ik_norm") thin k thin (#isaconst("aop_eval") thin italic("op") thin m thin n)
+  in conc(#isaconst("arith_ik") thin p thin k thin italic("op") thin a thin b),
+$
+where the theory states one more argument, a flag that reports whether both
+operands lie in $k$'s range, which the exceptions of Sign and Congruence above
+need. The kind's
+top must contain the range, $#isaconst("ik_range") thin k subset.eq
+conc(#isaconst("top_ik") thin k)$ (#isathm("top_ik_sound")). Neither law
+requires a result to lie in the range. The tag adds that restriction through
+#isaconst("gamma_kd"). Forward evaluation (@sec:domain-forward) uses these
+operations, and the class #isalocale("kind_int_domain") collects them
+(@sec:domain-contract). Each domain proves its wrap case from one fact about
+#isaconst("ik_norm"): the interval shift for Interval, the divisibility of the
+difference by $2^w$ for Congruence (#isathm("ik_mod_dvd_ik_norm")), and the
+preserved parity for Parity.
+
+The solver's operations take no kind, but they need one as well. The emptiness
+test of @sec:domain-carrier-laws must recognize a value whose integers all lie
+outside the kind, such as the sign #signval("−") at `u8`, and the interval
+widening needs the kind's limits. The class #isalocale("ik_domain") therefore
+asks each carrier for a widening, a narrowing and an emptiness test at a
+kind, and #isatype("kd") applies them at the kind of its operands
+(#isaconst("widen_kd")):
+
+#{
+  show raw.where(block: true): set text(size: 6.5pt)
+  thy("ik_domain")
+}
+
+The interval widening #isaconst("widen_ivl_ik") moves a growing bound to the
+kind's limit instead of to infinity, or to the new bound if that already lies
+beyond the limit. The narrowing
+#isaconst("narrow_ivl_ik") replaces only a bound that sits at that limit. In
+the stride-2 loop of @sec:stride2, the loop head widens $ivl(1, 1)$ and
+$ivl(1, 3)$ to $ivl(1, 2^31 - 1)$, and narrowing then lowers the upper bound
+to $52$. The narrowing of @sec:domain-carrier-laws refines only infinite bounds
+and would keep $2^31 - 1$. On intervals inside the range, each bound grows at
+most once under widening and leaves the limit at most once under narrowing.
+This argument bounds the widening and narrowing sequences of one value. It is
+not a lemma of the theories, and it does not make the solver terminate
+(@sec:termination). Sign, Parity and Congruence widen by the join and narrow
+by the meet at every kind.
+
+The Int analysis is the reduced product #isatype("int_tuple") of Interval and
+Congruence, and it contains neither Sign nor Parity. Its arithmetic computes
+the interval first. When the mathematical interval lies in the kind's range,
+no value wraps, and the congruence keeps its classical class even where
+Congruence alone would return its top (#isaconst("arith_ik_int_tuple"),
+#fixture("27-signed-overflow/precision/04-int_no_ov_keeps_class.vimp", label: "04-int_no_ov_keeps_class")). The components then refine each other
+never, once, or until nothing changes (#isaconst("it_refine_mode")), as
+Goblint's `ana.int.refinement` selects. In @fig:domain-kinds, Int keeps
+$a in 4 ZZ$ and rounds its interval to $ivl(0, 2^32 - 4)$. @sec:reduced-product
+develops the reduction.
+
+Wrapping costs precision that the classical domains would keep. In
+@fig:domain-kinds the losses are forced: $b$ takes every `u32` value, since
+$3$ is invertible modulo $2^32$, and $y$ takes both $1$ and $-2^31$, the
+least value of `i32`, so no congruence class, interval or sign other than the
+top describes these values. Elsewhere the loss comes from the domain or the
+policy. Sign loses the sign of a sum whenever both operands may be positive,
+even where the program keeps its values small
+(#fixture("07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp", label: "01-sign_cannot_bound_magnitude")). Under #ctor("Assume_Top"),
+Congruence alone loses the class of every signed sum and product, including
+those that cannot wrap, because its values do not bound magnitudes either.
+The answers that analyses exchange through queries (@sec:coop-queries) are
+not tagged. They are values of #isatype("int_dom"), a record of a sign, an
+interval, a parity and a congruence over $ZZ$, and not the Int analysis. Each
+analysis translates its value into this record (#isaconst("answer_ik")) and
+back (#isaconst("of_answer_ik")), and on the way back it may bound an answer
+by the kind of the queried expression. @sec:domain-states assembles tagged
+values into states, in which every variable holds a value of its own kind.
+
 == From values to stores <sec:domain-states>
 
 A numeric domain describes the possible values of one variable. The
@@ -1042,7 +1267,8 @@ and likewise for the other comparison operators (#isathm("refine_ik_sound")).
 A refined operand that is a sum or a difference passes the refinement on to
 its own operands, inverting the operation with the domain's arithmetic on
 mathematical integers (#isaconst("raw_aop_ik")) when it cannot overflow, and
-at its kind with wraparound otherwise (#isaconst("refine_var")).
+otherwise at its kind under the overflow policy of @sec:domain-kinds
+(#isaconst("refine_var")).
 
 The refined operand is then combined with the value known before. Nipkow and
 Klein use the lattice meet for this and require it to be exact on the denoted
