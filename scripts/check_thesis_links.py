@@ -354,7 +354,11 @@ def cited() -> list[tuple[Path, int, str, str]]:
         for m in GENERATED_REF.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             kind = "any" if m.group(1) == "thy" else "thm"
-            name = SNIPPET_NAMES.get(m.group(2), m.group(2)) if kind == "any" else m.group(2)
+            name = (
+                SNIPPET_NAMES.get(m.group(2), m.group(2))
+                if kind == "any"
+                else m.group(2)
+            )
             refs.append((path, line, kind, name))
         for m in THEORY_REF.finditer(text):
             line = text.count("\n", 0, m.start()) + 1

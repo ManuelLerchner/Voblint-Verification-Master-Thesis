@@ -106,9 +106,7 @@ class PdfInventoryTests(unittest.TestCase):
         full_contents = (full / "document/contents.tex").read_text()
         self.assertNotIn(r"\input{Example_Sign.tex}", main_contents)
         self.assertNotIn(r"\input{Voblint.tex}", main_contents)
-        self.assertEqual(
-            main_contents.count(r"\input{Example_Non_Vacuity.tex}"), 1
-        )
+        self.assertEqual(main_contents.count(r"\input{Example_Non_Vacuity.tex}"), 1)
         self.assertIn(r"\appendix", main_contents)
         self.assertNotIn(r"\appendix", full_contents)
         for session in sessions:
