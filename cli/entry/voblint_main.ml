@@ -47,10 +47,10 @@ let usage =
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
-  \                             --parse-only). int is the refining composite\n\
-  \                             Sign x Interval x Parity x Congruence domain,\n\
-  \                             whose components refine each other as\n\
-  \                             --int-refinement selects.\n\
+  \                             --parse-only). int is the reduced product of\n\
+  \                             Interval and Congruence at each variable's\n\
+  \                             machine kind, whose components refine each\n\
+  \                             other as --int-refinement selects.\n\
   \                             parity is the four-element Bot/Even/Odd/Top\n\
   \                             lattice; it decides equalities only by\n\
   \                             refuting them across differing parities.\n\
