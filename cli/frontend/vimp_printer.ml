@@ -18,30 +18,65 @@ let string_of_kind = function
   | Voblint.I64 -> "i64"
   | Voblint.U64 -> "u64"
 
+(* The operator table, shared with every printer of an expression tree that uses
+   VIMP's concrete syntax. [left] and [right] are the levels the operands print at,
+   which encode associativity. *)
+type binop = { infix : string; level : int; left : int; right : int }
+
+type prefix_op = { prefix : string; prefix_level : int }
+
+let op_plus = { infix = "+"; level = 5; left = 5; right = 6 }
+let op_minus = { infix = "-"; level = 5; left = 5; right = 6 }
+let op_times = { infix = "*"; level = 6; left = 6; right = 7 }
+let op_div = { infix = "/"; level = 6; left = 6; right = 7 }
+let op_mod = { infix = "%"; level = 6; left = 6; right = 7 }
+let op_less = { infix = "<"; level = 4; left = 5; right = 5 }
+let op_less_eq = { infix = "<="; level = 4; left = 5; right = 5 }
+let op_greater = { infix = ">"; level = 4; left = 5; right = 5 }
+let op_greater_eq = { infix = ">="; level = 4; left = 5; right = 5 }
+let op_eq = { infix = "=="; level = 3; left = 4; right = 4 }
+let op_not_eq = { infix = "!="; level = 3; left = 4; right = 4 }
+let op_and = { infix = "&&"; level = 2; left = 2; right = 3 }
+let op_or = { infix = "||"; level = 1; left = 1; right = 2 }
+
+let op_not = { prefix = "!"; prefix_level = 7 }
+
+(* The printing combinators take the recursive printer [at] for the operands, so a
+   tree with other node types reuses the same spelling and parenthesization. *)
+let print_int_lit ctx n = paren ctx 8 (string_of_int_lit n)
+
+let print_cast at ctx k a =
+  paren ctx 7 ("(" ^ string_of_kind k ^ ") " ^ at 7 a)
+
+let print_binop at ctx op a b =
+  paren ctx op.level (at op.left a ^ " " ^ op.infix ^ " " ^ at op.right b)
+
+let print_prefix at ctx op a = paren ctx op.prefix_level (op.prefix ^ at op.prefix_level a)
+
 let rec exp_at ctx = function
-  | Voblint.N n -> paren ctx 8 (string_of_int_lit n)
+  | Voblint.N n -> print_int_lit ctx n
   | Voblint.V x -> x
-  | Voblint.Cast (k, a) -> paren ctx 7 ("(" ^ string_of_kind k ^ ") " ^ exp_at 7 a)
+  | Voblint.Cast (k, a) -> print_cast exp_at ctx k a
   (* [0 - e] parses back to itself only when [e] is not a literal: the parser folds
      a negated literal into a negative one, so print that case as a subtraction. *)
   | Voblint.Minus (Voblint.N z, (Voblint.N _ as b)) when Z.equal (Voblint.integer_of_int z) Z.zero ->
     paren ctx 5 ("0 - " ^ exp_at 6 b)
   | Voblint.Minus (Voblint.N z, b) when Z.equal (Voblint.integer_of_int z) Z.zero ->
     paren ctx 7 ("-" ^ exp_at 7 b)
-  | Voblint.Plus (a, b) -> paren ctx 5 (exp_at 5 a ^ " + " ^ exp_at 6 b)
-  | Voblint.Minus (a, b) -> paren ctx 5 (exp_at 5 a ^ " - " ^ exp_at 6 b)
-  | Voblint.Times (a, b) -> paren ctx 6 (exp_at 6 a ^ " * " ^ exp_at 7 b)
-  | Voblint.Div (a, b) -> paren ctx 6 (exp_at 6 a ^ " / " ^ exp_at 7 b)
-  | Voblint.Mod (a, b) -> paren ctx 6 (exp_at 6 a ^ " % " ^ exp_at 7 b)
-  | Voblint.Less (a, b) -> paren ctx 4 (exp_at 5 a ^ " < " ^ exp_at 5 b)
-  | Voblint.LessEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " <= " ^ exp_at 5 b)
-  | Voblint.Greater (a, b) -> paren ctx 4 (exp_at 5 a ^ " > " ^ exp_at 5 b)
-  | Voblint.GreaterEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " >= " ^ exp_at 5 b)
-  | Voblint.Eq (a, b) -> paren ctx 3 (exp_at 4 a ^ " == " ^ exp_at 4 b)
-  | Voblint.NotEq (a, b) -> paren ctx 3 (exp_at 4 a ^ " != " ^ exp_at 4 b)
-  | Voblint.And (a, b) -> paren ctx 2 (exp_at 2 a ^ " && " ^ exp_at 3 b)
-  | Voblint.Or (a, b) -> paren ctx 1 (exp_at 1 a ^ " || " ^ exp_at 2 b)
-  | Voblint.Not a -> paren ctx 7 ("!" ^ exp_at 7 a)
+  | Voblint.Plus (a, b) -> print_binop exp_at ctx op_plus a b
+  | Voblint.Minus (a, b) -> print_binop exp_at ctx op_minus a b
+  | Voblint.Times (a, b) -> print_binop exp_at ctx op_times a b
+  | Voblint.Div (a, b) -> print_binop exp_at ctx op_div a b
+  | Voblint.Mod (a, b) -> print_binop exp_at ctx op_mod a b
+  | Voblint.Less (a, b) -> print_binop exp_at ctx op_less a b
+  | Voblint.LessEq (a, b) -> print_binop exp_at ctx op_less_eq a b
+  | Voblint.Greater (a, b) -> print_binop exp_at ctx op_greater a b
+  | Voblint.GreaterEq (a, b) -> print_binop exp_at ctx op_greater_eq a b
+  | Voblint.Eq (a, b) -> print_binop exp_at ctx op_eq a b
+  | Voblint.NotEq (a, b) -> print_binop exp_at ctx op_not_eq a b
+  | Voblint.And (a, b) -> print_binop exp_at ctx op_and a b
+  | Voblint.Or (a, b) -> print_binop exp_at ctx op_or a b
+  | Voblint.Not a -> print_prefix exp_at ctx op_not a
 
 let string_of_exp e = exp_at 0 e
 

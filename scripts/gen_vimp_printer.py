@@ -68,13 +68,17 @@ def render(grammar: dict) -> str:
         if "UMINUS" in entry["tokens"]
     )
 
+    binary_ops = []
     binary_cases = []
     for ctor, text, level, assoc in binary:
         left = level if assoc == "left" else level + 1
         right = level if assoc == "right" else level + 1
+        binary_ops.append(
+            f"let {op_name(ctor)} = "
+            f'{{ infix = "{text}"; level = {level}; left = {left}; right = {right} }}'
+        )
         binary_cases.append(
-            f"  | {G}.{ctor} (a, b) -> paren ctx {level} "
-            f'(exp_at {left} a ^ " {text} " ^ exp_at {right} b)'
+            f"  | {G}.{ctor} (a, b) -> print_binop exp_at ctx {op_name(ctor)} a b"
         )
     keyword_text = {token: word for word, token in grammar["keywords"].items()}
     kind_cases = "\n".join(
@@ -82,9 +86,13 @@ def render(grammar: dict) -> str:
         for p in grammar["productions"]
         if p.get("result") == "kind"
     )
-    unary_cases = [
-        f'  | {G}.{ctor} a -> paren ctx {level} ("{text}" ^ exp_at {level} a)'
+    unary_ops = [
+        f'let {op_name(ctor)} = {{ prefix = "{text}"; prefix_level = {level} }}'
         for ctor, text, level in unary
+    ]
+    unary_cases = [
+        f"  | {G}.{ctor} a -> print_prefix exp_at ctx {op_name(ctor)} a"
+        for ctor, _, _ in unary
     ]
 
     return (
@@ -101,10 +109,33 @@ let string_of_int_lit n = Z.to_string ({G}.integer_of_int n)
 let string_of_kind = function
 {kind_cases}
 
+(* The operator table, shared with every printer of an expression tree that uses
+   VIMP's concrete syntax. [left] and [right] are the levels the operands print at,
+   which encode associativity. *)
+type binop = {{ infix : string; level : int; left : int; right : int }}
+
+type prefix_op = {{ prefix : string; prefix_level : int }}
+
+{chr(10).join(binary_ops)}
+
+{chr(10).join(unary_ops)}
+
+(* The printing combinators take the recursive printer [at] for the operands, so a
+   tree with other node types reuses the same spelling and parenthesization. *)
+let print_int_lit ctx n = paren ctx {atom_level} (string_of_int_lit n)
+
+let print_cast at ctx k a =
+  paren ctx {uminus_level} ("(" ^ string_of_kind k ^ ") " ^ at {uminus_level} a)
+
+let print_binop at ctx op a b =
+  paren ctx op.level (at op.left a ^ " " ^ op.infix ^ " " ^ at op.right b)
+
+let print_prefix at ctx op a = paren ctx op.prefix_level (op.prefix ^ at op.prefix_level a)
+
 let rec exp_at ctx = function
-  | {G}.N n -> paren ctx {atom_level} (string_of_int_lit n)
+  | {G}.N n -> print_int_lit ctx n
   | {G}.V x -> x
-  | {G}.Cast (k, a) -> paren ctx {uminus_level} ("(" ^ string_of_kind k ^ ") " ^ exp_at {uminus_level} a)
+  | {G}.Cast (k, a) -> print_cast exp_at ctx k a
   (* [0 - e] parses back to itself only when [e] is not a literal: the parser folds
      a negated literal into a negative one, so print that case as a subtraction. *)
   | {G}.Minus ({G}.N z, ({G}.N _ as b)) when Z.equal ({G}.integer_of_int z) Z.zero ->
@@ -172,6 +203,12 @@ let string_of_imp_prog p =
     ~procs:(("main", [], {G}.prog_main p) :: List.map proc ({G}.prog_procs p))
 """
     )
+
+
+def op_name(ctor: str) -> str:
+    """OCaml value name for a constructor's operator entry: [LessEq] -> [op_less_eq]."""
+    snake = "".join("_" + c.lower() if c.isupper() else c for c in ctor)
+    return "op" + snake
 
 
 def binary_level(binary: list[tuple], ctor: str) -> int:

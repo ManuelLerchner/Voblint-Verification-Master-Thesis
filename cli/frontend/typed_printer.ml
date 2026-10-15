@@ -1,26 +1,25 @@
-(* Typed expressions in VIMP's concrete syntax, at the precedence levels
-   Vimp_printer uses. A variable prints as its identity's label and a conversion
-   as a cast; literals and operators carry their kind in the IR but print as the
-   source wrote them. *)
+(* Typed expressions in VIMP's concrete syntax, through Vimp_printer's
+   grammar-generated operator table. A variable prints as its identity's label
+   and a conversion as a cast; literals and operators carry their kind in the IR
+   but print as the source wrote them. *)
 
 module C = Voblint
+module P = Vimp_printer
 
-let paren = Vimp_printer.paren
+let aop_op = function
+  | C.AAdd -> P.op_plus
+  | C.ASub -> P.op_minus
+  | C.AMul -> P.op_times
+  | C.ADiv -> P.op_div
+  | C.AMod -> P.op_mod
 
-let aop_text = function
-  | C.AAdd -> ("+", 5)
-  | C.ASub -> ("-", 5)
-  | C.AMul -> ("*", 6)
-  | C.ADiv -> ("/", 6)
-  | C.AMod -> ("%", 6)
-
-let cop_text = function
-  | C.CLt -> ("<", 4)
-  | C.CLe -> ("<=", 4)
-  | C.CGt -> (">", 4)
-  | C.CGe -> (">=", 4)
-  | C.CEq -> ("==", 3)
-  | C.CNe -> ("!=", 3)
+let cop_op = function
+  | C.CLt -> P.op_less
+  | C.CLe -> P.op_less_eq
+  | C.CGt -> P.op_greater
+  | C.CGe -> P.op_greater_eq
+  | C.CEq -> P.op_eq
+  | C.CNe -> P.op_not_eq
 
 (* A local prints by its own name, as the source wrote it; its label qualifies it by
    its procedure. *)
@@ -31,19 +30,14 @@ let var_name x =
   | C.GlobalId n -> n
 
 let rec texp_at ctx = function
-  | C.TN (_, n) -> paren ctx 8 (Vimp_printer.string_of_int_lit n)
+  | C.TN (_, n) -> P.print_int_lit ctx n
   | C.TVar (_, x) -> var_name x
-  | C.TCast (k, a) ->
-      paren ctx 7 ("(" ^ Vimp_printer.string_of_kind k ^ ") " ^ texp_at 7 a)
-  | C.TArith (_, op, a, b) ->
-      let s, l = aop_text op in
-      paren ctx l (texp_at l a ^ " " ^ s ^ " " ^ texp_at (l + 1) b)
-  | C.TCmp (op, a, b) ->
-      let s, l = cop_text op in
-      paren ctx l (texp_at (l + 1) a ^ " " ^ s ^ " " ^ texp_at (l + 1) b)
-  | C.TAnd (a, b) -> paren ctx 2 (texp_at 2 a ^ " && " ^ texp_at 3 b)
-  | C.TOr (a, b) -> paren ctx 1 (texp_at 1 a ^ " || " ^ texp_at 2 b)
-  | C.TNot a -> paren ctx 7 ("!" ^ texp_at 7 a)
+  | C.TCast (k, a) -> P.print_cast texp_at ctx k a
+  | C.TArith (_, op, a, b) -> P.print_binop texp_at ctx (aop_op op) a b
+  | C.TCmp (op, a, b) -> P.print_binop texp_at ctx (cop_op op) a b
+  | C.TAnd (a, b) -> P.print_binop texp_at ctx P.op_and a b
+  | C.TOr (a, b) -> P.print_binop texp_at ctx P.op_or a b
+  | C.TNot a -> P.print_prefix texp_at ctx P.op_not a
 
 let string_of_texp e = texp_at 0 e
 
