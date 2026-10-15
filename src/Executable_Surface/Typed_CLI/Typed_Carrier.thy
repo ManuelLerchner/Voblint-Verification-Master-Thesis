@@ -5,8 +5,8 @@ begin
 section \<open>The combined state of the typed analyses\<close>
 
 text \<open>
-  Every typed analysis owns one field of the combined state, as in the untyped carrier
-  (\<^verbatim>\<open>MCP_Carrier\<close>), and the typed analyses form a \<^locale>\<open>mcp_registry\<close> over the
+  Every typed analysis owns one field of the combined state, as in Goblint's MCP, and
+  the typed analyses form a \<^locale>\<open>mcp_registry\<close> over the
   typed language. A non-relational field runs the typed component and answers through
   its evaluator, which may ask the channel about operands; the order field runs the
   order component and answers comparisons from its facts.

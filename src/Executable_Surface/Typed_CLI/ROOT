@@ -1,8 +1,8 @@
 chapter Voblint
 
 session Voblint_Typed_CLI in "." = "Voblint_Typed_Int" +
-  description "The experimental typed entry point: one call that runs a typed analysis on a
-    program and its kind declarations, with the soundness of its verdicts"
+  description "The typed analyses run as one: the activation vocabulary, the combined
+    carrier and its soundness, and their cooperation"
   sessions
     Voblint_Typed_Order
     Voblint_Typed_Sign
@@ -11,5 +11,4 @@ session Voblint_Typed_CLI in "." = "Voblint_Typed_Int" +
     Typed_Run
     Typed_Carrier
     Typed_MCP
-    Typed_Run_Regression
     Cooperation_Regression

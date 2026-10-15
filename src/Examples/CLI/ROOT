@@ -6,5 +6,7 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
   theories
     (* The public run_voblint operation and the published result table *)
     Example_Run_Voblint_Regression
+    (* Precision a configuration buys: refinement, context, overflow semantics *)
+    Example_Run_Voblint_Precision
     (* Program globals on the shared channel, through run_voblint *)
     Example_Sign_Mixed_Flow
