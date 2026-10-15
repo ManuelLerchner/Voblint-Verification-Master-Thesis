@@ -1081,9 +1081,9 @@ above (claim #claim-ref("dom-conjunct-order")).
   #proved("nonrel_refine_sound")
 ]
 
-The shipped refinements are sound but not the most precise possible. A product,
-for instance, stops the refinement, so Interval cannot learn a bound on $x$
-from `2 * x < 5`.
+The shipped refinements are sound but not the most precise possible. A
+quotient, for instance, stops the refinement, so Interval cannot learn $y <= 9$
+from `y / 2 < 5`, although it holds in every run.
 
 The branch transfer #isaconst("nonrel_branch") first drops an arm that the
 truth test rules out, and otherwise applies the refinement at the variables

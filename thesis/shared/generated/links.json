@@ -173,6 +173,7 @@
     "const:nonrel_init_st": "Voblint/Voblint_Nonrelational/Nonrelational_Analysis.html#Nonrelational_Analysis.nonrel_init_st%7Cconst",
     "const:nonrel_refine": "Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.nonrel_refine%7Cconst",
     "const:nonrel_spec": "Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.nonrel_spec%7Cconst",
+    "const:norm_ivl_ik": "Voblint/Voblint_Analysis_Interval/Interval_Kind.html#Interval_Kind.norm_ivl_ik%7Cconst",
     "const:normalize_ivl": "Voblint/Voblint_Domain/Interval_Lattice.html#Interval_Lattice.normalize_ivl%7Cconst",
     "const:normalize_lift": "Voblint/Voblint_Domain/Reachability_Lift.html#Reachability_Lift.normalize_lift%7Cconst",
     "const:obligation_classify": "Voblint/Voblint_CLI/Run_Report.html#Run_Report.obligation_classify%7Cconst",

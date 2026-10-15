@@ -379,7 +379,7 @@ replaces each concrete operation by an abstract one, a _transfer function_
 $sh(f) : A -> A$, and the transfer function must not lose any state that the
 concrete operation can produce. In the counting loop, the edge from $b$ to $t$
 executes `i = i + 1`, and its concrete operation maps every store to the store
-with $i$ increased by one. In general, a program's steps form a relation $->$
+with $i$ increased by one, wrapping around at the largest 32-bit value. In general, a program's steps form a relation $->$
 on $U$. One state may have several successors, even infinitely many, for
 example when the next value is read from user input. The _post-image_
 $"post"(X) = setcomp(s', exists s in X. s -> s')$ collects the successors of
@@ -388,10 +388,13 @@ $ "post"(conc(a)) subset.eq conc(sh(f)(a)): $
 stepping from any state that $a$ describes leads to a state that $sh(f)(a)$
 describes @cousot77[§6] @mine17[Def. 2.15] @rival20[§4.2.2]. The two paths
 around the square of @fig:transfer-square do not necessarily lead to equal sets: the
-concrete result only has to be a subset of the abstract one. For the
-increment `i = i + 1`, the interval transfer $[l, u] |-> [l + 1, u + 1]$, the
-addition #isaconst("plus_ivl") with $[1, 1]$, is sound. Applied to
-$[0, 4]$, it yields $[1, 5]$, which contains every successor $i = 1, dots, 5$. Voblint states the property once per kind of edge in
+concrete result only has to be a subset of the abstract one. Over $ZZ$,
+the interval transfer $[l, u] |-> [l + 1, u + 1]$, the addition
+#isaconst("plus_ivl") with $[1, 1]$, is sound for the increment `i = i + 1`.
+Applied to $[0, 4]$, it yields $[1, 5]$, which contains every successor
+$i = 1, dots, 5$. At a machine kind the concrete increment wraps at $2^31 - 1$,
+so Voblint's transfer also maps a result that leaves the kind back into it
+(#isaconst("norm_ivl_ik"), @ch:domains). Voblint states the property once per kind of edge in
 #isaconst("gsound_local_spec"), for instance for an assignment as
 #isaconst("gsound_assign"). It composes along paths @mine17[Thm. 2.6], and
 at control-flow joins the upper-bound laws of join and monotonicity of

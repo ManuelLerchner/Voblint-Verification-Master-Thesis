@@ -310,8 +310,8 @@ relational state of @sec:rel-state. A guard between two variables adds a pair.
 An assignment first forgets the pairs involving the changed variable. It then
 asks the shared query channel how the new value relates to each variable, and
 every active analysis, the order analysis included, may contribute an answer
-(@sec:coop-catalogue). In the program below, the guard `x < y` tells Interval
-nothing about either variable, so it keeps
+(@sec:coop-catalogue). In the program below, the guard `x < y` removes only
+the extreme values of the kind from Interval's ranges, so it keeps
 #state("order-alone-interval", "12:5") and reports
 #verdict("order-alone-interval", "12:5") at the first check. The order
 analysis records #state("order-alone-order", "12:5") and reports
@@ -339,7 +339,9 @@ Because the analysis does not combine pairs transitively, it cannot prove
 `x <= z` under `y <= z`: it holds #state("order-alone-order", "14:7") there
 and answers #verdict("order-alone-order", "14:7") (@sec:rel-state). The assignment
 `y = y + 1` throws away every pair involving $y$, leaving
-#state("order-alone-order", "17:5"). A copy, in contrast, yields pairs in both
+#state("order-alone-order", "17:5"). Forgetting is necessary here: at
+$y = 2^31 - 1$ the increment wraps to $-2^31$, so `x <= y` fails for $x = 0$.
+A copy, in contrast, yields pairs in both
 directions. At `w = x`, between two variables of one kind, the order analysis
 records both orders and gives $w$ the pairs of $x$ (#isaconst("ord_copy")), so
 it records #state("order-alone-order", "20:3") and proves `w == x`, where
