@@ -66,6 +66,24 @@ lemma call_string_verdicts:
      = Some [Decided Check_Proved, Decided Check_Proved]"
   by eval+
 
+text \<open>A longer call string pays off once calls nest. \<open>g\<close> is called only from \<open>f\<close>, and \<open>f\<close>
+  from two sites in \<open>main\<close>. Length \<open>1\<close> keys both activations of \<open>g\<close> by \<open>f\<close>'s one call site,
+  so \<open>g\<close> returns the join of \<open>3\<close> and \<open>-10\<close>; length \<open>2\<close> also records the site in \<open>main\<close>, and
+  each activation returns its own argument.\<close>
+
+definition nested_prog :: imp_prog where
+  "nested_prog = program {
+     fun g(p) { return p; }
+     fun f(p) { t = g(p); return t; }
+     fun main() { x = f(3); y = f(0 - 10); __voblint_check(x > 0); __voblint_check(y < 0); } }"
+
+lemma call_string_depth_verdicts:
+  "verdicts (prec_conf [Interval] (Call_String 1) default_sem_conf) nested_prog
+     = Some [Decided Check_Unknown, Decided Check_Unknown]"
+  "verdicts (prec_conf [Interval] (Call_String 2) default_sem_conf) nested_prog
+     = Some [Decided Check_Proved, Decided Check_Proved]"
+  by eval+
+
 subsection \<open>Signed overflow\<close>
 
 text \<open>

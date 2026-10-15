@@ -19,3 +19,4 @@ src/Examples/CFG
 src/Examples/CLI
 src/Examples/Capstone
 src/Executable_Surface/Codegen
+src/Examples/Tooling
