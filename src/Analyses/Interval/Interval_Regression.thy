@@ -23,7 +23,7 @@ abbreviation main_var :: "vname \<Rightarrow> var_id" where
 
 subsection \<open>A counting loop at \<^const>\<open>I32\<close>\<close>
 
-text \<open>The guard bounds the body and the loop exit, as in the untyped flagship.\<close>
+text \<open>The guard bounds the body and the loop exit.\<close>
 
 definition loop_prog :: imp_prog where
   "loop_prog = program { fun main() { x = 0; while (x < 20) { x = x + 1; } } }"

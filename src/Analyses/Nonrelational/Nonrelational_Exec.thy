@@ -9,10 +9,10 @@ section \<open>The executable typed state\<close>
 text \<open>
   A solver compares and joins states, so it cannot run on the functions of
   \<^typ>\<open>'a tabs\<close>. The executable carrier is a pair of finite default
-  dictionaries over variable identities, one for the locals and one for the globals,
-  as for the untyped analyses. Each operation updates finitely many entries and
-  agrees with its counterpart in \<open>Nonrelational_Transfer\<close> on the function the carrier
-  represents, so the soundness of the typed transfer carries over unchanged.
+  dictionaries over variable identities, one for the locals and one for the globals.
+  Each operation updates finitely many entries and agrees with its counterpart in
+  \<open>Nonrelational_Transfer\<close> on the function the carrier represents, so the soundness
+  of the transfer carries over unchanged.
 \<close>
 
 lemma infinite_range_GlobalId: "infinite (range GlobalId)"

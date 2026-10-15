@@ -21,7 +21,7 @@ part of the adequacy argument, not a proved transformation.
 | `Machine_Kind.thy` | the kinds `I8` ... `U64`, their ranges, `ik_norm` (wraparound into a kind), promotion and the usual arithmetic conversions |
 | `VIMP_Syntax.thy` | surface expressions `src_exp`, variable names and surface stores |
 | `VIMP_Globals.thy` | locals/globals classifier: fresh callee stores and caller/callee store combination |
-| `VIMP_Expr.thy` | C division and remainder (`c_div`, `c_mod`), `truthy`, `src_aval`, an unbounded-integer evaluator of surface expressions that no step relation uses, and `lits_fit` |
+| `VIMP_Expr.thy` | C division and remainder (`c_div`, `c_mod`), `truthy`, expression footprints and `lits_fit` |
 | `VIMP_Special.thy` | special-call vocabulary (`__voblint_nondet_int`, `min`, `max`) |
 | `VIMP_Proc.thy` | the command syntax `gcom` generic in annotation, variable and expression type; declarations, frames, the generic step rules `vimp_sem.gpstep`, well-formedness |
 | `VIMP_Program.thy` | the `imp_prog` record and program-level lookups |

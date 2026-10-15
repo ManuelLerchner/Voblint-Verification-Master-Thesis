@@ -5,8 +5,7 @@ begin
 section \<open>Typed expressions\<close>
 
 text \<open>
-  The untyped evaluator \<^const>\<open>src_aval\<close> computes over mathematical integers. Under
-  machine kinds an expression's value depends on the kind each operation computes at:
+  Under machine kinds an expression's value depends on the kind each operation computes at:
   \<open>200 + 100 < 250\<close> holds over \<^typ>\<open>int\<close> but fails when the sum wraps at an
   8-bit kind. This theory states that meaning twice. \<open>src_eval\<close> reads it off a source
   expression and a kind for every name, in the shape the C standard describes it.
@@ -303,8 +302,8 @@ subsection \<open>Erasure\<close>
 text \<open>
   Erasure drops the kinds and the conversions and names every identity by its source
   name. It recovers the expression elaboration started from. It belongs to no
-  semantics: \<^const>\<open>eval\<close> and \<^const>\<open>src_aval\<close> differ wherever a kind wraps, so the
-  untyped meaning of the erased expression is not the typed meaning of the original.
+  semantics: the erased expression has lost the kinds that \<^const>\<open>eval\<close> wraps at, so
+  read over unbounded integers it can mean something other than the original.
 \<close>
 
 fun aop_exp :: "aop \<Rightarrow> src_exp \<Rightarrow> src_exp \<Rightarrow> src_exp" where

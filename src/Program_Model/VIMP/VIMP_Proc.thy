@@ -335,7 +335,7 @@ definition source_pi :: "('a, 'v, 'e) gptable \<Rightarrow> bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
 
 text \<open>Well-formedness is stated once for any language: \<open>vars\<close> gives the variables an
-  expression reads, and \<open>rv\<close> is the reserved return slot. The untyped predicates are the
+  expression reads, and \<open>rv\<close> is the reserved return slot. The surface predicates are the
   instances at \<^const>\<open>exp_vnames\<close> and \<^const>\<open>ret_var\<close>.\<close>
 
 definition gsource_exp :: "('e \<Rightarrow> 'v set) \<Rightarrow> 'v \<Rightarrow> 'e \<Rightarrow> bool" where

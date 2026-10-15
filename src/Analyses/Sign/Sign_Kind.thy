@@ -10,8 +10,8 @@ text \<open>
   nonzero sign to a kind answers the kind's top, every sign at a signed kind and the
   nonnegative ones at an unsigned kind (\<^const>\<open>sign_cast\<close>). Zero survives every
   normalization. A conversion from a kind whose range lies inside the target's
-  changes no value and keeps the sign. Sign has no Goblint counterpart; the typed
-  Sign is sound and much weaker than the untyped one, whose integers do not wrap.
+  changes no value and keeps the sign. Sign has no Goblint counterpart, and it is
+  much weaker at machine kinds than a sign analysis over integers that do not wrap.
 \<close>
 
 lemma minus_one_in_signed_range: "ik_signed k \<Longrightarrow> - 1 \<in> ik_range k"
@@ -161,8 +161,8 @@ lemma sign_excl_sound:
   "m \<noteq> n \<Longrightarrow> m \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> m \<in> gamma_sign (sign_excl a b)"
   by (induction a b rule: sign_excl.induct) auto
 
-text \<open>An order between two values refines each by the other's sign, as the untyped
-  \<^const>\<open>inv_less_sign\<close>: a comparison reads values the kind already holds, so no
+text \<open>An order between two values refines each by the other's sign through the
+  value-level \<^const>\<open>inv_less_sign\<close>: a comparison reads values the kind already holds, so no
   wraparound is involved.\<close>
 
 definition refine_ik_sign :: "cop \<Rightarrow> sign \<Rightarrow> sign \<Rightarrow> sign \<times> sign" where

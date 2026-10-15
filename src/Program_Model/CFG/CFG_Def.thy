@@ -64,7 +64,7 @@ text \<open>
 
 text \<open>Both action types are generic in the variable type \<open>'v\<close> and the expression type
   \<open>'e\<close>, as the commands they are compiled from are. \<open>edge_action\<close> and \<open>call_action\<close>
-  are the instances at source names and untyped expressions.\<close>
+  are the instances at source names and surface expressions.\<close>
 
 datatype ('v, 'e) gedge_action =
     EA_Nop

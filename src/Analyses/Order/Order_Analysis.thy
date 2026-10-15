@@ -5,13 +5,13 @@ begin
 section \<open>The order domain at typed variables\<close>
 
 text \<open>
-  The relational carrier of the untyped order analysis (\<open>relc\<close>) over any variable
-  type: a finite set of pairs \<open>(x, y)\<close>, each meaning that \<open>x\<close>'s value is at most
-  \<open>y\<close>'s. Stored values are already normalized to their kinds, so the facts compare the
-  values a typed run holds; a guard adds a fact only when it compares two variable
-  reads, whose values the comparison sees unconverted. The flag records that every
-  variable other than the return slot holds a value of its kind (@{const in_kinds}): a
-  copy between two variables of one kind then passes the conversion unchanged.
+  A relational carrier over any variable type: a finite set of pairs \<open>(x, y)\<close>, each
+  meaning that \<open>x\<close>'s value is at most \<open>y\<close>'s. Stored values are already normalized to
+  their kinds, so the facts compare the values a run holds; a guard adds a fact only
+  when it compares two variable reads, whose values the comparison sees unconverted.
+  The flag records that every variable other than the return slot holds a value of its
+  kind (@{const in_kinds}): a copy between two variables of one kind then passes the
+  conversion unchanged.
 \<close>
 
 datatype 'v order_rel = OBot | OFacts bool "('v \<times> 'v) set"
@@ -193,13 +193,12 @@ subsection \<open>Assignments\<close>
 text \<open>
   At \<open>x = e\<close> the component asks about the state before the assignment, where
   \<open>(\<kappa> x) e\<close> evaluates to the new value of \<open>x\<close> and every other variable keeps
-  its value, as the untyped order analysis does. The exact answer \<open>1\<close> to
-  \<open>(\<kappa> x) e \<le> y\<close> makes \<open>(x, y)\<close> true afterwards, and \<open>y \<le> (\<kappa> x) e\<close> makes
-  \<open>(y, x)\<close> true. The candidate partners are the variables in \<open>ys\<close>. A copy from a
-  variable of the same kind records both orders when the stores are typed and gives
-  the destination the source's facts, as
-  Goblint's \<^verbatim>\<open>varEq\<close> records an equality for an assignment between variables of
-  one type (\<^verbatim>\<open>varEq.ml\<close> at \<^verbatim>\<open>0dc12d355\<close>).
+  its value. The exact answer \<open>1\<close> to \<open>(\<kappa> x) e \<le> y\<close> makes \<open>(x, y)\<close> true
+  afterwards, and \<open>y \<le> (\<kappa> x) e\<close> makes \<open>(y, x)\<close> true. The candidate partners are
+  the variables in \<open>ys\<close>. A copy from a variable of the same kind records both orders
+  when the stores are typed and gives the destination the source's facts, as Goblint's
+  \<^verbatim>\<open>varEq\<close> records an equality for an assignment between variables of one type
+  (\<^verbatim>\<open>varEq.ml\<close> at \<^verbatim>\<open>0dc12d355\<close>).
 \<close>
 
 definition ord_copy ::
@@ -278,8 +277,8 @@ subsection \<open>The component\<close>
 
 text \<open>
   Assignments forget their destination and learn, library calls forget it, and a
-  return forgets the return slot. The caller learns nothing back from a call, as in
-  the untyped order analysis: a callee may change globals, so no fact survives it.
+  return forgets the return slot. The caller learns nothing back from a call: a callee
+  may change globals, so no fact survives it.
 \<close>
 
 definition ord_spec :: "kenv \<Rightarrow> var_id list \<Rightarrow> (var_id, exp, var_id order_rel lifted) glocal_spec"
@@ -368,8 +367,8 @@ proof -
   qed
 qed
 
-text \<open>The candidate partners: every variable some procedure of the program declares, as
-  for the untyped order analysis (@{const program_vars}).\<close>
+text \<open>The candidate partners: every variable some procedure of the program declares
+  (@{const program_vars}).\<close>
 
 definition ord_vars :: "imp_prog \<Rightarrow> var_id list" where
   "ord_vars p = remdups (concat (map (\<lambda>q. map (resolve_var (declared_global p) q)

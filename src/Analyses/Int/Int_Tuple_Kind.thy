@@ -10,7 +10,7 @@ text \<open>
   Goblint's \<^verbatim>\<open>IntDomTuple\<close> (\<^verbatim>\<open>int/intDomTuple.ml\<close>) restricted to its Interval and
   Congruence components. A value denotes the integers both components admit. Its type
   parameter selects how the components refine each other, as Goblint's
-  \<^verbatim>\<open>ana.int.refinement\<close> does; the untyped Int analysis takes the same modes.
+  \<^verbatim>\<open>ana.int.refinement\<close> does.
 \<close>
 
 class int_refinement =
@@ -226,7 +226,7 @@ lemma it_refine_sound: "n \<in> gamma_it a \<Longrightarrow> n \<in> gamma_it (i
   by (cases a) (fastforce simp: it_refine_def Let_def)
 
 text \<open>\<open>Refine_Never\<close> leaves the components apart, \<open>Refine_Once\<close> exchanges once, and
-  \<open>Refine_Fixpoint\<close> exchanges until nothing changes. Like the untyped
+  \<open>Refine_Fixpoint\<close> exchanges until nothing changes. Like the value-level
   \<^const>\<open>refine_fix\<close>, the fixpoint keeps its input when the loop does not stop.\<close>
 
 definition it_refine_mode :: "refine_mode \<Rightarrow> 'm int_tuple \<Rightarrow> 'm int_tuple" where
@@ -263,8 +263,8 @@ definition narrow_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Righta
 definition is_empty_int_tuple :: "'a int_tuple \<Rightarrow> bool" where
   "is_empty_int_tuple a = it_empty (it_ivl a) (it_cong a)"
 
-text \<open>A value prints as the untyped Int product does: bottom, a single integer when a
-  component pins one, and otherwise each component.\<close>
+text \<open>A value prints as bottom, as a single integer when a component pins one, and
+  otherwise as each component.\<close>
 
 definition to_string_int_tuple :: "'a int_tuple \<Rightarrow> String.literal" where
   "to_string_int_tuple a =

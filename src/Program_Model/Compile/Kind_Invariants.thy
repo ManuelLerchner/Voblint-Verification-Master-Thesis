@@ -66,24 +66,13 @@ proof -
     by (rule in_kinds_bind_formals[OF in_kinds_enter_state[OF t]])
 qed
 
-text \<open>The suspended activations below a trace. A return resumes one of them, so the
-  invariant is carried for all of them at once.\<close>
-
-primrec callers :: "'v gactivation_trace \<Rightarrow> 'v gactivation_trace set" where
-  "callers (Root _) = {}"
-| "callers (Call c _) = insert c (callers c)"
-| "callers (Resume c _ _) = callers c"
-
-lemma callers_extend [simp]: "callers (extend t x) = callers t"
-  by (cases t) simp_all
-
-lemma caller_of_callers: "caller_of t = Some c \<Longrightarrow> insert c (callers c) \<subseteq> callers t"
-  by (induction t) auto
+text \<open>A return resumes one of the suspended activations below a trace
+  (\<^const>\<open>ancestors\<close>), so the invariant is carried for all of them at once.\<close>
 
 lemma valid_activation_trace_callers_in_kinds:
   assumes vimp: "calls_in_kinds \<kappa> g" and S: "\<And>s. s \<in> S \<Longrightarrow> in_kinds \<kappa> s"
     and t: "t \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
-  shows "in_kinds \<kappa> (sink_store t) \<and> (\<forall>c \<in> callers t. in_kinds \<kappa> (sink_store c))"
+  shows "in_kinds \<kappa> (sink_store t) \<and> (\<forall>c \<in> ancestors t. in_kinds \<kappa> (sink_store c))"
   using t
 proof (induction t rule: vimp.gvalid_activation_trace.induct)
   case (root s)
@@ -97,8 +86,8 @@ next
   then show ?case by (simp add: in_kinds_call_enter)
 next
   case (ret callee caller p dst pars args cont)
-  from ret.IH caller_of_callers [OF ret.hyps(2)]
-  have "in_kinds \<kappa> (sink_store caller)" "\<forall>c \<in> callers caller. in_kinds \<kappa> (sink_store c)"
+  from ret.IH ancestors_caller [OF ret.hyps(2)]
+  have "in_kinds \<kappa> (sink_store caller)" "\<forall>c \<in> ancestors caller. in_kinds \<kappa> (sink_store c)"
     and callee: "in_kinds \<kappa> (sink_store callee)"
     by auto
   moreover have "in_kinds \<kappa> (vimp.gcombine_collect \<kappa> dst (sink_store caller) (sink_store callee))"

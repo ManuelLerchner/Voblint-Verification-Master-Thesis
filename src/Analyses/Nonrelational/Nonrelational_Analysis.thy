@@ -165,9 +165,9 @@ subsection \<open>Entry-state contexts\<close>
 
 text \<open>
   A call's context is the abstract values of the callee's formals in the state the call
-  enters, as for the untyped analyses' entry-state policy. Goblint's default context is the
-  whole entry state (\<^verbatim>\<open>DefaultSpec.context\<close>); the formals are the part of it a call
-  determines, since the callee's other locals start unconstrained.
+  enters. Goblint's default context is the whole entry state
+  (\<^verbatim>\<open>DefaultSpec.context\<close>); the formals are the part of it a call determines, since
+  the callee's other locals start unconstrained.
 \<close>
 
 definition nonrel_es_ctx ::

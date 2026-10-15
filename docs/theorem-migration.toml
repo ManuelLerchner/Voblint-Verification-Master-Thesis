@@ -6,13 +6,14 @@
 # the typed name only after its prose has been checked against that note.
 #
 # Semantic changes common to every typed entry:
-#   - stores are typed stores (tstore) over var_id, values are machine integers
-#     of each identity's kind, and expressions are elaborated typed expressions
-#     (texp, teval) rather than source expressions (exp, aval);
-#   - the run is of the elaborated program typed_ptable p ds under tpstep,
-#     starting from tinit_stores (globals zero at their kinds);
-#   - "reaching ds p v" replaces the collecting semantics 𝒞⇘𝒢,g,S⇙ v, over the
-#     typed graph typed_cfg p ds.
+#   - stores (store) are over var_id, values are machine integers of each
+#     identity's kind, and expressions are elaborated core expressions (exp,
+#     eval) rather than surface expressions (src_exp);
+#   - the run is of the elaborated program elab_ptable p ds under pstep,
+#     starting from init_stores (kenv_of ds): globals zero, every other identity
+#     any value of its kind;
+#   - "reaching ds p v" is the collecting semantics 𝒞 over the elaborated graph
+#     elab_cfg p ds from those initial stores.
 
 [[theorem]]
 legacy = "run_voblint_legacy_sound"
@@ -355,8 +356,9 @@ kind = "type"
 
 [[rename]]
 old = "aval"
-new = "src_aval"
+new = ""
 kind = "constant"
+note = "Deleted with the mathematical-integer semantics; src_eval gives a surface expression its machine-kind meaning."
 
 [[rename]]
 old = "calls_typed"
@@ -1155,8 +1157,9 @@ kind = "qualifier"
 
 [[rename]]
 old = "activation_context_of_typed_cs0"
-new = "activation_context_of_cs0"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "call_formals_typed_ptable"
@@ -1330,13 +1333,15 @@ kind = "fact"
 
 [[rename]]
 old = "tarith_obligations_division"
-new = "arith_obligations_division"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tarith_obligations_literal"
-new = "arith_obligations_literal"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tarith_obligations_overflow"
@@ -1350,8 +1355,9 @@ kind = "fact"
 
 [[rename]]
 old = "tassign_kind"
-new = "nonrel_assign_kind"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tassign_sound"
@@ -1380,8 +1386,9 @@ kind = "fact"
 
 [[rename]]
 old = "tbranch_kind"
-new = "nonrel_branch_kind"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tbranch_sound"
@@ -1435,8 +1442,9 @@ kind = "fact"
 
 [[rename]]
 old = "tcombine_kind"
-new = "nonrel_combine_kind"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tcombine_sound"
@@ -1475,8 +1483,9 @@ kind = "fact"
 
 [[rename]]
 old = "tenter_state_kind"
-new = "nonrel_enter_state_kind"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tenter_state_sound"
@@ -1485,8 +1494,9 @@ kind = "fact"
 
 [[rename]]
 old = "teval_cong"
-new = "eval_cong"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "teval_elaborate"
@@ -1515,8 +1525,9 @@ kind = "fact"
 
 [[rename]]
 old = "teval_tstyped_in_range"
-new = "eval_in_kinds_in_range"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "texp_erase_elaborate"
@@ -1755,8 +1766,9 @@ kind = "fact"
 
 [[rename]]
 old = "trefine_kind"
-new = "nonrel_refine_kind"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "trefine_sound"
@@ -1770,8 +1782,9 @@ kind = "fact"
 
 [[rename]]
 old = "treturn_kind"
-new = "nonrel_return_kind"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "treturn_sites_def"
@@ -1850,8 +1863,9 @@ kind = "fact"
 
 [[rename]]
 old = "tslot_mono"
-new = "slot_mono"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tspecial_def"
@@ -1860,8 +1874,9 @@ kind = "fact"
 
 [[rename]]
 old = "tspecial_kind"
-new = "nonrel_special_kind"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tspecial_sound"
@@ -1925,8 +1940,9 @@ kind = "fact"
 
 [[rename]]
 old = "tstyped_styped"
-new = "in_kinds_all_in_kinds"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "tstyped_upd"
@@ -2000,8 +2016,9 @@ kind = "fact"
 
 [[rename]]
 old = "typed_cs0_node_collect"
-new = "cs0_node_collect"
+new = ""
 kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
 
 [[rename]]
 old = "typed_cs_run_def"
@@ -2050,8 +2067,9 @@ kind = "fact"
 
 [[rename]]
 old = "typed_mcp_es_verdict_sound"
-new = "mcp_es_verdict_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_mcp_keyed"
@@ -2080,38 +2098,45 @@ kind = "fact"
 
 [[rename]]
 old = "typed_mcp_verdict_sound"
-new = "mcp_cs_verdict_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_es_node_sound"
-new = "nonrel_es_node_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_es_verdict_sound"
-new = "nonrel_es_verdict_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_node_sound"
-new = "nonrel_node_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_report_ctx_sound"
-new = "nonrel_report_ctx_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_report_proved_sound"
-new = "nonrel_report_proved_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_report_refuted_sound"
-new = "nonrel_report_refuted_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_routed"
@@ -2120,28 +2145,33 @@ kind = "fact"
 
 [[rename]]
 old = "typed_nonrel_source_sound"
-new = "nonrel_source_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_nonrel_verdict_sound"
-new = "nonrel_verdict_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_order_node_sound"
-new = "order_analysis_node_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_order_report_proved_sound"
-new = "order_analysis_report_proved_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_order_report_refuted_sound"
-new = "order_analysis_report_refuted_sound"
+new = ""
 kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
 
 [[rename]]
 old = "typed_ptable_def"
