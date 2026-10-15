@@ -65,7 +65,7 @@ lemma fg_return_at_callee:
            \<approx> (v, t, stk)"
     and "unwinding u"
   shows "v = FunctionResult (STR ''one'')"
-  using csim_point_compile_prog[OF fg_wf assms(1)[unfolded fg_pi_def]] assms(2) by simp
+  using bridge_sem.csim_point_compile_prog[OF fg_wf assms(1)[unfolded fg_pi_def]] assms(2) by simp
 
 text \<open>The call from \<open>main\<close> followed through its return.  At each configuration the
   elaborated residual names the node the simulation must relate it to: the call site, the
@@ -122,7 +122,7 @@ lemma fg_call_return_nodes:
     and "c = Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call) \<Longrightarrow> v = Statement 0"
     and "c = Seq (Unwind fg_ret) (Restore fg_call) \<Longrightarrow> v = FunctionResult (STR ''one'')"
     and "c = SKIP fg_call \<Longrightarrow> v = Statement 5"
-  using csim_point_compile_prog [OF fg_wf assms [unfolded fg_pi_def]] fg_call_return_points
+  using bridge_sem.csim_point_compile_prog [OF fg_wf assms [unfolded fg_pi_def]] fg_call_return_points
   by simp_all
 
 subsection \<open>Annotations agree with the emitted edges\<close>

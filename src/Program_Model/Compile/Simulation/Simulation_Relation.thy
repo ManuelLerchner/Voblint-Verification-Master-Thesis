@@ -50,14 +50,6 @@ lemma edge_step_EA_Ret_ret_store_mem [simp]: "gret_store e s \<in> gedge_step (E
 
 end
 
-definition ret_store :: "exp option \<Rightarrow> store \<Rightarrow> store" where
-  "ret_store = simrel_sem.gret_store aval ret_var"
-
-global_interpretation untyped?: simrel_sem aval \<G> ret_var "\<lambda>_ n. n"
-    rewrites "simrel_sem.gret_store aval ret_var = ret_store"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp add: ret_store_def)
-
 subsection \<open>Bare Unwind is stuck\<close>
 
 text \<open>A lone \<^const>\<open>Unwind\<close> has no source step: only the \<^const>\<open>Seq\<close> rules propagate it, and
@@ -104,7 +96,7 @@ text \<open>
   own \<^const>\<open>Restore\<close>); \<open>pop_ready\<close> describes the whole activation body in that phase ---
   either the normal fall-through \<^const>\<open>Restore\<close> or an \<^const>\<open>Unwind\<close> spine
   \<open>Seq u Restore\<close> from an explicit \<^const>\<open>Return\<close>.  Both pop the single caller frame with one
-  \<open>cstep\<close> return; \<open>unwinding\<close> propagation is matched by \<^emph>\<open>no\<close> CFG step, because the CFG
+  \<open>gcstep\<close> return; \<open>unwinding\<close> propagation is matched by \<^emph>\<open>no\<close> CFG step, because the CFG
   waits at \<^term>\<open>FunctionResult p\<close>.
 \<close>
 fun unwinding :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
@@ -230,7 +222,7 @@ text \<open>
   On its own \<^const>\<open>csim\<close> is a \<^emph>\<open>structural\<close> correspondence, not a reachability one.  For an
   unannotated program it is not functional either: a residual carries no record of which
   occurrence it came from, so two textually equal statements share every location.  A caller
-  that needs the semantic node pairs it with membership in \<open>node_collect\<close> at the same node.
+  that needs the semantic node pairs it with membership in \<open>gnode_collect\<close> at the same node.
   Annotated programs whose annotations are the compiler's own locations are the case where the
   node is determined.
 \<close>
@@ -271,8 +263,8 @@ subsection \<open>The call-redex source shape\<close>
 text \<open>\<open>head_call c\<close> holds when the leftmost-innermost of \<open>c\<close> is a \<^const>\<open>Call\<close> to a procedure
   \<^const>\<open>special_table\<close> does not classify: the shape of an active residual whose next
   \<^const>\<open>pstep\<close> pushes a frame.  A call \<^const>\<open>special_table\<close> classifies resolves in place
-  instead (\<^const>\<open>intra_step\<close>'s \<open>ISpecial\<close>), so it is deliberately excluded here, mirroring
-  \<^const>\<open>intra_step\<close>'s own exclusion of \<^const>\<open>Call\<close>.\<close>
+  instead (\<^const>\<open>residual_sem.gintra_step\<close>'s \<open>ISpecial\<close>), so it is deliberately excluded here, mirroring
+  \<^const>\<open>residual_sem.gintra_step\<close>'s own exclusion of \<^const>\<open>Call\<close>.\<close>
 fun head_call :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "head_call (Call i dst q actuals) = (special_table q = None)"
 | "head_call (Seq c1 c2) = head_call c1"

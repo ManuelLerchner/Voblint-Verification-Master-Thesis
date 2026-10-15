@@ -6,7 +6,7 @@ begin
 section \<open>One route, CALL and COMB discharged once\<close>
 
 text \<open>
-  \<^locale>\<open>dg_context_activation\<close> already discharges EDGE (\<open>dg_ctx_act_edge\<close>) generically off the
+  \<^locale>\<open>gdg_context_activation\<close> already discharges EDGE (\<open>dg_ctx_act_edge\<close>) generically off the
   post-solution, independent of \<open>route\<close>/\<open>cmb\<close>/\<open>extra\<close>: intra edges never route. COMB
   cannot be discharged that generically, because \<open>cmb\<close> is an unconstrained parameter: a
   context-sensitive analysis whose entry-seed publication and return combine are hand-written
@@ -21,19 +21,19 @@ text \<open>
 subsection \<open>The routed-context locale: D and G independently typed\<close>
 
 text \<open>
-  \<open>routed_context\<close> instantiates \<^locale>\<open>dg_context_activation\<close> at
+  \<open>grouted_context\<close> instantiates \<^locale>\<open>gdg_context_activation\<close> at
   \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close>, so \<open>S\<close>'s own \<open>'D\<close>/\<open>'G\<close> stay as
   independent as that locale already keeps them: no \<open>'D = 'G\<close> constraint is threaded
-  in by this locale's \<open>for\<close> clause. \<^locale>\<open>dg_context_activation\<close> itself carries
+  in by this locale's \<open>for\<close> clause. \<^locale>\<open>gdg_context_activation\<close> itself carries
   no routing-specific content: every fact it supplies (\<open>pp_eq_bound\<close>,
   \<open>pp_sides_bound\<close>, \<open>sides_fold_le_Gen\<close>, \<open>edge_bound_local\<close>/\<open>_global\<close>,
   \<open>dg_ctx_act_edge\<close>) is already generic in
   \<open>cmb\<close>/\<open>extra\<close>, so instantiating it at \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close>
   reuses those proofs unchanged; only the seed-specific reasoning below, which
-  \<open>dg_context_activation\<close> never has since seeding is \<open>routed_call_program\<close>'s own
+  \<open>gdg_context_activation\<close> never has since seeding is \<open>routed_call_program\<close>'s own
   addition, is carried out here.
 
-  Beyond \<^locale>\<open>dg_context_activation\<close>'s parameters: \<open>seed\<close> injects a routed
+  Beyond \<^locale>\<open>gdg_context_activation\<close>'s parameters: \<open>seed\<close> injects a routed
   \<open>(pp, 'c)\<close> pair into the global-key space; \<open>adm\<close> is the trace-semantic context relation
   keying the activation-trace collecting semantics; and two obligations about it cannot be
   discharged generically.  \<open>routing_adequate\<close> is adequacy: whenever \<open>adm\<close> admits a context
@@ -84,7 +84,7 @@ locale routed_context_base =
                        (dg_local (sigma (Inl (u, ctx)))))"
 
 text \<open>The routing obligations read the concrete call entry; everything else above is
-  shared by the generic and the untyped contract.\<close>
+  independent of the language.\<close>
 
 locale grouted_context =
   gdg_context_activation ev rv conv glob S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route
@@ -575,7 +575,7 @@ subsection \<open>Activation-collect soundness against the routed local unknown\
 text \<open>
   Every activation-collected store at any \<open>(v, ctx)\<close> pair is concretized by the routed
   local unknown's own \<open>\<gamma>\<^sub>M\<close> reading. The five obligations of
-  \<^locale>\<open>activation_coverage\<close> are this locale's own facts: the two entry bounds discharge
+  \<^locale>\<open>gactivation_coverage\<close> are this locale's own facts: the two entry bounds discharge
   \<open>INIT\<close> together, \<open>dg_ctx_act_edge\<close> is \<open>INTRA\<close>, the CALL and COMB theorems above are
   \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>routing_total\<close> read through the reader is \<open>TOTAL\<close>. An
   instance therefore gets its activation-indexed soundness theorem by interpretation alone.
@@ -644,7 +644,7 @@ qed
 text \<open>
   Every valid activation trace of a covered program carries some context under this instance's own
   \<open>adm\<close>: the same four EDGE/CALL/COMB/TOTAL facts that bound the buckets above also make
-  \<open>activation_coverage\<close> total here, so an example such as
+  \<open>gactivation_coverage\<close> total here, so an example such as
   \<open>Example_Interval_Source_Ctx\<close> can discharge the \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
   interpretation itself.
 \<close>
@@ -696,75 +696,6 @@ proof -
 qed
 
 end
-
-text \<open>The untyped instance.\<close>
-
-locale routed_context =
-  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route
-    "routed_call_program S global_of seed resolve is_bot"
-      "routed_entry_seed_programs seed"
-    bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M +
-  routed_context_base S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
-    seed resolve is_bot \<gamma>\<^sub>M adm
-  for S :: "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
-    and g buffer_key global_of
-    and route ("context\<^sup>\<sharp>")
-    and bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg seed resolve is_bot \<gamma>\<^sub>M
-    and adm :: "'c context_policy" +
-  assumes routing_adequate:
-    "\<And>u ctx dst pars args p cont s ctx'.
-       (u, ctx) \<in> vars
-       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (genv global_of sigma)
-       \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s
-             (call_enter \<G> (CallEdge dst pars args) s)
-       \<Longrightarrow> \<exists>pairs pub deps cont' entry.
-             enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
-               (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) global_of) sigma pairs pub
-           \<and> enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
-               (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) global_of) sigma pairs deps
-           \<and> (cont', entry) \<in> set pairs
-           \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv global_of sigma)
-           \<and> call_enter \<G> (CallEdge dst pars args) s
-               \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)
-           \<and> context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args) = ctx'
-           \<and> (FunctionEntry p, ctx') \<in> vars"
-    and routing_total:
-    "\<And>u ctx dst pars args p cont s.
-       (u, ctx) \<in> vars
-       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (genv global_of sigma)
-       \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) p) s
-                     (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {}"
-    and comb_fwd:
-    "\<And>cl c1 dst pars args p cont.
-       (cl, c1) \<in> vars \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> (cont, c1) \<in> vars"
-
-sublocale routed_context \<subseteq>
-  grouted_context aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0
-    sigma vars x0 sg seed resolve is_bot \<gamma>\<^sub>M adm
-  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
-    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
-    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
-    and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
-    and "ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G> = admits_call_context \<G>"
-    and "ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G> = activation_context_rel \<G>"
-    and "ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
-    and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
-    and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
-proof -
-  show "grouted_context aval ret_var (\<lambda>_ n. n) \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0
-      g\<^sub>0 sigma vars x0 sg seed resolve is_bot \<gamma>\<^sub>M adm"
-    by unfold_locales
-       (use routing_adequate routing_total comb_fwd in \<open>simp_all add: call_enter_def\<close>)
-qed (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def
-       valid_activation_trace_def admits_call_context_def activation_context_rel_def
-       call_context_total_on_def activation_collect_def node_collect_def)
 
 
 subsection \<open>The context relation a solved entry-state table induces\<close>
@@ -848,7 +779,7 @@ text \<open>
   domain provides for a concrete value and the CFG needed to look up a call
   site's own formal list. Neither definition mentions a domain-specific accessor
   beyond \<open>decode\<close> itself, nor a specification, so any domain reusing
-  \<^locale>\<open>routed_context\<close> instantiates this pair once instead of
+  \<^locale>\<open>grouted_context\<close> instantiates this pair once instead of
   hand-writing a per-formal projection.
 \<close>
 
@@ -939,8 +870,8 @@ subsection \<open>Formal-entry contexts at the routed spine's lifted carrier\<cl
 
 text \<open>
   \<^const>\<open>formals_context\<close> above operates on the unlifted
-  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>routed_context\<close> caller state
-  has. The routed executable spine (\<^locale>\<open>dg_context_activation\<close>, every current
+  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>grouted_context\<close> caller state
+  has. The routed executable spine (\<^locale>\<open>gdg_context_activation\<close>, every current
   instance) instead carries \<^typ>\<open>'a abs_state lifted\<close> throughout, to represent an
   activation the solver has not yet covered. \<open>formals_route_lifted\<close>/
   \<open>formals_route_lifted_gen\<close> are the same formal-entry projection at that carrier:
@@ -962,6 +893,5 @@ definition formals_route_lifted_gen ::
   "pp \<Rightarrow> 'a list \<Rightarrow> 'a::numeric_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
 where
   "formals_route_lifted_gen u ctx d ca = formals_route_lifted d ca"
-
 
 end

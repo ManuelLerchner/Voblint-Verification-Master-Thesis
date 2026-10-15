@@ -196,7 +196,7 @@ text \<open>
   off-key sides to be preserved, not removed.
 
   An instance that interprets the spine at \<open>spec_st\<close> hands this post-solution to
-  \<^locale>\<open>dg_context_activation\<close> directly.
+  \<^locale>\<open>gdg_context_activation\<close> directly.
 \<close>
 
 abbreviation intra_st :: "'c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> edge_action

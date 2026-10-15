@@ -10,9 +10,9 @@ text \<open>
   really is in the graph, and taking the source step re-locates the successor residual at
   that edge's target.  Every simulation step reads its edge off one of these facts.
 
-  \<open>intra_step\<close> collects the source steps that stay inside one activation, and
+  \<open>gintra_step\<close> collects the source steps that stay inside one activation, and
   \<open>intra_step_simulation\<close> assembles the facts below into the statement that any such step
-  is matched by a run of \<^const>\<open>cstep\<close>.
+  is matched by a run of \<^const>\<open>cfg_exec_sem.gcstep\<close>.
 
   Six proofs here induct on \<^const>\<open>control_at\<close> and repeat the same descent: project the
   sub-fragment's compile tuple, apply the induction hypothesis, lift the result back through
@@ -264,8 +264,8 @@ begin
 text \<open>A located \<^const>\<open>SKIP\<close> --- a completed sub-command --- is at its fragment's continuation
   already, except for a source \<^const>\<open>SKIP\<close>, which still has its own node and one
   \<^term>\<open>EA_Nop\<close> edge.  \<open>compile_control_at_SKIP_exit_path\<close> already establishes that route as a
-  store-preserving \<^const>\<open>intra_path\<close>; an intra path never touches the activation stack, so
-  \<open>intra_path_imp_cstep_star\<close> reads it back as a \<open>cstep\<close> run at whatever stack is current.\<close>
+  store-preserving intra path; an intra path never touches the activation stack, so
+  \<open>intra_path_imp_cstep_star\<close> reads it back as a \<open>gcstep\<close> run at whatever stack is current.\<close>
 lemma control_at_skip_to_exit:
   assumes "control_at \<Pi> p c0 k n r v" and "is_SKIP r"
       and "compile \<Pi> p c0 k n = (n', en, E, K)" and "E \<subseteq> intra g"
@@ -646,7 +646,7 @@ lemma intra_step_frame_eq:
 subsection \<open>Intra-step simulation\<close>
 
 text \<open>The base cases of that simulation, once: a located residual with an emitted action moves
-  along its own edge in one \<open>cstep\<close> and re-locates as a completed sub-command.  Which action it
+  along its own edge in one \<open>gcstep\<close> and re-locates as a completed sub-command.  Which action it
   is only decides the store, which the caller supplies as \<open>s' \<in> gedge_step a s\<close>.\<close>
 lemma control_at_base_step:
   assumes loc: "control_at \<Pi> p c0 k n r v"
@@ -868,16 +868,5 @@ next
 qed
 
 end
-
-text \<open>The untyped intra step is the instance at source names and untyped expressions.\<close>
-
-definition intra_step ::
-  "'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool" where
-  "intra_step = residual_sem.gintra_step aval (\<lambda>_ n. n)"
-
-global_interpretation untyped?: residual_sem aval \<G> ret_var "\<lambda>_ n. n"
-    rewrites "residual_sem.gintra_step aval (\<lambda>_ n. n) = intra_step"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp add: intra_step_def)
 
 end

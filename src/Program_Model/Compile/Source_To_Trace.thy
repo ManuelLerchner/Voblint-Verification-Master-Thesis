@@ -7,7 +7,7 @@ section \<open>A source run is an activation trace\<close>
 text \<open>
   What the session is for.  A graph configuration is tied to a valid activation trace: the
   activation currently running \<^emph>\<open>is\<close> the trace, and the runtime frame stack is exactly
-  its chain of callers.  Each \<^const>\<open>cstep\<close> rule lines up with one \<^const>\<open>valid_activation_trace\<close>
+  its chain of callers.  Each \<^const>\<open>cfg_exec_sem.gcstep\<close> rule lines up with one \<^const>\<open>trace_sem.gvalid_activation_trace\<close>
   constructor, so advancing the graph by an edge extends the trace by a step.
 
   Composed with the simulation, this turns a run of the source program into a trace, and
@@ -19,7 +19,7 @@ text \<open>
 subsection \<open>The representation invariant\<close>
 
 text \<open>\<open>stack_repr\<close> walks \<^const>\<open>caller_of\<close> in lockstep with the runtime 'v gframe list: each
-  \<^type>\<open>cframe\<close> \<open>(cont, dst, s)\<close> pins the caller activation \<open>caller\<close> --- its frozen store
+  \<^type>\<open>gcframe\<close> \<open>(cont, dst, s)\<close> pins the caller activation \<open>caller\<close> --- its frozen store
   \<open>sink_store caller = s\<close> --- and records the concrete \<^const>\<open>calls\<close> edge that spawned the child,
   whose callee \<^term>\<open>FunctionEntry p\<close> equals the child's (path-invariant) entry node.\<close>
 inductive stack_repr :: "('v, 'e) gcfg \<Rightarrow> 'v gcframe list \<Rightarrow> 'v gactivation_trace \<Rightarrow> bool" for g where
@@ -36,7 +36,7 @@ text \<open>Inversion by the shape of the runtime stack.  A frame's clause recur
 inductive_cases stack_repr_NilE [elim!]: "stack_repr g [] t"
 inductive_cases stack_repr_ConsE [elim]: "stack_repr g (cf # stk) t"
 
-text \<open>\<open>activation_trace_repr\<close> pins a valid activation trace to a located configuration: the trace's sink is the current
+text \<open>\<open>gactivation_trace_repr\<close> pins a valid activation trace to a located configuration: the trace's sink is the current
   node/store, and its caller chain is the runtime stack.\<close>
 locale bridge_sem = simrel_sem ev glob rv conv + collect_sem ev rv conv glob
   for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and glob :: "'v \<Rightarrow> bool" and rv :: 'v
@@ -64,11 +64,11 @@ lemma stack_repr_cong:
 
 subsection \<open>The return step\<close>
 
-text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops the top frame; \<open>stack_repr\<close>
+text \<open>The load-bearing case.  A \<^const>\<open>cfg_exec_sem.gcstep\<close> return pops the top frame; \<open>stack_repr\<close>
   identifies the caller \<open>c\<close> (\<^const>\<open>caller_of\<close> recovers it) and its spawning \<^const>\<open>calls\<close>
   edge, whose callee \<^term>\<open>FunctionEntry q\<close> matches the returning \<^term>\<open>FunctionResult q\<close> by
   \<open>valid_activation_trace_entry_result_eq\<close> --- so the trace composes by \<open>gvalid_activation_trace.ret\<close>, and the combined
-  store equals the \<^const>\<open>cstep\<close> store.\<close>
+  store equals the \<^const>\<open>cfg_exec_sem.gcstep\<close> store.\<close>
 context bridge_sem
 begin
 
@@ -114,7 +114,7 @@ end
 
 subsection \<open>The invariant is preserved by located CFG steps\<close>
 
-text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>valid_activation_trace\<close> constructor: intra \<open>\<mapsto>\<close>
+text \<open>Each \<^const>\<open>cfg_exec_sem.gcstep\<close> rule maps to one \<^const>\<open>trace_sem.gvalid_activation_trace\<close> constructor: intra \<open>\<mapsto>\<close>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>activation_trace_repr_Return\<close>).\<close>
 context bridge_sem
 begin
@@ -272,7 +272,7 @@ end
 
 subsection \<open>The source bridge\<close>
 
-text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star\<close> (the source-to-\<^const>\<open>cstep\<close>
+text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star\<close> (the source-to-\<^const>\<open>cfg_exec_sem.gcstep\<close>
   simulation) and the located invariant: every source run produces a matching valid
   activation trace at the simulated node.\<close>
 context bridge_sem
@@ -312,9 +312,9 @@ proof -
 qed
 
 text \<open>The plain projected source bridge: a reachable source store lies in the activation-trace
-  collecting \<^const>\<open>activation_collect\<close> at the simulated node, in a context the witness
+  collecting \<^const>\<open>ctx_sem.gactivation_collect\<close> at the simulated node, in a context the witness
   trace carries. A relational policy may leave a trace without any context, so the bridge
-  asks for one: \<open>has_ctx\<close> is what \<open>activation_coverage\<close>'s \<open>TOTAL\<close> buys downstream, and what a
+  asks for one: \<open>has_ctx\<close> is what \<open>gactivation_coverage\<close>'s \<open>TOTAL\<close> buys downstream, and what a
   functional policy has outright (\<open>source_store_in_activation_collect_of_fun\<close>).\<close>
 theorem source_store_in_activation_collect:
   assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
@@ -368,7 +368,7 @@ proof -
 qed
 
 text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
-  the activation collecting at the fixed seed context --- no \<^typ>\<open>activation_trace\<close> witness and no context
+  the activation collecting at the fixed seed context --- no \<^type>\<open>gactivation_trace\<close> witness and no context
   existential. This is the shape a user reads for main-level program points.\<close>
 theorem source_toplevel_in_activation_collect:
   assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
@@ -400,30 +400,16 @@ section \<open>The bridge is inhabited\<close>
 text \<open>\<open>source_run_has_activation_trace\<close> and the collecting corollaries all assume a well-formed compiler
   input, so the session ends by exhibiting one and running the bridge on it.  The zero-step
   run of the empty \<open>main\<close> is enough: it yields an actual node of an actual compiled graph and
-  an actual \<^const>\<open>valid_activation_trace\<close> witness, so none of the above is vacuously true.\<close>
-
-
-
-
-text \<open>The untyped bridge is the instance at source names and untyped expressions.\<close>
-
-definition activation_trace_repr ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> activation_trace \<Rightarrow> bool" where
-  "activation_trace_repr \<G> = bridge_sem.gactivation_trace_repr aval \<G> ret_var (\<lambda>_ n. n)"
-
-definition located_activation_trace :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> bool" where
-  "located_activation_trace \<G> = bridge_sem.glocated_activation_trace aval \<G> ret_var (\<lambda>_ n. n)"
-
-global_interpretation untyped?: bridge_sem aval \<G> ret_var "\<lambda>_ n. n"
-    rewrites "bridge_sem.gactivation_trace_repr aval \<G> ret_var (\<lambda>_ n. n) = activation_trace_repr \<G>"
-      and "bridge_sem.glocated_activation_trace aval \<G> ret_var (\<lambda>_ n. n) = located_activation_trace \<G>"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp_all add: activation_trace_repr_def located_activation_trace_def)
-
+  an actual \<^const>\<open>trace_sem.gvalid_activation_trace\<close> witness, so none of the above is vacuously true.\<close>
 
 theorem source_run_has_activation_trace_witness:
   "\<exists>v stk t. witness_pi, witness_cfg, prog_main_name \<turnstile> (SKIP (), s0, []) \<approx> (v, s0, stk)
-           \<and> activation_trace_repr (\<lambda>_. False) witness_cfg {s0} (v, s0, stk) t"
-  using source_run_has_activation_trace[OF witness_wf singletonI star.refl] by simp
+           \<and> bridge_sem.gactivation_trace_repr aval (\<lambda>_. False) ret_var (\<lambda>_ n. n)
+               witness_cfg {s0} (v, s0, stk) t"
+proof -
+  interpret B: bridge_sem aval "\<lambda>_. False" ret_var "\<lambda>_ n. n" .
+  show ?thesis
+    using B.source_run_has_activation_trace[OF witness_wf singletonI star.refl] by simp
+qed
 
 end

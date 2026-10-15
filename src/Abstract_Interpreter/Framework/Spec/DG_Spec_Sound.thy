@@ -5,7 +5,7 @@ begin
 section \<open>What a manager-native specification owes a concretization\<close>
 
 text \<open>
-  Soundness of a manager-native \<open>dg_spec\<close> relates its returned local value
+  Soundness of a manager-native \<open>gdg_spec\<close> relates its returned local value
   to an environment of analysis-visible globals. The manager maps each global
   name to a solver key; \<open>genv\<close> reads the global component at those keys.
 
@@ -175,9 +175,9 @@ text \<open>
   the solved system actually selects --- a property this locale alone cannot
   state, since it never mentions how a call compiles.
 
-  So \<open>analysis_contract\<close> is the entry-independent part and not a complete soundness
+  So \<open>ganalysis_contract\<close> is the entry-independent part and not a complete soundness
   statement: interpreting it alone leaves a call's entry entirely unconstrained.
-  \<open>routed_context\<close> (\<open>Routed_Context\<close>, downstream in this session) is
+  \<open>grouted_context\<close> (\<open>Routed_Context\<close>, downstream in this session) is
   the complete statement, extending this contract with that entry obligation for
   the routed equation shape, and is what an analysis should be asked to
   establish.
@@ -201,7 +201,7 @@ text \<open>
 
   Both levels earn their place, which is why there are two of them.
   \<open>combine_transfer_program\<close> is used at an arbitrary
-  \<^type>\<open>man_combine_transfer\<close> --- by the ownership-split observation
+  \<^type>\<open>gman_combine_transfer\<close> --- by the ownership-split observation
   equations in \<open>DG_Ownership_Split_Spec\<close>, and by the relational domain's --- while
   \<open>dg_spec_combine_program\<close> is used at a selected specification, by
   \<open>combine_sound_program\<close> below, which restates the return obligation at
@@ -351,39 +351,6 @@ locale ganalysis_contract = cfg_transfer_sem ev rv conv glob
         gcombine_collect (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key q r \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key q r \<tau>)"
 
-text \<open>The untyped contract: the same obligations over source names and untyped
-  expressions. Its theorems are the generic ones at the untyped language.\<close>
-
-locale analysis_contract =
-  fixes S :: "('x,'k,'v,'D::bounded_semilattice_sup_bot,
-                'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
-  assumes spec_wf: "dg_spec_wf S"
-    and gammaDG_mono:
-      "\<lbrakk>d \<le> d'; e \<le> e'\<rbrakk> \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d e \<subseteq> \<gamma>\<^sub>D\<^sub>G d' e'"
-    and step_sound:
-      "edge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
-         \<subseteq> \<gamma>\<^sub>D\<^sub>G (edge_out S a src key \<tau>) (genv key \<tau> \<squnion> edge_pub S a src key \<tau>)"
-    and combine_sound:
-      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G q (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G r (genv key \<tau>)\<rbrakk> \<Longrightarrow>
-        combine_collect \<G> (ci_dst ci) s t
-          \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key q r \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key q r \<tau>)"
-
-lemma analysis_contract_iff:
-  "analysis_contract S gm \<G> \<longleftrightarrow> ganalysis_contract aval ret_var (\<lambda>_ n. n) \<G> S gm"
-  by (simp add: analysis_contract_def ganalysis_contract_def edge_collect_def combine_collect_def)
-
-sublocale analysis_contract \<subseteq> ganalysis_contract aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G
-  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
-    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
-    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
-proof -
-  show "ganalysis_contract aval ret_var (\<lambda>_ n. n) \<G> S \<gamma>\<^sub>D\<^sub>G"
-    using analysis_contract_axioms by (simp add: analysis_contract_iff)
-qed (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def)
-
 text \<open>
   The obligation is stated at \<^emph>\<open>values\<close> rather than at two unknown reads,
   because the routed call boundary applies combine at the continuation the
@@ -455,26 +422,5 @@ next
           \<in> gm (combine_out S ci key dc de \<tau>) ((genv key \<tau> \<squnion> combine_pub S ci key dc de \<tau>) ())"
     by (rule subsetD[OF mono, rotated 2]) simp_all
 qed
-
-lemma analysis_contract_unitI:
-  fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
-                'G::bounded_semilattice_sup_bot) dg_spec"
-    and gm :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
-  assumes wf: "dg_spec_wf S"
-    and mono: "\<And>d d' g g'. \<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gm d g \<subseteq> gm d' g'"
-    and step: "\<And>a \<tau> src gk.
-      edge_collect a (gm (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
-        \<subseteq> gm (edge_out S a src (\<lambda>_. gk) \<tau>)
-            (dg_global (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
-    and comb: "\<And>s \<tau> dc gk t de ci.
-      \<lbrakk>s \<in> gm dc (dg_global (\<tau> (Inr gk))); t \<in> gm de (dg_global (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
-        combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (combine_out S ci (\<lambda>_. gk) dc de \<tau>)
-              (dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
-  shows "analysis_contract S (\<lambda>d e. gm d (e ())) \<G>"
-  unfolding analysis_contract_iff
-  by (rule untyped.ganalysis_contract_unitI [OF wf mono])
-     (use step comb in \<open>simp_all add: edge_collect_def combine_collect_def\<close>)
 
 end

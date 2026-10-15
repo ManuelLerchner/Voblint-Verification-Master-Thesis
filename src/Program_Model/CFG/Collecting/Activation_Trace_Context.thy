@@ -33,9 +33,9 @@ text \<open>\<open>activation_context_of\<close> fixes one context per trace by 
   executable routed solver's own \<open>route\<close> is typed to return a single context, not a set.
   The entry-state instance is not: a call may answer several overlapping alternatives, each
   covering the same concrete activation and routing it to its own context, so its concrete
-  semantics is stated directly over \<open>activation_context_rel\<close>/\<open>context_policy\<close> rather than over
+  semantics is stated directly over \<open>gactivation_context_rel\<close>/\<open>gcontext_policy\<close> rather than over
   \<open>activation_context_of\<close>. \<open>activation_context_of\<close> is therefore not the primary semantics; it is the deterministic
-  compatibility witness for the functional case, connected to \<open>activation_context_rel\<close> via
+  compatibility witness for the functional case, connected to \<open>gactivation_context_rel\<close> via
   \<open>context_policy_of_fun\<close> and \<open>activation_context_rel_of_fun_iff\<close>.\<close>
 
 
@@ -49,10 +49,10 @@ subsection \<open>Admissible callee contexts, as a set per call\<close>
 text \<open>
   An analysis's entry operation answers a \<^emph>\<open>list\<close> of alternatives and its context
   selector is applied to each, so one concrete call may be admitted in several contexts.
-  \<open>context_policy\<close> is the semantic shape of that whole-call protocol: given the call
+  \<open>gcontext_policy\<close> is the semantic shape of that whole-call protocol: given the call
   site, the caller's own context, the call's information, the caller store and the entered
   store, it returns the set of callee contexts that may describe this transition.  The set
-  may be empty or have several elements; \<open>call_context_total_on\<close> below requires it to be
+  may be empty or have several elements; \<open>gcall_context_total_on\<close> below requires it to be
   non-empty for every covered call.  Both stores are
   arguments so an instance can tie the chosen context to one alternative whose continuation
   half covers the caller and whose entry half covers the entered store, never mixing two.
@@ -65,7 +65,6 @@ text \<open>
 type_synonym ('v, 'e, 'c) gcontext_policy =
   "cfg_node \<Rightarrow> 'c \<Rightarrow> ('v, 'e) gcall_info \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> 'c set"
 
-type_synonym 'c context_policy = "(vname, exp, 'c) gcontext_policy"
 
 definition context_policy_of_fun ::
   "(cfg_node \<Rightarrow> 'c \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> 'c) \<Rightarrow> ('v, 'e, 'c) gcontext_policy"
@@ -88,7 +87,7 @@ begin
 text \<open>
   \<open>gadmits_call_context g adm u ctx p s es ctx'\<close>: from node \<open>u\<close> in context \<open>ctx\<close> with store
   \<open>s\<close>, some \<open>calls\<close> edge of \<open>g\<close> enters \<open>p\<close> with exactly the store \<open>es\<close>, and \<open>adm\<close> admits
-  \<open>ctx'\<close> for that edge.  It is \<^const>\<open>call_enter_store\<close> with the callee and the admitted
+  \<open>ctx'\<close> for that edge.  It is \<^const>\<open>trace_sem.gcall_enter_store\<close> with the callee and the admitted
   context made explicit.  Naming the edge by its effect rather than assuming it unique keeps
   the semantics honest on a graph with two call edges leaving one node, exactly as
   \<open>gvalid_activation_trace.ret\<close> does.
@@ -327,7 +326,7 @@ qed
 subsection \<open>Functional context entry invariant\<close>
 
 text \<open>Every ancestor of a valid activation trace is itself valid: \<open>caller_chain_closure\<close>'s own
-  four cases are exactly \<^const>\<open>valid_activation_trace\<close>'s four introduction rules, so the closure fact
+  four cases are exactly \<^const>\<open>trace_sem.gvalid_activation_trace\<close>'s four introduction rules, so the closure fact
   and validity coincide.\<close>
 
 lemma callers_valid:
@@ -466,36 +465,5 @@ lemma activation_collect_of_fun:
 
 
 end
-
-text \<open>The untyped context semantics is the instance at source names and untyped
-  expressions.\<close>
-
-definition admits_call_context ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> 'c context_policy
-     \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" where
-  "admits_call_context \<G> = ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G>"
-
-definition activation_context_rel ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'c context_policy \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> activation_trace \<Rightarrow> 'c \<Rightarrow> bool" where
-  "activation_context_rel \<G> = ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G>"
-
-definition call_context_total_on ::
-  "(cfg_node \<Rightarrow> 'c \<Rightarrow> store set) \<Rightarrow> 'c context_policy \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> bool" where
-  "call_context_total_on cover adm \<G> g = ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover adm g"
-
-definition activation_collect ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'c context_policy \<Rightarrow> 'c \<Rightarrow> cfg
-     \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
-    ("\<A>\<^bsub>_,_,_,_,_\<^esub>") where
-  "activation_collect \<G> = ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G>"
-
-global_interpretation untyped?: ctx_sem aval ret_var "\<lambda>_ n. n" \<G>
-    rewrites "ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G> = admits_call_context \<G>"
-      and "ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G> = activation_context_rel \<G>"
-      and "ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover adm g = call_context_total_on cover adm \<G> g"
-      and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp_all add: admits_call_context_def activation_context_rel_def call_context_total_on_def
-    activation_collect_def)
 
 end

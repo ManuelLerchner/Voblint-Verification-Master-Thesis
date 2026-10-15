@@ -57,8 +57,8 @@ text \<open>
 
 definition ownership_split_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_transfer
-   \<Rightarrow> ('x,'k,unit,'d,'d) man_transfer"
+   \<Rightarrow> (exp, 'x,'k,unit,'d::bounded_semilattice_sup_bot,'d) gman_transfer
+   \<Rightarrow> (exp, 'x,'k,unit,'d,'d) gman_transfer"
 where
   "ownership_split_transfer_gen cmb rg rl T m =
      do {
@@ -79,8 +79,8 @@ text \<open>
 
 definition ownership_split_combine_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_combine_transfer
-   \<Rightarrow> ('x,'k,unit,'d,'d) man_combine_transfer"
+   \<Rightarrow> (exp, 'x,'k,unit,'d::bounded_semilattice_sup_bot,'d) gman_combine_transfer
+   \<Rightarrow> (exp, 'x,'k,unit,'d,'d) gman_combine_transfer"
 where
   "ownership_split_combine_transfer_gen cmb rg rl T m de =
      do {
@@ -137,8 +137,8 @@ lemma ownership_split_enter_sides_le_iff:
 
 definition ownership_split_enter_transfer_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) man_enter_transfer
-   \<Rightarrow> ('x,'k,unit,'d,'d) man_enter_transfer"
+   \<Rightarrow> (exp, 'x,'k,unit,'d::bounded_semilattice_sup_bot,'d) gman_enter_transfer
+   \<Rightarrow> (exp, 'x,'k,unit,'d,'d) gman_enter_transfer"
 where
   "ownership_split_enter_transfer_gen cmb rg rl T m =
      do {
@@ -276,8 +276,8 @@ text \<open>
 
 definition ownership_split_lift_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) dg_spec
-   \<Rightarrow> ('x,'k,unit,'d,'d) dg_spec"
+   \<Rightarrow> (vname, exp, 'x,'k,unit,'d::bounded_semilattice_sup_bot,'d) gdg_spec
+   \<Rightarrow> (vname, exp, 'x,'k,unit,'d,'d) gdg_spec"
 where
   "ownership_split_lift_gen cmb rg rl S = local_dg_spec_template\<lparr>
      dgs_skip := ownership_split_transfer_gen cmb rg rl (skip\<^sup>\<sharp> S),

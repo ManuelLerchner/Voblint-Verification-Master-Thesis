@@ -5,8 +5,8 @@ begin
 section \<open>How a control-flow graph runs\<close>
 
 text \<open>
-  \<open>cstep\<close> executes an arbitrary CFG over a node, a store, and a stack of suspended
-  activations.  Each \<open>cframe\<close> records where to resume, which variable receives the
+  \<open>gcstep\<close> executes an arbitrary CFG over a node, a store, and a stack of suspended
+  activations.  Each \<open>gcframe\<close> records where to resume, which variable receives the
   result, and the caller's store.  There are three rules, one per graph phenomenon:
   follow an \<open>intra\<close> edge and apply its transfer; follow a \<open>calls\<close> edge, enter the callee
   and push a frame; at a \<^term>\<open>FunctionResult\<close>, pop the top frame and combine the
@@ -15,15 +15,13 @@ text \<open>
   A return follows no edge.  The stack supplies the continuation, so one
   \<^term>\<open>FunctionResult\<close> node serves every caller of a procedure and recursion needs no
   duplicated nodes.  Nothing here mentions the compiler: this is the execution of any
-  graph, just as \<open>valid_activation_trace\<close> is the activation-trace semantics of any graph.
+  graph, just as \<open>gvalid_activation_trace\<close> is the activation-trace semantics of any graph.
 \<close>
 type_synonym 'v gcframe = "cfg_node \<times> 'v option \<times> ('v \<Rightarrow> int)"
 type_synonym 'v gcconf = "cfg_node \<times> ('v \<Rightarrow> int) \<times> 'v gcframe list"
-type_synonym cframe = "vname gcframe"
-type_synonym cconf = "vname gcconf"
 
 text \<open>Graph execution is generic in the language like the edge and transfer semantics it
-  runs; the untyped \<open>cstep\<close> is its instance at source names and untyped expressions.\<close>
+  runs.\<close>
 
 locale cfg_exec_sem = cfg_transfer_sem ev rv conv glob
   for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and rv :: 'v
@@ -43,23 +41,10 @@ inductive gcstep :: "('v, 'e) gcfg \<Rightarrow> 'v gcconf \<Rightarrow> 'v gcco
 
 text \<open>One inversion rule, because the three clauses are told apart by the edge taken rather
   than by the shape of the configuration.  It stays plain \<open>[elim]\<close> so the classical reasoner
-  does not split every \<open>cstep\<close> hypothesis three ways before trying anything else.\<close>
+  does not split every \<open>gcstep\<close> hypothesis three ways before trying anything else.\<close>
 inductive_cases cstep_E [elim]: "gcstep g (u, s, stk) y"
 
 end
-
-definition cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50)
-  where "cstep \<G> = cfg_exec_sem.gcstep aval ret_var (\<lambda>_ n. n) \<G>"
-
-global_interpretation untyped?: cfg_exec_sem aval ret_var "\<lambda>_ n. n" \<G>
-    rewrites "cfg_exec_sem.gcstep aval ret_var (\<lambda>_ n. n) \<G> = cstep \<G>"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp add: cstep_def)
-
-abbreviation csteps :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50)
-  where "csteps \<G> g x y \<equiv> star (cstep \<G> g) x y"
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
@@ -86,7 +71,7 @@ lemma cstep_assume_not:
   shows "gcstep g (u, s, stk) (v, s, stk)"
   by (rule gcstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
-text \<open>An \<^const>\<open>intra_path\<close> is a \<open>cstep\<close> run at any stack: every \<^const>\<open>cfg_intra_step\<close> is a
+text \<open>An intra path is a \<open>gcstep\<close> run at any stack: every \<^const>\<open>cfg_edge_sem.gcfg_intra_step\<close> is a
   \<open>gcstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
   along local edges can therefore reason on \<open>(node, store)\<close> pairs and lift the result here.\<close>
 lemma intra_path_imp_cstep_star:

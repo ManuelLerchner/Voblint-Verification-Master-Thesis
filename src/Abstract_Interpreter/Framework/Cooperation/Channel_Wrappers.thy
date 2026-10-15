@@ -24,14 +24,14 @@ text \<open>The wrapper keeps an assignment's law: where it substitutes the lite
   answer holds at the store, so the literal evaluates to what \<open>e\<close> does.\<close>
 
 lemma assign_ask_sound:
-  assumes "sound_assign gm asn"
-  shows "sound_assign gm (assign_ask asn)"
-  unfolding sound_assign_def
+  assumes "mcp_sem.gsound_assign aval (\<lambda>_ n. n) gm asn"
+  shows "mcp_sem.gsound_assign aval (\<lambda>_ n. n) gm (assign_ask asn)"
+  unfolding mcp_sem.gsound_assign_def geval_channel_holds_aval
 proof (intro allI impI)
   fix ch x s y e
   assume s: "s \<in> gm x" and o: "eval_query.channel_holds ch s"
   have base: "s(y := \<lbrakk>e'\<rbrakk>\<^sub>e s) \<in> gm (asn ch y e' x)" for e'
-    using assms s o unfolding sound_assign_def by blast
+    using assms s o unfolding mcp_sem.gsound_assign_def geval_channel_holds_aval by simp
   show "s(y := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gm (assign_ask asn ch y e x)"
   proof (cases "answer_const (ch (EvalInt e))")
     case None
@@ -84,10 +84,10 @@ proof -
 qed
 
 theorem ask_assign_sound:
-  assumes sound: "sound_local_spec \<G> gm c"
-  shows "sound_local_spec \<G> gm (ask_assign c)"
+  assumes sound: "mcp_sem.gsound_local_spec aval ret_var (\<lambda>_ n. n) \<G> gm c"
+  shows "mcp_sem.gsound_local_spec aval ret_var (\<lambda>_ n. n) \<G> gm (ask_assign c)"
   unfolding ask_assign_def
-  by (rule sound_local_spec_update_assign[OF sound
-        assign_ask_sound[OF sound_local_spec_assignD[OF sound]]])
+  by (rule mcp_sem.sound_local_spec_update_assign[OF sound
+        assign_ask_sound[OF mcp_sem.sound_local_spec_assignD[OF sound]]])
 
 end

@@ -10,7 +10,7 @@ text \<open>
   analysis has to over-approximate, so it is the target of every soundness statement
   downstream.
 
-  \<^const>\<open>valid_activation_trace\<close> has four clauses --- root, intra
+  \<^const>\<open>trace_sem.gvalid_activation_trace\<close> has four clauses --- root, intra
   step, call, return --- each reading exactly the relation for its phenomenon: \<open>intra\<close> for
   local extension, \<open>calls\<close> for entering a callee and for recovering a continuation.  The
   return clause recovers the caller from the completed callee's own ancestry through
@@ -23,8 +23,8 @@ text \<open>
 
 subsection \<open>Forgetful projections\<close>
 
-text \<open>\<open>node_collect\<close> is the concrete collecting view: the sink stores of valid activation traces
-  reaching node \<open>v\<close>.  \<^const>\<open>activation_collect\<close> is the context-indexed collector, keeping
+text \<open>\<open>gnode_collect\<close> is the concrete collecting view: the sink stores of valid activation traces
+  reaching node \<open>v\<close>.  \<^const>\<open>ctx_sem.gactivation_collect\<close> is the context-indexed collector, keeping
   those whose trace may carry the queried context; the context type is not required
   finite, and a bucket is not claimed to be an exact activation identity.\<close>
 
@@ -58,7 +58,7 @@ lemma node_collect_E [elim]:
   using assms unfolding gnode_collect_def by blast
 
 text \<open>
-  \<open>node_collect\<close> is closed under intra flow: extending a witness trace by one
+  \<open>gnode_collect\<close> is closed under intra flow: extending a witness trace by one
   \<^const>\<open>intra\<close> edge is \<open>gvalid_activation_trace.intra\<close>.  Closure under \<^emph>\<open>call\<close> and \<^emph>\<open>return\<close>
   steps is deliberately absent here --- \<open>gvalid_activation_trace.ret\<close> requires the popped activation to be the
   witness trace's own caller, which a bare CFG step does not supply.
@@ -80,7 +80,7 @@ proof -
 qed
 
 text \<open>
-  The activation-preserving form.  Following an \<^const>\<open>intra_path\<close> only \<open>extend\<close>s the trace, so
+  The activation-preserving form.  Following an intra path only \<open>extend\<close>s the trace, so
   the resulting witness is the \<^emph>\<open>same\<close> activation: same caller and same entry node.  Callers
   that must know \<^emph>\<open>which\<close> activation reached a node need this: the collection at a node
   merges every activation that reaches it.
@@ -124,7 +124,7 @@ text \<open>
   single-step closure above harmless in practice.  The callee trace is built from
   the caller's by \<open>gvalid_activation_trace.call\<close>, so \<open>gvalid_activation_trace.ret\<close>'s side condition --- that the
   activation being popped is this trace's own caller --- holds by construction,
-  and running the callee to its \<^const>\<open>FunctionResult\<close> along \<^const>\<open>intra_path\<close>
+  and running the callee to its \<^const>\<open>FunctionResult\<close> along an intra path
   preserves it.  What a caller supplies is the call edge and an intra path through
   the callee; what it gets back is the continuation node with the combined ('v \<Rightarrow> int).
 \<close>
@@ -209,23 +209,10 @@ end
 
 end
 
-text \<open>The untyped node collection is the instance at source names and untyped expressions.\<close>
-
-definition node_collect ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set"
-    ("\<C>\<^bsub>_,_,_\<^esub>") where
-  "node_collect \<G> = collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G>"
-
-global_interpretation untyped?: collect_sem aval ret_var "\<lambda>_ n. n" \<G>
-    rewrites "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp add: node_collect_def)
-
-
 section \<open>The collecting semantics is inhabited\<close>
 
 text \<open>
-  \<^const>\<open>valid_activation_trace\<close> and \<^const>\<open>node_collect\<close> are defined over an arbitrary graph, and every
+  \<^const>\<open>trace_sem.gvalid_activation_trace\<close> and \<^const>\<open>collect_sem.gnode_collect\<close> are defined over an arbitrary graph, and every
   soundness statement downstream is an over-approximation claim about them; if they were
   empty, all of it would hold vacuously.  A two-node graph with one assignment edge settles
   that inside this session, without borrowing a graph from the compiler: the initial store is
@@ -245,29 +232,36 @@ lemma activation_trace_witness_edge [simp]:
   "(Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1) \<in> intra activation_trace_witness_cfg"
   by (simp add: activation_trace_witness_cfg_def)
 
+text \<open>The witness runs at source names and the evaluator \<^const>\<open>aval\<close>.\<close>
+
 lemma activation_trace_witness_root:
-  "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
+  "Root [(Statement 0, s)]
+     \<in> trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> activation_trace_witness_cfg {s}"
 proof -
-  have "Root [(cfg_entry activation_trace_witness_cfg, s)] \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
-    by (rule gvalid_activation_trace.root) simp
+  interpret C: collect_sem aval ret_var "\<lambda>_ n. n" \<G> .
+  have "Root [(cfg_entry activation_trace_witness_cfg, s)]
+          \<in> C.gvalid_activation_trace activation_trace_witness_cfg {s}"
+    by (rule C.gvalid_activation_trace.root) simp
   then show ?thesis by simp
 qed
 
 theorem node_collect_witness:
-  "s \<in> \<C>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub> (Statement 0)"
-  "s(STR ''x'' := 1) \<in> \<C>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub> (Statement 1)"
+  "s \<in> collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> activation_trace_witness_cfg {s} (Statement 0)"
+  "s(STR ''x'' := 1)
+     \<in> collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> activation_trace_witness_cfg {s} (Statement 1)"
 proof -
-  have root: "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
+  interpret C: collect_sem aval ret_var "\<lambda>_ n. n" \<G> .
+  have root: "Root [(Statement 0, s)] \<in> C.gvalid_activation_trace activation_trace_witness_cfg {s}"
     by (rule activation_trace_witness_root)
-  show "s \<in> \<C>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub> (Statement 0)"
-    using node_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
+  show "s \<in> C.gnode_collect activation_trace_witness_cfg {s} (Statement 0)"
+    using C.node_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
   have "extend (Root [(Statement 0, s)]) (Statement 1, s(STR ''x'' := 1))
-          \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
-    by (rule gvalid_activation_trace.intra[OF root, where a = "EA_Assign (STR ''x'') (N 1)"
+          \<in> C.gvalid_activation_trace activation_trace_witness_cfg {s}"
+    by (rule C.gvalid_activation_trace.intra[OF root, where a = "EA_Assign (STR ''x'') (N 1)"
                                         and v = "Statement 1"])
        (simp_all add: activation_trace_witness_cfg_def sink_node_def sink_store_def)
-  from node_collect_I[OF this]
-  show "s(STR ''x'' := 1) \<in> \<C>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub> (Statement 1)"
+  from C.node_collect_I[OF this]
+  show "s(STR ''x'' := 1) \<in> C.gnode_collect activation_trace_witness_cfg {s} (Statement 1)"
     by (simp add: sink_node_def sink_store_def)
 qed
 

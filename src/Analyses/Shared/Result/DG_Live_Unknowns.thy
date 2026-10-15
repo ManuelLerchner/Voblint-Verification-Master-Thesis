@@ -338,7 +338,7 @@ interpretation dg_base: ganalysis_contract ev rv "pconv p" "pglob p" "analysis_s
   by (rule gplace_contract)
 
 text \<open>
-  Establishes \<open>routed_analysis\<close> over the live keys, for any relation admitting call contexts.
+  Establishes \<open>grouted_analysis\<close> over the live keys, for any relation admitting call contexts.
   Beyond termination and well-formedness a policy owes only its own two facts: an
   admitted context is the one this pipeline routes the entered state to, and every
   concrete call at a live key is admitted somewhere. \<open>glive_unknowns_cover\<close> supplies
@@ -771,58 +771,6 @@ theorem gentry_state_node_collect_eq_Union_of_terminates:
 end
 
 end
-
-end
-
-subsection \<open>The untyped instance\<close>
-
-text \<open>At source names the procedure table is the program's own, so the generic endpoints
-  above hold with no premise beyond the ones they state.\<close>
-
-context dg_analysis
-begin
-
-abbreviation live_unknowns :: "imp_prog \<Rightarrow> (pp \<times> 'c) set" where
-  "live_unknowns p \<equiv> glive_unknowns TYPE(unit) prog_table prog_procs p"
-
-lemmas live_unknowns_cover = glive_unknowns_cover[OF prog_cfg_def]
-lemmas root_live_key = groot_live_key[OF prog_cfg_def]
-lemmas activation_collect_sound_live_unknowns =
-  gactivation_collect_sound_live_unknowns[OF prog_cfg_def]
-lemmas fun_route_activation_collect_sound_of_terminates =
-  gfun_route_activation_collect_sound_of_terminates[OF prog_cfg_def]
-lemmas fun_route_state_at_sound = gfun_route_state_at_sound[OF prog_cfg_def]
-lemmas fun_route_result_node_sound = gfun_route_result_node_sound[OF prog_cfg_def]
-lemmas fun_route_report_proved_sound = gfun_route_report_proved_sound[OF prog_cfg_def]
-lemmas fun_route_report_refuted_sound = gfun_route_report_refuted_sound[OF prog_cfg_def]
-lemmas entry_state_activation_collect_sound_of_terminates =
-  gentry_state_activation_collect_sound_of_terminates[OF prog_cfg_def]
-lemmas entry_state_lookup_sound_of_terminates =
-  gentry_state_lookup_sound_of_terminates[OF prog_cfg_def]
-lemmas entry_state_has_context_of_terminates =
-  gentry_state_has_context_of_terminates[OF prog_cfg_def]
-lemmas entry_state_node_collect_eq_Union_of_terminates =
-  gentry_state_node_collect_eq_Union_of_terminates[OF prog_cfg_def]
-
-theorem fun_route_source_sound:
-  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and s0 s :: store
-  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
-    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-    and s0: "s0 \<in> cinit_stores (declared_global p)"
-    and run: "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, [])
-                \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-  shows "\<exists>v stk ctx. prog_table p, prog_cfg p, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> s \<in> \<gamma>\<^sub>V (state_at (declared_global p) p ctx v)"
-proof -
-  have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
-    by (rule prog_cfg_def)
-  have "\<exists>v stk. prog_table p, prog_cfg p, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-          \<and> s \<in> (\<Union>ctx. \<gamma>\<^sub>V (state_at (declared_global p) p ctx v))"
-    unfolding cfg_eq
-    by (rule source_sound_from_node_collect_cap[OF wf s0 run])
-       (use fun_route_result_node_sound[OF route_const wf solves] in \<open>simp add: cfg_eq\<close>)
-  then show ?thesis by blast
-qed
 
 end
 

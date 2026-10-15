@@ -76,7 +76,7 @@ definition exec_dg_spec ::
    \<Rightarrow> ('a::bounded_semilattice_sup_bot default_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
    \<Rightarrow> (call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
-   \<Rightarrow> ('x,'k,unit,'a default_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
+   \<Rightarrow> (vname, exp, 'x,'k,unit,'a default_st lifted,'g::bounded_semilattice_sup_bot) gdg_spec"
 where
   "exec_dg_spec \<G> empty_pred tf_st enter_st
      = dg_spec_of (exec_local_spec \<G> empty_pred tf_st enter_st)"

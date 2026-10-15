@@ -14,10 +14,10 @@ text \<open>
   discharge that report's own soundness from the activation-indexed collecting
   semantics
   (\<^theory>\<open>Voblint_Framework.Activation_Backbone\<close>) already available once
-  EDGE/CALL/COMB are in hand from \<^locale>\<open>routed_context\<close>.
-  \<open>dg_analysis_adapter\<close> derives that whole triple once, generic in a domain
+  EDGE/CALL/COMB are in hand from \<^locale>\<open>grouted_context\<close>.
+  \<open>gdg_analysis_adapter\<close> derives that whole triple once, generic in a domain
   instance (a \<open>classify\<close> function with its own soundness obligations), a
-  context instance (an interpretation of \<^locale>\<open>routed_context\<close>),
+  context instance (an interpretation of \<^locale>\<open>grouted_context\<close>),
   and the published value (a publication map \<open>rd\<close> from a local and a global
   value of the solver's carrier into a value type \<open>'v\<close> with its own
   concretization \<open>\<gamma>\<^sub>V\<close> and exact emptiness test \<open>empty\<^sub>V\<close>; a
@@ -32,7 +32,7 @@ text \<open>
   \<open>\<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')\<close>. The global value the table
   pairs with every local one is the solved global unknown at
   \<open>Inr buffer_key\<close>, the pairing the coverage assumption \<open>sg_cov\<close> of
-  \<^locale>\<open>dg_context_activation\<close> concretizes. A concretization that reads both
+  \<^locale>\<open>gdg_context_activation\<close> concretizes. A concretization that reads both
   components, an ownership split say, therefore interprets this locale
   directly. An analysis whose concretization ignores the global half
   instantiates \<open>rd\<close> at a function constant in its second argument.
@@ -167,7 +167,7 @@ text \<open>
   case-split on coverage. A concrete instance whose own public result reads
   through this same \<open>analyse_result\<close> (up to a proved value equality) gets its
   own node-soundness bridge from this lemma directly, instead of re-deriving
-  it from \<open>routed_context\<close>'s primitives by hand.
+  it from \<open>grouted_context\<close>'s primitives by hand.
 \<close>
 
 lemma analyse_result_node_sound:
@@ -231,7 +231,7 @@ text \<open>
   own soundness already puts the collect inside an empty concretization there.
   So every bucket is empty and so is their union.
 
-  \<^term>\<open>node_collect\<close> decomposes into those buckets only for a context relation
+  \<^const>\<open>collect_sem.gnode_collect\<close> decomposes into those buckets only for a context relation
   that comes from a function, which this locale does not assume of \<^term>\<open>adm\<close>;
   the decomposition is therefore a hypothesis, discharged by
   \<open>node_collect_eq_Union_activation_of_fun\<close> at every instance whose relation has
@@ -351,60 +351,5 @@ proof -
 qed
 
 end
-
-text \<open>The untyped adapter: the same obligations over source names and untyped expressions.\<close>
-
-locale dg_analysis_adapter =
-  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
-    seed
-    "static_resolve g" is_bot \<gamma>\<^sub>M adm
-  for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
-    and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
-    and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
-    and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
-    and vars :: "(pp \<times> 'c) set"
-    and x0 :: "pp \<times> 'c"
-    and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
-    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and is_bot :: "'D \<Rightarrow> bool"
-    and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
-    and adm :: "'c context_policy" +
-  fixes rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
-    and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
-    and empty\<^sub>V :: "'v \<Rightarrow> bool"
-    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
-  assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')"
-    and empty_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> \<gamma>\<^sub>V v = {}"
-    and classify_proved:
-    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-    and classify_refuted:
-    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-    and vars_finite: "finite vars"
-
-sublocale dg_analysis_adapter \<subseteq>
-  gdg_analysis_adapter aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0
-    g\<^sub>0 sigma vars x0 sg seed is_bot \<gamma>\<^sub>M adm rd \<gamma>\<^sub>V empty\<^sub>V classify
-  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
-    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
-    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
-    and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
-    and "ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G> = admits_call_context \<G>"
-    and "ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G> = activation_context_rel \<G>"
-    and "ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
-    and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
-    and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
-proof -
-  show "gdg_analysis_adapter aval ret_var (\<lambda>_ n. n) \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0
-      d\<^sub>0 g\<^sub>0 sigma vars x0 sg seed is_bot \<gamma>\<^sub>M adm rd \<gamma>\<^sub>V empty\<^sub>V classify"
-    by unfold_locales
-       (use gammaDG_rd empty_sound classify_proved classify_refuted vars_finite in simp_all)
-qed (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def
-       valid_activation_trace_def admits_call_context_def activation_context_rel_def
-       call_context_total_on_def activation_collect_def node_collect_def)
 
 end

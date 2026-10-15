@@ -8,7 +8,7 @@ section \<open>What a solved routed system says about one program point\<close>
 text \<open>
   A post-solution bounds a right-hand side by the value at its own unknown and
   every published side effect by the value at its target key.
-  \<open>dg_context_activation\<close> fixes such a solution over the routed generator, a
+  \<open>gdg_context_activation\<close> fixes such a solution over the routed generator, a
   set \<open>vars\<close> of keys whose own equations it bounds, and a reader \<open>sg\<close> that
   answers the empty set off \<open>vars\<close>. The set may contain every key the solver
   visited or any subset. These facts derive the EDGE obligation the activation
@@ -57,8 +57,8 @@ locale dg_context_base =
         \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
 
-text \<open>The obligations above do not mention the concrete semantics, so the generic and
-  the untyped contract share them.\<close>
+text \<open>The obligations above do not mention the concrete semantics, so every language
+  shares them.\<close>
 
 locale gdg_context_activation =
   ganalysis_contract ev rv conv glob S \<gamma>\<^sub>D\<^sub>G +
@@ -245,26 +245,5 @@ next
 qed
 
 end
-
-text \<open>The untyped instance: the contract over source names, and the same base.\<close>
-
-locale dg_context_activation =
-  analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G> +
-  dg_context_base S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0
-    sigma vars x0 sg \<gamma>\<^sub>M
-  for S :: "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
-    and g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
-
-sublocale dg_context_activation \<subseteq>
-  gdg_context_activation aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb
-    extra bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
-  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
-    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
-    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
-  by unfold_locales (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def)
 
 end

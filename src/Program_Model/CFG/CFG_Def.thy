@@ -8,7 +8,7 @@ text \<open>
   A \<open>cfg\<close> is an interprocedural control-flow graph over two disjoint transition
   relations, one per phenomenon:
     \<^item> \<open>intra\<close> --- ordinary context-preserving flow, labelled by an \<open>edge_action\<close> that is
-      a total within-context store transformer.  Executed by \<open>edge_step\<close>.
+      a total within-context store transformer.  Executed by \<open>gedge_step\<close>.
     \<^item> \<open>calls\<close> --- context-crossing calls, labelled by a \<open>call_action\<close> and carrying the
       call-site, the callee entry node, and the continuation node.
 
@@ -16,7 +16,7 @@ text \<open>
   nodes, not keyed side slots.  There is no global exit node and no call/return matching
   side relation: a call edge already names its callee entry and its continuation, and a
   return is an ordinary intra edge into \<open>FunctionResult p\<close>.  Calls carry incompatible
-  typing from intra flow, so \<open>edge_step\<close> has no call case and \<open>intra\<close> can never carry a
+  typing from intra flow, so \<open>gedge_step\<close> has no call case and \<open>intra\<close> can never carry a
   call --- by typing, not by a side condition.
 
   Translation from VIMP to CFG and the collecting/equation layers ride on this structure.
@@ -58,7 +58,7 @@ text \<open>
   destination variable, the callee's formal parameter names, and the actual arguments; the
   callee identity and the continuation are the two target nodes of the \<open>calls\<close> tuple, not
   payload of the action.  Carrying \<open>formals\<close> on the edge lets the caller-side entry transfer
-  \<open>call_enter\<close> bind actuals to formals without consulting a procedure table, keeping the
+  \<open>gcall_enter\<close> bind actuals to formals without consulting a procedure table, keeping the
   trace kernel independent of the source declaration environment.
 \<close>
 
@@ -141,7 +141,7 @@ type_synonym cfg = "(vname, exp) gcfg"
 subsection \<open>Intra edge execution\<close>
 
 text \<open>
-  \<open>special_step\<close> is \<open>special_call\<close>'s own step function, factored out of \<open>edge_step\<close>
+  \<open>gspecial_step\<close> is \<open>special_call\<close>'s own step function, factored out of \<open>gedge_step\<close>
   so that extending the special-call vocabulary only touches this function (via
   \<open>special_result\<close>, shared with the source small-step semantics) and
   \<open>special_step_nonempty\<close> below, not every generic lemma stated over \<open>edge_action\<close>.
@@ -166,7 +166,7 @@ fun gspecial_step :: "'e gspecial_call \<Rightarrow> 'v \<Rightarrow> ('v \<Righ
 lemma special_step_nonempty [simp]: "gspecial_step sc x s \<noteq> {}"
   by (cases sc) auto
 
-text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
+text \<open>\<open>gedge_step\<close> is the single primitive semantics of an intra action.  It is defined for
   every constructor and has no call case; guards are the only source of an empty result.\<close>
 
 fun gedge_step :: "('v, 'e) gedge_action \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) set" where
@@ -180,9 +180,9 @@ fun gedge_step :: "('v, 'e) gedge_action \<Rightarrow> ('v \<Rightarrow> int) \<
      {s(rv := (case e of None \<Rightarrow> s rv | Some a \<Rightarrow> ev a s))}"
 | "gedge_step (EA_Check l c) s = {s}"
 
-text \<open>One intra transition on a \<open>(node, store)\<close> pair.  \<open>intra_path\<close> is its \<^const>\<open>star\<close>, so
+text \<open>One intra transition on a \<open>(node, store)\<close> pair.  An intra path is its \<^const>\<open>star\<close>, so
   reflexivity, transitivity and the induction rule come from \<^theory>\<open>HOL-IMP.Star\<close> rather than
-  from a bespoke closure.  The name avoids \<open>intra_step\<close>, which is the \<^emph>\<open>source\<close>-level
+  from a bespoke closure.  The name avoids \<open>gintra_step\<close>, which is the \<^emph>\<open>source\<close>-level
   \<^const>\<open>pstep\<close> fragment.\<close>
 
 definition gcfg_intra_step ::
@@ -209,30 +209,13 @@ lemma intra_path_nop:
 
 end
 
-definition special_step :: "special_call \<Rightarrow> vname \<Rightarrow> store \<Rightarrow> store set" where
-  "special_step = cfg_edge_sem.gspecial_step aval (\<lambda>_ n. n)"
-
-definition edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
-  "edge_step = cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n)"
-
-definition cfg_intra_step :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
-  "cfg_intra_step = cfg_edge_sem.gcfg_intra_step aval ret_var (\<lambda>_ n. n)"
-
-global_interpretation untyped?: cfg_edge_sem aval ret_var "\<lambda>_ n. n"
-  rewrites "cfg_edge_sem.gspecial_step aval (\<lambda>_ n. n) = special_step"
-    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
-    and "cfg_edge_sem.gcfg_intra_step aval ret_var (\<lambda>_ n. n) = cfg_intra_step"
-  by (simp_all add: special_step_def edge_step_def cfg_intra_step_def)
-
 text \<open>
-  \<open>intra_path\<close> is the reflexive-transitive closure of \<^const>\<open>edge_step\<close> along \<^const>\<open>intra\<close>
+  An intra path, \<open>star (gcfg_intra_step g)\<close>, is the reflexive-transitive closure of
+  \<^const>\<open>cfg_edge_sem.gedge_step\<close> along \<^const>\<open>intra\<close>
   edges, on \<open>(node, store)\<close> pairs.  It deliberately excludes \<^const>\<open>calls\<close>: an intra path
   never pushes or pops an activation, so it lifts to the collecting semantics without any
   stack-representation side condition, and to a stack-preserving CFG run at any stack.
 \<close>
-
-abbreviation intra_path :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
-  "intra_path g \<equiv> star (cfg_intra_step g)"
 
 subsection \<open>Node set (derived, not stored)\<close>
 

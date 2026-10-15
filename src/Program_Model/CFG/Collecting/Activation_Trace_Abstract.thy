@@ -21,7 +21,7 @@ text \<open>
   transition from the caller's own carried context, so a return may only compose a callee
   whose context came from the caller it is resuming --- not any context that happens to
   cover that callee's entry.  This correlation is not an extra parameter to assume:
-  \<open>activation_context_rel_caller_entry\<close> makes it a theorem about \<^const>\<open>valid_activation_trace\<close>.
+  \<open>activation_context_rel_caller_entry\<close> makes it a theorem about \<^const>\<open>trace_sem.gvalid_activation_trace\<close>.
 
   \<open>TOTAL\<close> is what makes the buckets meaningful rather than merely safe.  A resumed caller
   may carry a context under which its callee was never assigned one; the callee's exit
@@ -210,7 +210,7 @@ qed
 
 subsection \<open>The generic soundness theorem\<close>
 
-text \<open>The bound holds along the whole caller chain, by \<open>valid_activation_trace\<close> rule induction
+text \<open>The bound holds along the whole caller chain, by \<open>gvalid_activation_trace\<close> rule induction
   feeding the four closure lemmas.  The chain, not a per-node statement, is what the
   \<open>RETURN\<close> case needs: it recovers its caller structurally, and the caller lies in the
   callee's chain.\<close>
@@ -246,7 +246,7 @@ next
 qed
 
 text \<open>Every valid activation trace carries a context, and its sink lies in every slot it carries:
-  \<open>valid_activation_trace\<close> is soundly over-approximated by \<open>trace_covered\<close>.\<close>
+  \<open>gvalid_activation_trace\<close> is soundly over-approximated by \<open>trace_covered\<close>.\<close>
 theorem valid_activation_trace_covered: "t \<in> \<T> \<Longrightarrow> trace_covered t"
 proof -
   assume "t \<in> \<T>"
@@ -297,52 +297,6 @@ qed
 
 end
 
-
-text \<open>The untyped interface: the same obligations over source names and untyped expressions.
-  Every analysis interprets this one; its theorems are the generic ones above at the untyped
-  language.\<close>
-locale activation_coverage =
-  fixes g :: cfg and S :: "store set"
-    and cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
-    and adm :: "'c context_policy"
-    and c\<^sub>0 :: 'c
-    and \<G> :: "vname \<Rightarrow> bool"
-  assumes INIT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) c\<^sub>0"
-    and INTRA[intro]: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> cover v c"
-    and CALL[intro]: "\<And>u dst pars args p cont c c' s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> cover u c
-        \<Longrightarrow> c' \<in> adm u c (call_info_of (CallEdge dst pars args) p) s
-              (call_enter \<G> (CallEdge dst pars args) s)
-        \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s \<in> cover (FunctionEntry p) c'"
-    and RETURN[intro]: "\<And>u dst pars args p cont c c' p' s t es.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> cover u c
-        \<Longrightarrow> admits_call_context \<G> g adm u c p' s es c'
-        \<Longrightarrow> t \<in> cover (FunctionResult p) c'
-        \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c"
-    and TOTAL: "call_context_total_on cover adm \<G> g"
-
-sublocale activation_coverage \<subseteq> gactivation_coverage aval ret_var "\<lambda>_ n. n" \<G> g S cover adm c\<^sub>0
-  rewrites "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
-    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
-    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
-    and "ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G> = admits_call_context \<G>"
-    and "ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G> = activation_context_rel \<G>"
-    and "ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
-    and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
-    and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
-proof -
-  show "gactivation_coverage aval ret_var (\<lambda>_ n. n) \<G> g S cover adm c\<^sub>0"
-    by unfold_locales
-       (use INIT INTRA CALL RETURN TOTAL in \<open>auto simp: edge_step_def call_enter_def
-         combine_collect_def admits_call_context_def call_context_total_on_def\<close>)
-qed (simp_all add: edge_step_def call_enter_def combine_collect_def valid_activation_trace_def
-       admits_call_context_def activation_context_rel_def call_context_total_on_def
-       activation_collect_def node_collect_def)
-
 subsection \<open>Non-vacuity\<close>
 
 text \<open>The interface is satisfiable for every graph, seed set, and initial context: choosing
@@ -353,58 +307,8 @@ text \<open>The interface is satisfiable for every graph, seed set, and initial 
   wide \<open>cover\<close> is chosen --- \<open>TOTAL\<close> genuinely constrains the context policy, not merely
   the cover.\<close>
 
-lemma activation_coverage_exists:
-  "activation_coverage g S (\<lambda>_ _. UNIV) (context_policy_of_fun (\<lambda>_ _ _. ())) () \<G>"
+lemma (in collect_sem) activation_coverage_exists:
+  "gactivation_coverage ev rv conv glob g S (\<lambda>_ _. UNIV) (context_policy_of_fun (\<lambda>_ _ _. ())) ()"
   by unfold_locales auto
-
-subsection \<open>Monovariant semantic post-fixpoint\<close>
-
-text \<open>
-  Set-valued entry, edge, call, and combine closure of a candidate node map \<open>B\<close> bounds the
-  stack-faithful \<^const>\<open>node_collect\<close> at every node.  The proof interprets
-  \<^locale>\<open>activation_coverage\<close> at \<open>cover v _ = B v\<close> with the trivial one-point context, whose policy
-  is total outright; its combine obligation follows one caller and one callee exit.
-\<close>
-lemma node_collect_semantic_postfix:
-  fixes g :: cfg and B :: "cfg_node \<Rightarrow> store set"
-    and S0 :: "store set" and v :: cfg_node and \<G> :: "vname \<Rightarrow> bool"
-  assumes entry: "S0 \<subseteq> B (cfg_entry g)"
-    and edge: "\<And>u a w s s'. (u, a, w) \<in> intra g
-        \<Longrightarrow> s \<in> B u \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> B w"
-    and call: "\<And>u dst pars args p cont s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> B u
-        \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s \<in> B (FunctionEntry p)"
-    and combine: "\<And>cl dst pars args p cont s t.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> B cl \<Longrightarrow> t \<in> B (FunctionResult p)
-        \<Longrightarrow> combine_collect \<G> dst s t \<in> B cont"
-  shows "\<C>\<^bsub>\<G>,g,S0\<^esub> v \<subseteq> B v"
-proof -
-  interpret G: activation_coverage g S0 "\<lambda>v _. B v" "context_policy_of_fun (\<lambda>_ _ _. ())" "()" \<G>
-  proof (standard, goal_cases INIT INTRA CALL RETURN TOTAL)
-    case (INIT s) then show ?case using entry by auto
-  next
-    case (INTRA u a w c s s') then show ?case using edge by simp
-  next
-    case (CALL u dst pars args p cont c c' s) then show ?case using call by simp
-  next
-    case (RETURN cl dst pars args p cont c1 c' p' s t es) then show ?case using combine by simp
-  next
-    case TOTAL then show ?case by simp
-  qed
-  show ?thesis
-  proof (rule subsetI)
-    fix x assume "x \<in> \<C>\<^bsub>\<G>,g,S0\<^esub> v"
-    then obtain u where u: "u \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>" "sink_node u = v" "sink_store u = x"
-      by (rule node_collect_E)
-    from G.valid_activation_trace_has_context[OF u(1)] obtain c
-      where c: "activation_context_rel \<G> (context_policy_of_fun (\<lambda>_ _ _. ())) () g u c" .
-    have "sink_store u \<in> B (sink_node u)" using G.valid_activation_trace_covered_at[OF u(1) c]
-      by simp
-    then show "x \<in> B v" using u(2,3) by simp
-  qed
-qed
-
 
 end

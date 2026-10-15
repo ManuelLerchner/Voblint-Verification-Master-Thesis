@@ -5,11 +5,11 @@ begin
 section \<open>What each kind of edge does to the store\<close>
 
 text \<open>
-  Three transfers, one per thing an edge can do.  \<open>edge_collect\<close> runs an ordinary edge on a
-  whole set of stores at once, by lifting the single-store \<^const>\<open>edge_step\<close> pointwise ---
+  Three transfers, one per thing an edge can do.  \<open>gedge_collect\<close> runs an ordinary edge on a
+  whole set of stores at once, by lifting the single-store \<^const>\<open>cfg_edge_sem.gedge_step\<close> pointwise ---
   derived from the concrete step rather than restated, so the two cannot drift apart.
-  \<open>call_enter\<close> builds the callee's opening store: evaluate the actuals in the caller,
-  reset the locals, bind the formals.  \<open>combine_collect\<close> does the reverse at a return:
+  \<open>gcall_enter\<close> builds the callee's opening store: evaluate the actuals in the caller,
+  reset the locals, bind the formals.  \<open>gcombine_collect\<close> does the reverse at a return:
   keep the callee's globals, restore the caller's locals, and write the callee's return
   value into the destination.
 
@@ -114,29 +114,9 @@ lemma combine_collect_frame:
 
 end
 
-text \<open>The write set runs in generated code at every language, not only the untyped one.\<close>
+text \<open>The write set runs in generated code at every language.\<close>
 
 lemmas [code] = cfg_transfer_sem.gedge_writes.simps
-
-definition edge_collect :: "edge_action \<Rightarrow> store set \<Rightarrow> store set" where
-  "edge_collect = cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n)"
-
-definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
-  "combine_collect \<G> = cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G>"
-
-definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
-  "call_enter \<G> = cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G>"
-
-definition edge_writes :: "edge_action \<Rightarrow> vname list" where
-  "edge_writes = cfg_transfer_sem.gedge_writes ret_var"
-
-global_interpretation untyped?: cfg_transfer_sem aval ret_var "\<lambda>_ n. n" \<G>
-  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
-    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
-    and "cfg_transfer_sem.gedge_writes ret_var = edge_writes"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_writes_def)
 
 subsection \<open>What an edge reads\<close>
 

@@ -5,7 +5,7 @@ begin
 section \<open>Activation traces\<close>
 
 text \<open>
-  An \<open>activation_trace\<close> represents one procedure activation of a sequential run and its
+  An \<open>gactivation_trace\<close> represents one procedure activation of a sequential run and its
   concrete ancestry.  Its own path contains \<open>(cfg_node, store)\<close> pairs; structural constructors record the
   suspended caller and, after resumption, the completed callee.  Activation contexts
   are projections of this structure rather than fields stored in the trace.
@@ -13,8 +13,8 @@ text \<open>
   Local flow follows \<open>intra\<close>, including \<open>EA_Ret\<close> into the matching
   \<open>FunctionResult\<close>.  A \<open>calls\<close> tuple supplies the call site, callee entry, and
   continuation.  The call rule builds the parameter-bound entered store with
-  \<^const>\<open>call_enter\<close>.  The resume rule combines caller locals, callee globals,
-  and the return value with \<^const>\<open>combine_collect\<close>.
+  \<^const>\<open>cfg_transfer_sem.gcall_enter\<close>.  The resume rule combines caller locals, callee globals,
+  and the return value with \<^const>\<open>cfg_transfer_sem.gcombine_collect\<close>.
 
   The shape is adapted from the local traces of Schwarz et al., \<^emph>\<open>Improving Thread-Modular
   Abstract Interpretation\<close> (SAS 2021), and Schwarz and Erhard, \<^emph>\<open>Data Race Detection
@@ -35,7 +35,7 @@ text \<open>
     \<open>callee\<close> is the retained completed callee subtree; \<open>p\<close> is the continued path.
 \<close>
 
-text \<open>An \<open>activation_path\<close> lists the nodes one activation passed and the store it held at
+text \<open>An \<open>gactivation_path\<close> lists the nodes one activation passed and the store it held at
   each.  An activation trace carries the path of its own activation, with the surrounding activations beside it rather than on it.\<close>
 
 type_synonym 'v gactivation_path = "(cfg_node \<times> ('v \<Rightarrow> int)) list"
@@ -45,9 +45,6 @@ datatype 'v gactivation_trace =
   | Call (activation_trace_caller: "'v gactivation_trace") "'v gactivation_path"
   | Resume (activation_trace_current: "'v gactivation_trace")
     (activation_trace_callee: "'v gactivation_trace") "'v gactivation_path"
-
-type_synonym activation_path = "vname gactivation_path"
-type_synonym activation_trace = "vname gactivation_trace"
 
 subsection \<open>Observers\<close>
 
@@ -89,14 +86,14 @@ fun extend :: "'v gactivation_trace \<Rightarrow> (cfg_node * ('v \<Rightarrow> 
 subsection \<open>The closure relation\<close>
 
 text \<open>
-  \<open>valid_activation_trace\<close> is the least set closed under four concrete operations: an initial main
+  \<open>gvalid_activation_trace\<close> is the least set closed under four concrete operations: an initial main
   activation at \<^const>\<open>cfg_entry\<close>; an \<open>intra\<close> step; a call; and a return.  Each rule reads
   exactly the relation for its phenomenon.  \<open>intra\<close> carries no side condition --- calls are
   not \<open>intra\<close> members, so they are untraversable by typing.  \<open>call\<close> enters the callee named
-  by the \<open>calls\<close> edge at the entered store \<^const>\<open>call_enter\<close>.  \<open>ret\<close> matches the
+  by the \<open>calls\<close> edge at the entered store \<^const>\<open>cfg_transfer_sem.gcall_enter\<close>.  \<open>ret\<close> matches the
   callee's \<open>FunctionResult p\<close> against the \<open>FunctionEntry p\<close> of a concrete \<open>calls\<close> edge
   leaving the caller's node, and resumes at the continuation stored in that same edge; the
-  resumed state is \<^const>\<open>combine_collect\<close>.  There is no \<open>combines\<close> lookup and no scan for a
+  resumed state is \<^const>\<open>cfg_transfer_sem.gcombine_collect\<close>.  There is no \<open>combines\<close> lookup and no scan for a
   compatible context.
 \<close>
 
@@ -151,7 +148,7 @@ subsection \<open>Structural lemmas\<close>
 
 text \<open>How the three trace shapes answer the projections every later proof reads them
   through -- path, sink, caller, entry store.  Kept as \<open>simp\<close> rules so an induction over
-  \<open>valid_activation_trace\<close> never has to case on the constructor merely to look up a sink.\<close>
+  \<open>gvalid_activation_trace\<close> never has to case on the constructor merely to look up a sink.\<close>
 lemma extend_simps [simp]:
   "path_of (extend t x) = path_of t @ [x]"
   "caller_of (extend t x) = caller_of t"
@@ -309,7 +306,7 @@ subsection \<open>Generic caller-chain closure\<close>
 
 text \<open>
   A caller-chain-quantified predicate \<open>P\<close> holds along the whole \<^const>\<open>callers\<close> chain of
-  every valid activation trace once its four \<open>valid_activation_trace\<close> obligations are discharged.  Each obligation
+  every valid activation trace once its four \<open>gvalid_activation_trace\<close> obligations are discharged.  Each obligation
   reads its own generating trace's induction hypothesis as the whole-chain fact
   \<open>\<forall>u \<in> callers _. P u\<close>, not a single-node fact --- this is exactly what \<open>ret\<close> needs to
   recover its caller's own chain fact from the callee's.
@@ -373,24 +370,5 @@ lemma entry_store_Resume_caller:
   "path_of caller \<noteq> [] \<Longrightarrow>
      entry_store (Resume caller callee (path_of caller @ [x])) = entry_store caller"
   by (simp add: entry_store_def hd_append)
-
-
-text \<open>The untyped activation traces and entry stores are the instances at source names
-  and untyped expressions.\<close>
-
-definition valid_activation_trace ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> activation_trace set"
-    ("\<T>\<^bsub>_,_,_\<^esub>") where
-  "valid_activation_trace \<G> = trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G>"
-
-definition call_enter_store ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "call_enter_store \<G> = trace_sem.gcall_enter_store aval (\<lambda>_ n. n) \<G>"
-
-global_interpretation untyped?: trace_sem aval ret_var "\<lambda>_ n. n" \<G>
-    rewrites "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
-      and "trace_sem.gcall_enter_store aval (\<lambda>_ n. n) \<G> = call_enter_store \<G>"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp_all add: valid_activation_trace_def call_enter_store_def)
 
 end

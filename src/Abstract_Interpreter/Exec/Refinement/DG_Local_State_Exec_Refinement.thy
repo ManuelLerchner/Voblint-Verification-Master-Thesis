@@ -13,8 +13,8 @@ text \<open>
   soundness statements are about function-valued ones. This theory is the
   bridge: it fixes a domain whose executable transfer agrees with its abstract
   transfer on the represented functions (\<open>dg_domain_exec\<close>) and derives, from
-  those three agreements alone, that a whole D/G specification is sound at the
-  executable carrier -- with no separate abstract-carrier run to compare against.
+  those three agreements alone, how its executable specification commutes with
+  the abstract one.
 \<close>
 
 subsection \<open>The function one return combine represents\<close>
@@ -184,10 +184,10 @@ text \<open>
   above.
 \<close>
 
-abbreviation spec_st :: "('x,'k,unit,'a default_st lifted,'a default_st lifted) dg_spec" where
+abbreviation spec_st :: "(vname, exp, 'x,'k,unit,'a default_st lifted,'a default_st lifted) gdg_spec" where
   "spec_st \<equiv> exec_dg_spec \<G> empty_pred tf_st enter_st"
 
-abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
+abbreviation spec_abs :: "(vname, exp, 'x,'k,unit,'a abs_state lifted,'a abs_state lifted) gdg_spec" where
   "spec_abs \<equiv> lifted_state_dg_spec \<G> is_empty_state sk asn sp br bd rt en ev"
 
 lemma Henter_lifted_for:
@@ -212,16 +212,12 @@ lemma Hcomb_lifted_for:
          where F = "transfer_lift2 is_empty_state (combine\<^sup>\<sharp> \<G> (ci_dst ci))"])
      (rule combine_lift_commute)
 
-subsection \<open>Soundness at the executable carrier, pulled back through its functions\<close>
+subsection \<open>The executable carrier's concretization\<close>
 
 text \<open>
   The framework is carrier-agnostic, so nothing forces it to be instantiated at
-  \<open>'a abs_state lifted\<close>: with the carrier's own concretization
-  \<^const>\<open>default_st_gamma\<close>, the executable Base-style spec is itself a
-  \<^locale>\<open>analysis_contract\<close>, and the field equations above are all that the proof
-  needs. An instance that interprets the routed spine at \<open>spec_st\<close> with this
-  concretization feeds it the solver's own table and never transports a solved
-  system between carriers.
+  \<open>'a abs_state lifted\<close>: an instance can interpret the routed spine at \<open>spec_st\<close>
+  with the carrier's own concretization \<^const>\<open>default_st_gamma\<close>.
 \<close>
 
 definition gamma_exec :: "'a default_st lifted \<Rightarrow> 'a default_st lifted \<Rightarrow> store set" where
@@ -229,80 +225,6 @@ definition gamma_exec :: "'a default_st lifted \<Rightarrow> 'a default_st lifte
 
 lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
-
-text \<open>
-  Entry is not part of \<^locale>\<open>analysis_contract\<close>, so a routed instance needs it
-  separately. This is the same fact the collapse below proves for its own entry
-  obligation, exported once because every routed instance over this carrier
-  discharges its entry coverage from it.
-\<close>
-
-lemma entered_st:
-  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and s: "s \<in> \<gamma> d"
-  shows "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-           \<in> \<gamma> (transfer_lift empty_pred (enter_st ci) d)"
-  using s unfolding gamma_lift_default_st_gamma_to_fun enter_lift_commute
-  by (intro transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty])
-     (simp add: call_enter_CallEdge
-       sound_nonrelational_transfer.tf_sound_enter_entry_for[OF tf_sound])
-
-theorem entry_pairs_cover_st:
-  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and sin: "s \<in> \<gamma> d"
-  shows "entry_pairs_cover (\<lambda>d'. \<gamma> d') s
-           (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
-           [(d, transfer_lift empty_pred (enter_st ci) d)]"
-  by (rule entry_pairs_coverI
-        [where cont = d and entry = "transfer_lift empty_pred (enter_st ci) d"])
-     (simp_all add: sin entered_st[OF tf_sound sin])
-
-text \<open>
-  The executable analysis as a component, sound for the carrier's
-  concretization. The proof maps each state to its function through \<open>reader\<close>; the
-  contract below is its one-line consequence.
-\<close>
-
-theorem exec_local_spec_sound:
-  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-  shows "sound_local_spec \<G> (\<lambda>d. \<gamma> d) (exec_local_spec \<G> empty_pred tf_st enter_st)"
-proof -
-  have step: "edge_collect a (\<gamma>\<^sub>\<bottom> (reader d)) \<subseteq> \<gamma>\<^sub>\<bottom> (reader (transfer_lift empty_pred (tf_st a) d))"
-    for a d
-  proof (cases "normalized_lift empty_pred d")
-    case True
-    show ?thesis
-      unfolding step_lift_commute[OF True]
-      by (rule transfer_lift_sound_collect
-            [OF sound_nonrelational_transfer.step_sound_for[OF tf_sound]
-                edge_collect_empty_set is_empty_state_gamma_state_empty])
-  next
-    case False
-    then obtain s where "d = Lifted s" "empty_pred s" by (cases d) simp_all
-    then show ?thesis by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
-  qed
-  have comb: "combine_collect \<G> (ci_dst ci) s t \<in> \<gamma>\<^sub>\<bottom> (reader (transfer_lift2 empty_pred
-        (\<lambda>env0 de0. combine_assign_default_st \<G> (ci_dst ci)
-           de0\<langle>location_of \<G> ret_var\<rangle> env0)
-        (combine_env_st_lifted dc de) de))"
-    if "s \<in> \<gamma>\<^sub>\<bottom> (reader dc)" "t \<in> \<gamma>\<^sub>\<bottom> (reader de)" for s t dc de ci
-    unfolding combine_lift_commute
-    by (rule
-      transfer_lift2_sound_mem[OF combine_collect_sound is_empty_state_gamma_state_empty that])
-  have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<gamma>\<^sub>\<bottom> (reader x) \<subseteq> \<gamma>\<^sub>\<bottom> (reader y)"
-    by (meson gamma_lift_mono gamma_state_mono map_lift_default_st_to_fun_mono)
-  show ?thesis
-    unfolding sound_local_spec_def gamma_lift_default_st_gamma_to_fun
-    using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step]
-      entered_st[OF tf_sound, unfolded gamma_lift_default_st_gamma_to_fun] comb
-    by (auto simp: exec_local_spec_def)
-qed
-
-theorem analysis_contract_st:
-  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-  shows "analysis_contract spec_st (\<lambda>d e. gamma_exec d (e ())) \<G>"
-  unfolding exec_dg_spec_def gamma_exec_def[abs_def]
-  by (rule dg_spec_of_contract[OF exec_local_spec_sound[OF tf_sound]])
 
 end
 

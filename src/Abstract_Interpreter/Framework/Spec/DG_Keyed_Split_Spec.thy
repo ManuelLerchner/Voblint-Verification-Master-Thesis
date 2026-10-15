@@ -284,7 +284,7 @@ where
 abbreviation keyed_split_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd)
    \<Rightarrow> (vname list \<Rightarrow> 'd) \<Rightarrow> 'd local_spec
-   \<Rightarrow> ('x,'k,vname,'d::bounded_semilattice_sup_bot,'d) dg_spec"
+   \<Rightarrow> (vname, exp, 'x,'k,vname,'d::bounded_semilattice_sup_bot,'d) gdg_spec"
 where
   "keyed_split_spec \<equiv> gkeyed_split_spec exp_vnames ret_var"
 
@@ -434,22 +434,5 @@ proof -
           bot_fun_def[symmetric])
   qed
 qed
-
-text \<open>The untyped lifter is the instance at source names and untyped expressions.\<close>
-
-theorem keyed_split_contract:
-  fixes cmb :: "'d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd"
-  assumes sound: "sound_local_spec \<G> gm c"
-    and cmb_mono: "\<And>d d' g g'. d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> cmb d g \<le> cmb d' g'"
-    and rg_mono: "\<And>x v v'. v \<le> v' \<Longrightarrow> rg x v \<le> rg x v'"
-    and rg_free: "\<And>x R v. x \<notin> set R \<Longrightarrow> rg x v \<le> free R"
-    and mix: "\<And>l0 e r s s' W. s \<in> gm (cmb l0 (full_view rg xs e)) \<Longrightarrow> s' \<in> gm r
-        \<Longrightarrow> (\<forall>x. \<G> x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x)
-        \<Longrightarrow> s' \<in> gm (cmb (rl r) (full_view rg xs (\<lambda>x. if x \<in> set W then rg x r else e x)))"
-  shows "analysis_contract (keyed_split_spec \<G> cmb rl rg free c)
-           (\<lambda>d e. gm (cmb d (full_view rg xs e))) \<G>"
-  unfolding analysis_contract_iff
-  using sound[unfolded sound_local_spec_inst] cmb_mono rg_mono rg_free mix
-  by (rule gkeyed_split_contract)
 
 end

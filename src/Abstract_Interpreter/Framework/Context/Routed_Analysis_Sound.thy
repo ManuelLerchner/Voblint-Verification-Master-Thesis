@@ -44,7 +44,7 @@ text \<open>
   The reader returns only the local half. The global half enters through the
   concretization the locale below pairs with it, which publishes each local
   value together with the solved global at \<open>Inr buffer_key\<close>. Under that
-  pairing the two coverage obligations \<^locale>\<open>dg_context_activation\<close> asks for
+  pairing the two coverage obligations \<^locale>\<open>gdg_context_activation\<close> asks for
   hold by construction, given \<open>gammaDG_rd\<close> and that the publication map takes
   \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the context policy,
   so no instance need prove them again.
@@ -88,48 +88,5 @@ locale grouted_analysis =
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> ('vr \<Rightarrow> int) set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and classify :: "'e \<Rightarrow> 'v \<Rightarrow> check_result"
-
-text \<open>The untyped composition locale, the instance at source names.\<close>
-
-locale routed_analysis =
-  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0
-    "solved_local_reader vars sigma" seed is_bot
-    "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
-    adm rd \<gamma>\<^sub>V empty\<^sub>V classify
-  for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
-    and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
-    and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
-    and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
-    and vars :: "(pp \<times> 'c) set"
-    and x0 :: "pp \<times> 'c"
-    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and is_bot :: "'D \<Rightarrow> bool"
-    and adm :: "'c context_policy"
-    and rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
-    and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
-    and empty\<^sub>V :: "'v \<Rightarrow> bool"
-    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
-
-sublocale routed_analysis \<subseteq>
-  grouted_analysis aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0
-    sigma vars x0 seed is_bot adm rd \<gamma>\<^sub>V empty\<^sub>V classify
-  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
-    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
-    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
-    and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
-    and "ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G> = admits_call_context \<G>"
-    and "ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G> = activation_context_rel \<G>"
-    and "ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
-    and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
-    and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
-  by unfold_locales
-     (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def
-       valid_activation_trace_def admits_call_context_def activation_context_rel_def
-       call_context_total_on_def activation_collect_def node_collect_def)
 
 end

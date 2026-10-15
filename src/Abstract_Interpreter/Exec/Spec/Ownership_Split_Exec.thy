@@ -18,8 +18,8 @@ text \<open>
 \<close>
 
 definition ownership_split_transfer_st ::
-  "('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_transfer
-   \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) man_transfer"
+  "(exp, 'x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) gman_transfer
+   \<Rightarrow> (exp, 'x,'k,unit,'a default_st,'a default_st) gman_transfer"
 where
   "ownership_split_transfer_st =
      ownership_split_transfer_gen combine_default_st restrict_global_default_st restrict_local_default_st"
@@ -32,8 +32,8 @@ text \<open>
 \<close>
 
 definition ownership_split_enter_transfer_st ::
-  "('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_enter_transfer
-   \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) man_enter_transfer"
+  "(exp, 'x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) gman_enter_transfer
+   \<Rightarrow> (exp, 'x,'k,unit,'a default_st,'a default_st) gman_enter_transfer"
 where
   "ownership_split_enter_transfer_st =
      ownership_split_enter_transfer_gen combine_default_st restrict_global_default_st
@@ -48,7 +48,7 @@ text \<open>
 
 definition ownership_split_combine_transfer_st ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info
-   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_combine_transfer"
+   \<Rightarrow> (exp, 'x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) gman_combine_transfer"
 where
   "ownership_split_combine_transfer_st \<G> ci =
      ownership_split_combine_transfer_gen combine_default_st restrict_global_default_st
@@ -61,7 +61,7 @@ definition ownership_split_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot default_st \<Rightarrow> 'a default_st)
    \<Rightarrow> (call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
-   \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) dg_spec"
+   \<Rightarrow> (vname, exp, 'x,'k,unit,'a default_st,'a default_st) gdg_spec"
 where
   "ownership_split_dg_spec_st_for \<G> tf_st enter_st = local_dg_spec_template\<lparr>
      dgs_skip := ownership_split_transfer_st (local_transfer (tf_st EA_Nop)),

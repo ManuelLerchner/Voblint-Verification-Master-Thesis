@@ -26,7 +26,7 @@ subsection \<open>Located residuals\<close>
 text \<open>\<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> have no clause: they are runtime-only activation
   markers rather than compiled commands.  Once a \<^const>\<open>Return\<close> fires the CFG is already at
   \<^term>\<open>FunctionResult p\<close> through the \<^term>\<open>EA_Ret\<close> edge, and the activation return that
-  remains is performed by \<open>cstep\<close> popping a frame, not by any fragment node.\<close>
+  remains is performed by \<open>gcstep\<close> popping a frame, not by any fragment node.\<close>
 
 inductive control_at ::
   "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> cfg_node \<Rightarrow> bool"

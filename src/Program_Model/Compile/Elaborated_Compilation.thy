@@ -836,7 +836,7 @@ proof -
     and m: "elab_pt (prog_table p) (prog_procs p), prog_cfg p, prog_main_name
               \<turnstile> (c, s, frs) \<approx> (v, s, stk)"
     by auto
-  from csim_erase [OF m] ec erase_elab_pt(1) [OF wf]
+  from csim_erase [OF m] ec bridge_sem.erase_elab_pt(1) [OF wf]
   show ?thesis by auto
 qed
 

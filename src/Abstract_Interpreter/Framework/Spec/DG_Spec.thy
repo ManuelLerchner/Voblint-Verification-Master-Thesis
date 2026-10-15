@@ -6,7 +6,7 @@ section \<open>What an analysis supplies: manager-native transfers\<close>
 
 text \<open>
   An analysis supplies one manager-native transfer per edge action and the
-  pieces of the call/return protocol. A transfer takes a \<open>man\<close> and returns
+  pieces of the call/return protocol. A transfer takes a \<open>gman\<close> and returns
   a \<open>strategy_program\<close>: global reads are \<open>man_global\<close> calls, global
   publications are \<open>man_sideg\<close> calls, and a transfer that makes neither
   compiles to a tree with no \<open>QueryG\<close> and no \<open>Side\<close> at all. This replaces the
@@ -73,10 +73,6 @@ record ('vr,'e,'x,'k,'v,'dl,'dg) gdg_spec =
     ("combine'_assign\<^sup>\<sharp>")
   dgs_query          :: "('e,'x,'k,'v,'dl,'dg) gman_query"
 
-text \<open>A specification of the untyped language.\<close>
-
-type_synonym ('x,'k,'v,'dl,'dg) dg_spec = "(vname, exp, 'x,'k,'v,'dl,'dg) gdg_spec"
-
 text \<open>
   \<open>dgs_query\<close> is Goblint's \<open>Spec.query\<close>: it answers a query from the manager
   it is given, and may read globals or ask further queries through it. What an
@@ -124,7 +120,7 @@ text \<open>
   \<open>Spec.event\<close>; Goblint's own check goes through \<open>special\<close>, see
   \<open>analysis_event\<close> above), and conflating it with skip would make a future domain's
   non-identity skip silently change what a check edge does. A concrete
-  \<open>dg_spec\<close> therefore supplies its own notion of a
+  \<open>gdg_spec\<close> therefore supplies its own notion of a
   check event directly, the same way it already supplies
   \<^const>\<open>dgs_body\<close>/\<^const>\<open>dgs_return\<close>.
 \<close>
@@ -255,7 +251,7 @@ lemma dep_transfer_program:
 subsection \<open>Specifications whose transfers run their continuation once\<close>
 
 text \<open>
-  A \<^type>\<open>man_transfer\<close> is a function from a continuation to a tree, so a
+  A \<^type>\<open>gman_transfer\<close> is a function from a continuation to a tree, so a
   specification could in principle write one that drops or duplicates it.
   \<^const>\<open>sp_wf\<close> rules that out, and the generator's fold needs it: what a
   contribution publishes is only well posed for a transfer that runs its
@@ -334,7 +330,7 @@ text \<open>
   field that names one has reached past the interface into the solver's. That
   is a discipline, not something the types rule out: a transfer returns a
   \<^type>\<open>strategy_program\<close> and could build any of them by hand. Three recipes
-  cover every field of a \<^type>\<open>dg_spec\<close> without doing so:
+  cover every field of a \<^type>\<open>gdg_spec\<close> without doing so:
 
     \<^item> A transfer that only transforms the local value is \<open>local_transfer f\<close>,
       and its compiled tree is one read and an answer: no \<open>QueryG\<close>, no
@@ -504,7 +500,7 @@ text \<open>
   sound for it. It is false in general -- an assignment analysis that leaves
   \<open>dgs_assign\<close> at the identity does not track assignments -- and nothing here
   checks it. Whether a specification, defaulted fields included, means
-  anything is settled by \<open>analysis_contract\<close> together with the entry
+  anything is settled by \<open>ganalysis_contract\<close> together with the entry
   obligation that locale deliberately leaves open --- never by how the record
   was assembled.
 

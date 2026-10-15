@@ -12,18 +12,15 @@ text \<open>
   skip, assign, special, branch, body, return, event, with branch covering both
   \<open>EA_Assume\<close> and \<open>EA_AssumeNot\<close> --- plus the callee entry, and this theory
   turns them into a
-  \<^type>\<open>dg_spec\<close> two ways: \<open>state_dg_spec\<close> on the raw
+  \<^type>\<open>gdg_spec\<close> two ways: \<open>state_dg_spec\<close> on the raw
   states, and \<open>lifted_state_dg_spec\<close> on states carrying an
   explicit unreachable value, where a dead point collapses to \<^const>\<open>Bot\<close>
   before any transfer runs.
 
   \<open>sound_nonrelational_transfer\<close> is the contract those operations owe: every
   concrete transition the collecting semantics allows must land inside the
-  concretization of what the corresponding operation computes. A domain discharges
-  it once, by \<open>interpretation\<close>, and \<open>state_dg_spec\<close> becomes a sound
-  specification. \<open>lifted_state_dg_spec\<close> is the structural target its
-  executable mirror refines; \<open>DG_Local_State_Exec_Refinement\<close> proves that
-  mirror sound directly.
+  concretization of what the corresponding operation computes.
+  \<open>lifted_state_dg_spec\<close> is the structural target its executable mirror refines.
 
   The call boundary is fixed here rather than supplied. A call answers exactly one
   alternative, whose continuation is the caller value unchanged. That is sound
@@ -85,22 +82,6 @@ text \<open>Each obligation is stated directly as an inference rule
   implicitly generalized, so the assumptions compose directly with \<open>rule\<close>,
   \<open>OF\<close>, and \<open>auto\<close>; no separate Horn-clause restatement is needed.\<close>
 
-context sound_nonrelational_transfer
-begin
-
-text \<open>The per-edge dispatcher's soundness, which is what an equation generator's
-  step obligation asks for: \<^const>\<open>local_spec_step\<close> selects the operation the
-  action names, and each selected operation is sound by one locale assumption.\<close>
-
-lemma step_sound_for[intro]:
-  "edge_collect a (\<gamma> d) \<subseteq> \<gamma> (local_spec_step sk asn sp br bd rt ev a d)"
-proof (cases a)
-  case (EA_Special sc x)
-  then show ?thesis by (cases sc) auto
-qed auto
-
-end
-
 subsection \<open>The operations as a component\<close>
 
 text \<open>What a whole-state analysis actually supplies: eight pure operations over
@@ -144,26 +125,6 @@ lemma ls_combine_state_local_spec [simp]:
      = combine\<^sup>\<sharp> \<G> (ci_dst ci) dc de"
   by (simp add: state_local_spec_def)
 
-context sound_nonrelational_transfer
-begin
-
-abbreviation tf_spec :: "'a abs_state local_spec" where
-  "tf_spec \<equiv> state_local_spec \<G> sk asn sp br bd rt en ev"
-
-theorem state_local_spec_sound: "sound_local_spec \<G> gamma_state tf_spec"
-proof -
-  have step: "edge_collect a (\<gamma> d \<inter> Collect (eval_query.channel_holds ch))
-      \<subseteq> \<gamma> (ls_step tf_spec ch a d)" for a ch and d :: "'a abs_state"
-    by (simp only: ls_step_state_local_spec)
-       (rule subset_trans[OF edge_collect_mono[OF Int_lower1] step_sound_for])
-  show ?thesis
-    unfolding sound_local_spec_def
-    using gamma_state_mono step
-    by (auto simp: state_local_spec_def call_enter_CallEdge combine_collect_sound)
-qed
-
-end
-
 subsection \<open>The unlifted specification\<close>
 
 text \<open>
@@ -182,7 +143,7 @@ definition state_dg_spec ::
    \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> ('x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
+   \<Rightarrow> (vname, exp, 'x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) gdg_spec"
 where
   "state_dg_spec \<G> sk asn sp br bd rt en ev
      = dg_spec_of (state_local_spec \<G> sk asn sp br bd rt en ev)"
@@ -195,11 +156,6 @@ lemma dg_spec_step_state_dg_spec:
 lemma dg_spec_wf_state_dg_spec [intro, simp]:
   "dg_spec_wf (state_dg_spec \<G> sk asn sp br bd rt en ev)"
   by (simp add: state_dg_spec_def)
-
-theorem (in sound_nonrelational_transfer) state_dg_spec_contract:
-  "analysis_contract (state_dg_spec \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<gamma> d) \<G>"
-  unfolding state_dg_spec_def by (rule dg_spec_of_contract[OF state_local_spec_sound])
-
 
 subsection \<open>The reachability-lifted construction\<close>
 
@@ -247,7 +203,7 @@ definition lifted_state_dg_spec ::
    \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-   \<Rightarrow> ('x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
+   \<Rightarrow> (vname, exp, 'x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) gdg_spec"
 where
   "lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev
      = dg_spec_of (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev)"

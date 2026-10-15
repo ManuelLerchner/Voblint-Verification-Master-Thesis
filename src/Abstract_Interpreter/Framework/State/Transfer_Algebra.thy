@@ -13,7 +13,7 @@ text \<open>
   \<open>gamma_state\<close>.
 
   It defines no interface. What an analysis supplies to the framework is a
-  \<open>dg_spec\<close>: one manager-native transfer per edge action, taking the manager and
+  \<open>gdg_spec\<close>: one manager-native transfer per edge action, taking the manager and
   returning a program. This theory is the algebra those transfers compute in,
   stated once so that no whole-state domain re-proves it.
 
@@ -97,7 +97,7 @@ text \<open>
   \<^const>\<open>enter_binding\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Proc\<close>) are already generic in
   the state's codomain, and the concrete semantics is \<^const>\<open>enter_binding\<close> at
   the reset value \<open>0\<close> and the evaluator \<^const>\<open>aval\<close>
-  (\<^const>\<open>call_enter\<close>). An abstract domain runs the same constant at its own
+  (\<^const>\<open>cfg_transfer_sem.gcall_enter\<close>). An abstract domain runs the same constant at its own
   \<open>top\<close> and its own evaluator, so the two can never drift apart: there is one
   definition and two instances of it.
 
@@ -240,8 +240,8 @@ text \<open>
 lemma combine_collect_sound [intro]:
   fixes dc de :: "'a::numeric_domain abs_state"
   assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
-  shows "combine_collect \<G> dst s t \<in> \<gamma> (combine\<^sup>\<sharp> \<G> dst dc de)"
-  unfolding gcombine_collect_def combine_collect_abs_def
+  shows "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> dst s t \<in> \<gamma> (combine\<^sup>\<sharp> \<G> dst dc de)"
+  unfolding cfg_transfer_sem.gcombine_collect_def combine_collect_abs_def
   using combine_env_sound[OF sc se] gamma_stateD[OF se]
   by (cases dst) (auto simp add: gamma_state_upd)
 
@@ -253,6 +253,5 @@ text \<open>
   satisfying \<open>cinit_stores \<G> \<subseteq> \<gamma> s0\<close> may state its soundness
   theorem against \<open>cinit_stores \<G>\<close> rather than \<open>UNIV\<close>, matching VIMP's
   C-like initialization semantics.\<close>
-
 
 end

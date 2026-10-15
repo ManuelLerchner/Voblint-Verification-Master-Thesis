@@ -5,7 +5,7 @@ begin
 section \<open>A manager capability interface for the D/G packed carrier\<close>
 
 text \<open>
-  \<open>man\<close> is a capability fragment of Goblint's own manager record: \<open>man_local\<close>
+  \<open>gman\<close> is a capability fragment of Goblint's own manager record: \<open>man_local\<close>
   is the current local value, \<open>man_global\<close>/\<open>man_sideg\<close> are \<^emph>\<open>capabilities\<close> a
   transfer runs to read or publish shared state, without naming which solver
   key that state lives at, and \<open>man_ask\<close> is the query channel, Goblint's
@@ -49,7 +49,7 @@ text \<open>
   \<open>dg_read_global\<close> and \<open>dg_sideg\<close> are what interpret those capabilities
   against the packed \<open>('dl,'dg) dg_state\<close> carrier; \<open>mk_dg_man\<close> is where the
   embedding \<open>unknown_of\<close> is closed into them, so it is the only place a name becomes a
-  key. Either way a transfer written against \<open>man\<close>'s fields sees neither the
+  key. Either way a transfer written against \<open>gman\<close>'s fields sees neither the
   packed carrier nor a key.
 \<close>
 
@@ -60,10 +60,6 @@ record ('e,'x,'k,'v,'dl,'dg) gman =
   man_global :: "'v \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) strategy_program"
   man_sideg :: "'v \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl,'dg) dg_state,unit) strategy_program"
   man_ask :: "'e gquery \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
-
-text \<open>A manager of the untyped language, whose queries are about untyped expressions.\<close>
-
-type_synonym ('x,'k,'v,'dl,'dg) man = "(exp,'x,'k,'v,'dl,'dg) gman"
 
 subsection \<open>Packed-carrier primitives\<close>
 
@@ -76,7 +72,7 @@ text \<open>
 
   These three are where the packed carrier is taken apart and put back
   together. The framework's own transfer constructors use only these and
-  \<open>man\<close>'s fields, and an analysis author is expected to do the same; the
+  \<open>gman\<close>'s fields, and an analysis author is expected to do the same; the
   transfer type does not enforce it, since a transfer may build any
   \<open>strategy_program\<close> it likes. The tree formers that assemble a right-hand side
   do construct \<^const>\<open>DG\<close> values directly.
@@ -168,7 +164,7 @@ subsection \<open>Constructing a manager\<close>
 
 text \<open>
   \<open>mk_dg_man\<close> closes the name-to-key embedding into both effectful fields, so
-  a transfer built against \<open>man\<close> never sees a key itself. A manager-native
+  a transfer built against \<open>gman\<close> never sees a key itself. A manager-native
   transfer should reach shared state through the record fields rather than
   call \<open>dg_read_global\<close>/\<open>dg_sideg\<close> or name a key directly, so that a future
   manager (instrumented, differently routed, or backed by distinct global
@@ -219,7 +215,6 @@ lemma mk_dg_man_local_update [simp]:
 
 type_synonym ('e,'x,'k,'v,'dl,'dg) gman_transfer =
   "('e,'x,'k,'v,'dl,'dg) gman \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
-type_synonym ('x,'k,'v,'dl,'dg) man_transfer = "(exp,'x,'k,'v,'dl,'dg) gman_transfer"
 
 text \<open>
   A query handler takes the same manager and answers the query in the answer
@@ -228,18 +223,15 @@ text \<open>
 
 type_synonym ('e,'x,'k,'v,'dl,'dg) gman_query =
   "('e,'x,'k,'v,'dl,'dg) gman \<Rightarrow> 'e gquery \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
-type_synonym ('x,'k,'v,'dl,'dg) man_query = "(exp,'x,'k,'v,'dl,'dg) gman_query"
 
 text \<open>
   A combine-shaped transfer takes the same manager plus the callee-exit
   value as an ordinary trailing argument, the way Goblint's
-  \<open>combine_env\<close>/\<open>combine_assign\<close> take the same \<open>man\<close> plus a \<open>D.t\<close>.
+  \<open>combine_env\<close>/\<open>combine_assign\<close> take the same \<open>gman\<close> plus a \<open>D.t\<close>.
 \<close>
 
 type_synonym ('e,'x,'k,'v,'dl,'dg) gman_combine_transfer =
   "('e,'x,'k,'v,'dl,'dg) gman \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
-type_synonym ('x,'k,'v,'dl,'dg) man_combine_transfer =
-  "(exp,'x,'k,'v,'dl,'dg) gman_combine_transfer"
 
 text \<open>
   A call answers a list of alternatives, and each alternative is a pair: the
@@ -251,7 +243,7 @@ text \<open>
   and leaves the caller free to consume them however the equation shape needs.
 
   The result is not a \<open>'dl\<close>, so an entry transfer is not a
-  \<^type>\<open>man_transfer\<close>: it cannot be the answer of an equation on its own, and
+  \<^type>\<open>gman_transfer\<close>: it cannot be the answer of an equation on its own, and
   whatever consumes it must reduce the list to one local value first.
 \<close>
 
@@ -260,7 +252,6 @@ type_synonym 'dl enter_result = "'dl \<times> 'dl"
 type_synonym ('e,'x,'k,'v,'dl,'dg) gman_enter_transfer =
   "('e,'x,'k,'v,'dl,'dg) gman
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl enter_result list) strategy_program"
-type_synonym ('x,'k,'v,'dl,'dg) man_enter_transfer = "(exp,'x,'k,'v,'dl,'dg) gman_enter_transfer"
 
 text \<open>
   A second transfer stage runs from the point the first reached by updating

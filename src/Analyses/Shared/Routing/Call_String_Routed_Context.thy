@@ -35,8 +35,8 @@ text \<open>
 
 definition call_string_eqs_for ::
     "nat
-      \<Rightarrow> (pp \<times> call_string, call_string_gk, unit,
-           'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec
+      \<Rightarrow> (vname, exp, pp \<times> call_string, call_string_gk, unit,
+           'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) gdg_spec
       \<Rightarrow> cfg
       \<Rightarrow> 'D
       \<Rightarrow> (pp \<times> call_string, call_string_gk, ('D, 'G) dg_state) eqsT"
@@ -52,13 +52,13 @@ text \<open>
 \<close>
 
 locale call_string_routed_context =
-  dg_context_activation S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" Global "\<lambda>_. Global"
+  gdg_context_activation aval ret_var "\<lambda>_ n. n" \<G> S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" "compile_prog Pi ps" Global "\<lambda>_. Global"
     "cs_route k"
     "routed_call_program S (\<lambda>_. Global) Seed (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_programs Seed"
     bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
-  for S :: "(pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
+  for S :: "(vname, exp, pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) gdg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
@@ -80,7 +80,7 @@ locale call_string_routed_context =
            \<and> enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
            \<and> entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr Global)))) s
-               (call_enter \<G> (CallEdge dst pars args) s) pairs"
+               (cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> (CallEdge dst pars args) s) pairs"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars
@@ -97,7 +97,7 @@ locale call_string_routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" Global
+sublocale routed: grouted_context aval ret_var "\<lambda>_ n. n" \<G> S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" "compile_prog Pi ps" Global
   "\<lambda>_. Global"
   "cs_route k" bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg Seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M "context_policy_of_fun (cs_context k)"
@@ -128,8 +128,8 @@ next
                \<in> calls (compile_prog Pi ps)"
     and sin: "s \<in> gamma_at u ctx"
     and Rc: "ctx' \<in> context_policy_of_fun (cs_context k) u ctx (call_info_of (CallEdge dst pars args) p)
-               s (call_enter \<G> (CallEdge dst pars args) s)"
-  have ctx': "ctx' = cs_context k u ctx (call_enter \<G> (CallEdge dst pars args) s)"
+               s (cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> (CallEdge dst pars args) s)"
+  have ctx': "ctx' = cs_context k u ctx (cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> (CallEdge dst pars args) s)"
     using Rc by simp
   obtain pairs pub deps
     where R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
@@ -137,12 +137,12 @@ next
       and D: "enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs deps"
       and P: "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr Global)))) s
-                (call_enter \<G> (CallEdge dst pars args) s) pairs"
+                (cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> (CallEdge dst pars args) s) pairs"
     using enter_complete[OF covV ce sin[simplified]] by blast
   from P obtain cont' entry
     where mem: "(cont', entry) \<in> set pairs"
       and ccov: "s \<in> \<gamma>\<^sub>D\<^sub>G cont' (dg_global (sigma (Inr Global)))"
-      and ecov: "call_enter \<G> (CallEdge dst pars args) s
+      and ecov: "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> (CallEdge dst pars args) s
                    \<in> \<gamma>\<^sub>D\<^sub>G entry (dg_global (sigma (Inr Global)))"
     by (rule entry_pairs_coverE)
   have req: "cs_route k u ctx entry (CallEdge dst pars args) = ctx'"
@@ -156,7 +156,7 @@ next
                (man_at u ctx) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv (\<lambda>_. Global) sigma ())
-           \<and> call_enter \<G> (CallEdge dst pars args) s
+           \<and> cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> (CallEdge dst pars args) s
                \<in> \<gamma>\<^sub>D\<^sub>G entry (genv (\<lambda>_. Global) sigma ())
            \<and> cs_route k u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
@@ -165,7 +165,7 @@ next
   fix u ctx dst pars args p cont s
   show "context_policy_of_fun (cs_context k) u ctx
                  (call_info_of (CallEdge dst pars args) p) s
-                 (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {}"
+                 (cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> (CallEdge dst pars args) s) \<noteq> {}"
     by simp
 next
   fix cl c1 dst pars args p cont

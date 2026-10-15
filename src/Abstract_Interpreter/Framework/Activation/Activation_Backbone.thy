@@ -7,7 +7,7 @@ section \<open>What one activation of a procedure may observe\<close>
 text \<open>
   Every concrete call creates one callee activation.  Each step of that activation carries
   the contexts its creating call admits, a nested call derives its callee's contexts from
-  those, and a return resumes the caller at the caller's own.  \<^const>\<open>activation_context_rel\<close> replays
+  those, and a return resumes the caller at the caller's own.  \<^const>\<open>ctx_sem.gactivation_context_rel\<close> replays
   those choices along a trace, so a table indexed by \<open>(node, context)\<close> can be checked
   against concrete runs without carrying an auxiliary digest.  That indexing is many-to-one
   and one-to-many at once: activations reaching the same context are collected together,
@@ -15,13 +15,13 @@ text \<open>
   its stores; they need not partition them.
 
   \<open>cover v c\<close> is the set of stores that table admits at node \<open>v\<close> in context \<open>c\<close>.  Given the
-  five local obligations of \<^locale>\<open>activation_coverage\<close> on it --- \<open>INIT\<close> for the seed stores,
+  five local obligations of \<^locale>\<open>gactivation_coverage\<close> on it --- \<open>INIT\<close> for the seed stores,
   \<open>INTRA\<close> per intra edge, \<open>CALL\<close> per call and admitted context, \<open>RETURN\<close> per return,
   \<open>TOTAL\<close> for at least one admitted context per covered call ---
-  \<open>activation_collect_sound\<close> bounds \<^const>\<open>activation_collect\<close>, the set
+  \<open>gactivation_collect_sound\<close> bounds \<^const>\<open>ctx_sem.gactivation_collect\<close>, the set
   of stores some valid activation trace can leave at one \<open>(node, context)\<close>.  It is the context-sensitive
-  twin of \<open>node_collect_semantic_postfix\<close> and shares its proof shape: interpret
-  \<^locale>\<open>activation_coverage\<close> at the supplied \<open>cover\<close>, then read off \<open>valid_activation_trace_covered_at\<close>.
+  twin of a monovariant post-fixpoint argument: interpret
+  \<^locale>\<open>gactivation_coverage\<close> at the supplied \<open>cover\<close>, then read off \<open>valid_activation_trace_covered_at\<close>.
 
   \<open>adm\<close> says which contexts may describe a concrete call transition, and that is what indexes
   the collecting semantics.  It is handed both stores, so a policy may inspect them, but
@@ -47,15 +47,6 @@ proof -
       .
     then show "st \<in> cover v c" using sn st by simp
   qed
-qed
-
-theorem activation_collect_sound:
-  assumes "activation_coverage g S cover adm c\<^sub>0 \<G>"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> cover v c"
-proof -
-  interpret activation_coverage g S cover adm c\<^sub>0 \<G> by (fact assms)
-  show ?thesis
-    by (rule untyped.gactivation_collect_sound) unfold_locales
 qed
 
 end

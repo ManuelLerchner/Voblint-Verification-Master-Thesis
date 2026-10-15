@@ -136,7 +136,7 @@ next
   then show ?case by auto
 qed auto
 
-text \<open>The CFG dual: a \<^const>\<open>cstep\<close> also touches only the head of the stack, so an extra
+text \<open>The CFG dual: a \<^const>\<open>cfg_exec_sem.gcstep\<close> also touches only the head of the stack, so an extra
   bottom segment rides along --- with no non-emptiness needed, since the return step already
   requires a non-empty stack.\<close>
 lemma cstep_frame_extend:
@@ -206,7 +206,7 @@ end
 section \<open>Call preservation\<close>
 
 text \<open>
-  A source \<^const>\<open>Call\<close> at the head of the active residual is matched by two \<^const>\<open>cstep\<close>s
+  A source \<^const>\<open>Call\<close> at the head of the active residual is matched by two \<^const>\<open>cfg_exec_sem.gcstep\<close>s
   --- the call edge to \<^term>\<open>FunctionEntry q\<close> and the \<^term>\<open>EA_Body\<close> edge to the callee body
   --- and adds exactly one \<open>Nested\<close> layer: the callee body becomes a fresh \<open>Base\<close> activation
   of \<open>q\<close>, and the caller resumes at \<^term>\<open>seq_after (SKIP i) afters\<close>.  Everything the callee
@@ -557,9 +557,9 @@ text \<open>
   One \<^const>\<open>pstep\<close> of a base returning activation \<^term>\<open>seq_after w afters\<close>
   (\<^term>\<open>pop_ready w\<close>, framed by the single caller frame, CFG at \<^term>\<open>FunctionResult p\<close>)
   either \<^emph>\<open>pops\<close>: the source resumes at \<^term>\<open>seq_after (SKIP i) afters\<close> with the combined store
-  and the CFG performs exactly one return \<^const>\<open>cstep\<close> to \<open>cont\<close>, rebuilt as a \<open>Base\<close>
+  and the CFG performs exactly one return \<^const>\<open>cfg_exec_sem.gcstep\<close> to \<open>cont\<close>, rebuilt as a \<open>Base\<close>
   activation; or \<^emph>\<open>propagates\<close>: an \<^const>\<open>Unwind\<close> advances one dead-code layer and the CFG
-  stays at \<^term>\<open>FunctionResult p\<close> with \<^emph>\<open>zero\<close> \<^const>\<open>cstep\<close>, rebuilt as a \<open>Returning\<close>
+  stays at \<^term>\<open>FunctionResult p\<close> with \<^emph>\<open>zero\<close> \<^const>\<open>cfg_exec_sem.gcstep\<close>, rebuilt as a \<open>Returning\<close>
   activation.
 \<close>
 context simrel_sem
@@ -858,7 +858,7 @@ lemma witness_wf: "wf_compile_input (\<lambda>_. False) witness_pi []"
         special_pname_min_def special_pname_max_def)
 
 theorem procs_embedded_witness: "procs_embedded witness_pi witness_cfg"
-  by (rule procs_embedded_compile_prog[OF witness_wf])
+  by (rule simrel_sem.procs_embedded_compile_prog[OF witness_wf])
 
 theorem csim_witness:
   obtains v where "witness_pi, witness_cfg, STR ''main'' \<turnstile> (SKIP (), s, []) \<approx> (v, s, [])"
