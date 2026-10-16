@@ -481,7 +481,8 @@ written value has the kind of its target (#isathm("wt_exp_elaborate"),
 *Evaluation.* Since every kind is written on its node, evaluation
 #isaconst("eval", thy: "Core_Exp") needs no kind environment. It is a function
 defined by one equation per constructor. An arithmetic node computes the
-mathematical result and wraps it into its kind, a conversion wraps, and a
+mathematical result of its operator (#isaconst("aop_eval")) and wraps it into its
+kind, a conversion wraps, and a
 variable read returns the stored value unchanged:
 $
   #isaconst("eval", thy: "Core_Exp") (#ctor("TArith", thy: "Core_Exp") thin k thin italic("op") thin e_1 thin e_2, s) & = #isaconst("ik_norm") thin k thin (italic("op")(#isaconst("eval", thy: "Core_Exp") (e_1, s), #isaconst("eval", thy: "Core_Exp") (e_2, s))), \
