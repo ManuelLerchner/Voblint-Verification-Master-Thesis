@@ -141,7 +141,7 @@ the running example of the remaining chapters.
     edge labels as `voblint --dot` prints them. Solid arrows are local edges and
     dashed arrows are call edges. Dotted connectors are not edges. They show the
     continuation of a call edge, that is, the node where the caller resumes.
-    The edge `return` into the result node `exit_main` of `main` is the return without a value by which
+    The edge `return` into the result node of `main` is the return without a value by which
     `main` falls through (@sec:compile). The drawing omits the corresponding
     node `pp1` of `bump` and its edge, which no run reaches because `bump`
     always returns explicitly.],

@@ -468,7 +468,7 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
     )
   },
   kind: image,
-  placement: none,
+  placement: auto,
   caption: [The solve of @tab:eq-trace on the unknowns. Gray arrows are graph
     edges, including a seed feeding its entry, and blue dashed arrows are the
     solver's queries and publications, labeled with their phases. The copies
