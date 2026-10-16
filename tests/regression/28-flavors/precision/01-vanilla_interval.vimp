@@ -1,0 +1,10 @@
+// PARAM: --analysis interval
+// Vanilla (Monniaux, "Flavors of abstract interpretation", ETAPS 2024): x and y are
+// negative constants, so z = x + y = -15 and z < 0 holds. Interval tracks the
+// constants exactly and proves it.
+fun main() {
+  i32 x = -5;
+  i32 y = -10;
+  i32 z = x + y;
+  __voblint_check(z < 0);  // PROVED
+}

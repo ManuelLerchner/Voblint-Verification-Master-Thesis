@@ -1,0 +1,13 @@
+// PARAM: --analysis sign
+// Optimal only among inductive invariants (Monniaux, ETAPS 2024): i takes 6, 4, 2,
+// 0, so i > 0 holds whenever the body starts. Its abstraction + is not inductive,
+// because i - 2 of a positive value may be anything, so Sign reaches every sign at
+// the loop head.
+fun main() {
+  i32 i = 6;
+  i = i - 2;
+  while (i != 0) {
+    __voblint_check(i > 0);  // UNKNOWN
+    i = i - 2;
+  }
+}

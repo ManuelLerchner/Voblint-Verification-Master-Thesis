@@ -1,0 +1,10 @@
+// PARAM: --analysis interval
+// Fudge (Monniaux, ETAPS 2024): the loop head widens i to the i32 limit, and
+// narrowing through the exit test recovers i = 10 after the loop.
+fun main() {
+  i32 i = 0;
+  while (i < 10) {
+    i = i + 1;
+  }
+  __voblint_check(i == 10);  // PROVED
+}
