@@ -149,8 +149,9 @@ theorem skeleton_elab_com:
 
 subsection \<open>Programs\<close>
 
-text \<open>Kinds are declared per identity, and an identity without a declaration is a C
-  \<open>int\<close>.\<close>
+text \<open>Kinds are declared per identity. The parser declares every variable of a program,
+  so the default \<open>I32\<close> only makes the environment total, for identities such as the
+  return slot that no declaration names.\<close>
 
 type_synonym kind_decls = "(var_id \<times> ikind) list"
 

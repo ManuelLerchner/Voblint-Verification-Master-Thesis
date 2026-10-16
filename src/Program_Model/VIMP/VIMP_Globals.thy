@@ -62,7 +62,9 @@ text \<open>
   those where every global is 0, so \<open>main\<close>'s locals may hold any integer. It
   constrains only the initial store. A callee's locals do not come from it:
   \<open>enter_state\<close> resets them to 0 on every entry, which defines what C leaves
-  indeterminate, as \<open>c_div\<close> defines division by zero. Neither convention is a
+  indeterminate, as \<open>c_div\<close> defines division by zero. Every local of a parsed
+  program is declared, and a declaration forgets the value it finds, so no run of a
+  parsed program observes this 0. Neither convention is a
   model of C's indeterminate-value or undefined-behaviour rules, and VIMP has no
   global initializer syntax for a declaration such as \<open>int x = 42;\<close> to diverge
   from.
