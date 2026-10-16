@@ -167,6 +167,24 @@ lemma conversions_inserted:
      = Return () (Some (TCast U8 (TVar I32 x_v)))"
   by eval+
 
+text \<open>The arguments of \<open>min\<close> and \<open>max\<close> meet at their common kind, as the operands of
+  C's \<open>MIN\<close> macro do: in \<open>min(x, u)\<close> with \<open>u\<close> at \<^const>\<open>U32\<close>, \<open>x = -1\<close> converts
+  to \<open>4294967295\<close> before the two are compared.\<close>
+
+definition min_xu :: "(unit, vname, src_exp) gcom" where
+  "min_xu = Call () (Some (STR ''u'')) special_pname_min [V (STR ''x''), V (STR ''u'')]"
+
+lemma library_arguments_kind:
+  "args_kind (kenv_u32 \<circ> res_main) [V (STR ''x''), V (STR ''u'')] = U32"
+  unfolding args_kind_pair by eval
+
+lemma library_arguments_common_kind:
+  "elab_com (\<lambda>_. False) (\<lambda>_. []) kenv_u32 main_p min_xu
+     = Call () (Some u_v) special_pname_min [TCast U32 (TVar I32 x_v), TVar U32 u_v]"
+  "map (\<lambda>a. eval a ((\<lambda>_. 0)(x_v := - 1, u_v := 1)))
+     (call_args (elab_com (\<lambda>_. False) (\<lambda>_. []) kenv_u32 main_p min_xu)) = [4294967295, 1]"
+  by eval+
+
 subsection \<open>Names after resolution and the command skeleton\<close>
 
 text \<open>A global keeps its identity in every procedure, erasure restores the source

@@ -7151,11 +7151,14 @@ let rec elaborate_syn
 
 let rec resolve_var g q x = (if g x then GlobalId x else ScopedId (q, x));;
 
+let rec args_kind gamma es = foldr (fun e -> usual_kind (esyn gamma e)) es I32;;
+
 let rec elab_args
   rho kappa x2 es = match rho, kappa, x2, es with
     rho, kappa, f :: fs, e :: es ->
       elaborate rho kappa (kappa f) e :: elab_args rho kappa fs es
-    | rho, kappa, [], es -> map (elaborate_syn rho kappa) es
+    | rho, kappa, [], es ->
+        map (elaborate rho kappa (args_kind (comp kappa rho) es)) es
     | rho, kappa, v :: va, [] -> [];;
 
 let rec elab_com
@@ -10326,15 +10329,19 @@ let rec operand_ivl
     | kappa, ch, TOr (a, b) ->
         inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TOr (a, b)))))
           (Ivl (Fin zero_inta, Fin one_inta))
+    | kappa, ch, TCast (k, a) ->
+        (let i = operand_ivl kappa ch a in
+         let j =
+           of_answer_ik_ivl (src_kind kappa (TCast (k, a)))
+             (ch (EvalInt (TCast (k, a))))
+           in
+          (if less_eq_ivl i (ik_ivl k) then inf_ivl i j else j))
     | kappa, ch, TVar (v, va) ->
         of_answer_ik_ivl (src_kind kappa (TVar (v, va)))
           (ch (EvalInt (TVar (v, va))))
     | kappa, ch, TArith (v, va, vb, vc) ->
         of_answer_ik_ivl (src_kind kappa (TArith (v, va, vb, vc)))
-          (ch (EvalInt (TArith (v, va, vb, vc))))
-    | kappa, ch, TCast (v, va) ->
-        of_answer_ik_ivl (src_kind kappa (TCast (v, va)))
-          (ch (EvalInt (TCast (v, va))));;
+          (ch (EvalInt (TArith (v, va, vb, vc))));;
 
 let rec unwrapped_ivl
   kappa ch x2 = match kappa, ch, x2 with

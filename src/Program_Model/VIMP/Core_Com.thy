@@ -16,17 +16,28 @@ text \<open>
 
 type_synonym 'a com = "('a, var_id, exp) gcom"
 
-text \<open>An actual argument converts to the kind of the formal it binds. An argument
-  without a formal, which only a library call has, keeps its own kind.\<close>
+text \<open>An actual argument converts to the kind of the formal it binds. The arguments
+  without a formal, which only a library call has, convert to their common kind, as the
+  operands of an arithmetic operator do: C has no integer \<open>min\<close> or \<open>max\<close>, and the
+  macro \<open>(a) < (b) ? (a) : (b)\<close> that stands for one compares and selects at the usual
+  arithmetic conversion of its arguments. \<^const>\<open>I32\<close> is a neutral start: the
+  common kind of \<^const>\<open>I32\<close> and a kind is that kind promoted.\<close>
+
+definition args_kind :: "(vname \<Rightarrow> ikind) \<Rightarrow> src_exp list \<Rightarrow> ikind" where
+  "args_kind \<Gamma> es = foldr (\<lambda>e. usual_kind (esyn \<Gamma> e)) es I32"
+
+lemma args_kind_pair: "args_kind \<Gamma> [a, b] = usual_kind (esyn \<Gamma> a) (esyn \<Gamma> b)"
+  unfolding args_kind_def
+  by (cases "esyn \<Gamma> a"; cases "esyn \<Gamma> b") (simp_all add: usual_kind_def)
 
 fun elab_args :: "(vname \<Rightarrow> var_id) \<Rightarrow> kenv \<Rightarrow> var_id list \<Rightarrow> src_exp list \<Rightarrow> exp list" where
   "elab_args \<rho> \<kappa> (f # fs) (e # es) = elaborate \<rho> \<kappa> (\<kappa> f) e # elab_args \<rho> \<kappa> fs es"
-| "elab_args \<rho> \<kappa> [] es = map (elaborate_syn \<rho> \<kappa>) es"
+| "elab_args \<rho> \<kappa> [] es = map (elaborate \<rho> \<kappa> (args_kind (\<kappa> \<circ> \<rho>) es)) es"
 | "elab_args \<rho> \<kappa> fs [] = []"
 
 lemma exp_vars_elab_args: "e \<in> set (elab_args \<rho> \<kappa> fs es) \<Longrightarrow> exp_vars e \<subseteq> range \<rho>"
   by (induction \<rho> \<kappa> fs es rule: elab_args.induct)
-     (auto simp: elaborate_syn_def dest: subsetD [OF exp_vars_elaborate])
+     (auto dest: subsetD [OF exp_vars_elaborate])
 
 text \<open>\<open>fm p\<close> lists the formals of procedure \<open>p\<close>, empty for a library call, and
   \<open>q\<close> is the procedure whose body is elaborated.\<close>
@@ -77,8 +88,7 @@ fun wt_com :: "kenv \<Rightarrow> (pname \<Rightarrow> var_id list) \<Rightarrow
 
 lemma elab_args_wt:
   "list_all (wt_exp \<kappa>) (elab_args \<rho> \<kappa> fs es) \<and> args_ok \<kappa> fs (elab_args \<rho> \<kappa> fs es)"
-  by (induction \<rho> \<kappa> fs es rule: elab_args.induct)
-     (simp_all add: wt_exp_elaborate elaborate_syn_def list_all_iff)
+  by (induction \<rho> \<kappa> fs es rule: elab_args.induct) (simp_all add: wt_exp_elaborate list_all_iff)
 
 theorem wt_com_elab_com:
   "wt_com \<kappa> (\<lambda>p. map (resolve_var \<G> p) (fm p)) q (elab_com \<G> fm \<kappa> q c)"
@@ -105,12 +115,12 @@ proof (induction es arbitrary: fs)
   show ?case by (cases fs) simp_all
 next
   case (Cons e es)
-  have syn: "list_all cast_free xs \<Longrightarrow> map (\<lambda>a. exp_erase (elaborate_syn \<rho> \<kappa> a)) xs = xs"
-    for xs
-    by (induction xs) (simp_all add: elaborate_syn_def exp_erase_elaborate [OF assms(1)])
+  have syn: "list_all cast_free xs \<Longrightarrow> map (\<lambda>a. exp_erase (elaborate \<rho> \<kappa> k a)) xs = xs"
+    for xs k
+    by (induction xs) (simp_all add: exp_erase_elaborate [OF assms(1)])
   show ?case
     using Cons syn
-    by (cases fs) (simp_all add: exp_erase_elaborate [OF assms(1)] comp_def elaborate_syn_def)
+    by (cases fs) (simp_all add: exp_erase_elaborate [OF assms(1)] comp_def)
 qed
 
 theorem com_erase_elab_com:

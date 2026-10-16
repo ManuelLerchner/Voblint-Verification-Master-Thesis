@@ -1,0 +1,16 @@
+// PARAM: --analysis sign
+// EXPECT-ARITHMETIC
+// u8 and i8 arguments of min and max are promoted to i32, and the i32 result is
+// converted back to the destination. The promotion changes no value, so the
+// result still fits a destination of the arguments' own kind, which a domain
+// without magnitudes, such as Sign, can only learn from the arguments' kinds.
+fun main() {
+  u8 a;
+  u8 b;
+  u8 m;
+  i8 c;
+  i8 d;
+  i8 n;
+  m = min(a, b); // ARITH: NONE
+  n = max(c, d); // ARITH: NONE
+}

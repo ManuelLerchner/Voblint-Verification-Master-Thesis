@@ -211,7 +211,8 @@ not a model of C's undefined behaviour:
 | conversion to an unsigned kind that does not fit | raised | defined wraparound (6.3.1.3p2) |
 | conversion to a signed kind that does not fit | raised | implementation-defined (6.3.1.3p3) |
 | conversion that widens into its target | not raised | value preserved |
-| `min`/`max` result written to a kind that does not hold both arguments' kinds | raised, exactly when the result does not fit (`min(300, 1)` into `u8` holds) | library result converted on assignment (6.3.1.3) |
+| `min`/`max` arguments of different kinds | both converted to their common kind (usual arithmetic conversions), each conversion raised as above | the `(a) < (b) ? (a) : (b)` macro converts both operands (6.3.1.8, 6.5.15p5) |
+| `min`/`max` result written to a kind that does not hold the arguments' common kind | raised, exactly when the result does not fit (`min(300, 1)` into `u8` holds) | library result converted on assignment (6.3.1.3) |
 | `__voblint_nondet_int()` result | not raised: any value of the destination's kind | (declaration without initializer) |
 | operands under `&&`, `\|\|` | raised for both operands | second operand evaluated only if needed (6.5.13p4, 6.5.14p4) |
 

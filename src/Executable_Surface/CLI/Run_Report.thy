@@ -114,7 +114,10 @@ text \<open>A literal operand is its own exact interval, a truth value lies in \
   (\<^const>\<open>src_kind\<close>), whatever the active analyses answer for it: a domain without
   magnitudes, such as Parity, would otherwise leave even \<open>10 / 3\<close> or \<open>x / 2\<close> a
   possible overflow. The kind bounds an operand only at a store within the kinds
-  (\<^const>\<open>in_kinds\<close>), which every reaching store is.\<close>
+  (\<^const>\<open>in_kinds\<close>), which every reaching store is. A conversion whose operand's
+  interval lies in the target kind changes no value, so it keeps that interval: a
+  \<^const>\<open>U8\<close> argument of \<open>min\<close> promoted to \<^const>\<open>I32\<close> stays within
+  \<open>[0, 255]\<close>.\<close>
 
 fun operand_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
   "operand_ivl \<kappa> ch (TN k n) = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
@@ -126,6 +129,10 @@ fun operand_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarr
      of_answer_ik None (ch (EvalInt (TAnd a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
 | "operand_ivl \<kappa> ch (TOr a b) =
      of_answer_ik None (ch (EvalInt (TOr a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl \<kappa> ch (TCast k a) =
+     (let i = operand_ivl \<kappa> ch a;
+          j = of_answer_ik (src_kind \<kappa> (TCast k a)) (ch (EvalInt (TCast k a)))
+      in if i \<le> ik_ivl k then i \<sqinter> j else j)"
 | "operand_ivl \<kappa> ch e = of_answer_ik (src_kind \<kappa> e) (ch (EvalInt e))"
 
 fun unwrapped_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
@@ -150,9 +157,20 @@ proof -
       "a \<in> {TCmp c x y | c x y. True} \<union> range TNot \<union> {TAnd x y | x y. True} \<union> {TOr x y | x y. True}"
     for a
     using that by (auto simp: less_eq_eint_def)
-  have ans: "eval a t \<in> gamma_ivl (operand_ivl \<kappa> ch a)" for a
-    using answer[of None a] answer[of "src_kind \<kappa> a" a, OF src_kind_sound[OF kinds]] truth[of a]
+  have known: "eval a t \<in> gamma_ivl (of_answer_ik (src_kind \<kappa> a) (ch (EvalInt a)))" for a
+    by (rule answer[OF src_kind_sound[OF kinds]])
+  have other: "eval a t \<in> gamma_ivl (operand_ivl \<kappa> ch a)" if "\<forall>k b. a \<noteq> TCast k b" for a
+    using that answer[of None a] known[of a] truth[of a]
     by (cases a) (auto simp: less_eq_eint_def gamma_inf_ivl)
+  have ans: "eval a t \<in> gamma_ivl (operand_ivl \<kappa> ch a)" for a
+  proof (induction a)
+    case (TCast k a)
+    have "eval (TCast k a) t = eval a t"
+      if "operand_ivl \<kappa> ch a \<le> ik_ivl k"
+      using gamma_ivl_mono[OF that] TCast.IH by auto
+    then show ?case
+      using TCast.IH known[of "TCast k a"] by (auto simp: Let_def)
+  qed (rule other, simp)+
   show "unwrapped e t \<in> gamma_ivl (unwrapped_ivl \<kappa> ch e)"
   proof (cases e)
     case (TN k n) then show ?thesis by (simp add: less_eq_eint_def)

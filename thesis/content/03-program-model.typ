@@ -470,8 +470,10 @@ conversions C performs where a value is written: to the variable's kind at an
 assignment, to the formal's kind at an argument (#isaconst("elab_args")), and
 to the procedure's return kind #isai("\<kappa> (ReturnId q)") at a
 #keyw("return"). A condition or a check is evaluated at the kind it
-synthesizes. The arguments of `min` and `max` have no formals and keep their
-own kinds, and the library compares them as integers. Elaborating every body
+synthesizes. The arguments of `min` and `max` have no formals. They convert
+to their common kind, as the operands of C's usual `MIN` macro do, so
+`min(x, u)` with `x = -1` and `u` a `u32` compares $2^32 - 1$ with `u`.
+Elaborating every body
 gives the program's core procedure table
 $Pi = #isaconst("elab_ptable") thin p thin italic("ds")$. Its expressions are
 well-typed. The operands of an arithmetic node carry its kind, and every
