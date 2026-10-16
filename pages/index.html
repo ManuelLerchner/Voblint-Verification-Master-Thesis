@@ -4816,10 +4816,12 @@ fun main() {
             <p class="thm-plain">
               At a node with no arithmetic diagnostic, every store that reaches it is arithmetically
               safe on the edges leaving it: no divisor is zero, no signed <code>+</code>, <code>-</code>,
-              <code>*</code> or <code>/</code> computes a result outside its kind, and no conversion
-              to a kind its source does not fit in receives a value outside the target. The statement
-              has three parts, for the expressions of intra edges, for a call's arguments, and for a
-              value returned to a caller. The statement below is the first.
+              <code>*</code> or <code>/</code> computes a result outside its kind, no signed
+              <code>%</code> has a quotient outside its kind (as <code>INT_MIN % -1</code> would), and
+              no conversion to a kind its source does not fit in receives a value outside the target.
+              The statement has five parts: the expressions of intra edges, a call's arguments, a
+              value returned to a caller, and the results of <code>min</code> and <code>max</code>
+              written to their destination. The statement below is the first.
             </p>
             <details>
               <summary>Isabelle statement</summary>
@@ -5254,7 +5256,7 @@ qed</code></pre>
               <rect x="1010" y="366" width="76" height="28" rx="6"/><text x="1048" y="385">PROVED</text></a>
             <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_dead_unreached%7Cfact" data-name="run_voblint_dead_unreached" data-theory="Voblint_CLI.Run_Voblint" data-info="DEAD means no store reaches the node. Proved forwards from run_voblint_sound, not through the source bridge: that bridge runs forwards, placing each run at a node, so it cannot be read backwards into no run reaching a given node.">
               <rect x="1010" y="426" width="76" height="28" rx="6"/><text x="1048" y="445">DEAD</text></a>
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Run_Voblint" data-info="No diagnostic means no zero divisor, no signed overflow and no out-of-range conversion in any reaching store. Stated at the node, over the collecting semantics, so it needs the semantics line but not the source bridge.">
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Run_Voblint" data-info="No diagnostic means no zero divisor, no signed overflow, no remainder whose quotient overflows and no out-of-range conversion, min/max results included, in any reaching store. Stated at the node, over the collecting semantics, so it needs the semantics line but not the source bridge.">
               <rect x="1010" y="486" width="76" height="28" rx="6"/><text x="1048" y="505">SAFE</text></a>
           </g>
         </svg>
