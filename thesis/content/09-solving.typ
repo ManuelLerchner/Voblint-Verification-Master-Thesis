@@ -726,7 +726,9 @@ termination. @sec:eval-precision compares them on the programs of
     agrees with warrow per origin here, since A switches to narrowing once, and
     the bound 5 is never reached. A widened bound is set
     bold and marked $nabla$. The cells are the values the vendored rules compute
-    with Voblint's interval operators. The contributions separate the rules and
+    on the unbounded intervals #isatype("ivl"), whose widening jumps to
+    $infinity$. At a machine kind the widened bound is the kind's limit
+    instead (@sec:domain-kinds). The contributions separate the rules and
     come from no program.],
 ) <fig:update-rules>
 
