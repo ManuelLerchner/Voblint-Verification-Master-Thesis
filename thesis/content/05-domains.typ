@@ -537,7 +537,7 @@ The domains of @sec:domain-carrier-laws are the classical ones. Their values
 denote sets of mathematical integers, and their operations are the arithmetic
 of $ZZ$. A VIMP variable, however, holds a value of its machine kind $k$, and
 every arithmetic node wraps its mathematical result into the kind's range
-#isaconst("ik_range") with #isaconst("ik_norm") (@sec:vimp). An analyzer that
+#isaconst("ik_range") with #isaconst("ik_norm") (@sec:elaboration). An analyzer that
 used the classical operations unchanged would therefore be unsound. In the
 program of @fig:domain-kinds, interval arithmetic over $ZZ$ bounds $x$ by
 $ivl(0, +infinity)$ after the guard, hence $y$ by $ivl(1, +infinity)$, and
@@ -716,10 +716,11 @@ The interval widening #isaconst("widen_ivl_ik") moves a growing bound to the
 kind's limit instead of to infinity, or to the new bound if that already lies
 beyond the limit. The narrowing
 #isaconst("narrow_ivl_ik") replaces only a bound that sits at that limit. In
-the stride-2 loop of @sec:stride2, the loop head widens $ivl(1, 1)$ and
-$ivl(1, 3)$ to $ivl(1, 2^31 - 1)$, and narrowing then lowers the upper bound
-to $52$. The narrowing of @sec:domain-carrier-laws refines only infinite bounds
-and would keep $2^31 - 1$. On intervals inside the range, each bound grows at
+the stride-2 loop of @sec:stride2, the loop head widens the growing upper
+bound of $v$ to the limit of `i32`, and narrowing then lowers it to $52$, as
+the state at the check `v <= 52` in the loop body shows (claim
+#claim-ref("dom-stride2-interval")). The narrowing of @sec:domain-carrier-laws
+refines only infinite bounds and would keep the limit. On intervals inside the range, each bound grows at
 most once under widening and leaves the limit at most once under narrowing.
 This argument bounds the widening and narrowing sequences of one value. It is
 not a lemma of the theories, and it does not make the solver terminate
@@ -734,7 +735,8 @@ Congruence alone would return its top (#isaconst("arith_ik_int_tuple"),
 #fixture("27-signed-overflow/precision/04-int_no_ov_keeps_class.vimp", label: "04-int_no_ov_keeps_class")). The components then refine each other
 never, once, or until nothing changes (#isaconst("it_refine_mode")), as
 Goblint's `ana.int.refinement` selects. In @fig:domain-kinds, Int keeps
-$a in 4 ZZ$ and rounds its interval to $ivl(0, 2^32 - 4)$. @sec:reduced-product
+$a in 4 ZZ$ and rounds its interval to $ivl(0, 2^32 - 4)$ (claim
+#claim-ref("dom-kinds-int")). @sec:reduced-product
 develops the reduction.
 
 Wrapping costs precision that the classical domains would keep. In
@@ -1245,7 +1247,7 @@ It costs precision, however, as the following program shows.
 The first branch keeps $x$ between $-1000$ and $1000$. In this range `- x`
 cannot wrap, so $y$ ends up as $|x|$ and the check always holds. Without the
 bound it could fail: at $x = -2^31$, `- x` wraps to $-2^31$ in 32 bits. Without
-refinement, however, the analysis learns nothing from either condition: $x$
+refinement, however, the analysis learns nothing from either condition. Then $x$
 keeps the top value of its kind, and so does $y$, so the state cannot show
 that the check holds. Backward refinement runs the condition in
 reverse, as in the backward abstract interpretation of tests by Cousot
@@ -1288,9 +1290,6 @@ each variable can therefore depend on the order of the conjuncts. With
 Interval, `0 < i && i < j && j < 10` bounds $j$ to $ivl(2, 9)$ but $i$ only
 from below, and the reversed order bounds $i$ to $ivl(1, 8)$ but $j$ only from
 above (claim #claim-ref("dom-conjunct-order")).
-// TODO: regenerate claim dom-conjunct-order; the refinement now runs left to
-// right (brefine), so the variable that gets both bounds is swapped relative
-// to the claim output recorded before the machine-integer migration.
 
 #block(breakable: false)[
   #lemma(name: [Sound guard refinement], isa: "nonrel_refine_sound")[

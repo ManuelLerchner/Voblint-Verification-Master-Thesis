@@ -323,6 +323,16 @@
       "placement": "flow-sensitive"
     }
   },
+  "dom-kinds-int": {
+    "fixture": "thesis/shared/programs/domain-kinds.vimp",
+    "program": "fun main() {\n  i32 x;\n  u32 n;\n  if (x >= 0) {\n    i32 y = x + 1;\n    __voblint_check(y > 0);\n  }\n  u32 a = 4 * n;\n  u32 b = 3 * n;\n  __voblint_check(a != 1);\n  __voblint_check(b != 1);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "dom-kinds-interval": {
     "fixture": "thesis/shared/programs/domain-kinds.vimp",
     "program": "fun main() {\n  i32 x;\n  u32 n;\n  if (x >= 0) {\n    i32 y = x + 1;\n    __voblint_check(y > 0);\n  }\n  u32 a = 4 * n;\n  u32 b = 3 * n;\n  __voblint_check(a != 1);\n  __voblint_check(b != 1);\n}",
@@ -487,6 +497,16 @@
   "kinds-promotion": {
     "fixture": "thesis/shared/programs/kinds-promotion.vimp",
     "program": "fun main() {\n  u8 x = 200;\n  u8 y = 100;\n  u8 z = x + y;\n  __voblint_check(x + y < 250);\n  __voblint_check(z < 250);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "kinds-untyped": {
+    "fixture": "thesis/shared/programs/kinds-untyped.vimp",
+    "program": "fun main() {\n  x = 200;\n  y = 100;\n  z = x + y;\n  __voblint_check(x + y < 250);\n  __voblint_check(z < 250);\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",

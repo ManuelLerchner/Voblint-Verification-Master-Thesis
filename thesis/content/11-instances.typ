@@ -256,7 +256,9 @@ fun main() {
   placement: none,
   caption: [The value of $x$ at the check of the program above, without
     reduction and with the default reduction (claims #claim-ref("int-reduction-never") and
-    #claim-ref("int-reduction-fixpoint")). Both columns describe the integers $1$, $5$
+    #claim-ref("int-reduction-fixpoint")), both under wraparound overflow
+    (#ctor("Assume_Wraparound")). Since `4 * n` may overflow, #ctor("Assume_Top") would
+    drop the class (@sec:domain-kinds). Both columns describe the integers $1$, $5$
     and $9$ in the guard's range, but only the reduced value decides the check.],
 ) <tab:reduction>
 

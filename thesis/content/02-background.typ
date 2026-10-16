@@ -580,7 +580,9 @@ whereas the top-down solver TD widens where a read closes a cycle (@sec:td). The
 widening replaces a growing bound by $+infinity$ @cousot77[§9.2] @mine17[§4.5.2] (#isaconst("widen_ivl_core")),
 so widening at $h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
 $[0, +infinity]$ at once, a post-fixpoint that loses the bound $5$ of the loop
-condition `i < 5`. The branch into the body refines the head's value against the
+condition `i < 5`. At a machine kind, Voblint's widening moves the bound to the
+kind's limit instead of $+infinity$ (@sec:domain-kinds), which loses the bound
+$5$ in the same way. The branch into the body refines the head's value against the
 condition (#isalocale("kind_int_domain"), @sec:branches), and restricts $[0, +infinity]$ to $[0, 4]$ (#isaconst("ivl_refine")).
 The body yields $[1, 5]$, and evaluating the head again gives
 $[0, 0] ljoin [1, 5] = [0, 5]$. A widened iteration only grows and would not

@@ -1,0 +1,7 @@
+fun main() {
+  x = 200;
+  y = 100;
+  z = x + y;
+  __voblint_check(x + y < 250);
+  __voblint_check(z < 250);
+}

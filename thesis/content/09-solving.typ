@@ -723,7 +723,7 @@ termination. @sec:eval-precision compares them on the programs of
     agrees with warrow per origin here, since A switches to narrowing once, and
     the bound 5 is never reached. A widened bound is set
     bold and marked $nabla$. The cells are the values the vendored rules compute
-    with Voblint's interval operators; the contributions separate the rules and
+    with Voblint's interval operators. The contributions separate the rules and
     come from no program.],
 ) <fig:update-rules>
 
@@ -748,7 +748,7 @@ short, distinct from the carrier of a domain, @ch:background).
 
 VIMP initializes globals to zero, as
 C does for objects with static storage (#c11("6.7.9p10")), and leaves the
-locals of `main` arbitrary within their kinds (@sec:vimp-vs-c). The initial
+locals of `main` arbitrary within their kinds (@sec:elaboration). The initial
 state must give every local the value #ltop and every global the value $0^sharp$
 at its kind, the abstract value of the constant $0$, without listing every
 global identity. Voblint's carrier therefore keeps two default dictionaries,

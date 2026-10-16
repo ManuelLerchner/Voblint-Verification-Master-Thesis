@@ -30,7 +30,8 @@ every pair of a CFG node and a context the solver reached, and a value for
 every global unknown. By @sec:cert-forward, these states cover every
 execution. A user, however, reads neither states nor contexts. The user reads
 a report with one verdict for every `__voblint_check` and a diagnostic wherever
-a division, a signed operation or a narrowing conversion may fail. The chapter shows how the analyzer derives this report
+a division or a signed operation may fail or a conversion may receive a value
+its target kind cannot represent. The chapter shows how the analyzer derives this report
 from the solution and why every verdict in it is sound. Neither verdict claims its
 check is reached. #verdict("PROVED") says the condition holds whenever a run
 reaches the check, and #verdict("REFUTED") says that it fails there (@sec:verdict-meaning).
@@ -141,11 +142,11 @@ something an end user reads, and an end user reads the verdicts rather than
 the states. To state that
 the verdicts are correct as an inclusion of sets, we turn each verdict at $v$
 into the set of stores consistent with it. If $v$ carries the check `x > 0` with
-verdict #verdict("PROVED"), this set is $setcomp(s, s(x) > 0)$: the verdict
+verdict #verdict("PROVED"), this set is $setcomp(s, s(x) > 0)$. The verdict
 tells the user that $x$ is positive there and nothing else.
 #verdict("REFUTED") gives the stores in which the condition fails, and
 #verdict("UNKNOWN") gives every store. The definition takes the evaluator
-$"ev"$ that gives a condition its meaning at a store as a parameter; for VIMP
+$"ev"$ that gives a condition its meaning at a store as a parameter. For VIMP
 it is #isaconst("eval", thy: "Core_Exp"):
 
 #thy("verdict_holds")
@@ -184,7 +185,7 @@ Let $"res"$ be a report #isaconst("run_voblint") returns for a program $p$
 with kind declarations $"ds"$, $g$ = #isaconst("elab_cfg") $p$ $"ds"$ its
 compiled graph, #isai("\<kappa>") = #isaconst("kenv_of") $"ds"$ the kind of
 every variable, and $S$ = #isaconst("init_stores") #isai("\<kappa>") its
-initial-store set (@sec:vimp-vs-c, @ch:traces). A store is _reached_ if some
+initial-store set (@sec:elaboration, @ch:traces). A store is _reached_ if some
 finite run of `main` in the elaborated program, started from a store in $S$,
 arrives at it. The argument that a verdict is sound places a reached store at
 a CFG node $v$ and follows a chain of inclusions between sets of stores there.
@@ -338,8 +339,8 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
     admits $3$ and $5$, which no run reaches, and the stores verdict
     #verdict(_vge) admits are unbounded, since a store is not restricted to a
     kind's range. The check `m == 2` (line 4) sees the same
-    stores. Report and verdict are analyzer output (claim #claim-ref("chain-split-entry"));
-    the first three rows are derived by hand.],
+    stores. Report and verdict are analyzer output (claim #claim-ref("chain-split-entry")).
+    The first three rows are derived by hand.],
   kind: image,
   placement: none,
 ) <fig:chain>
@@ -501,22 +502,20 @@ lies outside its kind, a signed remainder whose quotient does, as for
 including the result of `min` or `max`. Each such operation carries an obligation
 (#isaconst("arith_obligations")), and the analyzer decides it from the
 analyses' states (#isaconst("obligation_classify")). A division asks the query
-system of @sec:coop-queries whether the divisor can be zero; an overflow or
+system of @sec:coop-queries whether the divisor can be zero. An overflow or
 conversion obligation tests an interval bound of the operation's unwrapped
 result, or of the quotient for a remainder, against the kind's range. The
 analyzer reports an error if the analyses
 show that the obligation fails, a warning if they cannot show that it holds,
-and nothing otherwise. The concrete semantics wraps every result. The
-configuration's signed-overflow option only chooses whether the domains bound a
-possibly overflowing signed result by the kind's whole range
-(#ctor("Assume_Top"), the default) or by its wrapped value
-(#ctor("Assume_Wraparound")), and both guarantees below hold under either option.
+and nothing otherwise. The concrete semantics wraps every result, and both
+guarantees below hold under either signed-overflow policy (@sec:domain-kinds).
 An error is sound as well. Whenever a covered execution reaches its node, the
 obligation fails (#isathm("run_voblint_arithmetic_refuted")). A warning means
 only that the analysis could not establish the obligation. At a node $v$
 without a diagnostic, every obligation of every expression evaluated on an
 intraprocedural edge or in a call argument at $v$ holds in every store
-collected at $v$, and a value returned there fits the narrower kind a caller
-converts it to:
+collected at $v$. A value returned there fits the narrower kind a caller
+converts it to, and the result of a `min` or `max` computed there fits the kind
+of its destination:
 
 #proved("run_voblint_arithmetic_safe")

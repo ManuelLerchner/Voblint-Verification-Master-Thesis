@@ -257,7 +257,7 @@ argv = [
   "interval",
   "tests/regression/02-control-flow/known-imprecision/05-conjunct_order.vimp",
 ]
-why = "bfilter refines a conjunction in one pass, so 0 < i && i < j && j < 10 bounds i but not j, and the reversed order bounds j but not i."
+why = "brefine refines a conjunction in one left-to-right pass, so 0 < i && i < j && j < 10 bounds j but not i, and the reversed order bounds i but not j."
 
 [claims.dom-disjunct-sign]
 argv = [
@@ -945,6 +945,14 @@ why = "At i32, x + 1 may wrap, so Interval gives y the whole range and leaves y 
 argv = ["--analysis", "congruence", "thesis/shared/programs/domain-kinds.vimp"]
 why = "At u32, 4 * n keeps the class 4Z through wrapping (4 divides 2^32), so a != 1 is PROVED; 3 * n loses 3Z (gcd(3, 2^32) = 1), and b != 1 fails at n = 2863311531."
 
+[claims.dom-kinds-int]
+argv = ["--analysis", "int", "thesis/shared/programs/domain-kinds.vimp"]
+why = "Section 5.2: Int keeps a in 4Z at u32 and rounds its interval to [0, 2^32 - 4] = [0,4294967292], the largest multiple of 4 in the kind."
+
 [claims.kinds-promotion]
 argv = ["--analysis", "interval", "thesis/shared/programs/kinds-promotion.vimp"]
 why = "Section 3.2: x + y is promoted to i32, so x + y < 250 compares 300 and is REFUTED; z = x + y converts 300 to u8, so z holds 44 and z < 250 is PROVED."
+
+[claims.kinds-untyped]
+argv = ["--analysis", "interval", "thesis/shared/programs/kinds-untyped.vimp"]
+why = "Section 3.2: the untyped variant of kinds-promotion makes every variable i32, so z holds 300 and z < 250 is REFUTED."

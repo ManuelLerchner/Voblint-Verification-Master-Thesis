@@ -8,6 +8,7 @@
 #import "../lib/sources.typ": proved, stated, thy
 #import "../lib/theorems.typ": corollary, definition, example, lemma, theorem
 #import "../lib/cfg-graphs.typ": dot-edge-line, dot-label, dot-node-line, sum-graph
+#import "../lib/claims.typ": claim-ref
 
 = Programs and Control-Flow Graphs <ch:program-model>
 
@@ -209,11 +210,6 @@ and sets of states. Both languages target program verification, where semantic o
 convenient, whereas an analyzer needs syntax that it can inspect. VIMP is therefore defined from scratch, with such a syntax, which code
 generation can also export.
 
-The parser produces these _surface_ expressions over variable names, and
-surface VIMP has no evaluation of its own. Elaboration translates them into
-core expressions, in which every operation carries the width it computes at,
-and gives those their meaning (@sec:elaboration).
-
 Commands are built from expressions. Besides the structured statements, there
 are calls, which may store a result, and two markers that appear only during
 execution.
@@ -229,9 +225,10 @@ execution.
 Every constructor except sequencing also carries an _annotation_, whose type is
 a parameter of #isatype("gcom"), as are the types of variables and expressions.
 The commands of a parsed program carry the unit annotation and have type
-#isatype("src_com"), over names and surface expressions. Elaboration
-(@sec:elaboration) turns them into core commands (#isatype("com")) over
-identities and core expressions. The grammar above omits annotations, which @fig:pstep writes as $i$.
+#isatype("src_com"), over names and the _surface_ expressions above, which
+have no evaluation of their own. Elaboration (@sec:elaboration) turns them
+into core commands (#isatype("com")) over identities and core expressions, in
+which every operation carries the width it computes at. The grammar above omits annotations, which @fig:pstep writes as $i$.
 
 In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
@@ -368,13 +365,15 @@ Read at the variables' own width, both compare $44$, the sum $300$ wrapped to
 converts both 8-bit operands to `int` (the integer promotions) and adds at
 that width, so the first check compares $300 < 250$ and fails. The assignment
 to `z` then converts $300$ back to 8 bits, so `z` holds $44$ and the second
-check holds. The analyzer agrees: the first check is
+check holds. The analyzer agrees. The first check is
 #verdict(check-row("kinds-promotion", cond: "(i32) x + (i32) y < 250").verdict)
 and the second
 #verdict(check-row("kinds-promotion", cond: "(i32) z < 250").verdict). It
 also reports the conversion to `u8` as an error, because it changes the value,
 although C defines it (@sec:vimp-vs-c). A program that declares no types makes every variable 32 bits wide, so `z` holds
-$300$ and the second check fails. A verdict is therefore only meaningful
+$300$ and the second check is
+#verdict(check-row("kinds-untyped", cond: "z < 250").verdict) (claim
+#claim-ref("kinds-untyped")). A verdict is therefore only meaningful
 together with the width at which each operation computes. This section fixes
 that width for every operation, and states the result as a translation of the
 program into a form in which every width is explicit.
@@ -416,7 +415,7 @@ $q$, and the single slot #ctor("ReturnVar", thy: "Var_Id") carries a returned
 value back to the caller. Within one procedure, distinct names resolve to
 distinct identities, and two procedures share an identity only for a global
 (#isaconst("resolve_var"), #isathm("resolve_var_eq_iff")). The formal language
-has no block scopes. The parser removes them: it renames every declaration that
+has no block scopes. The parser removes them. It renames every declaration that
 shadows a name already in use in its procedure to a fresh name such as `x#2`,
 which no source program can write, and resolves every use to the innermost
 declaration in scope (#fixture("26-machine-kinds/15-block_scopes.vimp")).
@@ -476,7 +475,7 @@ synthesizes. The arguments of `min` and `max` have no formals and keep their
 own kinds, and the library compares them as integers. Elaborating every body
 gives the program's core procedure table
 $Pi = #isaconst("elab_ptable") thin p thin italic("ds")$. Its expressions are
-well-typed: the operands of an arithmetic node carry its kind, and every
+well-typed. The operands of an arithmetic node carry its kind, and every
 written value has the kind of its target (#isathm("wt_exp_elaborate"),
 #isathm("wt_com_elab_com")).
 
@@ -718,7 +717,7 @@ effects. It gives the short-circuit value. Only the division diagnostic differs.
 A program can declare machine kinds. Declarations give a C integer type such as
 `u8` to a global, to a formal or local of one procedure, or to a procedure's
 return value, and `(k) e` converts explicitly. An undeclared variable is an
-`int` (#isaconst("kenv_of")). Elaboration (@sec:vimp) resolves every name to a
+`i32` (#isaconst("kenv_of")). Elaboration (@sec:elaboration) resolves every name to a
 static identity, computes every operation at its C type under integer
 promotion and the usual arithmetic conversions, and makes every conversion an
 explicit node that wraps a value into the range of its kind. On every store

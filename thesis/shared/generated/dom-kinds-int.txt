@@ -1,0 +1,13 @@
+thesis/shared/programs/domain-kinds.vimp [int]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+5:9       pp3    WARNING   possible signed integer overflow in +: x + 1
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------------------------------------------------------
+6:5       pp4    y > 0      UNKNOWN  int: y=intervals:[-2147483648,2147483647]; congruences:⊤
+10:3      pp8    a != 1     PROVED   int: a=intervals:[0,4294967292]; congruences:4ℤ
+11:3      pp9    b != 1     UNKNOWN  int: b=intervals:[0,4294967295]; congruences:⊤
