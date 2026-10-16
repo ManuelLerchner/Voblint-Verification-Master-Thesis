@@ -1654,14 +1654,14 @@ cannot show the effect.
 `while-loop.vimp` figures):
 
 ```c
-fun bump(n) {
+fun i32 bump(i32 n) {
   return n + 1;
 }
 
 fun main() {
-  a = bump(5);
-  b = bump(4);
-  x = 0;
+  i32 a = bump(5);
+  i32 b = bump(4);
+  i32 x = 0;
   while (x < 10) {
     x = x + 1;
   }

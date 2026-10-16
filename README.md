@@ -85,7 +85,7 @@ Voblint programs are written in VIMP, a small IMP-style language with
 
 ```c
 fun main() {
-    x = 0;
+    i32 x = 0;
     while (x < 10) {
         x = x + 1;
     }
