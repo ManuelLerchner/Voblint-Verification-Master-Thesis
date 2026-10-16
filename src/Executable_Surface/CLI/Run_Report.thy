@@ -109,51 +109,55 @@ text \<open>
   read as unknown, as \<^const>\<open>answer_check\<close> reads one.
 \<close>
 
-text \<open>A literal operand is its own exact interval, and a truth value lies in
-  \<open>[0, 1]\<close>, whatever the active analyses answer for them: a domain without
-  magnitudes, such as Parity, would otherwise leave even \<open>10 / 3\<close> a possible
-  overflow.\<close>
+text \<open>A literal operand is its own exact interval, a truth value lies in \<open>[0, 1]\<close>, and
+  any other operand lies in its kind's range when its kind is known
+  (\<^const>\<open>src_kind\<close>), whatever the active analyses answer for it: a domain without
+  magnitudes, such as Parity, would otherwise leave even \<open>10 / 3\<close> or \<open>x / 2\<close> a
+  possible overflow. The kind bounds an operand only at a store within the kinds
+  (\<^const>\<open>in_kinds\<close>), which every reaching store is.\<close>
 
-fun operand_ivl :: "exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
-  "operand_ivl ch (TN k n) = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
-| "operand_ivl ch (TCmp c a b) =
+fun operand_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
+  "operand_ivl \<kappa> ch (TN k n) = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
+| "operand_ivl \<kappa> ch (TCmp c a b) =
      of_answer_ik None (ch (EvalInt (TCmp c a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch (TNot a) =
+| "operand_ivl \<kappa> ch (TNot a) =
      of_answer_ik None (ch (EvalInt (TNot a))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch (TAnd a b) =
+| "operand_ivl \<kappa> ch (TAnd a b) =
      of_answer_ik None (ch (EvalInt (TAnd a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch (TOr a b) =
+| "operand_ivl \<kappa> ch (TOr a b) =
      of_answer_ik None (ch (EvalInt (TOr a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch e = of_answer_ik None (ch (EvalInt e))"
+| "operand_ivl \<kappa> ch e = of_answer_ik (src_kind \<kappa> e) (ch (EvalInt e))"
 
-fun unwrapped_ivl :: "exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
-  "unwrapped_ivl ch (TN k n) = Ivl (Fin n) (Fin n)"
-| "unwrapped_ivl ch (TArith k op a b) = ivl_aop op (operand_ivl ch a) (operand_ivl ch b)"
-| "unwrapped_ivl ch (TCast k a) = operand_ivl ch a"
-| "unwrapped_ivl ch e = operand_ivl ch e"
+fun unwrapped_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
+  "unwrapped_ivl \<kappa> ch (TN k n) = Ivl (Fin n) (Fin n)"
+| "unwrapped_ivl \<kappa> ch (TArith k op a b) =
+     ivl_aop op (operand_ivl \<kappa> ch a) (operand_ivl \<kappa> ch b)"
+| "unwrapped_ivl \<kappa> ch (TCast k a) = operand_ivl \<kappa> ch a"
+| "unwrapped_ivl \<kappa> ch e = operand_ivl \<kappa> ch e"
 
 lemma unwrapped_ivl_sound:
-  assumes "geval_query.channel_holds eval ch t"
-  shows "unwrapped e t \<in> gamma_ivl (unwrapped_ivl ch e)"
-    and "eval e t \<in> gamma_ivl (operand_ivl ch e)"
+  assumes "geval_query.channel_holds eval ch t" and kinds: "in_kinds \<kappa> t"
+  shows "unwrapped e t \<in> gamma_ivl (unwrapped_ivl \<kappa> ch e)"
+    and "eval e t \<in> gamma_ivl (operand_ivl \<kappa> ch e)"
 proof -
-  have answer: "eval a t \<in> gamma_ivl (of_answer_ik None (ch (EvalInt a)))" for a
-    using geval_query.channel_holdsD[OF assms, of "EvalInt a"]
-      of_answer_ik_sound[where 'a = ivl, of None "eval a t" "ch (EvalInt a)"]
+  have answer: "eval a t \<in> gamma_ivl (of_answer_ik sk (ch (EvalInt a)))"
+    if "\<And>k. sk = Some k \<Longrightarrow> eval a t \<in> ik_range k" for a sk
+    using geval_query.channel_holdsD[OF assms(1), of "EvalInt a"]
+      of_answer_ik_sound[where 'a = ivl, of sk "eval a t" "ch (EvalInt a)"] that
     by simp
   have truth: "eval a t \<in> gamma_ivl (Ivl (Fin 0) (Fin 1))"
     if
       "a \<in> {TCmp c x y | c x y. True} \<union> range TNot \<union> {TAnd x y | x y. True} \<union> {TOr x y | x y. True}"
     for a
     using that by (auto simp: less_eq_eint_def)
-  have ans: "eval a t \<in> gamma_ivl (operand_ivl ch a)" for a
-    using answer[of a] truth[of a]
+  have ans: "eval a t \<in> gamma_ivl (operand_ivl \<kappa> ch a)" for a
+    using answer[of None a] answer[of "src_kind \<kappa> a" a, OF src_kind_sound[OF kinds]] truth[of a]
     by (cases a) (auto simp: less_eq_eint_def gamma_inf_ivl)
-  show "unwrapped e t \<in> gamma_ivl (unwrapped_ivl ch e)"
+  show "unwrapped e t \<in> gamma_ivl (unwrapped_ivl \<kappa> ch e)"
   proof (cases e)
     case (TN k n) then show ?thesis by (simp add: less_eq_eint_def)
   qed (simp_all only: unwrapped.simps unwrapped_ivl.simps ans ivl_aop_sound)
-  show "eval e t \<in> gamma_ivl (operand_ivl ch e)" by (rule ans)
+  show "eval e t \<in> gamma_ivl (operand_ivl \<kappa> ch e)" by (rule ans)
 qed
 
 definition fits_verdict :: "ikind \<Rightarrow> ivl \<Rightarrow> check_result" where
@@ -183,28 +187,28 @@ definition obligation_classify ::
     "sem_conf \<Rightarrow> kind_decls \<Rightarrow> analysis list \<Rightarrow> exp arithmetic_obligation \<Rightarrow> mcp_val
        \<Rightarrow> check_result" where
   "obligation_classify sem ds as ob v =
-     (let ch = mcp_ask sem ds as v; e = arithmetic_operation ob;
-          i = unwrapped_ivl ch e; j = operand_ivl ch (arithmetic_operand ob)
+     (let ch = mcp_ask sem ds as v; \<kappa> = kenv_of ds; e = arithmetic_operation ob;
+          i = unwrapped_ivl \<kappa> ch e; j = operand_ivl \<kappa> ch (arithmetic_operand ob)
       in case arithmetic_hazard ob of
            Division_By_Zero \<Rightarrow> mcp_classify sem ds as (arith_condition ob) v
          | Min_Conversion_Overflow \<Rightarrow> fits_verdict (exp_kind e) (ivl_min i j)
          | Max_Conversion_Overflow \<Rightarrow> fits_verdict (exp_kind e) (ivl_max i j)
          | Remainder_Overflow \<Rightarrow>
-             fits_verdict (exp_kind e) (unwrapped_ivl ch (arithmetic_operand ob))
+             fits_verdict (exp_kind e) (unwrapped_ivl \<kappa> ch (arithmetic_operand ob))
          | _ \<Rightarrow> fits_verdict (exp_kind e) i)"
 
 lemma obligation_classify_sound:
-  assumes t: "t \<in> mcp.act_gamma ds as v"
+  assumes t: "t \<in> mcp.act_gamma ds as v" and kinds: "in_kinds (kenv_of ds) t"
   shows "obligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> t \<Turnstile> ob"
     and "obligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> t \<Turnstile> ob"
 proof -
   have ch: "geval_query.channel_holds eval (mcp_ask sem ds as v) t"
     by (rule mcp.mcp_ask_sound[OF t])
-  note fits = fits_verdict_sound[OF unwrapped_ivl_sound(1)[OF ch]]
-    and fits_min = fits_verdict_sound[OF ivl_min_sound[OF unwrapped_ivl_sound[OF ch]]]
-    and fits_max = fits_verdict_sound[OF ivl_max_sound[OF unwrapped_ivl_sound[OF ch]]]
-    and fits_rem =
-      fits_verdict_sound[OF unwrapped_ivl_sound(1)[OF ch, of "arithmetic_operand ob"]]
+  note ivl = unwrapped_ivl_sound[OF ch kinds]
+  note fits = fits_verdict_sound[OF ivl(1)]
+    and fits_min = fits_verdict_sound[OF ivl_min_sound[OF ivl]]
+    and fits_max = fits_verdict_sound[OF ivl_max_sound[OF ivl]]
+    and fits_rem = fits_verdict_sound[OF ivl(1)[of "arithmetic_operand ob"]]
   have ne: "truthy (eval (arith_condition ob) t) \<longleftrightarrow> eval (arithmetic_operand ob) t \<noteq> 0"
     by (simp add: arith_condition_def)
   show "obligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> t \<Turnstile> ob"
@@ -484,7 +488,7 @@ lemma table_diagnostics_sound:
   fixes rt :: "('c, mcp_val) solved_table"
   assumes fin: "finite (table_contexts rt v)"
     and look: "lookup_table rt v ctx = Lifted st"
-    and s: "s \<in> mcp.act_gamma ds as st"
+    and s: "s \<in> mcp.act_gamma ds as st" and kinds: "in_kinds (kenv_of ds) s"
   shows table_diagnostics_safe:
       "(v, obs) \<in> set sites \<Longrightarrow> ob \<in> set obs
          \<Longrightarrow> \<forall>d \<in> set (arithmetic_diagnostics sites rt (obligation_classify sem ds as)).
@@ -506,7 +510,7 @@ proof -
       by auto
     then have "?cl ob st = Check_Proved"
       by (rule point_verdict_decided[OF _ _ look]) simp
-    then show ?thesis by (rule obligation_classify_sound(1)[OF s])
+    then show ?thesis by (rule obligation_classify_sound(1)[OF s kinds])
   qed
   show "\<not> s \<Turnstile> diagnostic_obligation d"
     if d: "d \<in> set (arithmetic_diagnostics sites rt ?cl)"
@@ -516,7 +520,7 @@ proof -
       using arithmetic_diagnostics_refuted[OF d r] v by simp
     then have "?cl (diagnostic_obligation d) st = Check_Refuted"
       by (rule point_verdict_decided[OF _ _ look]) simp
-    then show ?thesis by (rule obligation_classify_sound(2)[OF s])
+    then show ?thesis by (rule obligation_classify_sound(2)[OF s kinds])
   qed
 qed
 
@@ -546,12 +550,14 @@ text \<open>
   A report built from a solved table is sound when the table covers every reaching
   store, whichever context policy and placement filed it. The table's states are listed
   and its verdicts reported, so each guarantee is read off the state a reaching store
-  lies in.
+  lies in. A well-formed program keeps every reaching store within its kinds, which
+  the diagnostics read.
 \<close>
 
 lemma prog_report_of_sound:
   fixes sr :: "(var_id, exp, 'c, var_id, mcp_val) gsolved_run"
-  assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
+  assumes wf: "wf_program_compile_input p"
+    and fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
     and node: "\<And>v. reaching ds p v \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of (conf_analyses conf))
                  (case lookup_table (run_table sr) v ctx of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st))"
   shows "report_sound conf ds p (prog_report_of conf ds p gs ctx_key ctx_tag sr)"
@@ -605,7 +611,10 @@ proof -
           mcp.mcp_classify_proved[OF st] mcp.mcp_classify_refuted[OF st]
         by (auto simp: chk)
     qed
-    note diag = table_diagnostics_sound[OF fin_v look st, where sem = ?sem]
+    have kinds: "in_kinds (kenv_of ds) s"
+      using node_collect_in_kinds[OF calls_in_kinds_elab_cfg[OF wf] init_stores_in_kinds] s
+      by blast
+    note diag = table_diagnostics_sound[OF fin_v look st kinds, where sem = ?sem]
     show ?thesis using states st check diag unfolding diags by blast
   qed
   show ?thesis unfolding report_sound_def using rows at by blast
@@ -641,7 +650,7 @@ proof -
       note solved = mcp_cs.solve_c_run[OF sol]
       show ?thesis
         unfolding res
-        by (rule prog_report_of_sound)
+        by (rule prog_report_of_sound[OF wf])
            (use solved mcp_cs.vars_finite_of_terminates[OF solved(1)]
               mcp_cs_node_sound[OF wf solved(1), unfolded mcp_cs.state_at_unfold] in
              \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_call_string_key\<close>)
@@ -657,7 +666,7 @@ proof -
       note solved = mcp_split.solve_c_run[OF sol]
       show ?thesis
         unfolding res
-        by (rule prog_report_of_sound)
+        by (rule prog_report_of_sound[OF wf])
            (use solved mcp_split.vars_finite_of_terminates[OF solved(1)]
               mcp_split_node_sound[OF wf solved(1), unfolded mcp_split.state_at_unfold] in
              \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_call_string_key\<close>)
@@ -677,7 +686,7 @@ proof -
       note solved = mcp_es.solve_c_run[OF sol]
       show ?thesis
         unfolding res
-        by (rule prog_report_of_sound)
+        by (rule prog_report_of_sound[OF wf])
            (use solved mcp_es.vars_finite_of_terminates[OF solved(1)]
               mcp_es_node_sound[OF wf solved(1), unfolded mcp_es.state_at_unfold] in
              \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_mcp_ctx_key\<close>)
@@ -693,7 +702,7 @@ proof -
       note solved = mcp_split_es.solve_c_run[OF sol]
       show ?thesis
         unfolding res
-        by (rule prog_report_of_sound)
+        by (rule prog_report_of_sound[OF wf])
            (use solved mcp_split_es.vars_finite_of_terminates[OF solved(1)]
               mcp_split_es_node_sound[OF wf solved(1), unfolded mcp_split_es.state_at_unfold] in
              \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_mcp_ctx_key\<close>)

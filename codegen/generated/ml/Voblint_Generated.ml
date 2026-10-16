@@ -10312,36 +10312,41 @@ let rec arith_condition
               TN (exp_kind (arithmetic_operand ob), zero_inta));;
 
 let rec operand_ivl
-  ch x1 = match ch, x1 with
-    ch, TN (k, n) -> Ivl (Fin (ik_norm k n), Fin (ik_norm k n))
-    | ch, TCmp (c, a, b) ->
+  kappa ch x2 = match kappa, ch, x2 with
+    kappa, ch, TN (k, n) -> Ivl (Fin (ik_norm k n), Fin (ik_norm k n))
+    | kappa, ch, TCmp (c, a, b) ->
         inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TCmp (c, a, b)))))
           (Ivl (Fin zero_inta, Fin one_inta))
-    | ch, TNot a ->
+    | kappa, ch, TNot a ->
         inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TNot a))))
           (Ivl (Fin zero_inta, Fin one_inta))
-    | ch, TAnd (a, b) ->
+    | kappa, ch, TAnd (a, b) ->
         inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TAnd (a, b)))))
           (Ivl (Fin zero_inta, Fin one_inta))
-    | ch, TOr (a, b) ->
+    | kappa, ch, TOr (a, b) ->
         inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TOr (a, b)))))
           (Ivl (Fin zero_inta, Fin one_inta))
-    | ch, TVar (v, va) -> of_answer_ik_ivl None (ch (EvalInt (TVar (v, va))))
-    | ch, TArith (v, va, vb, vc) ->
-        of_answer_ik_ivl None (ch (EvalInt (TArith (v, va, vb, vc))))
-    | ch, TCast (v, va) ->
-        of_answer_ik_ivl None (ch (EvalInt (TCast (v, va))));;
+    | kappa, ch, TVar (v, va) ->
+        of_answer_ik_ivl (src_kind kappa (TVar (v, va)))
+          (ch (EvalInt (TVar (v, va))))
+    | kappa, ch, TArith (v, va, vb, vc) ->
+        of_answer_ik_ivl (src_kind kappa (TArith (v, va, vb, vc)))
+          (ch (EvalInt (TArith (v, va, vb, vc))))
+    | kappa, ch, TCast (v, va) ->
+        of_answer_ik_ivl (src_kind kappa (TCast (v, va)))
+          (ch (EvalInt (TCast (v, va))));;
 
 let rec unwrapped_ivl
-  ch x1 = match ch, x1 with ch, TN (k, n) -> Ivl (Fin n, Fin n)
-    | ch, TArith (k, op, a, b) ->
-        ivl_aop op (operand_ivl ch a) (operand_ivl ch b)
-    | ch, TCast (k, a) -> operand_ivl ch a
-    | ch, TVar (v, va) -> operand_ivl ch (TVar (v, va))
-    | ch, TCmp (v, va, vb) -> operand_ivl ch (TCmp (v, va, vb))
-    | ch, TNot v -> operand_ivl ch (TNot v)
-    | ch, TAnd (v, va) -> operand_ivl ch (TAnd (v, va))
-    | ch, TOr (v, va) -> operand_ivl ch (TOr (v, va));;
+  kappa ch x2 = match kappa, ch, x2 with
+    kappa, ch, TN (k, n) -> Ivl (Fin n, Fin n)
+    | kappa, ch, TArith (k, op, a, b) ->
+        ivl_aop op (operand_ivl kappa ch a) (operand_ivl kappa ch b)
+    | kappa, ch, TCast (k, a) -> operand_ivl kappa ch a
+    | kappa, ch, TVar (v, va) -> operand_ivl kappa ch (TVar (v, va))
+    | kappa, ch, TCmp (v, va, vb) -> operand_ivl kappa ch (TCmp (v, va, vb))
+    | kappa, ch, TNot v -> operand_ivl kappa ch (TNot v)
+    | kappa, ch, TAnd (v, va) -> operand_ivl kappa ch (TAnd (v, va))
+    | kappa, ch, TOr (v, va) -> operand_ivl kappa ch (TOr (v, va));;
 
 let rec parity_accepts
   x0 n = match x0, n with PBot, n -> false
@@ -10501,14 +10506,16 @@ let rec fits_verdict
 let rec obligation_classify
   sem ds asa ob v =
     (let ch = mcp_ask sem ds asa v in
+     let kappa = kenv_of ds in
      let e = arithmetic_operation ob in
-     let i = unwrapped_ivl ch e in
-     let j = operand_ivl ch (arithmetic_operand ob) in
+     let i = unwrapped_ivl kappa ch e in
+     let j = operand_ivl kappa ch (arithmetic_operand ob) in
       (match arithmetic_hazard ob
         with Division_By_Zero -> mcp_classify sem ds asa (arith_condition ob) v
         | Signed_Overflow -> fits_verdict (exp_kind e) i
         | Remainder_Overflow ->
-          fits_verdict (exp_kind e) (unwrapped_ivl ch (arithmetic_operand ob))
+          fits_verdict (exp_kind e)
+            (unwrapped_ivl kappa ch (arithmetic_operand ob))
         | Conversion_Overflow -> fits_verdict (exp_kind e) i
         | Min_Conversion_Overflow -> fits_verdict (exp_kind e) (ivl_min i j)
         | Max_Conversion_Overflow -> fits_verdict (exp_kind e) (ivl_max i j)));;

@@ -8,10 +8,10 @@
 // Concretely x = 3 / 2 = 1 and y = -10 / 2 = -5. A quotient with a
 // nonnegative operand cannot leave i32, so Sign keeps p / 2 at >=0 and <=0
 // in the two contexts and both checks are PROVED; at depth 0 or 1 the
-// contexts merge and both are UNKNOWN. The graph still lists a possible
-// overflow at p / 2: the diagnostic bounds the unwrapped result by an
-// interval read from the analysis (obligation_classify), and a sign gives
-// that interval no finite end.
+// contexts merge and both are UNKNOWN. The graph lists no overflow at
+// p / 2: the diagnostic bounds each operand by the interval the analysis
+// answers, met with the range of the operand's kind (obligation_classify),
+// so p / 2 fits i32 although a sign has no finite end.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context
@@ -81,10 +81,9 @@
 //   g_exit_g_ctx0: exit_g
 //       sign:
 //         p=+
-//   g_pp0_ctx0: pp0 [unknown]
+//   g_pp0_ctx0: pp0
 //       sign:
 //         p=+
-//       possible signed integer overflow in /: p / 2
 //   g_entry_g_ctx0: entry_g
 //       sign:
 //         p=+
@@ -93,10 +92,9 @@
 //   g_exit_g_ctx1: exit_g
 //       sign:
 //         p=-
-//   g_pp0_ctx1: pp0 [unknown]
+//   g_pp0_ctx1: pp0
 //       sign:
 //         p=-
-//       possible signed integer overflow in /: p / 2
 //   g_entry_g_ctx1: entry_g
 //       sign:
 //         p=-

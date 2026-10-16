@@ -25,7 +25,9 @@ many nested operations are decided: `precision/05` and
 `known-imprecision/04` run one program under each. A signed `%` raises the
 obligation that its truncated quotient fits the kind, since C leaves
 `INT_MIN % -1` undefined although its remainder 0 fits; `precision/07` checks
-that case and remainders that stay silent. Unsigned arithmetic wraps by
+that case and remainders that stay silent. Each operand's interval is met with its
+kind's range, so a domain without magnitudes still decides `x / 2` and `x % 2`
+(`precision/08` for Sign, `precision/09` for Congruence). Unsigned arithmetic wraps by
 definition and raises none; Goblint warns about it as unsigned overflow.
 
 Conversions raise the obligation that the converted value fits the target kind,
