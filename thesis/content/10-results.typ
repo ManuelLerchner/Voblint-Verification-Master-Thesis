@@ -491,15 +491,17 @@ An unreached check can thus miss #verdict("DEAD") because its state describes
 stores that no run reaches, as Interval's state above does, or because the test
 does not recognize that it describes none. The verdict is sound either way.
 
-*Arithmetic diagnostics.* Three hazards need no check in the program: a
+*Arithmetic diagnostics.* Four hazards need no check in the program: a
 division or remainder by zero, a signed operation whose mathematical result
-lies outside its kind, and a conversion to a narrower kind of a value the
-target cannot represent. Each such operation carries an obligation
+lies outside its kind, a signed remainder whose quotient does, as for
+`INT_MIN % -1`, and a conversion of a value its target kind cannot represent,
+including the result of `min` or `max`. Each such operation carries an obligation
 (#isaconst("arith_obligations")), and the analyzer decides it from the
 analyses' states (#isaconst("obligation_classify")). A division asks the query
 system of @sec:coop-queries whether the divisor can be zero; an overflow or
 conversion obligation tests an interval bound of the operation's unwrapped
-result against the kind's range. The analyzer reports an error if the analyses
+result, or of the quotient for a remainder, against the kind's range. The
+analyzer reports an error if the analyses
 show that the obligation fails, a warning if they cannot show that it holds,
 and nothing otherwise. The concrete semantics wraps every result. The
 configuration's signed-overflow option only chooses whether the domains bound a
