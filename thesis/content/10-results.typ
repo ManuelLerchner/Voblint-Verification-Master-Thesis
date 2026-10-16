@@ -59,7 +59,7 @@ so that a report exists only where the soundness proofs apply.
 that the compilation theorems of @ch:program-model assume. An input that fails
 is answered with #isaconst("Invalid_Activation") or
 #isaconst("Malformed_Program"), and #isaconst("No_Answer") stands for a solve
-that produces no result. Every answer #ctor("Analysed") $"res"$ thus comes
+that produces no result. Every answer #isaconst("Analysed") $"res"$ thus comes
 from inputs that pass both tests (#isathm("run_voblint_report_contract")), and
 the executable test implies the well-formedness premise of the proofs
 (#isathm("wf_program_compile_input_exec_sound")).
