@@ -119,8 +119,8 @@ Because seeds are global unknowns, the update rule for globals merges their
 contributions (@sec:update-rules). Without contexts, both calls publish to
 the one seed of `bump`, and warrowing widens it. The analyzer then reports
 #_cli("pg-contexts-none", "a == 6", 3) for `a == 6` with
-#_cli("pg-contexts-none", "a == 6", 4), whose lower bound $-infinity$ comes
-from this widening.
+#_cli("pg-contexts-none", "a == 6", 4), whose lower bound comes from this
+widening: it moves the bound to the least `i32` value, and the call adds one.
 
 === One value type #thy-badge("Voblint_Framework", "DG_State") <sec:global-unknowns>
 
