@@ -273,7 +273,7 @@ shows one step of the replay.
 #subfigures(
   playground-figure(
     "while-loop",
-    width: 74%,
+    width: 60%,
     [one run in three views: the check's verdict in the editor, the state
       inspector at the check, and the solved graph. Settings
       #playground-settings("while-loop")],
@@ -281,7 +281,7 @@ shows one step of the replay.
   <fig:pg-overview>,
   playground-figure(
     "solve-replay-still",
-    width: 72%,
+    width: 66%,
     [one step of the solver replay for the calls of `bump` (@tab:eq-trace): the
       graph shows each unknown's value at this step, and the trace beside it
       marks the step's line. Settings #playground-settings("solve-replay-still")],

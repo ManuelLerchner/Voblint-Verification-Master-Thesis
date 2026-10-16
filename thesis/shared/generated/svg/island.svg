@@ -40,7 +40,7 @@
             <ellipse cx="110" cy="220" rx="62" ry="32"/><text x="110" y="218">library</text><text x="110" y="234">&amp; I/O</text>
           </g>
 
-          <g class="island" tabindex="0" data-note="Inside VIMP: machine-integer variables of eight kinds, i32 by default, with C's usual arithmetic conversions made explicit; a signed overflow wraps, which C leaves undefined, and is reported as a diagnostic. Also `global` declarations, procedures with parameters, recursion and return values, `if` and `while`, `__voblint_check` assertions, and `__voblint_nondet_int()` for unknown input. A call is a statement, `f(x)` or `y = f(x)`, never part of an expression, and `main` does not return a value. Division is total: `a / 0` is `0` and `a % 0` is `a`, and a possible zero divisor is reported as a diagnostic.">
+          <g class="island" tabindex="0" data-note="Inside VIMP: machine-integer variables of eight kinds, each declared, with C's usual arithmetic conversions made explicit; a signed overflow wraps, which C leaves undefined, and is reported as a diagnostic. Also `global` declarations, procedures with parameters, recursion and return values, `if` and `while`, `__voblint_check` assertions, and `__voblint_nondet_int()` for unknown input. A call is a statement, `f(x)` or `y = f(x)`, never part of an expression, and `main` does not return a value. Division is total: `a / 0` is `0` and `a % 0` is `a`, and a possible zero divisor is reported as a diagnostic.">
             <path d="M300 180 C 340 140, 520 145, 560 190 S 560 290, 470 295 S 290 280, 300 180 Z"/>
             <text class="island-title" x="430" y="196">VIMP</text>
             <text x="430" y="222">machine integers · globals</text>
