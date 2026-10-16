@@ -122,18 +122,18 @@
 // EXPECT-GRAPH-END
 
 
-fun dec(x) {
+fun i32 dec(i32 x) {
   return x - 1;
 }
 
-fun sum(n) {
+fun i32 sum(i32 n) {
   if (n < 1) { return 0; }
-  m = dec(n);
-  r = sum(m);
+  i32 m = dec(n);
+  i32 r = sum(m);
   return r + n;
 }
 
 fun main() {
-  x = sum(2);
+  i32 x = sum(2);
   __voblint_check(x == 3); // UNKNOWN
 }

@@ -11,8 +11,8 @@
 // Kept next to the PROVED cases so they are not mistaken for general-purpose
 // numeric precision.
 
-global total;
-fun inc(n) {
+global i32 total;
+fun inc(i32 n) {
   total = total + n;
 }
 fun main() {

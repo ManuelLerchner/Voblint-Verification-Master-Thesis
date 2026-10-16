@@ -12,12 +12,12 @@
 // (measured). Same for b. Solver-invariant across join, per-origin, warrow,
 // warrow-per-origin.
 fun main() {
-  a = 0;
+  i32 a = 0;
   while (a != 3) {
     __voblint_check(a < 3); // UNKNOWN
     a = a + 1;
   }
-  b = 0;
+  i32 b = 0;
   while (b != 4) {
     __voblint_check(b < 4); // UNKNOWN
     b = b + 1;

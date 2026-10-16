@@ -11,7 +11,7 @@
 // yields the full i32 range, so the head becomes top and both in-loop
 // bounds are UNKNOWN. x == 0 holds because the exit edge asserts equality.
 fun main() {
-  x = 40;
+  i32 x = 40;
   while (x != 0) {
     __voblint_check(x <= 40); // UNKNOWN
     x = x - 1;

@@ -8,15 +8,15 @@
 // so g <= 2 would be UNKNOWN.
 //
 // Ported from Example_Buffered_Encoding_Flush_Order.thy (fo_program).
-global g;
-fun up(n) {
+global i32 g;
+fun i32 up(i32 n) {
   g = n;
   return 0;
 }
 fun main() {
   g = 0;
-  a = up(1);
-  b = up(2);
+  i32 a = up(1);
+  i32 b = up(2);
   __voblint_check(0 < g); // PROVED
   __voblint_check(g <= 2); // PROVED
 }

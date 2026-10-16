@@ -8,11 +8,12 @@
 // two Positives can land on either side of zero, so both give Top, and the
 // join of Negative and Positive is Top as well, which cannot exclude 0.
 fun main() {
-  s = -5 + 3;
+  i32 s = -5 + 3;
   __voblint_check(s < 0); // UNKNOWN
-  t = 5 - 3;
+  i32 t = 5 - 3;
   __voblint_check(0 < t); // UNKNOWN
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 a;
   if (c) { a = -1; } else { a = 1; }
   __voblint_check(a != 0); // UNKNOWN
 }

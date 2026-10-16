@@ -30,7 +30,7 @@
 // before widening. 03-per_origin_widening.vimp is the same program under
 // the update rule that fixes exactly this.
 
-fun f(x) {
+fun f(i32 x) {
   __voblint_check(x < 43); // UNKNOWN
 }
 fun main() {

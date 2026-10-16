@@ -6,11 +6,11 @@
 // nothing and answers z == 1 with top. Interval, run beside it, turns that answer
 // into z = [1,1] (precision/03-equality_asked_of_order).
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (x <= y) {
     if (y <= x) {
-      z = (x == y);
+      i32 z = (x == y);
       __voblint_check(z == 1); // UNKNOWN
     }
   }

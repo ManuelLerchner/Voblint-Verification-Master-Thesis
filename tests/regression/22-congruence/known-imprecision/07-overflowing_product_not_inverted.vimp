@@ -9,7 +9,7 @@
 // top whatever the overflow policy, and both checks stay UNKNOWN. Under the
 // default assume_top the forward value of n * 3 is top as well.
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (n * 3 == 12) {
     __voblint_check(n == 4); // UNKNOWN
     __voblint_check(n != 0); // UNKNOWN

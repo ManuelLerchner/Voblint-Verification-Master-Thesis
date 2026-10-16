@@ -19,8 +19,8 @@
 // signed +, - or * that may overflow gives top instead (27-signed-
 // overflow/known-imprecision/02).
 fun main() {
-  n = __voblint_nondet_int();
-  k = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
+  i32 k = __voblint_nondet_int();
   if (n + 1 == 4 * k + 2) {
     if (n == 3) {
       __voblint_check(false); // NOWARN
@@ -48,17 +48,17 @@ fun main() {
   if (n * 2 == 2 * k + 1) {
     __voblint_check(false); // NOWARN
   }
-  a = __voblint_nondet_int();
-  b = __voblint_nondet_int();
-  x = 4 * a + 1;
-  y = 6 * b + 3;
+  i32 a = __voblint_nondet_int();
+  i32 b = __voblint_nondet_int();
+  i32 x = 4 * a + 1;
+  i32 y = 6 * b + 3;
   if (x * y == n) {
     if (x == 13) {
       __voblint_check(true); // PROVED
     }
   }
-  e = 2 * a;
-  o = 2 * b + 1;
+  i32 e = 2 * a;
+  i32 o = 2 * b + 1;
   if (e == o) {
     __voblint_check(false); // NOWARN
   }

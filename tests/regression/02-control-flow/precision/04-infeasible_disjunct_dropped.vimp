@@ -19,8 +19,8 @@
 //
 // The conjunctive half of the gate is 05-infeasible_conjunct_dropped.vimp.
 fun main() {
-  x = 5;
-  y = __voblint_nondet_int();
+  i32 x = 5;
+  i32 y = __voblint_nondet_int();
   if (0 < y || (x < 0) == 1) {
     __voblint_check(0 < y); // PROVED
   } else {

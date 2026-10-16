@@ -14,7 +14,7 @@
 // --analysis int (16-composite-domain/known-imprecision/
 // 02-mine_ex46_decreasing_counter.vimp) loses the bounds the same way.
 fun main() {
-  x = 40;
+  i32 x = 40;
   while (x != 0) {
     __voblint_check(x <= 40); // UNKNOWN
     x = x - 1;

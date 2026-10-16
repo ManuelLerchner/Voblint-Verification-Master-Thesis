@@ -7,14 +7,14 @@
 // second step and a keeps [0,2147483647]. Bound 0 behaves the same.
 // precision/12-bounded_narrowing_two_narrowing_steps.vimp is the same program
 // at the default bound 5, which takes both steps and proves both checks.
-fun p(a, b) {
+fun p(i32 a, i32 b) {
   __voblint_check(a <= 2); // UNKNOWN
   __voblint_check(b <= 2); // PROVED
 }
 fun main() {
-  i = 0;
-  k = 0;
-  k2 = 0;
+  i32 i = 0;
+  i32 k = 0;
+  i32 k2 = 0;
   while (i < 3) {
     p(k, k2);
     k = k2;

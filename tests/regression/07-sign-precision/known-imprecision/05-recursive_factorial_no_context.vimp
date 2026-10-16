@@ -12,19 +12,19 @@
 // of a product of two positives. That Top flows into r, a and b.
 // Interval sibling with entry-state contexts:
 // 03-procedures/precision/06-recursive_factorial_dead_branch_no_bottom_leak.vimp.
-fun factorial(n) {
+fun i32 factorial(i32 n) {
   __voblint_check(0 < n); // UNKNOWN
   if (n < 2) {
     return 1;
   } else {
-    r = factorial(n - 1);
+    i32 r = factorial(n - 1);
     __voblint_check(0 < r); // UNKNOWN
     return n * r;
   }
 }
 fun main() {
-  a = factorial(3);
-  b = factorial(4);
+  i32 a = factorial(3);
+  i32 b = factorial(4);
   __voblint_check(0 < a); // UNKNOWN
   __voblint_check(0 < b); // UNKNOWN
 }

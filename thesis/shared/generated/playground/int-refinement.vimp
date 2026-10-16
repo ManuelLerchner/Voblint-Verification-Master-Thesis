@@ -1,5 +1,6 @@
 fun main() {
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 x;
   if (c < 0) {
     x = 1;
   } else {

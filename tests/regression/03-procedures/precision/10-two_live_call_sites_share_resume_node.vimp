@@ -14,12 +14,13 @@
 //
 // x is unconstrained, so nothing here claims a value for a -- the check is on
 // the caller's own local, which the call cannot touch.
-fun f(n) {
+fun i32 f(i32 n) {
   return n;
 }
 fun main() {
-  x = __voblint_nondet_int();
-  y = 7;
+  i32 x = __voblint_nondet_int();
+  i32 y = 7;
+  i32 a;
   if (x < 2) {
     a = f(1);
   } else {

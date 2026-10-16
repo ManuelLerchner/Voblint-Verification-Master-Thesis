@@ -8,7 +8,8 @@
 // NonPositive, enough for y < 1 but not for y < 0, which the nondet branch
 // genuinely leaves open.
 fun main() {
-  u = __voblint_nondet_int();
+  i32 u = __voblint_nondet_int();
+  i32 x;
   if (u) {
     x = -5;
   } else {
@@ -20,6 +21,7 @@ fun main() {
     __voblint_check(false); // NOWARN (unreachable)
   }
   __voblint_check(x < 0); // PROVED
+  i32 y;
   if (u) {
     y = -5;
   } else {

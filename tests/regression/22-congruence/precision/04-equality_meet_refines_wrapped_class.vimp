@@ -13,10 +13,10 @@
 // both products may overflow, x and y become top, and the meet has nothing
 // to narrow.
 fun main() {
-  n = __voblint_nondet_int();
-  m = __voblint_nondet_int();
-  x = 4 * n + 1;
-  y = 6 * m + 3;
+  i32 n = __voblint_nondet_int();
+  i32 m = __voblint_nondet_int();
+  i32 x = 4 * n + 1;
+  i32 y = 6 * m + 3;
   if (x == y) {
     __voblint_check(y != 3); // PROVED
     if (y == 13) {

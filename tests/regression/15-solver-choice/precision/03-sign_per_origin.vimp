@@ -1,6 +1,6 @@
 // PARAM: --analysis sign --globals per-origin
 // Exercises --globals per-origin and the Sign domain together.
 fun main() {
-  x = 5;
+  i32 x = 5;
   __voblint_check(0 < x); // PROVED
 }

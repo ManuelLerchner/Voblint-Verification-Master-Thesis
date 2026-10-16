@@ -9,8 +9,8 @@
 // against y = [3,3] is UNKNOWN in both polarities. int agrees: none of sign,
 // parity or congruence can exclude a single point either.
 fun main() {
-  z = __voblint_nondet_int();
-  y = 3;
+  i32 z = __voblint_nondet_int();
+  i32 y = 3;
   if (z != 3) {
     __voblint_check(y == z); // UNKNOWN
     __voblint_check(y != z); // UNKNOWN

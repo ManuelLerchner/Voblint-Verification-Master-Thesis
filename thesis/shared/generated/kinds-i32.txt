@@ -1,4 +1,4 @@
-thesis/shared/programs/kinds-untyped.vimp [interval]
+thesis/shared/programs/kinds-i32.vimp [interval]
 
 Arithmetic diagnostics
 None

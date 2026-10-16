@@ -10,9 +10,9 @@
 // signed +, - or * that may overflow gives top instead (27-signed-
 // overflow/known-imprecision/02).
 fun main() {
-  n = __voblint_nondet_int();
-  dividend = n * 6 + 1;
-  r = dividend % 6;
+  i32 n = __voblint_nondet_int();
+  i32 dividend = n * 6 + 1;
+  i32 r = dividend % 6;
   if (r == 4) {
     __voblint_check(false); // NOWARN
   }
@@ -20,6 +20,6 @@ fun main() {
     __voblint_check(r == -5); // PROVED
     __voblint_check(r < 0); // PROVED
   }
-  q = -7 / 3;
+  i32 q = -7 / 3;
   __voblint_check(q == -2); // PROVED
 }

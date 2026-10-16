@@ -16,10 +16,10 @@
 // (measured: i is top at both checks).
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 fun main() {
-  i = 0;
+  i32 i = 0;
   while (true) {
     i = i + 1;
-    j = 0;
+    i32 j = 0;
     while (j < 10) {
       __voblint_check(i >= 0); // UNKNOWN
       __voblint_check(i <= 10); // UNKNOWN

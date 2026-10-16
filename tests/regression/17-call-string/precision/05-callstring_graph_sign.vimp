@@ -166,11 +166,11 @@
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-fun g(p) { return p / 2; }
-fun f(p) { t = g(p); return t; }
+fun i32 g(i32 p) { return p / 2; }
+fun i32 f(i32 p) { i32 t = g(p); return t; }
 fun main() {
-  x = f(3);
-  y = f(-10);
+  i32 x = f(3);
+  i32 y = f(-10);
   __voblint_check(0 <= x); // PROVED
   __voblint_check(y <= 0); // PROVED
 }

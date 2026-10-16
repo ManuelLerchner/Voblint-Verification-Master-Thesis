@@ -9,7 +9,7 @@
 // sequence with x an ordinary local: both give the identical exact result,
 // which is the point -- declaring x global costs nothing as long as no call
 // crosses it.
-global x;
+global i32 x;
 fun main() {
   x = 0;
   x = 1;

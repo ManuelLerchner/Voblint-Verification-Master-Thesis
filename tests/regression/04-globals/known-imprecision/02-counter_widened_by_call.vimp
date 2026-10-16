@@ -12,12 +12,12 @@
 // costs precision here. Contrast with
 // 04-globals/precision/05-glocal_not_global_by_name.vimp: same program,
 // same two calls, but Glocal is undeclared and stays exact throughout.
-global counter;
+global i32 counter;
 fun p() {
   counter = counter + 1;
 }
 fun main() {
-  Glocal = 1;
+  i32 Glocal = 1;
   p();
   p();
   __voblint_check(counter < 5); // UNKNOWN

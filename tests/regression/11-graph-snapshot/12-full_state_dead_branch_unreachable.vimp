@@ -54,7 +54,7 @@
 // EXPECT-GRAPH-END
 
 fun main() {
-  x = 5;
+  i32 x = 5;
   if (x < 2) {
     __voblint_check(x == 99); // NOWARN (unreachable)
   } else {

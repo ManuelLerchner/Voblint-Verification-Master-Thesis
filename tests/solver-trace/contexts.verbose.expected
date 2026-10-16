@@ -19,15 +19,15 @@ Voblint trace
       %%% iter: iterate called from query
       %%% iter: begin iterate (pp4 "__voblint_check(a == 6);" L8, root), called: true, stable: false, wpoint: false
       %%% eq: eq (pp4 "__voblint_check(a == 6);" L8, root)
-      %%% solver_query: entering query for (pp3 "b = bump(4);" L7, root) from (pp4 "__voblint_check(a == 6);" L8, root); stable false; called false
+      %%% solver_query: entering query for (pp3 "b = bump(4)" L7, root) from (pp4 "__voblint_check(a == 6);" L8, root); stable false; called false
         %%% iter: iterate called from query
-        %%% iter: begin iterate (pp3 "b = bump(4);" L7, root), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp3 "b = bump(4);" L7, root)
-        %%% solver_query: entering query for (pp2 "a = bump(5);" L6, root) from (pp3 "b = bump(4);" L7, root); stable false; called false
+        %%% iter: begin iterate (pp3 "b = bump(4)" L7, root), called: true, stable: false, wpoint: false
+        %%% eq: eq (pp3 "b = bump(4)" L7, root)
+        %%% solver_query: entering query for (pp2 "a = bump(5)" L6, root) from (pp3 "b = bump(4)" L7, root); stable false; called false
           %%% iter: iterate called from query
-          %%% iter: begin iterate (pp2 "a = bump(5);" L6, root), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp2 "a = bump(5);" L6, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "a = bump(5);" L6, root); stable false; called false
+          %%% iter: begin iterate (pp2 "a = bump(5)" L6, root), called: true, stable: false, wpoint: false
+          %%% eq: eq (pp2 "a = bump(5)" L6, root)
+          %%% solver_query: entering query for (entry_main, root) from (pp2 "a = bump(5)" L6, root); stable false; called false
             %%% iter: iterate called from query
             %%% iter: begin iterate (entry_main, root), called: true, stable: false, wpoint: false
             %%% eq: eq (entry_main, root)
@@ -43,24 +43,24 @@ New value: interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤
             %%% destab: destabilize (entry_main, root)
             %%% iter: iterate changed (entry_main, root)
             %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "a = bump(5);" L6, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "a = bump(5);" L6, root)
+            %%% infl: add_infl (entry_main, root) (pp2 "a = bump(5)" L6, root)
+            %%% answer: exiting query for (entry_main, root) from (pp2 "a = bump(5)" L6, root)
 answer: interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤
-          %%% rhs: (pp2 "a = bump(5);" L6, root) = interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤
-          %%% sol: Var: (pp2 "a = bump(5);" L6, root) (wp: false)
+          %%% rhs: (pp2 "a = bump(5)" L6, root) = interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤
+          %%% sol: Var: (pp2 "a = bump(5)" L6, root) (wp: false)
 Old value: ⊥
 Eqd: interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤
 New value: interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤
-          %%% destab: destabilize (pp2 "a = bump(5);" L6, root)
-          %%% iter: iterate changed (pp2 "a = bump(5);" L6, root)
-          %%% iter: begin iterate (pp2 "a = bump(5);" L6, root), called: true, stable: true, wpoint: false
-          %%% infl: add_infl (pp2 "a = bump(5);" L6, root) (pp3 "b = bump(4);" L7, root)
-          %%% answer: exiting query for (pp2 "a = bump(5);" L6, root) from (pp3 "b = bump(4);" L7, root)
+          %%% destab: destabilize (pp2 "a = bump(5)" L6, root)
+          %%% iter: iterate changed (pp2 "a = bump(5)" L6, root)
+          %%% iter: begin iterate (pp2 "a = bump(5)" L6, root), called: true, stable: true, wpoint: false
+          %%% infl: add_infl (pp2 "a = bump(5)" L6, root) (pp3 "b = bump(4)" L7, root)
+          %%% answer: exiting query for (pp2 "a = bump(5)" L6, root) from (pp3 "b = bump(4)" L7, root)
 answer: interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤
-        %%% route: call at (pp2 "a = bump(5);" L6, root): entry interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤ -> context [[5,5]]
-        %%% side: side to Seed(bump, [[5,5]]) from (pp3 "b = bump(4);" L7, root); value: interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤
+        %%% route: call at (pp2 "a = bump(5)" L6, root): entry interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤ -> context [[5,5]]
+        %%% side: side to Seed(bump, [[5,5]]) from (pp3 "b = bump(4)" L7, root); value: interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤
         %%% destab: destabilize Seed(bump, [[5,5]])
-        %%% solver_query: entering query for (exit_bump, [[5,5]]) from (pp3 "b = bump(4);" L7, root); stable false; called false
+        %%% solver_query: entering query for (exit_bump, [[5,5]]) from (pp3 "b = bump(4)" L7, root); stable false; called false
           %%% iter: iterate called from query
           %%% iter: begin iterate (exit_bump, [[5,5]]), called: true, stable: false, wpoint: false
           %%% eq: eq (exit_bump, [[5,5]])
@@ -118,21 +118,21 @@ New value: interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=[6,6]
           %%% destab: destabilize (exit_bump, [[5,5]])
           %%% iter: iterate changed (exit_bump, [[5,5]])
           %%% iter: begin iterate (exit_bump, [[5,5]]), called: true, stable: true, wpoint: false
-          %%% infl: add_infl (exit_bump, [[5,5]]) (pp3 "b = bump(4);" L7, root)
-          %%% answer: exiting query for (exit_bump, [[5,5]]) from (pp3 "b = bump(4);" L7, root)
+          %%% infl: add_infl (exit_bump, [[5,5]]) (pp3 "b = bump(4)" L7, root)
+          %%% answer: exiting query for (exit_bump, [[5,5]]) from (pp3 "b = bump(4)" L7, root)
 answer: interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=[6,6]
-        %%% rhs: (pp3 "b = bump(4);" L7, root) = interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤
-        %%% sol: Var: (pp3 "b = bump(4);" L7, root) (wp: false)
+        %%% rhs: (pp3 "b = bump(4)" L7, root) = interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤
+        %%% sol: Var: (pp3 "b = bump(4)" L7, root) (wp: false)
 Old value: ⊥
 Eqd: interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤
 New value: interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤
-        %%% destab: destabilize (pp3 "b = bump(4);" L7, root)
-        %%% iter: iterate changed (pp3 "b = bump(4);" L7, root)
-        %%% iter: begin iterate (pp3 "b = bump(4);" L7, root), called: true, stable: true, wpoint: false
-        %%% infl: add_infl (pp3 "b = bump(4);" L7, root) (pp4 "__voblint_check(a == 6);" L8, root)
-        %%% answer: exiting query for (pp3 "b = bump(4);" L7, root) from (pp4 "__voblint_check(a == 6);" L8, root)
+        %%% destab: destabilize (pp3 "b = bump(4)" L7, root)
+        %%% iter: iterate changed (pp3 "b = bump(4)" L7, root)
+        %%% iter: begin iterate (pp3 "b = bump(4)" L7, root), called: true, stable: true, wpoint: false
+        %%% infl: add_infl (pp3 "b = bump(4)" L7, root) (pp4 "__voblint_check(a == 6);" L8, root)
+        %%% answer: exiting query for (pp3 "b = bump(4)" L7, root) from (pp4 "__voblint_check(a == 6);" L8, root)
 answer: interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤
-      %%% route: call at (pp3 "b = bump(4);" L7, root): entry interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤ -> context [[4,4]]
+      %%% route: call at (pp3 "b = bump(4)" L7, root): entry interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤ -> context [[4,4]]
       %%% side: side to Seed(bump, [[4,4]]) from (pp4 "__voblint_check(a == 6);" L8, root); value: interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤
       %%% destab: destabilize Seed(bump, [[4,4]])
       %%% solver_query: entering query for (exit_bump, [[4,4]]) from (pp4 "__voblint_check(a == 6);" L8, root); stable false; called false

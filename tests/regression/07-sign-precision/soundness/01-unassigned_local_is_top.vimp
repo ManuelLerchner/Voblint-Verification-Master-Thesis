@@ -6,6 +6,7 @@
 // assigns starts with any value, so 0 < y holds in some runs and fails in
 // others. Sign reports y as Top, and UNKNOWN is the only sound answer.
 fun main() {
-  x = 1;
+  i32 x = 1;
+  i32 y;
   __voblint_check(0 < y); // UNKNOWN
 }

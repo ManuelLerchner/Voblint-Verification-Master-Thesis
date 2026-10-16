@@ -3,7 +3,7 @@ tests/regression/24-site-figures/precision/48-clamp_every_answer.vimp [interval]
 Arithmetic diagnostics
 Location  Point  Severity  Message
 --------  -----  --------  -----------------------------------
-26:3      pp14   WARNING   possible division by zero: 1000 / p
+26:7      pp14   WARNING   possible division by zero: 1000 / p
 
 Assertion checks
 Location  Point  Condition           Verdict  State

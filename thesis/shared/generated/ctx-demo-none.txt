@@ -230,5 +230,5 @@ edges:
   main_pp19_ctx0 -> main_pp20_ctx0: call-to-return wrap
 tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:248:3: warning: possible signed integer overflow in +: hits + amount [interval]
 tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:252:3: warning: possible signed integer overflow in *: v * 2 [interval]
-tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:279:3: warning: possible signed integer overflow in -: a - 2 [interval]
-tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:279:3: warning: possible division by zero: 10 / (a - 2) [interval]
+tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:279:7: warning: possible signed integer overflow in -: a - 2 [interval]
+tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:279:7: warning: possible division by zero: 10 / (a - 2) [interval]

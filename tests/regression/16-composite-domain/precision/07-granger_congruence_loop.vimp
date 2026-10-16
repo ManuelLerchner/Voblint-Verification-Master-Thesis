@@ -19,11 +19,11 @@
 // range with congruence top (measured). Recovering them needs the relation
 // c = e + d = 4 the product does not track.
 fun main() {
-  a = 1;
-  b = 2;
-  c = 3;
-  d = 4;
-  e = 0;
+  i32 a = 1;
+  i32 b = 2;
+  i32 c = 3;
+  i32 d = 4;
+  i32 e = 0;
   while (d < 9) {
     b = 2 * a;
     d = d + 4;

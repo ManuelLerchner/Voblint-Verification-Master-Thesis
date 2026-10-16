@@ -8,8 +8,8 @@
 // j=[-2147483647,9]. Repeating the pass would give i=[1,8] and j=[2,9]
 // in both.
 fun main() {
-  i = __voblint_nondet_int();
-  j = __voblint_nondet_int();
+  i32 i = __voblint_nondet_int();
+  i32 j = __voblint_nondet_int();
   if (0 < i && i < j && j < 10) {
     __voblint_check(i <= 8); // UNKNOWN
     __voblint_check(j >= 2); // PROVED

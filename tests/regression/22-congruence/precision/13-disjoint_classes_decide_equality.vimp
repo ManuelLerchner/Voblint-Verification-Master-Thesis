@@ -10,7 +10,7 @@
 // signed +, - or * that may overflow gives top instead (27-signed-
 // overflow/known-imprecision/02).
 fun main() {
-  n = __voblint_nondet_int();
-  x = 2 * n;
+  i32 n = __voblint_nondet_int();
+  i32 x = 2 * n;
   __voblint_check(x != 3); // PROVED
 }

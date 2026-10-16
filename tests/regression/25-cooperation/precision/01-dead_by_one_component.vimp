@@ -17,7 +17,7 @@
 // no_ov here, so under Goblint's default assume_top its x + 2 may overflow
 // and gives top (27-signed-overflow/known-imprecision/02).
 fun main() {
-  x = 4;
+  i32 x = 4;
   while (x < 10) {
     x = x + 2;
   }

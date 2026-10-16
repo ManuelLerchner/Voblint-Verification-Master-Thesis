@@ -4,7 +4,7 @@
 // i32, so x + 1 wraps to -2147483648. The comparison with the literal
 // 2147483648 runs at i64 and is false.
 fun main() {
-  x = 2147483647;
+  i32 x = 2147483647;
   x = x + 1; // ARITH: ERROR signed-overflow
   __voblint_check(x == 2147483648); // REFUTED
 }

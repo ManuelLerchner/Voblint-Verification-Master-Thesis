@@ -47,9 +47,9 @@ caller's state after the call. Take one
 call:
 
 #listing(lang: "c", ```
-global g;
-fun inc(a) { g = g + a; return a - 1; }
-fun main() { g = 1; x = 5; y = inc(x); }
+global i32 g;
+fun i32 inc(i32 a) { g = g + a; return a - 1; }
+fun main() { g = 1; i32 x = 5; i32 y = inc(x); }
 ```)
 
 Enter describes two stores associated with the call `y = inc(x)`. The _entry state_ $e$
@@ -233,10 +233,10 @@ the globals.
 #let _mfs(var) = snapshot-var("mixed-flow-sign-shared", "main_pp7_ctx0", var)
 
 #listing(lang: "c", claim: "mixed-flow-sign", ```
-global Gx;
+global i32 Gx;
 fun set() { Gx = 1; }
-fun get() { return Gx; }
-fun main() { x = 1; set(); y = get(); }
+fun i32 get() { return Gx; }
+fun main() { i32 x = 1; set(); i32 y = get(); }
 ```)
 
 The flow-insensitive value of `Gx` must cover the initial `Gx = 0` as well as

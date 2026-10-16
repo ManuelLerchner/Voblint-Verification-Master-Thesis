@@ -904,8 +904,8 @@ and is thus imprecise.
       claim: "dom-disjunct-sign",
       ```
       fun main() {
-        x = __voblint_nondet_int();
-        y = __voblint_nondet_int();
+        i32 x = __voblint_nondet_int();
+        i32 y = __voblint_nondet_int();
         if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
           __voblint_check(false);
         }
@@ -1223,17 +1223,18 @@ true arm of `if (0 < x)`, for example, $x$ is positive. Ignoring this knowledge 
 state before the branch already contains every store that takes either arm.
 It costs precision, however, as the following program shows.
 
-#let _g = claim-row("dom-guard-interval", "11:3")
+#let _g = claim-row("dom-guard-interval", "12:3")
 #align(center, block(width: 60%, {
   show raw: set text(size: 6.5pt)
   listing(
     lang: "c",
     claim: "dom-guard-interval",
     ```
-    x = __voblint_nondet_int();
+    i32 x = __voblint_nondet_int();
     if (x < -1000 || x > 1000) {
       x = 0;
     }
+    i32 y;
     if (0 < x) {
       y = x;
     } else {

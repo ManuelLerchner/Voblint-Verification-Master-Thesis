@@ -4,13 +4,13 @@
 // product: both components wrap, so every check is proved. The assume_top
 // twin is ../known-imprecision/03-int_assume_top.vimp.
 fun main() {
-  a = 2147483647;
-  b = a + 1; // ARITH: ERROR signed-overflow
+  i32 a = 2147483647;
+  i32 b = a + 1; // ARITH: ERROR signed-overflow
   __voblint_check(b == -2147483648); // PROVED
-  c = -2147483648;
-  d = c - 1; // ARITH: ERROR signed-overflow
+  i32 c = -2147483648;
+  i32 d = c - 1; // ARITH: ERROR signed-overflow
   __voblint_check(d == 2147483647); // PROVED
-  e = 65536;
-  f = e * e; // ARITH: ERROR signed-overflow
+  i32 e = 65536;
+  i32 f = e * e; // ARITH: ERROR signed-overflow
   __voblint_check(f == 0); // PROVED
 }

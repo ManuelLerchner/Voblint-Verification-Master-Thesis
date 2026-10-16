@@ -8,15 +8,15 @@
 // clamp n is -2147483648 or in [0,23], and the interval hull
 // [-2147483648,23] loses that the outlier is divisible by 4, so r is
 // [-3,3].
-fun bucket(n) {
+fun i32 bucket(i32 n) {
   if (n < 0) {
     n = -n;
   }
   if (n > 23) {
     n = 23;
   }
-  q = n / 4;
-  r = n % 4;
+  i32 q = n / 4;
+  i32 r = n % 4;
   __voblint_check(q >= 0); // UNKNOWN
   __voblint_check(q <= 5); // PROVED
   __voblint_check(r >= 0); // UNKNOWN
@@ -25,11 +25,12 @@ fun bucket(n) {
 }
 
 fun main() {
-  input = __voblint_nondet_int();
-  bin = bucket(input);
+  i32 input = __voblint_nondet_int();
+  i32 bin = bucket(input);
   __voblint_check(bin >= 0); // UNKNOWN
   __voblint_check(bin <= 5); // PROVED
   __voblint_check(bin != 6); // PROVED
+  i32 label;
   if (bin == 0) {
     label = 0;
   } else if (bin <= 3) {

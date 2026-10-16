@@ -10,7 +10,8 @@
 // The assignment to z is what makes Int ask: on the check x <= y itself the
 // order analysis would answer alone, as in 06-order_asks_interval.
 fun main() {
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 x, y;
   if (0 < c) {
     x = 0;
     y = 10;
@@ -18,6 +19,6 @@ fun main() {
     x = 20;
     y = 30;
   }
-  z = (x <= y);
+  i32 z = (x <= y);
   __voblint_check(z == 1); // PROVED
 }

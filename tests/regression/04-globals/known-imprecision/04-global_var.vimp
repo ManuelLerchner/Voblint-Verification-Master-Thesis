@@ -4,8 +4,8 @@
 // and n = 4 in one context, and widening at the entry of inc takes n to
 // [3,2147483647]. total + n may then overflow, so the analysis sets total
 // to the full i32 range and the check is UNKNOWN.
-global total;
-fun inc(n) {
+global i32 total;
+fun inc(i32 n) {
   total = total + n;
 }
 fun main() {

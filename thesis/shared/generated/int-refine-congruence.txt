@@ -3,8 +3,8 @@ tests/regression/16-composite-domain/precision/11-division_remainder_reduction.v
 Arithmetic diagnostics
 Location  Point  Severity  Message
 --------  -----  --------  -------------------------------------------------
-9:5       pp2    WARNING   possible signed integer overflow in *: 12 * n
-9:5       pp2    WARNING   possible signed integer overflow in +: 12 * n + 3
+9:9       pp2    WARNING   possible signed integer overflow in *: 12 * n
+9:9       pp2    WARNING   possible signed integer overflow in +: 12 * n + 3
 
 Assertion checks
 Location  Point  Condition   Verdict  State

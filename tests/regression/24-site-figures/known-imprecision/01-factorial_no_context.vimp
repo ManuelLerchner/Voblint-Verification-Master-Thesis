@@ -84,16 +84,16 @@
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-fun f(n) {
+fun i32 f(i32 n) {
   if (n < 2) {
     return 1;
   } else {
-    r = f(n - 1);
+    i32 r = f(n - 1);
     return n * r;
   }
 }
 
 fun main() {
-  a = f(2);
+  i32 a = f(2);
   __voblint_check(a == 2); // UNKNOWN
 }

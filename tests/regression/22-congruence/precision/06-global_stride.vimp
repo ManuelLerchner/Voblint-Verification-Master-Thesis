@@ -12,7 +12,7 @@
 // carried across a call, and its classes come from signed arithmetic, which
 // standalone Congruence answers with top under Goblint's default assume_top
 // (27-signed-overflow/known-imprecision/02).
-global g;
+global i32 g;
 fun bump() { g = g + 4; }
 fun main() {
   g = 1;

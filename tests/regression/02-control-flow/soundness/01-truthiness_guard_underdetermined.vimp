@@ -9,15 +9,16 @@
 // refining if (i) to [1,2147483647] would be a soundness bug, and this fixture is
 // the witness against it.
 fun main() {
-  i = __voblint_nondet_int();
-  x = __voblint_nondet_int();
-  z = __voblint_nondet_int();
+  i32 i = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
   if (i) {
     __voblint_check(i >= 1); // UNKNOWN
   }
   if (!!x) {
     __voblint_check(x == 1); // UNKNOWN
   }
+  i32 a, b;
   if (z != 0) {
     a = 8;
     b = 9;

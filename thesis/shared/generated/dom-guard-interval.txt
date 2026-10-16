@@ -6,4 +6,4 @@ None
 Assertion checks
 Location  Point  Condition  Verdict  State
 --------  -----  ---------  -------  --------------------
-11:3      pp7    y >= 0     PROVED   interval: y=[0,1000]
+12:3      pp8    y >= 0     PROVED   interval: y=[0,1000]

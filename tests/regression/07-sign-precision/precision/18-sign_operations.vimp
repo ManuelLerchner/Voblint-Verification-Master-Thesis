@@ -15,19 +15,21 @@
 // operations that lose information on fixed values in
 // ../known-imprecision/02-mixed_signs_lose_sign.vimp.
 fun main() {
-  c = __voblint_nondet_int();
-  n = __voblint_nondet_int();
-  z = 0 * n;
+  i32 c = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
+  i32 z = 0 * n;
   __voblint_check(z == 0); // PROVED
-  x = 1;
+  i32 x = 1;
   __voblint_check(0 < x); // PROVED
+  i32 b;
   if (c) { b = -1; } else { b = 0; }
   __voblint_check(b <= 0); // PROVED
   __voblint_check(b < 0); // UNKNOWN
+  i32 d;
   if (c) { d = 1; } else { d = 0; }
   __voblint_check(d >= 0); // PROVED
   __voblint_check(d > 0); // UNKNOWN
-  m = -1;
+  i32 m = -1;
   __voblint_check(0 < (m <= 0)); // PROVED
   __voblint_check((m > 0) == 0); // PROVED
   __voblint_check((m >= 0) == 0); // PROVED
@@ -57,14 +59,14 @@ fun main() {
     }
   }
   if (n > 0 && c > 0) {
-    q = n / c;
+    i32 q = n / c;
     __voblint_check(q >= 0); // PROVED
     __voblint_check(q > 0); // UNKNOWN
     q = n / 0;
     __voblint_check(q == 0); // PROVED
   }
   if (n < 0) {
-    r = n % 0;
+    i32 r = n % 0;
     __voblint_check(r < 0); // PROVED
   }
 }

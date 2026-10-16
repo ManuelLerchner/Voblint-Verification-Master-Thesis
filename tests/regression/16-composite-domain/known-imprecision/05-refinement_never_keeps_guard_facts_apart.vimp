@@ -18,11 +18,11 @@
 // Under never, the check is not proved. ../precision/13 and ../precision/14
 // are the same program under once and fixpoint.
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (-100 <= n && n <= 100) {
-    y = 4 * n + 1;
+    i32 y = 4 * n + 1;
     if (-2 <= y && y <= 10) {
-      x = 0;
+      i32 x = 0;
     } else {
       y = 4;
     }

@@ -5,13 +5,13 @@ Voblint trace
   program:  docs/readme-figures/contexts.vimp
 
          (entry_main, root) reads Seed(main, root) = ⊥
-ROUTE    call at (pp2 "a = bump(5);" L6, root): entry interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤ -> context [[5,5]]
+ROUTE    call at (pp2 "a = bump(5)" L6, root): entry interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤ -> context [[5,5]]
 FLUSH    Seed(bump, [[5,5]]) += interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤  (changed)
-QUERY    (pp3 "b = bump(4);" L7, root) asks (exit_bump, [[5,5]])
+QUERY    (pp3 "b = bump(4)" L7, root) asks (exit_bump, [[5,5]])
          (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤
          (exit_bump, [[5,5]]) returns interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=[6,6]
-RETURN   (pp3 "b = bump(4);" L7, root) = interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤
-ROUTE    call at (pp3 "b = bump(4);" L7, root): entry interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤ -> context [[4,4]]
+RETURN   (pp3 "b = bump(4)" L7, root) = interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤
+ROUTE    call at (pp3 "b = bump(4)" L7, root): entry interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤ -> context [[4,4]]
 FLUSH    Seed(bump, [[4,4]]) += interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤  (changed)
 QUERY    (pp4 "__voblint_check(a == 6);" L8, root) asks (exit_bump, [[4,4]])
          (entry_bump, [[4,4]]) reads Seed(bump, [[4,4]]) = interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤

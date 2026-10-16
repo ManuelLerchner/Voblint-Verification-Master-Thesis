@@ -7,14 +7,14 @@
 // and at the default bound 5 the rule takes both.
 // known-imprecision/05-bounded_narrowing_bound_one.vimp is the same program
 // at --narrow-bound 1, which stops after the first step.
-fun p(a, b) {
+fun p(i32 a, i32 b) {
   __voblint_check(a <= 2); // PROVED
   __voblint_check(b <= 2); // PROVED
 }
 fun main() {
-  i = 0;
-  k = 0;
-  k2 = 0;
+  i32 i = 0;
+  i32 k = 0;
+  i32 k2 = 0;
   while (i < 3) {
     p(k, k2);
     k = k2;

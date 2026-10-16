@@ -11,13 +11,13 @@
 // a known imprecision of assume_top, kept beside the bounded case it
 // contrasts with.
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (0 <= n && n <= 10) {
-    x = 4 * n + 1;
+    i32 x = 4 * n + 1;
     __voblint_check(x != 3); // PROVED
     __voblint_check(x % 4 == 1); // PROVED
   }
-  m = __voblint_nondet_int();
-  y = 4 * m + 1; // ARITH: WARN signed-overflow; WARN signed-overflow
+  i32 m = __voblint_nondet_int();
+  i32 y = 4 * m + 1; // ARITH: WARN signed-overflow; WARN signed-overflow
   __voblint_check(y != 3); // UNKNOWN
 }

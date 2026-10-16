@@ -73,11 +73,11 @@
 // EXPECT-GRAPH-END
 
 
-fun p(a) {
+fun i32 p(i32 a) {
   return a;
 }
 fun main() {
-  x = __voblint_nondet_int();
-  y = p(x);
+  i32 x = __voblint_nondet_int();
+  i32 y = p(x);
   __voblint_check(0 < y); // UNKNOWN
 }

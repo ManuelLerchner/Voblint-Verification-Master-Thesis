@@ -3,9 +3,9 @@ tests/regression/18-parity/precision/01-even_odd_distinct.vimp [interval]
 Arithmetic diagnostics
 Location  Point  Severity  Message
 --------  -----  --------  ------------------------------------------------
-18:3      pp1    WARNING   possible signed integer overflow in *: 2 * n
-19:3      pp2    WARNING   possible signed integer overflow in *: 2 * n
-19:3      pp2    WARNING   possible signed integer overflow in +: 2 * n + 1
+18:7      pp1    WARNING   possible signed integer overflow in *: 2 * n
+19:7      pp2    WARNING   possible signed integer overflow in *: 2 * n
+19:7      pp2    WARNING   possible signed integer overflow in +: 2 * n + 1
 
 Assertion checks
 Location  Point  Condition  Verdict  State

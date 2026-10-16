@@ -2,8 +2,8 @@
 // EXPECT-ARITHMETIC
 // The unconstrained divisor admits both zero and nonzero executions.
 fun main() {
-  divisor = __voblint_nondet_int();
-  quotient = 7 / divisor; // ARITH: WARN division-by-zero
-  remainder = 7 % divisor; // ARITH: WARN remainder-by-zero
+  i32 divisor = __voblint_nondet_int();
+  i32 quotient = 7 / divisor; // ARITH: WARN division-by-zero
+  i32 remainder = 7 % divisor; // ARITH: WARN remainder-by-zero
   __voblint_check(divisor != 0); // UNKNOWN
 }

@@ -18,7 +18,9 @@
 // (../known-imprecision/04-assume_top_unbounded_operands_lose_class.vimp);
 // with x bounded the class survives (22-assume_top_bounded_operands_keep_class).
 fun main() {
-  y = x * 2;
+  i32 x;
+  i32 y = x * 2;
+  i32 z;
   if (0 < y) {
     if (y < 3) {
       __voblint_check(y == 2); // PROVED

@@ -11,9 +11,9 @@
 // ../precision/07-entry_state_separates_calls.vimp is the same program
 // under --context entry-state, where the two seeds stay apart and both
 // checks are decided.
-fun twice(p) { return p * 2; }
+fun i32 twice(i32 p) { return p * 2; }
 fun main() {
-  a = twice(3);
-  b = twice(5);
+  i32 a = twice(3);
+  i32 b = twice(5);
   __voblint_check(a == 6); // UNKNOWN
 }

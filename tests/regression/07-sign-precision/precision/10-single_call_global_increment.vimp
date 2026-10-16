@@ -5,12 +5,12 @@
 // exact answer at the exit -- not merely SNonNeg, the weaker bound a
 // whole-state summary that cannot separate "before the call" from "after"
 // would be stuck with.
-global counter;
+global i32 counter;
 fun p() {
   counter = counter + 1;
 }
 fun main() {
-  local = 1;
+  i32 local = 1;
   p();
   __voblint_check(0 < counter); // PROVED
 }

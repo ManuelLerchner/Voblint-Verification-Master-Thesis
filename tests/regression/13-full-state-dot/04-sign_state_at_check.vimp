@@ -57,7 +57,7 @@
 // EXPECT-GRAPH-END
 
 fun main() {
-  x = 5;
-  y = 1;
+  i32 x = 5;
+  i32 y = 1;
   __voblint_check(0 < x);
 }

@@ -12,9 +12,9 @@
 // assignments because a special call cannot nest inside another call.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 fun main() {
-  u = __voblint_nondet_int();
-  t = min(9, u);
-  a = max(-9, t);
+  i32 u = __voblint_nondet_int();
+  i32 t = min(9, u);
+  i32 a = max(-9, t);
   while (-10 < a && a < 10) {
     a = -2 * (a - 1);
   }

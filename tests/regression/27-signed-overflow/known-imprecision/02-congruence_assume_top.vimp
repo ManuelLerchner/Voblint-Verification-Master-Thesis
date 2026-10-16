@@ -6,13 +6,13 @@
 // difference of constants that leaves the range. So no check is decided;
 // ../precision/02 proves all three under assume_wraparound.
 fun main() {
-  a = 2147483647;
-  b = a + 1; // ARITH: WARN signed-overflow
+  i32 a = 2147483647;
+  i32 b = a + 1; // ARITH: WARN signed-overflow
   __voblint_check(b == -2147483648); // UNKNOWN
-  c = -2147483648;
-  d = c - 1; // ARITH: WARN signed-overflow
+  i32 c = -2147483648;
+  i32 d = c - 1; // ARITH: WARN signed-overflow
   __voblint_check(d == 2147483647); // UNKNOWN
-  e = 65536;
-  f = e * e; // ARITH: WARN signed-overflow
+  i32 e = 65536;
+  i32 f = e * e; // ARITH: WARN signed-overflow
   __voblint_check(f == 0); // UNKNOWN
 }

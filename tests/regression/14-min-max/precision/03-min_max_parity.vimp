@@ -5,10 +5,10 @@
 // Even proves z != 0 and refutes z == 2 * x; Top would leave both UNKNOWN.
 // Interval and Sign verdicts on the same program are 01 and 02.
 fun main() {
-  x = 3;
-  y = 0 - 5;
-  z = min(x, y);
-  w = max(x, y);
+  i32 x = 3;
+  i32 y = 0 - 5;
+  i32 z = min(x, y);
+  i32 w = max(x, y);
   __voblint_check(z != 0); // PROVED
   __voblint_check(w != 0); // PROVED
   __voblint_check(z == 2 * x); // REFUTED

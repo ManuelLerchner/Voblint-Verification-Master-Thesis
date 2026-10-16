@@ -10,8 +10,8 @@
 // [0,2147483646] and never the singleton 0. Depth 10 fits the o(5) and o(8)
 // chains (6 and 9 sites) and proves those two; o(25) stays UNKNOWN at any
 // depth below 26.
-global m;
-fun o(i) {
+global i32 m;
+fun i32 o(i32 i) {
   if (0 < i) { i = i - 1; m = i; o(i); }
   return 0;
 }

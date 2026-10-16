@@ -9,11 +9,11 @@
 // ivl_excl (Interval_Kind.thy) moves the bound 1 past the excluded
 // constant, so x=[2,2] and x == 2 is PROVED.
 fun main() {
-  x = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (x >= 1 && x <= 2) {
     __voblint_check(x == 1 || x == 2); // UNKNOWN
     if (x == 1) {
-      t = 1;
+      i32 t = 1;
     } else {
       __voblint_check(x == 2); // PROVED
     }

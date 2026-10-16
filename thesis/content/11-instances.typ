@@ -124,7 +124,7 @@ $v = 51$, so every check holds.
   ),
   ```
   fun main() {
-    v = 1;
+    i32 v = 1;
     while (v < 51) {
       __voblint_check(v >= 1);
       v = v + 2;
@@ -212,8 +212,8 @@ fixpoint mode.
 
 #listing(lang: "c", claim: "int-reduction-fixpoint", ```
 fun main() {
-  n = __voblint_nondet_int();
-  x = 4 * n + 1;
+  i32 n = __voblint_nondet_int();
+  i32 x = 4 * n + 1;
   if (x >= -2) {
     if (x <= 10) {
       __voblint_check(x >= 1 && x <= 9);
@@ -321,9 +321,9 @@ analysis records #state("order-alone-order", "12:5") and reports
 
 #listing(lang: "c", claim: "order-alone-order", ```
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
-  z = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
   if (x < y) {
     __voblint_check(x <= y);
     if (y <= z) {
@@ -332,7 +332,7 @@ fun main() {
     y = y + 1;
     __voblint_check(x <= y);
   }
-  w = x;
+  i32 w = x;
   __voblint_check(w == x);
 }
 ```)

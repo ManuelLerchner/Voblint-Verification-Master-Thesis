@@ -10,11 +10,11 @@
 // num_iterat + 1 may overflow and rec is entered with the full i32 range
 // (measured). The else arm then admits num_iterat == 0 and its return 5,
 // so res and r are [2,5] and both checks are UNKNOWN.
-global num_iterat;
-fun rec() {
+global i32 num_iterat;
+fun i32 rec() {
   if (0 < num_iterat) {
     num_iterat = num_iterat + 1;
-    res = rec();
+    i32 res = rec();
     __voblint_check(res == 5); // UNKNOWN
     return res;
   } else {
@@ -23,6 +23,6 @@ fun rec() {
 }
 fun main() {
   num_iterat = 2;
-  r = rec();
+  i32 r = rec();
   __voblint_check(r == 5); // UNKNOWN
 }

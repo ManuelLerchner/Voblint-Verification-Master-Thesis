@@ -971,6 +971,6 @@ why = "Section 5.2: Int keeps a in 4Z at u32 and rounds its interval to [0, 2^32
 argv = ["--analysis", "interval", "thesis/shared/programs/kinds-promotion.vimp"]
 why = "Section 3.2: x + y is promoted to i32, so x + y < 250 compares 300 and is REFUTED; z = x + y converts 300 to u8, so z holds 44 and z < 250 is PROVED."
 
-[claims.kinds-untyped]
-argv = ["--analysis", "interval", "thesis/shared/programs/kinds-untyped.vimp"]
-why = "Section 3.2: the untyped variant of kinds-promotion makes every variable i32, so z holds 300 and z < 250 is REFUTED."
+[claims.kinds-i32]
+argv = ["--analysis", "interval", "thesis/shared/programs/kinds-i32.vimp"]
+why = "Section 3.2: kinds-promotion with every variable declared i32, so z holds 300 and z < 250 is REFUTED."

@@ -1,4 +1,4 @@
-fun clamp(x, lo, hi) {
+fun i32 clamp(i32 x, i32 lo, i32 hi) {
   if (x < lo) {
     return lo;
   }
@@ -9,13 +9,13 @@ fun clamp(x, lo, hi) {
 }
 
 fun main() {
-  t = __voblint_nondet_int();
-  p = clamp(t, 0, 100);
+  i32 t = __voblint_nondet_int();
+  i32 p = clamp(t, 0, 100);
   __voblint_check(0 <= p && p <= 100);
   __voblint_check(p > 100);
   __voblint_check(p == 50);
-  a = 1000 / (p + 1);
-  b = 1000 / p;
+  i32 a = 1000 / (p + 1);
+  i32 b = 1000 / p;
   if (p > 100) {
     __voblint_check(p == 0);
   }

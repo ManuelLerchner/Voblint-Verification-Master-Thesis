@@ -80,7 +80,7 @@
 // EXPECT-GRAPH-END
 
 
-global Gx;
+global i32 Gx;
 fun inc() {
   Gx = Gx + 1;
 }

@@ -11,8 +11,8 @@
 // [8,42], and N == 8 is UNKNOWN for the same reason. An octagon or a
 // polyhedron would recover X = N; int agrees with interval.
 fun main() {
-  X = 0;
-  N = __voblint_nondet_int();
+  i32 X = 0;
+  i32 N = __voblint_nondet_int();
   if (N < 0) {
     N = 0;
   }

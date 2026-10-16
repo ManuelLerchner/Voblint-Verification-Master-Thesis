@@ -12,8 +12,8 @@
 // 04-globals/known-imprecision/04-global_var.vimp is the same program with
 // the check 0 < total, lost the same way.
 
-global total;
-fun inc(n) {
+global i32 total;
+fun inc(i32 n) {
   total = total + n;
 }
 fun main() {

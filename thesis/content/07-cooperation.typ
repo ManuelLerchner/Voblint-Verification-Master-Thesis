@@ -28,11 +28,11 @@ program below both guards hold at the assignment, so $x = y$ and `z` is $1$.
 
 #listing(lang: "c", claim: "coop-eq-both", ```
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (x <= y) {
     if (y <= x) {
-      z = (x == y);
+      i32 z = (x == y);
       __voblint_check(z == 1);
     }
   }

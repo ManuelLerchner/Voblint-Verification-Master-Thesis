@@ -7,8 +7,8 @@
 // "not 0", which decides nothing about i >= 1 or x == 1; those UNKNOWNs are
 // in soundness/01-truthiness_guard_underdetermined.vimp. sign and int agree.
 fun main() {
-  i = __voblint_nondet_int();
-  x = __voblint_nondet_int();
+  i32 i = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (!i) {
     __voblint_check(i == 0); // PROVED
     __voblint_check(i < 0); // REFUTED

@@ -9,20 +9,20 @@
 // under every policy: the guard pins n to 13, and 13 % 6 and 13 / 2 stay
 // singletons, as does 12 / 3 returned from third. The + and * cases that
 // assume_top loses are in ../known-imprecision/06.
-global g;
-fun third(p) { return p / 3; }
+global i32 g;
+fun i32 third(i32 p) { return p / 3; }
 fun dec() { g = g - 1; }
 fun main() {
-  d = 7 - 10;
+  i32 d = 7 - 10;
   __voblint_check(d == -3); // PROVED
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (n == 13) {
-    r = n % 6;
+    i32 r = n % 6;
     __voblint_check(r == 1); // PROVED
-    q = n / 2;
+    i32 q = n / 2;
     __voblint_check(q == 6); // PROVED
   }
-  a = third(12);
+  i32 a = third(12);
   __voblint_check(a == 4); // PROVED
   g = 5;
   dec();

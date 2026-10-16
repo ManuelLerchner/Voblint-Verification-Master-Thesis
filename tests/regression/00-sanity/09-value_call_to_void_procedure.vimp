@@ -2,8 +2,8 @@
 // Ported from Example_Compile_Regression.thy (value_call_requires_value_provider): a value call to a procedure that returns nothing.
 // The well-formedness gate rejects the program before any analysis runs.
 fun p() {
-  x = 1;
+  i32 x = 1;
 }
 fun main() {
-  y = p();
+  i32 y = p();
 }

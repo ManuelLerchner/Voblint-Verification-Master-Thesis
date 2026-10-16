@@ -8,34 +8,34 @@
 // entered i, so each is exact down to h(0), and the deepest chain
 // (h(300), 301 levels) takes about 1 s. Under --context none the same
 // program is UNKNOWN throughout; known-imprecision/02 names the mechanism.
-fun h(i) {
+fun i32 h(i32 i) {
   if (i == 0) { return 3; }
-  if (0 < i) { r = h(i - 1); return r; }
+  if (0 < i) { i32 r = h(i - 1); return r; }
   return 13;
 }
-fun g(i) {
+fun i32 g(i32 i) {
   if (i == 0) { return 2; }
-  if (0 < i) { r = h(i - 1); return r; }
+  if (0 < i) { i32 r = h(i - 1); return r; }
   return 12;
 }
-fun f(i) {
+fun i32 f(i32 i) {
   if (i == 0) { return 1; }
-  if (0 < i) { r = g(i - 1); return r; }
+  if (0 < i) { i32 r = g(i - 1); return r; }
   return 11;
 }
 fun main() {
-  a = f(10); __voblint_check(a == 3);  // PROVED
-  b = f(8); __voblint_check(b == 3);   // PROVED
-  c = h(5); __voblint_check(c == 3);   // PROVED
-  d = f(0); __voblint_check(d == 1);   // PROVED
-  e = f(1); __voblint_check(e == 2);   // PROVED
-  x = g(0); __voblint_check(x == 2);   // PROVED
-  y = g(1); __voblint_check(y == 3);   // PROVED
-  z = f(11); __voblint_check(z == 3);  // PROVED
-  u = g(12); __voblint_check(u == 3);  // PROVED
-  v = g(20); __voblint_check(v == 3);  // PROVED
-  w = f(20); __voblint_check(w == 3);  // PROVED
-  s = h(40); __voblint_check(s == 3);  // PROVED
-  t = h(300); __voblint_check(t == 3); // PROVED
-  q = f(300); __voblint_check(q == 3);  // PROVED
+  i32 a = f(10); __voblint_check(a == 3);  // PROVED
+  i32 b = f(8); __voblint_check(b == 3);   // PROVED
+  i32 c = h(5); __voblint_check(c == 3);   // PROVED
+  i32 d = f(0); __voblint_check(d == 1);   // PROVED
+  i32 e = f(1); __voblint_check(e == 2);   // PROVED
+  i32 x = g(0); __voblint_check(x == 2);   // PROVED
+  i32 y = g(1); __voblint_check(y == 3);   // PROVED
+  i32 z = f(11); __voblint_check(z == 3);  // PROVED
+  i32 u = g(12); __voblint_check(u == 3);  // PROVED
+  i32 v = g(20); __voblint_check(v == 3);  // PROVED
+  i32 w = f(20); __voblint_check(w == 3);  // PROVED
+  i32 s = h(40); __voblint_check(s == 3);  // PROVED
+  i32 t = h(300); __voblint_check(t == 3); // PROVED
+  i32 q = f(300); __voblint_check(q == 3);  // PROVED
 }

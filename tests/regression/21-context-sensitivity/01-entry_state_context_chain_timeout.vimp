@@ -13,10 +13,10 @@
 // rejection, not a report). It shows only that no answer came within the
 // bound, not that the solve diverges. A bounded call string answers the same
 // program; see 17-call-string/precision/13-depth2_context_chain_wraps_to_zero.vimp.
-fun f(x) {
-  if (x != 0) { r = f(x + 1); return r; } else { return x; }
+fun i32 f(i32 x) {
+  if (x != 0) { i32 r = f(x + 1); return r; } else { return x; }
 }
 fun main() {
-  a = f(1);
+  i32 a = f(1);
   __voblint_check(a == 0);
 }

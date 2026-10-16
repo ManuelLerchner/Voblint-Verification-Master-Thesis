@@ -6,7 +6,7 @@
 // p == 50 is undecided, and the check under p > 100 is dead. 1000 / (p + 1)
 // cannot divide by zero; 1000 / p can, since clamp may return 0.
 
-fun clamp(x, lo, hi) {
+fun i32 clamp(i32 x, i32 lo, i32 hi) {
   if (x < lo) {
     return lo;
   }
@@ -17,13 +17,13 @@ fun clamp(x, lo, hi) {
 }
 
 fun main() {
-  t = __voblint_nondet_int();
-  p = clamp(t, 0, 100);
+  i32 t = __voblint_nondet_int();
+  i32 p = clamp(t, 0, 100);
   __voblint_check(0 <= p && p <= 100);  // PROVED
   __voblint_check(p > 100);             // REFUTED
   __voblint_check(p == 50);             // UNKNOWN
-  a = 1000 / (p + 1);                   // ARITH: NONE
-  b = 1000 / p;                         // ARITH: WARN division-by-zero
+  i32 a = 1000 / (p + 1);                   // ARITH: NONE
+  i32 b = 1000 / p;                         // ARITH: WARN division-by-zero
   if (p > 100) {
     __voblint_check(p == 0);            // NOWARN
   }

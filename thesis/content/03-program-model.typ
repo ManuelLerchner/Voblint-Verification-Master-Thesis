@@ -373,8 +373,8 @@ also reports the conversion of $300$ to `u8` as an error, because the
 conversion changes the value in every run, although C defines its result
 (@sec:vimp-vs-c). A program that declares no types makes every variable 32 bits wide, so `z` holds
 $300$ and the second check is
-#verdict(check-row("kinds-untyped", cond: "z < 250").verdict) (claim
-#claim-ref("kinds-untyped")). A verdict is therefore only meaningful
+#verdict(check-row("kinds-i32", cond: "z < 250").verdict) (claim
+#claim-ref("kinds-i32")). A verdict is therefore only meaningful
 together with the width at which each operation computes. This section fixes
 that width for every operation, and states the result as a translation of the
 program into a form in which every width is explicit.

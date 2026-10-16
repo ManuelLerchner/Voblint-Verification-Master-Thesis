@@ -18,11 +18,11 @@
 // Under fixpoint, the check is proved; under never it is not
 // (../known-imprecision/05-refinement_never_keeps_guard_facts_apart.vimp).
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (-100 <= n && n <= 100) {
-    y = 4 * n + 1;
+    i32 y = 4 * n + 1;
     if (-2 <= y && y <= 10) {
-      x = 0;
+      i32 x = 0;
     } else {
       y = 4;
     }

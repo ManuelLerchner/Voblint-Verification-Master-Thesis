@@ -3,7 +3,8 @@
 // In the n <= -7 arm, n / -1 wraps to -2147483648 when n = -2147483648, so
 // positive >= 7 is undetermined and UNKNOWN is exact.
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
+  i32 positive, negative;
   if (n >= 7) {
     positive = n / 1;
     negative = n / -1;

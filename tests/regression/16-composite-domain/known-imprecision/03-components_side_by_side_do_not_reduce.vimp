@@ -9,11 +9,11 @@
 // Congruence, so only it obtains 3Z for x and proves x == 3; side by side the
 // check stays UNKNOWN.
 fun main() {
-  m = __voblint_nondet_int();
+  i32 m = __voblint_nondet_int();
   if (m < 0 || m > 100) {
     m = 0;
   }
-  x = 3 * m;
+  i32 x = 3 * m;
   if (x >= 1 && x <= 5) {
     __voblint_check(x == 3); // UNKNOWN
   }

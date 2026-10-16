@@ -66,9 +66,9 @@
 // EXPECT-GRAPH-END
 
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (n > 0) {
-    q = 10 / n;
+    i32 q = 10 / n;
     __voblint_check(n >= 1); // PROVED
   } else {
     if (n > 5) {

@@ -9,7 +9,7 @@
 // mathematical integers, x := x meet (r - 1), would claim x <= 3 here
 // unsoundly.
 fun main() {
-  x = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (x + 1 < 5) {
     __voblint_check(x < 4); // UNKNOWN
   }

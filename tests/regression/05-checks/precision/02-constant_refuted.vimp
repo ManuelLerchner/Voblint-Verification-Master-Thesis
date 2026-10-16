@@ -4,6 +4,6 @@
 // code, so the check actually executes and its condition is decidably
 // false every time.
 fun main() {
-  x = 5;
+  i32 x = 5;
   __voblint_check(false); // REFUTED
 }

@@ -14,7 +14,7 @@
 // --analysis interval has the same shape and the same answer; recovering
 // it needs a disjunctive or exclusion domain, which no domain here is.
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (n == 4) {
     __voblint_check(true); // PROVED
   } else {

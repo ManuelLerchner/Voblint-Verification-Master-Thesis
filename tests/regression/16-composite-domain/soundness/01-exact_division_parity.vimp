@@ -5,9 +5,9 @@
 // can be even, including 0 (-1 / -3 == 0). Every check is undetermined,
 // so UNKNOWN is the only sound answer.
 fun main() {
-  n = __voblint_nondet_int();
-  even = (6 * n) / 3;
-  odd = (12 * n + 3) / -3;
+  i32 n = __voblint_nondet_int();
+  i32 even = (6 * n) / 3;
+  i32 odd = (12 * n + 3) / -3;
   __voblint_check(even % 2 == 0); // UNKNOWN
   __voblint_check(odd % 2 != 0); // UNKNOWN
   __voblint_check(even == 1); // UNKNOWN

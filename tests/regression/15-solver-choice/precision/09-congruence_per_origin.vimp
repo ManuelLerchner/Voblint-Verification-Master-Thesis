@@ -9,6 +9,6 @@
 // standalone Congruence answers with top under Goblint's default assume_top
 // (27-signed-overflow/known-imprecision/02).
 fun main() {
-  x = 2 + 2;
+  i32 x = 2 + 2;
   __voblint_check(x == 4); // PROVED
 }

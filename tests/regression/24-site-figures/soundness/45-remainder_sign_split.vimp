@@ -7,9 +7,9 @@
 // else arm (measured).
 
 fun main() {
-  n = __voblint_nondet_int();
-  x = 6 * n + 5;
-  a = x % 6;
+  i32 n = __voblint_nondet_int();
+  i32 x = 6 * n + 5;
+  i32 a = x % 6;
   __voblint_check(a >= 0);       // UNKNOWN
   if (a < 0) {
     __voblint_check(a == -1);    // UNKNOWN

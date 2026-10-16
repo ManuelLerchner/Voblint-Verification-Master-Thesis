@@ -3,6 +3,6 @@
 // instead of Interval. Locks in the fix for #99: a purely local write no
 // longer loses precision through the global slot.
 fun main() {
-  x = 5;
+  i32 x = 5;
   __voblint_check(0 < x); // PROVED
 }

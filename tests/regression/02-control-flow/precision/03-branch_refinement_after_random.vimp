@@ -11,7 +11,7 @@
 // to refute "0<x", missing the touching-boundary case x=[-2147483648,0] where
 // u2=l1=0 -- sound but needlessly conservative, now u2<=l1.
 fun main() {
-  x = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (0 < x) {
     __voblint_check(0 < x); // PROVED
   } else {

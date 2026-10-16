@@ -259,18 +259,18 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
       claim: "chain-split-entry",
       highlights: ((line: 3, start: 3, end: none, fill: vb.accent, tag: [$v$]),),
       ```
-      fun f(n) {
-        m = 2 * n;
+      fun i32 f(i32 n) {
+        i32 m = 2 * n;
         __voblint_check(m >= 2);
         __voblint_check(m == 2);
         return m;
       }
 
       fun main() {
-        a = f(1);
-        x = __voblint_nondet_int();
+        i32 a = f(1);
+        i32 x = __voblint_nondet_int();
         if (0 < x && x < 4) {
-          b = f(x);
+          i32 b = f(x);
         }
       }
       ```,

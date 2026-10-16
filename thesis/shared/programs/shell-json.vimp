@@ -1,7 +1,7 @@
 fun main() {
-  k = 10;
-  q = 100 / k;
-  d = __voblint_nondet_int();
-  y = 100 / d;
+  i32 k = 10;
+  i32 q = 100 / k;
+  i32 d = __voblint_nondet_int();
+  i32 y = 100 / d;
   __voblint_check(0 < q);
 }

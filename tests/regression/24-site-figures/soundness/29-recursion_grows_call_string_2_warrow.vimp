@@ -108,7 +108,7 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-fun f(x) {
+fun f(i32 x) {
   __voblint_check(x >= 0); // UNKNOWN
   f(x + 1);
 }

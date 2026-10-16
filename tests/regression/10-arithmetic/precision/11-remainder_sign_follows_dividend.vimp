@@ -12,10 +12,10 @@
 // Top. Unbounded, 6 * n + 5 wraps to every odd i32 and the remainder to every
 // odd value in [-5,5] (../soundness/02-remainder_sign_undetermined.vimp).
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (-100 <= n && n <= 100) {
-    x = 6 * n + 5;
-    a = x % 6;
+    i32 x = 6 * n + 5;
+    i32 a = x % 6;
     __voblint_check(a >= -1); // PROVED
     __voblint_check(a <= 5); // PROVED
     __voblint_check(a != 0); // PROVED

@@ -1,10 +1,10 @@
-fun bump(n) {
+fun i32 bump(i32 n) {
   return n + 1;
 }
 
 fun main() {
-  a = bump(5);
-  b = bump(4);
+  i32 a = bump(5);
+  i32 b = bump(4);
   __voblint_check(a == 6);
   __voblint_check(b == 5);
 }

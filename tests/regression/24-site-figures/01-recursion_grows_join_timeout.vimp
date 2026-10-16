@@ -7,7 +7,7 @@
 // after 2^31 nested calls, so x >= 0 fails in a run that deep. The timeout
 // shows only that no answer came within 5 s; it says nothing about whether
 // the solve would finish.
-fun f(x) {
+fun f(i32 x) {
   __voblint_check(x >= 0);
   f(x + 1);
 }

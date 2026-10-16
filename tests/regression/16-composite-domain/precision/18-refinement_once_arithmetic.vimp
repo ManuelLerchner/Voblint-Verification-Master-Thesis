@@ -18,25 +18,25 @@
 // arithmetic_once_not_fixpoint is not visible in a check: the interval
 // already decides every proved row.
 fun main() {
-  x = -1;
-  m = __voblint_nondet_int();
+  i32 x = -1;
+  i32 m = __voblint_nondet_int();
   if (-100 <= m && m <= 100) {
-    y = 2 * m + 1;
+    i32 y = 2 * m + 1;
     if (y >= 0) {
       if (y <= 1) {
-        z = x + y;
+        i32 z = x + y;
         __voblint_check(z == 0); // PROVED
         __voblint_check(z <= 0); // PROVED
       }
     }
   }
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (0 <= n && n <= 20) {
-    even = (6 * n) / 3;
-    odd = (12 * n + 3) / -3;
+    i32 even = (6 * n) / 3;
+    i32 odd = (12 * n + 3) / -3;
     __voblint_check(even == 1); // REFUTED
     __voblint_check(odd == -2); // REFUTED
-    r = ((12 * n + 3) / 3) % 4;
+    i32 r = ((12 * n + 3) / 3) % 4;
     __voblint_check(r == 1); // PROVED
     __voblint_check(r > 0); // PROVED
   }

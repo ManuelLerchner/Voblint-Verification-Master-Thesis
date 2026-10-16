@@ -15,8 +15,8 @@
 // (../known-imprecision/04-assume_top_unbounded_operands_lose_class.vimp);
 // with x bounded the class survives (22-assume_top_bounded_operands_keep_class).
 fun main() {
-  n = __voblint_nondet_int();
-  x = 2 * n + 1;
+  i32 n = __voblint_nondet_int();
+  i32 x = 2 * n + 1;
   if (x >= 0) {
     if (x <= 0) {
       __voblint_check(false); // NOWARN

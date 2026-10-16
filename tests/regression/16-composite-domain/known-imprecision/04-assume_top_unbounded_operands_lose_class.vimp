@@ -11,14 +11,14 @@
 // precision fixtures), and so does a bound on x
 // (../precision/22-assume_top_bounded_operands_keep_class.vimp).
 fun main() {
-  x = __voblint_nondet_int();
-  y = x * 2;
+  i32 x = __voblint_nondet_int();
+  i32 y = x * 2;
   if (0 < y) {
     if (y < 3) {
       __voblint_check(y == 2); // UNKNOWN
     }
   }
-  z = 2 * x + 1;
+  i32 z = 2 * x + 1;
   if (z >= 0) {
     if (z <= 0) {
       __voblint_check(false); // REFUTED

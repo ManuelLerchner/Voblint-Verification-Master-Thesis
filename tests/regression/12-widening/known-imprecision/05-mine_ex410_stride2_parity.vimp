@@ -14,7 +14,7 @@
 // precision/05-...congruence.vimp) oddness cuts [1,50] to [1,49] in the
 // body, so the head holds [1,51] and the exit guard leaves v = 51.
 fun main() {
-  v = 1;
+  i32 v = 1;
   while (v < 51) {
     __voblint_check(v >= 1); // PROVED
     v = v + 2;

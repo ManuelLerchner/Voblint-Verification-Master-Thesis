@@ -6,7 +6,7 @@
 // comparing Positive against a nonzero constant, so the check stays UNKNOWN.
 // --analysis interval proves it (05-checks/precision/04-guarded_interval_trio.vimp).
 fun main() {
-  x = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (0 < x && x < 10) {
     __voblint_check(x < 11); // UNKNOWN
   }

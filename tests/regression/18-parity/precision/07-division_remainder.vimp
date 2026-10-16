@@ -6,12 +6,12 @@
 // but 3 % 3 = 0, and 1 / 2 = 0 but 11 / 2 = 5. Odd % Even is
 // 03-remainder_even_divisor.vimp.
 fun main() {
-  n = __voblint_nondet_int();
-  d = __voblint_nondet_int();
-  even_rem = (2 * n) % (2 * d);
+  i32 n = __voblint_nondet_int();
+  i32 d = __voblint_nondet_int();
+  i32 even_rem = (2 * n) % (2 * d);
   __voblint_check(even_rem != 1); // PROVED
-  odd_rem = (2 * n + 1) % (2 * d + 1);
+  i32 odd_rem = (2 * n + 1) % (2 * d + 1);
   __voblint_check(odd_rem != 0); // UNKNOWN
-  quot = (2 * n + 1) / (2 * d);
+  i32 quot = (2 * n + 1) / (2 * d);
   __voblint_check(quot != 0); // UNKNOWN
 }

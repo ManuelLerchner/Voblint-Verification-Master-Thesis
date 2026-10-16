@@ -11,8 +11,8 @@
 // under assume_top the possible overflow loses the class, and once and
 // fixpoint would not prove the check either.
 fun main() {
-  n = __voblint_nondet_int();
-  x = 4 * n + 1;
+  i32 n = __voblint_nondet_int();
+  i32 x = 4 * n + 1;
   if (x >= -2) {
     if (x <= 10) {
       __voblint_check(x >= 1 && x <= 9); // UNKNOWN

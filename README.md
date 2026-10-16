@@ -121,7 +121,7 @@ pixi run voblint --analysis interval --context entry-state my_program.vimp --pla
   <a href="docs/images/while_loop_cfg.png">
     <img src="docs/images/while_loop_cfg.png" width="560" alt="The counted-loop program in the browser playground: the source with its PROVED check, the state at the check, and the solved control-flow graph">
   </a>
-  <br><sub>The program above in the playground. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQqFCwVTCwBjLKMzJzUhU0KhRsFAwNIHIQ2QoFbQVDkIpaII6PL8tPysnMK4lPzkhNztYwACqv0LTmqgUA">Open this run</a>.</sub>
+  <br><sub>The program above in the playground. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQyDQ2UqhQsFUwsAZyyjMyc1IVNCoUbBQMDSDyCmDZCgVtBUOQilogjo8vy0_KycwriU_OSE3O1jAAKq_QtOaqBQA">Open this run</a>.</sub>
 </p>
 
 <p align="center">
@@ -179,7 +179,7 @@ animation below from the playground.
   <a href="docs/images/solve-replay.gif">
     <img src="docs/images/solve-replay.gif" width="720" alt="The playground's solve replay on the context example: the solver starts at the exit of main, queries backward to its entry, routes each call of bump to its own context, and fills in every node's interval step by step, with the indented trace beside the graph">
   </a>
-  <br><sub>The context example solved step by step. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Open this run</a>.</sub>
+  <br><sub>The context example solved step by step. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU8g0NlJIKs0t0AAx8jQVqrkUFIpSS0qL8hTyFLQVDK25arm40oAKcxMz8zQg8iCliQq2EH2mmtZQoSSYkAlYKD6-LD8pJzOvJD45IzU5WwOow1bBDKtUEkgKZFAtAA">Open this run</a>.</sub>
 </p>
 
 ### Arithmetic diagnostics
@@ -199,13 +199,13 @@ never change the exit code.
       <a href="docs/images/playground-division-definite.png">
         <img src="docs/images/playground-division-definite.png" width="400" alt="The playground on definite division and remainder by zero: two ERROR badges and the selected statement's state with divisor equal to zero">
       </a>
-      <br><sub>Definite: errors, while both checks still prove. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVTCwBnILS_NLMlPzSoB8cwV9mCxIpigVpCsltQgspYosFR9flp-Uk5lXEp-ckZqcrYEwBGiqJjYVSIYBTQMqqQUA">Open</a>.</sub>
+      <br><sub>Definite: errors, while both checks still prove. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQyDQ2UkjJLMsszi9SsFUwsIYKFZbml2Sm5pUAxcwV9GEqYLJFqSATUlKLwNKqyNLx8WX5STmZeSXxyRmpydkaCIOApmtiU4FkGNA0oJJaAA">Open</a>.</sub>
     </td>
     <td align="center">
       <a href="docs/images/playground-division-possible.png">
         <img src="docs/images/playground-division-possible.png" width="400" alt="The playground on a possible zero divisor from a nondeterministic input: a WARNING badge, an UNKNOWN check, and the state at the division">
       </a>
-      <br><sub>Possible: the state cannot exclude zero. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVYiPL8tPysnMK4nPy89LSS2JBzI1NK2BagpL80syU_NKgIrMFfRhWkAyCD3JGanJ2Row0xRtFQyAWmsB">Open</a>.</sub>
+      <br><sub>Possible: the state cannot exclude zero. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQyDQ2UkjJLMsszi9SsFWIjy_LT8rJzCuJz8vPS0ktiQcyNTStoeoKS_NLMlPzSoAKzRX0YdpAsgh9yRmpydkaMBMVbRUMgNprAQ">Open</a>.</sub>
     </td>
   </tr>
 </table>
@@ -439,7 +439,7 @@ settings.
       </a>
       <br><b>Context sensitivity, Interval</b>
       <br><sub>Without contexts, <code>bump(5)</code> and <code>bump(4)</code> share one state for <code>n</code>, so neither result is exact and both checks are UNKNOWN. <code>--context entry-state</code> keeps a separate abstract state per distinct <em>abstract</em> argument, so both checks prove, and the graph draws each context as its own box: <code>[5,5]</code> and <code>[4,4]</code>, instead of one box holding their join.</sub>
-      <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Open without contexts</a> &middot; <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">open with entry-state contexts</a></sub>
+      <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8g0NlJIKs0t0AAx8jQVqrkUFIpSS0qL8hTyFLQVDK25arm40oAKcxMz8zQg8iCliQq2EH2mmtZQoSSYkAlYKD6-LD8pJzOvJD45IzU5WwOow1bBDKtUEkgKZFAtAA">Open without contexts</a> &middot; <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU8g0NlJIKs0t0AAx8jQVqrkUFIpSS0qL8hTyFLQVDK25arm40oAKcxMz8zQg8iCliQq2EH2mmtZQoSSYkAlYKD6-LD8pJzOvJD45IzU5WwOow1bBDKtUEkgKZFAtAA">open with entry-state contexts</a></sub>
     </td>
   </tr>
 </table>

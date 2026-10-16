@@ -5,5 +5,5 @@
 // Vimp_parser.Parse_error was handled), crashing instead of reporting a
 // clean parse error.
 fun main() {
-  x = 1 @ 2;
+  i32 x = 1 @ 2;
 }

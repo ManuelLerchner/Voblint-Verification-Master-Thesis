@@ -6,13 +6,13 @@
 // shared summary. Concretely x = 6 and y = -20, yet both checks are
 // UNKNOWN: typed Sign has no magnitude, so it cannot exclude i32
 // wraparound of p + p for same-sign p, and each context returns Top.
-fun f(p) {
-  t = p + p;
+fun i32 f(i32 p) {
+  i32 t = p + p;
   return t;
 }
 fun main() {
-  x = f(3);
-  y = f(-10);
+  i32 x = f(3);
+  i32 y = f(-10);
   __voblint_check(0 < x); // UNKNOWN
   __voblint_check(y < 0); // UNKNOWN
 }

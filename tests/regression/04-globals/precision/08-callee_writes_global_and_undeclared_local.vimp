@@ -8,13 +8,13 @@
 //
 // Ported from Example_Inc_Proc.thy (inc_program_counter_global,
 // inc_program_glocal_not_global, prog_pcompletes_inc_pcall).
-global counter;
+global i32 counter;
 fun p() {
   counter = counter + 1;
-  Glocal = 7;
+  i32 Glocal = 7;
 }
 fun main() {
-  Glocal = 1;
+  i32 Glocal = 1;
   p();
   __voblint_check(Glocal == 1); // PROVED
   __voblint_check(counter == 1); // PROVED

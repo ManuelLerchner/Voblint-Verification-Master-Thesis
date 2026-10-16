@@ -3,8 +3,8 @@ tests/regression/24-site-figures/precision/02-int_reduction_int.vimp [int]
 Arithmetic diagnostics
 Location  Point  Severity  Message
 --------  -----  --------  ------------------------------------------------
-71:3      pp1    WARNING   possible signed integer overflow in *: 4 * n
-71:3      pp1    WARNING   possible signed integer overflow in +: 4 * n + 1
+71:7      pp1    WARNING   possible signed integer overflow in *: 4 * n
+71:7      pp1    WARNING   possible signed integer overflow in +: 4 * n + 1
 
 Assertion checks
 Location  Point  Condition         Verdict  State

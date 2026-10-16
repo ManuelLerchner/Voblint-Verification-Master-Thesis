@@ -11,17 +11,17 @@
 // propagates back up the chain to a. The nr check stays proved because
 // nr(5, 5) and nr(6, 6) are different call sites and get different keys at
 // any depth.
-fun nr(x, y) {
+fun nr(i32 x, i32 y) {
   __voblint_check(x == y); // PROVED
 }
-fun f(x, y) {
+fun i32 f(i32 x, i32 y) {
   if (x == 0) { return y; }
-  top = __voblint_nondet_int();
+  i32 top = __voblint_nondet_int();
   if (0 < top) { nr(5, 5); } else { nr(6, 6); }
-  r = f(x - 1, y - 1);
+  i32 r = f(x - 1, y - 1);
   return r;
 }
 fun main() {
-  a = f(3, 3);
+  i32 a = f(3, 3);
   __voblint_check(a == 0); // UNKNOWN
 }

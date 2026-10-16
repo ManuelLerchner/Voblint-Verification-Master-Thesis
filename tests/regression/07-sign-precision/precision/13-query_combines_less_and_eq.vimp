@@ -4,8 +4,8 @@
 // non-positive and y positive, Sign's less(+, <=0) and eq(+, 0) are both
 // definitely false, so both conjuncts hold and the check is proved.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (x <= 0) {
     if (0 < y) {
       __voblint_check(x <= y && y != 0); // PROVED

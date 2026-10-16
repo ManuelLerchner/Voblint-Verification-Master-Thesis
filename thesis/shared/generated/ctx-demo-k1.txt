@@ -272,5 +272,5 @@ edges:
   wrap_exit_wrap_ctx1 -> main_pp20_ctx0: combine b := wrap(4)
   main_pp19_ctx0 -> main_pp20_ctx0: call-to-return wrap
 tests/regression/24-site-figures/known-imprecision/12-demo_call_string_1.vimp:292:3: warning: possible signed integer overflow in *: v * 2 [interval]
-tests/regression/24-site-figures/known-imprecision/12-demo_call_string_1.vimp:319:3: warning: possible signed integer overflow in -: a - 2 [interval]
-tests/regression/24-site-figures/known-imprecision/12-demo_call_string_1.vimp:319:3: warning: possible division by zero: 10 / (a - 2) [interval]
+tests/regression/24-site-figures/known-imprecision/12-demo_call_string_1.vimp:319:7: warning: possible signed integer overflow in -: a - 2 [interval]
+tests/regression/24-site-figures/known-imprecision/12-demo_call_string_1.vimp:319:7: warning: possible division by zero: 10 / (a - 2) [interval]

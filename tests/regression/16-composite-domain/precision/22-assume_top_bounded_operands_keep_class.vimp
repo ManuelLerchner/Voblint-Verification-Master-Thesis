@@ -12,15 +12,15 @@
 // the congruence goes to top, and neither check is decided
 // (../known-imprecision/04-assume_top_unbounded_operands_lose_class.vimp).
 fun main() {
-  x = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (-100 <= x && x <= 100) {
-    y = x * 2;
+    i32 y = x * 2;
     if (0 < y) {
       if (y < 3) {
         __voblint_check(y == 2); // PROVED
       }
     }
-    z = 2 * x + 1;
+    i32 z = 2 * x + 1;
     if (z >= 0) {
       if (z <= 0) {
         __voblint_check(false); // NOWARN

@@ -2,7 +2,7 @@
 // Backs a row of the site's "The price of precision" recursion chart
 // (call string 10): 12 contexts, and the cost is still close to the floor.
 
-fun down(n) {
+fun down(i32 n) {
   __voblint_check(n >= 0); // PROVED
   if (n > 0) {
     down(n - 1);

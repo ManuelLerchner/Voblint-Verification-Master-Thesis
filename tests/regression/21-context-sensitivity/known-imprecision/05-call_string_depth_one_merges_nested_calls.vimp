@@ -2,16 +2,16 @@
 // The program of precision/12-call_string_depth_two_separates_nested_calls.vimp
 // at depth 1: both activations of g share the context of f's one call site,
 // so g returns the join of 3 and -10 and neither check is decided.
-fun g(p) {
+fun i32 g(i32 p) {
   return p;
 }
-fun f(p) {
-  t = g(p);
+fun i32 f(i32 p) {
+  i32 t = g(p);
   return t;
 }
 fun main() {
-  x = f(3);
-  y = f(-10);
+  i32 x = f(3);
+  i32 y = f(-10);
   __voblint_check(x > 0); // UNKNOWN
   __voblint_check(y < 0); // UNKNOWN
 }

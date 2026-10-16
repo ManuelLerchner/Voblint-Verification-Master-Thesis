@@ -15,8 +15,8 @@
 // because the lower bound never moved. Solver-invariant across join,
 // per-origin, warrow, warrow-per-origin.
 fun main() {
-  x = 0;
-  y = 0;
+  i32 x = 0;
+  i32 y = 0;
   while (x < 100) {
     __voblint_check(y >= 0); // PROVED
     __voblint_check(y <= 1); // UNKNOWN

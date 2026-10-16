@@ -20,7 +20,7 @@
 // With --globals join or per-origin, [h] grows by one per round and the
 // solve gave no answer within 10 s (measured for join); a widening rule is
 // needed (cases 02 and 03).
-global g, h;
+global i32 g, h;
 fun f() {
   h = h + 1;
   g = 42;

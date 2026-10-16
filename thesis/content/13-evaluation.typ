@@ -269,10 +269,10 @@ In the program below, `q` is $4n + 1$ for some $n in [0, 20]$, so `r` is $1$.
 #let _r(name) = claim-check("int-refine-" + name, "r == 1")
 #listing(lang: "c", claim: "int-refine-int", ```
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (0 <= n && n <= 20) {
-    q = (12 * n + 3) / 3;
-    r = q % 4;
+    i32 q = (12 * n + 3) / 3;
+    i32 r = q % 4;
     __voblint_check(r == 1);
     __voblint_check(r > 0);
     __voblint_check(r % 2 == 1);
@@ -294,9 +294,10 @@ following program they do so in both directions:
 
 #listing(lang: "c", claim: "coop-mutual-both", ```
 fun main() {
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 x, y;
   if (0 < c) { x = 0; y = 10; } else { x = 20; y = 30; }
-  z = (x <= y);
+  i32 z = (x <= y);
   __voblint_check(z == 1);
 }
 ```)

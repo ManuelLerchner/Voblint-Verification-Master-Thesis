@@ -69,12 +69,12 @@
 //   main_pp4_ctx0 -> main_pp5_ctx0: call-to-return g
 // EXPECT-GRAPH-END
 
-fun g(x) {
+fun g(i32 x) {
   __voblint_check(x < 10); // UNKNOWN
 }
 
 fun main() {
-  x = 0;
+  i32 x = 0;
   while (x < 10) {
     g(x);
     x = x + 1;

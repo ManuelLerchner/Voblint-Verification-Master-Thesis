@@ -14,9 +14,9 @@
 // no magnitude, so it cannot exclude i32 wraparound of a sum or product of
 // two positives (local + 1 at local = INT_MAX, 100 * result above
 // INT_MAX / 100), and the transfer returns Top.
-global input, result, out;
+global i32 input, result, out;
 fun compute() {
-  local = 1;
+  i32 local = 1;
   if (0 < input) {
     local = local + 1;
   } else {
@@ -25,7 +25,7 @@ fun compute() {
   result = local;
 }
 fun main() {
-  r = 0;
+  i32 r = 0;
   input = 5;
   compute();
   r = r + 1;

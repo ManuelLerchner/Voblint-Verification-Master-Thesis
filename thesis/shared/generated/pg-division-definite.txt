@@ -3,8 +3,8 @@ docs/readme-figures/division-definite.vimp [interval]
 Arithmetic diagnostics
 Location  Point  Severity  Message
 --------  -----  --------  -------------------------------------------------------------------
-3:3       pp1    ERROR     division by zero whenever this operation is evaluated: 7 / divisor
-4:3       pp2    ERROR     remainder by zero whenever this operation is evaluated: 7 % divisor
+3:7       pp1    ERROR     division by zero whenever this operation is evaluated: 7 / divisor
+4:7       pp2    ERROR     remainder by zero whenever this operation is evaluated: 7 % divisor
 
 Assertion checks
 Location  Point  Condition       Verdict  State

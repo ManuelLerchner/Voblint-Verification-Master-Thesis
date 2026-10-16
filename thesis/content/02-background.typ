@@ -170,7 +170,7 @@ its _loop head_ $h$ is the node at which the cycle is entered and left.
     column-gutter: 16mm,
     align: horizon,
     listing(lang: "c", ```
-    i = 0;
+    i32 i = 0;
     while (i < 5) {
       i = i + 1;
     }
@@ -673,7 +673,7 @@ without a right-hand side.
 == The verified top-down solver <sec:td>
 
 // The counting loop of fig:counting-loop, for the playground link below.
-#let _counting-loop = "i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
+#let _counting-loop = "i32 i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
 
 Kleene iteration recomputes every unknown in every round, although most values
 no longer change. Practical solvers therefore update one unknown at a time:

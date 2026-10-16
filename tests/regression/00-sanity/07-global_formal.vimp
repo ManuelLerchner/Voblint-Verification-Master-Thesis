@@ -1,8 +1,8 @@
 // PARAM: --analysis interval
 // Ported from Example_Compile_Regression.thy (global_formal_rejected): a formal shadows a declared global.
-// The well-formedness gate rejects the program before any analysis runs.
-global g;
-fun f(g) {
+// The parser rejects the program; the well-formedness gate checks the same condition.
+global i32 g;
+fun f(i32 g) {
   g = 1;
 }
 fun main() {

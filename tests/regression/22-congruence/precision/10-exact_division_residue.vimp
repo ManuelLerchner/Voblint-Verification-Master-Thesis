@@ -5,9 +5,9 @@
 // integers: 7 / 3 == 2 and -5 / -3 == 1, so both guarded branches are
 // reachable and their check(0) is REFUTED. A guard on a singleton still pins the quotient.
 fun main() {
-  n = __voblint_nondet_int();
-  positive = (12 * n + 3) / 3;
-  negative = (12 * n + 3) / -3;
+  i32 n = __voblint_nondet_int();
+  i32 positive = (12 * n + 3) / 3;
+  i32 negative = (12 * n + 3) / -3;
   if (positive == 2) {
     __voblint_check(0); // REFUTED
   }
