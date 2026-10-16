@@ -192,7 +192,7 @@ let build_proc = function
         | Atom k -> [ (ReturnId name, build_kind k) ]
         | s -> failwith ("ast_driver: bad return kind: " ^ show_sexp s)
       in
-      ( (name, Gproc_decl_ext (List.map fst formals, build_com body, ())),
+      ( (name, Gproc_decl_ext (List.map Stdlib.fst formals, build_com body, ())),
         scoped name formals @ scoped name locals @ ret )
   | s -> failwith ("ast_driver: bad proc sexp: " ^ show_sexp s)
 
@@ -201,11 +201,13 @@ let build_proc = function
 let build_program = function
   | Slist [ Slist procs; Slist [ main_locals; main_body ]; globals ] ->
       let procs = List.map build_proc procs and globals = build_typed globals in
-      ( mk_program (List.map fst procs) (build_com main_body)
-          (List.map fst globals),
+      ( mk_program
+          (List.map Stdlib.fst procs)
+          (build_com main_body)
+          (List.map Stdlib.fst globals),
         List.map (fun (g, k) -> (GlobalId g, k)) globals
         @ scoped "main" (build_typed main_locals)
-        @ List.concat_map snd procs )
+        @ List.concat_map Stdlib.snd procs )
   | s -> failwith ("ast_driver: bad program sexp: " ^ show_sexp s)
 
 (* -- Driver --------------------------------------------------------------- *)
