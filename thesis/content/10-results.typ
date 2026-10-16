@@ -336,7 +336,7 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
     contexts. Each row is a set of stores. Both per-context rows lie inside the
     union row, and each later row lies inside the rows below it. The report
     admits $3$ and $5$, which no run reaches, and the stores verdict
-    #verdict(_vge) admits extend past the drawn range to the largest 32-bit
+    #verdict(_vge) admits extend past the drawn range to the largest `i32`
     value $2^31 - 1$. The check `m == 2` (line 4) sees the same
     stores. Report and verdict are analyzer output (claim #claim-ref("chain-split-entry"));
     the first three rows are derived by hand.],

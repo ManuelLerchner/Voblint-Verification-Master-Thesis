@@ -285,10 +285,10 @@ why = "Chapter 7, the channel the framework supplies holds at every store of the
 [snippets.mcp_combine_sound]
 why = "Chapter 7, soundness of the combination of independent components."
 
-[snippets.relc_executable_domain]
+[snippets.order_rel_executable_domain]
 why = "Chapter 5, Figure 5.2: the relational carrier stops at executable_domain."
-name = "relc :: executable_domain"
-file = "src/Abstract_Interpreter/Domain/Relational/Order_Lattice.thy"
+name = "order_rel :: executable_domain"
+file = "src/Analyses/Order/Order_Analysis.thy"
 
 [snippets.sign_numeric_domain]
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."

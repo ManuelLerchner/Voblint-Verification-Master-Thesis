@@ -6,6 +6,8 @@ Location  Point  Severity  Message
 9:5       pp2    WARNING   possible signed integer overflow in *: 12 * n
 9:5       pp2    WARNING   possible signed integer overflow in +: 12 * n + 3
 9:5       pp2    WARNING   possible signed integer overflow in /: (12 * n + 3) / 3
+10:5      pp3    WARNING   possible signed integer overflow in %: q % 4
+13:5      pp6    WARNING   possible signed integer overflow in %: r % 2
 
 Assertion checks
 Location  Point  Condition   Verdict  State

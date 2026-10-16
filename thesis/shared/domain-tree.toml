@@ -30,7 +30,7 @@ widths = { ik_domain = 0.6, kind_int_domain = 0.9 }
 mono = {}
 # The instances listed at each class they instantiate, as snippet names.
 interpreted = { executable_domain = [
-  "relc_executable_domain",
+  "order_rel_executable_domain",
 ], numeric_domain = [
   "sign_numeric_domain",
   "ivl_numeric_domain",
