@@ -42,10 +42,10 @@ SHOWCASE = [
         "checks neither proves alone; every kind of inline annotation appears once.",
     ),
     (
-        "20-nested-loops/precision/01-hh12_nested_counted.vimp",
+        "28-flavors/precision/02-fudge_widening_narrowing.vimp",
         "Widening, then narrowing",
-        "Nested counted loops: each head widens its counter to [0,+inf] and narrows "
-        "it back against the loop bound, so both counters are proved exact on exit.",
+        "Monniaux's counting loop: widening sends i to the i32 limit, and narrowing "
+        "through the exit test brings it back, so i == 10 is proved after the loop.",
     ),
     (
         "07-sign-precision/precision/06-tutorial_negative_join.vimp",
@@ -72,11 +72,11 @@ SHOWCASE = [
         "separately recovers the precise bounds.",
     ),
     (
-        "19-paper-examples/precision/07-fig1_flow_insensitive_globals.vimp",
-        "Flow-insensitive globals",
-        "The FM 2026 paper's Fig. 1 with g and h each at its own unknown: g's "
-        "writes join to [-17,42], enough for g < 43 but not g == 42, and h widens "
-        "to [0,+inf]. Set Program globals to Flow-sensitive and every check is proved.",
+        "28-flavors/known-imprecision/02-coffee_absolute_value.vimp",
+        "A precision limit: absolute value",
+        "Monniaux's y = |x| example. The check holds in every run, but an "
+        "interval cannot relate y to x, so x != 0 stays UNKNOWN: lost "
+        "precision, not an error.",
     ),
     (
         "16-composite-domain/precision/09-remainder_reduction.vimp",
