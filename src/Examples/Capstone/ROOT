@@ -4,5 +4,8 @@ session Voblint_Examples in "." = "Voblint_Examples_CLI" +
   description
     "The project capstone: the published theorem is non-vacuous, and the
      framework's guarantees fail without its premises"
+  sessions
+    "Voblint_Examples_CFG"
+    "Voblint_Examples_Tooling"
   theories
     Example_Non_Vacuity
