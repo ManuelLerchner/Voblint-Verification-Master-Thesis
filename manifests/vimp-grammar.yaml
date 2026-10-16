@@ -37,8 +37,8 @@
 #
 # Machine-kind declarations are CLI-only and written in scripts/gen_vimp_menhir.py
 # (gen_program_rule): `global u8 g;`, `fun u16 f(u8 n) { u8 x; ... }`. Their kinds
-# become the program's kind_decls (cli/frontend/vimp_typing.ml); a variable without
-# one takes the default kind i32. The Isabelle notation reads programs without
+# become the program's kind_decls (cli/frontend/vimp_typing.ml), and the CLI rejects
+# a variable that declares none. The Isabelle notation reads programs without
 # declarations; a theory passes the kind declarations to run_voblint beside the
 # program. The kind keywords below also serve the `(k) e` cast, which both targets
 # share.

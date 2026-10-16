@@ -1,0 +1,8 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Every variable declares its
+// kind, so an assignment to a name that no declaration, formal or global
+// introduces is rejected instead of creating a variable.
+fun main() {
+  x = 10;
+  __voblint_check(x == 10);
+}

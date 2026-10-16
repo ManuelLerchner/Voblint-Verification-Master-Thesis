@@ -779,15 +779,13 @@ among them, holding some value of its kind. A declared local starts at some
 value of its kind each time its declaration executes
 (#isathm("pstep_declare_forgets"), @sec:elaboration), and that the parser
 rewrites every declaration this way is trusted (@sec:trust-boundary). A call
-also resets the callee's locals to $0$ (#isaconst("enter_state")). The reset is
-observable only for an undeclared local of an untyped program, because in a
-typed program every local is declared and its declaration forgets the $0$. No
-shipped analysis relies on the reset, because every abstract entry assumes
-nothing about callee locals beyond their kinds
+also resets the callee's locals to $0$ (#isaconst("enter_state")), but no
+program observes the reset. Every local is declared, the parser rejects a use
+before the declaration, and the declaration writes the local before any read,
+so it forgets the $0$. No shipped analysis relies on the reset either, because
+every abstract entry assumes nothing about callee locals beyond their kinds
 (#isaconst("nonrel_enter_frame") for the non-relational analyses,
-#isaconst("ord_enter") for the order analysis). A check `y == 0` on an
-unassigned local `y` of an untyped callee is therefore
-#raw(check-row("callee-uninit-local", cond: "y == 0").verdict). Checks never
+#isaconst("ord_enter") for the order analysis). Checks never
 prune executions, so the verdict for one check does not depend on an earlier
 one. Goblint's `__goblint_check` behaves the same way, and its library table
 classifies it as checked and not used for refinement

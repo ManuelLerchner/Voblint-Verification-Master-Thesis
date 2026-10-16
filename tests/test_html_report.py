@@ -143,13 +143,13 @@ def test_graph_pane_is_the_dot_drawing(report):
     assert dot == cli
 
 
-@pytest.mark.parametrize("dead_call", ["a = f(3);", "a = f(\n  3\n);", "f(3);"])
+@pytest.mark.parametrize("dead_call", ["i32 a = f(3);", "i32 a = f(\n  3\n);", "f(3);"])
 def test_dead_calls_keep_their_operation_without_a_callee_context(tmp_path, dead_call):
     source = tmp_path / "dead_call.vimp"
     source.write_text(
-        "fun f(n) { return n; }\n"
-        "fun main() { x = 5; if (x < 2) { " + dead_call + " } "
-        "b = f(7); __voblint_check(b == 7); }\n"
+        "fun i32 f(i32 n) { return n; }\n"
+        "fun main() { i32 x = 5; if (x < 2) { " + dead_call + " } "
+        "i32 b = f(7); __voblint_check(b == 7); }\n"
     )
     out = tmp_path / "result"
     proc = subprocess.run(
@@ -403,9 +403,9 @@ def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
     """
     src = tmp_path / "seeded.vimp"
     src.write_text(
-        "fun bump(n) {\n  m = n + 1;\n  return m;\n}\n\n"
-        "fun never() {\n  return 0;\n}\n\n"
-        "fun main() {\n  x = 7;\n  y = bump(x);\n  __voblint_check(y == 8);\n}\n"
+        "fun i32 bump(i32 n) {\n  i32 m = n + 1;\n  return m;\n}\n\n"
+        "fun i32 never() {\n  return 0;\n}\n\n"
+        "fun main() {\n  i32 x = 7;\n  i32 y = bump(x);\n  __voblint_check(y == 8);\n}\n"
     )
     out = _run(tmp_path, "--analysis", "interval", str(src))
     rows = {
@@ -481,7 +481,7 @@ def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
     src = tmp_path / "dead_then_live.vimp"
     src.write_text(
         "fun main() {\n"
-        "  x = 5;\n"
+        "  i32 x = 5;\n"
         "  if (x < 0) {\n"
         "    __voblint_check(x == 99);\n"
         "  } else {\n"

@@ -109,7 +109,7 @@ let declare_locals k ds =
 (* exp: *)
 exp:
   | v0 = IDENT
-      { let v0 = Vimp_scope.resolve v0 in Voblint.V v0 }
+      { let v0 = Vimp_scope.resolve $startpos(v0) v0 in Voblint.V v0 }
   | v0 = INT
       { Voblint.N (Voblint.Int_of_integer v0) }
   | v0 = MINUS v1 = exp %prec UMINUS
@@ -178,7 +178,7 @@ stmt:
   | v0 = SKIP v1 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.SKIP ()) }
   | v0 = IDENT v1 = ASSIGN v2 = exp v3 = SEMI
-      { let v0 = Vimp_scope.resolve v0 in record_stmt_pos $startpos $endpos (Voblint.Assign ((), v0, v2)) }
+      { let v0 = Vimp_scope.resolve $startpos(v0) v0 in record_stmt_pos $startpos $endpos (Voblint.Assign ((), v0, v2)) }
   | v0 = RETURN v1 = exp v2 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.Return ((), (Some v1))) }
   | v0 = RETURN v1 = SEMI
@@ -192,7 +192,7 @@ stmt:
   | v0 = IDENT v1 = LPAREN v2 = actuals v3 = RPAREN v4 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.Call ((), None, v0, v2)) }
   | v0 = IDENT v1 = ASSIGN v2 = IDENT v3 = LPAREN v4 = actuals v5 = RPAREN v6 = SEMI
-      { let v0 = Vimp_scope.resolve v0 in record_stmt_pos $startpos $endpos (Voblint.Call ((), (Some v0), v2, v4)) }
+      { let v0 = Vimp_scope.resolve $startpos(v0) v0 in record_stmt_pos $startpos $endpos (Voblint.Call ((), (Some v0), v2, v4)) }
   | k = kind ds = init_decls SEMI
       { declare_locals k ds }
   | block_open b = stmts_opt block_close
@@ -242,17 +242,20 @@ global_line_star:
   | g = global_line gs = global_line_star
       { g :: gs }
 
+(* Every global and formal declares its kind. The kindless forms parse only to
+   say so. *)
 global_line:
   | GLOBAL xs = ids SEMI
-      { Vimp_scope.add_globals xs; (xs, None) }
+      { failwith (Printf.sprintf "global '%s' needs a kind, as in 'global i32 %s;'"
+                    (List.hd xs) (List.hd xs)) }
   | GLOBAL k = kind xs = ids SEMI
-      { Vimp_scope.add_globals xs; (xs, Some k) }
+      { Vimp_scope.add_globals xs; (xs, k) }
 
 tformal:
   | x = IDENT
-      { (x, None) }
+      { failwith (Printf.sprintf "formal '%s' needs a kind, as in 'i32 %s'" x x) }
   | k = kind x = IDENT
-      { (x, Some k) }
+      { (x, k) }
 
 tformals:
   | (* empty *)

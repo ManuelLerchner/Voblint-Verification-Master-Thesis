@@ -263,7 +263,7 @@ def render_alt(prod: dict) -> str:
         action = f"record_stmt_pos $startpos $endpos ({action})"
     use = VARIABLE_USES.get(prod.get("name"))
     if use is not None:
-        action = f"let v{use} = Vimp_scope.resolve v{use} in {action}"
+        action = f"let v{use} = Vimp_scope.resolve $startpos(v{use}) v{use} in {action}"
     return f"  | {pattern}{prec}\n      {{ {action} }}"
 
 
@@ -327,8 +327,8 @@ def gen_program_rule() -> str:
     # notation does not share: kinds reach a theory as `typed_prog p ds`, not
     # through `program { ... }`. Every function parses uniformly via
     # function_decl*; Vimp_typing.program picks out "main" by string equality,
-    # matching VIMP_Notation.thy's prog_tr, and decides whether the program is
-    # typed. See manifests/vimp-grammar.yaml's header comment on why "main" stays
+    # matching VIMP_Notation.thy's prog_tr, and collects the kind declarations.
+    # See manifests/vimp-grammar.yaml's header comment on why "main" stays
     # a parse-time diagnostic rather than a deferred well-formedness check.
     return """program:
   | gs = global_line_star fs = function_decl_star EOF
@@ -340,17 +340,20 @@ global_line_star:
   | g = global_line gs = global_line_star
       { g :: gs }
 
+(* Every global and formal declares its kind. The kindless forms parse only to
+   say so. *)
 global_line:
   | GLOBAL xs = ids SEMI
-      { Vimp_scope.add_globals xs; (xs, None) }
+      { failwith (Printf.sprintf "global '%s' needs a kind, as in 'global i32 %s;'"
+                    (List.hd xs) (List.hd xs)) }
   | GLOBAL k = kind xs = ids SEMI
-      { Vimp_scope.add_globals xs; (xs, Some k) }
+      { Vimp_scope.add_globals xs; (xs, k) }
 
 tformal:
   | x = IDENT
-      { (x, None) }
+      { failwith (Printf.sprintf "formal '%s' needs a kind, as in 'i32 %s'" x x) }
   | k = kind x = IDENT
-      { (x, Some k) }
+      { (x, k) }
 
 tformals:
   | (* empty *)

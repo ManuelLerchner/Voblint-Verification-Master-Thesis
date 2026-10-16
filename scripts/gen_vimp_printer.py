@@ -175,31 +175,97 @@ let rec com_lines depth c =
        | _ -> [pad ^ "}} else {{"] @ com_lines (depth + 1) e @ [pad ^ "}}"])
   | _ -> [pad ^ "(* runtime-only command *)"]
 
-let proc_lines (name, formals, body) =
-  ["fun " ^ name ^ "(" ^ String.concat ", " formals ^ ") {{"]
-  @ com_lines 1 body
+(* Every variable declares its kind: [decls] are the kind declarations the parser
+   returns beside the program. A local is declared at the first top-level statement
+   that writes it, the way the parser lowers a declaration: [k x = e;] is the
+   assignment, [k x = f(a);] the call, and [k x;] the library call that yields an
+   arbitrary value. A local that no top-level statement writes has no source form. *)
+let kind_of decls id = List.assoc_opt id decls
+
+let seq_list c =
+  let rec go acc = function
+    | {G}.Seq (a, b) -> go (go acc b) a
+    | c -> c :: acc
+  in
+  go [] c
+
+let body_lines decls name formals body =
+  let declared = ref formals in
+  let declare x =
+    if List.mem x !declared then None
+    else
+      match kind_of decls ({G}.ScopedId (name, x)) with
+      | Some k -> declared := x :: !declared; Some (string_of_kind k)
+      | None -> None
+  in
+  let pad = indent 1 in
+  let statement c =
+    match c with
+    | {G}.Assign (_, x, e) -> (
+        match declare x with
+        | Some k -> [pad ^ k ^ " " ^ x ^ " = " ^ string_of_exp e ^ ";"]
+        | None -> com_lines 1 c)
+    | {G}.Call (_, Some x, "__voblint_nondet_int", []) -> (
+        match declare x with
+        | Some k -> [pad ^ k ^ " " ^ x ^ ";"]
+        | None -> com_lines 1 c)
+    | {G}.Call (_, Some x, f, args) -> (
+        match declare x with
+        | Some k ->
+          [pad ^ k ^ " " ^ x ^ " = " ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
+        | None -> com_lines 1 c)
+    | _ -> com_lines 1 c
+  in
+  let lines = List.concat_map statement (seq_list body) in
+  List.iter
+    (fun (id, _) ->
+      match id with
+      | {G}.ScopedId (q, x) when q = name && not (List.mem x !declared) ->
+        failwith ("local '" ^ x ^ "' of '" ^ name ^ "' has no top-level statement writing it")
+      | _ -> ())
+    decls;
+  lines
+
+let proc_lines decls (name, formals, body) =
+  let typed x =
+    match kind_of decls ({G}.ScopedId (name, x)) with
+    | Some k -> string_of_kind k ^ " " ^ x
+    | None -> x
+  in
+  let ret =
+    match kind_of decls ({G}.ReturnId name) with
+    | Some k -> string_of_kind k ^ " "
+    | None -> ""
+  in
+  ["fun " ^ ret ^ name ^ "(" ^ String.concat ", " (List.map typed formals) ^ ") {{"]
+  @ body_lines decls name formals body
   @ ["}}"]
 
 (* [procs] lists every procedure as [(name, formals, body)], [main] among them.
-   Blocks -- the globals line, then each procedure -- are separated by one blank line. *)
-let program_lines ~globals ~procs =
+   Blocks -- the globals, then each procedure -- are separated by one blank line. *)
+let program_lines ~decls ~globals ~procs =
+  let global_line g =
+    match kind_of decls ({G}.GlobalId g) with
+    | Some k -> "global " ^ string_of_kind k ^ " " ^ g ^ ";"
+    | None -> "global " ^ g ^ ";"
+  in
   let blocks =
-    (match globals with [] -> [] | gs -> [["global " ^ String.concat ", " gs ^ ";"]])
-    @ List.map proc_lines procs
+    (match globals with [] -> [] | gs -> [List.map global_line gs])
+    @ List.map (proc_lines decls) procs
   in
   List.concat (List.mapi (fun i block -> if i = 0 then block else "" :: block) blocks)
 
-let string_of_program ~globals ~procs =
-  String.concat "\\n" (program_lines ~globals ~procs) ^ "\\n"
+let string_of_program ~decls ~globals ~procs =
+  String.concat "\\n" (program_lines ~decls ~globals ~procs) ^ "\\n"
 
 (* The program type is abstract to OCaml; read it through the exported readers. *)
-let string_of_imp_prog p =
+let string_of_imp_prog ~decls p =
   let proc name =
     match {G}.prog_table p name with
     | Some ({G}.Gproc_decl_ext (formals, body, ())) -> (name, formals, body)
     | None -> (name, [], {G}.SKIP ())
   in
-  string_of_program ~globals:({G}.declared_global_vars p)
+  string_of_program ~decls ~globals:({G}.declared_global_vars p)
     ~procs:(("main", [], {G}.prog_main p) :: List.map proc ({G}.prog_procs p))
 """
     )

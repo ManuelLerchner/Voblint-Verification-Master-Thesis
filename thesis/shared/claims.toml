@@ -234,10 +234,6 @@ argv = [
 ]
 why = "The compiled graph of the recursive sum/dec program: node names, edge labels and wiring drawn in the compiled-graph figure of Chapter 3."
 
-[claims.callee-uninit-local]
-argv = ["--analysis", "interval", "thesis/shared/programs/callee-uninit.vimp"]
-why = "Chapter 3: the shipped entry resets a callee's locals to top, so a check that an unassigned callee local is 0 stays UNKNOWN although the source semantics starts it at 0."
-
 [claims.and-divisor-warning]
 argv = ["--analysis", "interval", "thesis/shared/programs/and-divisor.vimp"]
 why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns about the divisor in x != 0 && 10 / x > 1."

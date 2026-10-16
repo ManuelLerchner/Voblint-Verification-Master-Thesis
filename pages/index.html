@@ -353,10 +353,10 @@
             <div>
               <p class="ans-label">Your program</p>
               <pre class="mock-editor" data-lang="vimp"><span class="ml">fun main() {</span>
-<span class="ml">  k = 10;</span>
-<span class="ml">  q = 100 / k;</span>
-<span class="ml">  d = __voblint_nondet_int();</span>
-<span class="ml warning">  y = 100 / d;</span>
+<span class="ml">  i32 k = 10;</span>
+<span class="ml">  i32 q = 100 / k;</span>
+<span class="ml">  i32 d = __voblint_nondet_int();</span>
+<span class="ml warning">  i32 y = 100 / d;</span>
 <span class="ml proved">  __voblint_check(0 &lt; q);</span>
 <span class="ml">  if (k &lt; 0) {</span>
 <span class="ml dead">    __voblint_check(q == 0);</span>
@@ -488,8 +488,8 @@
           <div class="bug-pane right">
             <p class="bug-pane-title"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Voblint, congruence only</p>
             <pre class="mock-editor bug-editor" data-lang="vimp"><span class="ml">fun main() {</span>
-<span class="ml">  top = __voblint_nondet_int();</span>
-<span class="ml rl rl-1">  c = -5;<span class="mh">c = −5</span></span>
+<span class="ml">  i32 top = __voblint_nondet_int();</span>
+<span class="ml rl rl-1">  i32 c = -5;<span class="mh">c = −5</span></span>
 <span class="ml">  if (top) {</span>
 <span class="ml rl rl-2">    c = -7;<span class="mh">−5 ⊔ −7 = 1+2ℤ</span></span>
 <span class="ml">  }</span>
@@ -602,11 +602,11 @@
 
         <div class="pt-layout">
           <pre class="pt-code" data-lang="vimp"><code>fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (n &lt; -4 || n &gt; 4) {
     n = 0;
   }
-  x = 3 * n;
+  i32 x = 3 * n;
 
   if (x &gt; 0) {
     if (x &lt; 3) {
@@ -802,8 +802,8 @@
           <div class="reduce-side">
             <p class="td-panel-title">Program</p>
             <pre class="reduce-code" data-lang="vimp"><code>fun main() {
-  n = __voblint_nondet_int();
-  x = 4 * n + 1;
+  i32 n = __voblint_nondet_int();
+  i32 x = 4 * n + 1;
   if (x &gt;= -2) {
     if (x &lt;= 10) {
       __voblint_check(x &gt;= 1 &amp;&amp; x &lt;= 9);
@@ -859,9 +859,9 @@
 
       <figure class="scene">
         <pre class="mock-editor" data-lang="vimp" aria-label="A remainder that goes negative"><span class="ml">fun main() {</span>
-<span class="ml">  n = __voblint_nondet_int();<span class="mh">interval: [−2³¹, 2³¹−1]</span></span>
-<span class="ml warning">  x = 6 * n + 5;<span class="mh">interval: [−2³¹, 2³¹−1] · congruence: ⊤</span></span>
-<span class="ml">  a = x % 6;<span class="mh">interval: [−5, 5]</span></span>
+<span class="ml">  i32 n = __voblint_nondet_int();<span class="mh">interval: [−2³¹, 2³¹−1]</span></span>
+<span class="ml warning">  i32 x = 6 * n + 5;<span class="mh">interval: [−2³¹, 2³¹−1] · congruence: ⊤</span></span>
+<span class="ml">  i32 a = x % 6;<span class="mh">interval: [−5, 5]</span></span>
 <span class="ml unknown">  __voblint_check(a &gt;= 0);<span class="mb">? UNKNOWN</span></span>
 <span class="ml">  if (a &lt; 0) {<span class="mh">a narrows to [−5, −1]</span></span>
 <span class="ml unknown">    __voblint_check(a == -1);<span class="mb">? UNKNOWN</span></span>
@@ -894,17 +894,18 @@
           <div class="coop-code">
             <p class="td-panel-title">Program</p>
             <pre class="coop-prog" data-prog="eq" data-lang="vimp"><code>fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (x &lt;= y) {
     if (y &lt;= x) {
-      z = (x == y);
+      i32 z = (x == y);
       __voblint_check(z == 1);
     }
   }
 }</code></pre>
             <pre class="coop-prog" data-prog="le" data-lang="vimp" hidden><code>fun main() {
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 x, y;
   if (0 &lt; c) {
     x = 0;
     y = 10;
@@ -1002,21 +1003,21 @@
         <div class="cfgmap-layout">
           <div class="run-panel">
             <p class="td-panel-title">The program</p>
-      <pre class="run-code" data-lang="vimp"><code><span data-line="dec" data-nodes="entry_dec exit_dec">fun dec(x) {</span>
+      <pre class="run-code" data-lang="vimp"><code><span data-line="dec" data-nodes="entry_dec exit_dec">fun i32 dec(i32 x) {</span>
 <span data-line="retdec" data-nodes="pp0">  return x - 1;</span>
 <span data-nodes="exit_dec">}</span>
 
-<span data-line="sum" data-nodes="entry_sum">fun sum(n) {</span>
+<span data-line="sum" data-nodes="entry_sum">fun i32 sum(i32 n) {</span>
 <span data-line="if" data-nodes="pp2">  if (n &lt; 1) {</span>
 <span data-line="ret0" data-nodes="pp3">    return 0;</span>
 <span data-nodes="">  }</span>
-<span data-line="mdec" data-nodes="pp5 pp6">  m = dec(n);</span>
-<span data-line="rsum" data-nodes="pp6 pp7">  r = sum(m);</span>
+<span data-line="mdec" data-nodes="pp5 pp6">  i32 m = dec(n);</span>
+<span data-line="rsum" data-nodes="pp6 pp7">  i32 r = sum(m);</span>
 <span data-line="retn" data-nodes="pp7">  return r + n;</span>
 <span data-nodes="exit_sum">}</span>
 
 <span data-line="main" data-nodes="entry_main">fun main() {</span>
-<span data-line="callsum" data-nodes="pp9 pp10">  x = sum(2);</span>
+<span data-line="callsum" data-nodes="pp9 pp10">  i32 x = sum(2);</span>
 <span data-line="check" data-nodes="pp10 pp11">  __voblint_check(x == 3);</span>
 <span data-nodes="pp11 exit_main">}</span></code></pre>
           </div>
@@ -1387,11 +1388,11 @@ datatype 'v gactivation_trace =
         <h2 id="integers-heading">What a VIMP integer is</h2>
         <p class="section-intro">Before saying what a run does, we have to say what it computes with. Take this program, which Isabelle also evaluates through the analyzer (<a href="Voblint/Voblint_Examples_CLI/Example_Run_Voblint_Precision.html#Example_Run_Voblint_Precision.overflow_verdicts%7Cfact"><code>overflow_verdicts</code></a>):</p>
         <pre class="prose-code" data-lang="vimp"><code>fun main() {
-  x = 2147483647;
+  i32 x = 2147483647;
   x = x + 1;
   __voblint_check(x &lt; 0);
 }</code></pre>
-        <p class="section-intro">Over mathematical integers <code>x</code> ends at 2147483648 and the check is false. In C on a 32-bit <code>int</code> the addition overflows, which the standard leaves undefined. VIMP gives the program one meaning: the program declares no kind, so <code>x</code> gets the default kind <code>i32</code>, and <code>x + 1</code> wraps to −2147483648. The check holds in the only run there is.</p>
+        <p class="section-intro">Over mathematical integers <code>x</code> ends at 2147483648 and the check is false. In C on a 32-bit <code>int</code> the addition overflows, which the standard leaves undefined. VIMP gives the program one meaning: <code>x</code> is declared <code>i32</code>, so <code>x + 1</code> wraps to −2147483648. The check holds in the only run there is.</p>
       </div>
 
       <div class="prose-block">
@@ -1403,7 +1404,7 @@ datatype 'v gactivation_trace =
 
       <div class="prose-block">
         <h3>Kinds, and where wraparound happens</h3>
-        <p>A kind is one of eight machine integer types, <code>i8</code>, <code>u8</code>, <code>i16</code>, <code>u16</code>, <code>i32</code>, <code>u32</code>, <code>i64</code> and <code>u64</code> (<a href="Voblint/Voblint_VIMP/Machine_Kind.html#Machine_Kind.ikind%7Ctype"><code>ikind</code></a>). Each has a range, and <a href="Voblint/Voblint_VIMP/Machine_Kind.html#Machine_Kind.ik_norm%7Cconst"><code>ik_norm</code></a> maps any integer into it by keeping the low bits, two's complement for a signed kind. Values stay HOL integers; the kind only says which of them a variable may hold. A program may declare kinds in C style, <code>u8 x;</code>, <code>global i16 g;</code>, <code>fun u32 f(i8 n)</code>, In a program that declares no kind, every variable is <code>i32</code>. Once a program declares one, every global and formal needs a kind and every local a declaration.</p>
+        <p>A kind is one of eight machine integer types, <code>i8</code>, <code>u8</code>, <code>i16</code>, <code>u16</code>, <code>i32</code>, <code>u32</code>, <code>i64</code> and <code>u64</code> (<a href="Voblint/Voblint_VIMP/Machine_Kind.html#Machine_Kind.ikind%7Ctype"><code>ikind</code></a>). Each has a range, and <a href="Voblint/Voblint_VIMP/Machine_Kind.html#Machine_Kind.ik_norm%7Cconst"><code>ik_norm</code></a> maps any integer into it by keeping the low bits, two's complement for a signed kind. Values stay HOL integers; the kind only says which of them a variable may hold. A program declares the kind of every variable in C style, <code>u8 x;</code>, <code>global i16 g;</code>, <code>fun u32 f(i8 n)</code>, and the parser rejects a name that no declaration introduces.</p>
         <p>Wraparound happens at the operation, and the operation has a kind of its own. As in C, both operands are first brought to a common kind by the usual arithmetic conversions: a <code>u8</code> plus an <code>i32</code> is computed at <code>i32</code>. In <code>u8 x = 250; x = x + 10;</code> the sum is 260 at <code>i32</code>, and storing it back into the <code>u8</code> wraps it to 4.</p>
       </div>
 
@@ -1450,21 +1451,21 @@ datatype 'v gactivation_trace =
               <code class="run-rule" data-rule="source"></code>
             </div>
             <hr class="run-sep">
-            <pre class="run-code" data-lang="vimp"><code><span data-line="dec" data-nodes="entry_dec exit_dec">fun dec(x) {</span>
+            <pre class="run-code" data-lang="vimp"><code><span data-line="dec" data-nodes="entry_dec exit_dec">fun i32 dec(i32 x) {</span>
 <span data-line="retdec" data-nodes="pp0">  return x - 1;</span>
 <span data-nodes="exit_dec">}</span>
 
-<span data-line="sum" data-nodes="entry_sum">fun sum(n) {</span>
+<span data-line="sum" data-nodes="entry_sum">fun i32 sum(i32 n) {</span>
 <span data-line="if" data-nodes="pp2">  if (n &lt; 1) {</span>
 <span data-line="ret0" data-nodes="pp3">    return 0;</span>
 <span data-nodes="">  }</span>
-<span data-line="mdec" data-nodes="pp5 pp6">  m = dec(n);</span>
-<span data-line="rsum" data-nodes="pp6 pp7">  r = sum(m);</span>
+<span data-line="mdec" data-nodes="pp5 pp6">  i32 m = dec(n);</span>
+<span data-line="rsum" data-nodes="pp6 pp7">  i32 r = sum(m);</span>
 <span data-line="retn" data-nodes="pp7">  return r + n;</span>
 <span data-nodes="exit_sum">}</span>
 
 <span data-line="main" data-nodes="entry_main">fun main() {</span>
-<span data-line="callsum" data-nodes="pp9 pp10">  x = sum(2);</span>
+<span data-line="callsum" data-nodes="pp9 pp10">  i32 x = sum(2);</span>
 <span data-line="check" data-nodes="pp10 pp11">  __voblint_check(x == 3);</span>
 <span data-nodes="pp11 exit_main">}</span></code></pre>
             <p class="run-label">Rest of the program</p>
@@ -1778,7 +1779,7 @@ datatype 'v gactivation_trace =
           <div class="sm-panel sm-source">
             <p class="td-panel-title">Source</p>
             <pre class="sm-code" data-lang="vimp"><code><span class="sm-line" data-line="1">fun main() {</span>
-<span class="sm-line" data-line="2">  i = 0;</span>
+<span class="sm-line" data-line="2">  i32 i = 0;</span>
 <span class="sm-line" data-line="3">  while (i &lt; 5) {</span>
 <span class="sm-line" data-line="4">    i = i + 1;</span>
 <span class="sm-line" data-line="3">  }</span>
@@ -2360,7 +2361,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         <div class="walk-layout">
           <div class="walk-panel">
             <p class="td-panel-title">One equation per node</p>
-            <pre class="walk-code" data-lang="vimp"><code><span class="wl" data-step="0">fun main() {</span><span class="wl" data-step="1 2">  a = f(2);</span><span class="wl" data-step="3">  __voblint_check(a == 2);</span><span class="wl" data-step="4">}</span></code></pre>
+            <pre class="walk-code" data-lang="vimp"><code><span class="wl" data-step="0">fun main() {</span><span class="wl" data-step="1 2">  i32 a = f(2);</span><span class="wl" data-step="3">  __voblint_check(a == 2);</span><span class="wl" data-step="4">}</span></code></pre>
 
             <svg class="walk-svg" viewBox="0 0 340 320" role="img"
               aria-label="main's five nodes in a column, each with its own equation, beside a dashed box for f that is never opened and is touched only through two ports: the entry key the call publishes, and the exit it queries.">
@@ -2585,18 +2586,18 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         </div>
 
         <div class="context-layout">
-          <pre class="context-code" data-lang="vimp"><code>fun scale(v) {
+          <pre class="context-code" data-lang="vimp"><code>fun i32 scale(i32 v) {
   return v * 2;
 }
 
-fun wrap(w) {
-  r = scale(w);            // s3
+fun i32 wrap(i32 w) {
+  i32 r = scale(w);            // s3
   return r;
 }
 
 fun main() {
-  a = wrap(1);             // s1
-  b = wrap(4);             // s2
+  i32 a = wrap(1);             // s1
+  i32 b = wrap(4);             // s2
   __voblint_check(a == 2);
 }</code></pre>
           <svg class="context-svg" viewBox="0 0 636 340" role="img"
@@ -2855,13 +2856,13 @@ fun main() {
         <figure class="scene scene-cost">
           <p class="cost-title">Fan-out: <code>main</code> → <code>f6</code> → … → <code>f0</code>, each level twice</p>
           <p class="cost-sub">Solved graph nodes per setting, and whether <code>x &lt;= 22</code> is proved.</p>
-          <pre class="cost-code" data-lang="vimp"><code>fun f0(x) { __voblint_check(x &lt;= 22); }
-fun f1(x) { f0(x); f0(x + 1); }
-fun f2(x) { f1(x); f1(x + 2); }
-fun f3(x) { f2(x); f2(x + 3); }
-fun f4(x) { f3(x); f3(x + 4); }
-fun f5(x) { f4(x); f4(x + 5); }
-fun f6(x) { f5(x); f5(x + 6); }
+          <pre class="cost-code" data-lang="vimp"><code>fun f0(i32 x) { __voblint_check(x &lt;= 22); }
+fun f1(i32 x) { f0(x); f0(x + 1); }
+fun f2(i32 x) { f1(x); f1(x + 2); }
+fun f3(i32 x) { f2(x); f2(x + 3); }
+fun f4(i32 x) { f3(x); f3(x + 4); }
+fun f5(i32 x) { f4(x); f4(x + 5); }
+fun f6(i32 x) { f5(x); f5(x + 6); }
 
 fun main() {
   f6(1);
@@ -2926,7 +2927,7 @@ fun main() {
         <figure class="scene scene-cost">
           <p class="cost-title">Recursion: <code>down(n)</code> calls <code>down(n - 1)</code> from <code>down(100)</code></p>
           <p class="cost-sub">Contexts per setting, and whether <code>n &gt;= 0</code> is proved.</p>
-          <pre class="cost-code" data-lang="vimp"><code>fun down(n) {
+          <pre class="cost-code" data-lang="vimp"><code>fun down(i32 n) {
   __voblint_check(n &gt;= 0);
 
   if (n &gt; 0) {
@@ -3023,38 +3024,38 @@ fun main() {
 
       <figure class="scene scene-infinite">
         <div class="lat-side">
-          <pre class="lat-code" data-lang="vimp"><code>fun h(z) {
+          <pre class="lat-code" data-lang="vimp"><code>fun i32 h(i32 z) {
   return z + 1;
 }
 
-fun g(u, v) {
-  r = h(u);
+fun i32 g(i32 u, i32 v) {
+  i32 r = h(u);
   return r + v;
 }
 
-fun w(x) {
+fun i32 w(i32 x) {
   if (x &gt; 0) {
-    y = __voblint_nondet_int();
-    r = w(y);
+    i32 y = __voblint_nondet_int();
+    i32 r = w(y);
     return r;
   }
   return 0;
 }
 
-fun f(n) {
+fun i32 f(i32 n) {
   if (n &lt; 2) {
-    r = g(n, 0);
+    i32 r = g(n, 0);
     return r;
   }
-  a = f(n - 1);
-  b = f(n - 2);
+  i32 a = f(n - 1);
+  i32 b = f(n - 2);
   return a + b;
 }
 
 fun main() {
-  q = __voblint_nondet_int();
-  s = w(q);
-  r = f(3);
+  i32 q = __voblint_nondet_int();
+  i32 s = w(q);
+  i32 r = f(3);
 }</code></pre>
   <svg viewBox="0 0 1006 878" role="img"
             aria-label="A grid drawn only at the coordinates it names, thinning out towards its open edges. Rows are program points, grouped by procedure: aaa, h, pp, g, f, zz, w, main and bb, of which aaa, pp, zz and bb are procedures the type allows and this program does not have. Columns are contexts, written as the arguments the entry state binds, grouped by how many and ordered inside each group so the call chain runs left to right. One cell is one equation. Each call draws two arrows: a dashed one into the callee entry, the seed the call publishes, which is what brings that context into existence, and a solid one back from the callee exit to the call site that reads it. The procedure w has one context, top, because the value it calls itself with is unconstrained, so its two arrows loop back into its own column: a cycle in the dependency graph, which the solver iterates to a fixpoint. Inside f, the points behind the n less than 2 guard are hollow under (3) and (2) and those behind the other branch are hollow under (1) and (0): the solver reads them and they answer bottom. Between every drawn row and column is an axis break marked with an infinity sign for the coordinates left out, and the spacing across a break means nothing.">
@@ -3589,15 +3590,15 @@ fun main() {
 
       <figure class="scene scene-meet">
         <div class="lat-side">
-          <pre class="lat-code" data-lang="vimp"><code>fun p(x) {
+          <pre class="lat-code" data-lang="vimp"><code>fun p(i32 x) {
   __voblint_check(x &lt;= 2);
 }
 
-fun g(y) {
+fun g(i32 y) {
   __voblint_check(y &lt; 10);
 }
 
-fun s(a) {
+fun s(i32 a) {
   if (a &lt; 4) {
     s(9 / (a + 2));              // E
   }
@@ -3607,7 +3608,7 @@ fun s(a) {
 fun main() {
   p(1);                          // A
   p(2);                          // B
-  i = 0;
+  i32 i = 0;
   while (i &lt; 10) {               // C, ten times
     g(i);
     i = i + 1;
@@ -3937,7 +3938,7 @@ fun main() {
 
         <div class="spiral-body">
           <div class="spiral-side">
-            <pre class="spiral-code" data-lang="vimp"><code>fun f(x) {
+            <pre class="spiral-code" data-lang="vimp"><code>fun f(i32 x) {
   __voblint_check(x &gt;= 0);
 
   f(x + 1);
@@ -4427,16 +4428,16 @@ fun main() {
         <p class="eyebrow">The argument</p>
         <h2 id="chain-heading">The proof chain</h2>
         <p class="section-intro">Inside the boundary drawn in the previous section, soundness is a chain of set inclusions. At one program point, start from the stores real runs have there, and widen step by step: first to the stores the graph's activation traces reach, then to those traces split by context, then to what the solver's answer concretizes to. Each link is a theorem of its own. The analysis may lose precision at every link, but it may not lose a store. One last step turns the final set into the verdict you see. Below, the chain is drawn for <code>n</code> at <code>pp0</code>, the <code>if (n &lt; 2)</code> of this program:</p>
-        <pre class="prose-code" data-lang="vimp"><code>fun f(n) {
+        <pre class="prose-code" data-lang="vimp"><code>fun i32 f(i32 n) {
   if (n &lt; 2) {
     return 1;
   }
-  r = f(n - 1);
+  i32 r = f(n - 1);
   return n * r;
 }
 
 fun main() {
-  x = f(2);
+  i32 x = f(2);
 }</code></pre>
         <p class="section-intro">
           <code>main</code> calls <code>f(2)</code>, which calls <code>f(1)</code>, so two runs
@@ -4657,7 +4658,7 @@ fun main() {
             <li><strong>A domain obligation rules out the Goblint bug for every operand.</strong> Any abstract remainder that returns the constant <code>1</code> for the class <code>1+2ℤ</code> modulo <code>2</code> violates the statement that the shipped congruence remainder satisfies, at <code>−5</code> (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.prefix_congruence_mod_unsound%7Cfact"><code>prefix_congruence_mod_unsound</code></a>). Goblint's regression test samples one program; the obligation covers all of them. This is machine-checked; the upstream behaviour is documented, not re-run here.</li>
             <li><strong>Entry states must be covered in pairs.</strong> When <code>enter</code> returns several alternatives, each pair of caller continuation and callee entry has to cover the run together. Covering the caller store with one pair and the entered store with another lets the combined result exclude the run's real value (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.unpaired_entry_cover_unsound%7Cfact"><code>unpaired_entry_cover_unsound</code></a>).</li>
             <li><strong>Publish to a global unknown only complete contributions.</strong> The solver's update rules record one contribution per origin, so the equations buffer their writes (see the <a href="#buffering">buffering</a> above). Where the buffer flushes only at the answer, each key is published once per evaluation; a flush before a local read gives that up for keys written again afterwards. The buffered system terminates on a regression whose equation would otherwise publish twice in one evaluation (<a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Solver_Update_Rule_Regression.html#Example_Keyed_Solver_Update_Rule_Regression.keyed_multiwrite_buffered_terminates%7Cfact"><code>keyed_multiwrite_buffered_terminates</code></a>). That the unbuffered system does not terminate is expected, but neither proved nor evaluated.</li>
-            <li><strong>A verdict is about VIMP.</strong> VIMP's integers are machine integers of the declared kinds, <code>i32</code> by default, signed overflow wraps where C leaves it undefined, and division by zero is defined, so a verdict about a VIMP program does not automatically transfer to a corresponding C program. The arithmetic diagnostics flag the operations where the difference can matter. The theorem is only as meaningful as the semantics it is stated against; the <a href="#limits">limits</a> section returns to this.</li>
+            <li><strong>A verdict is about VIMP.</strong> VIMP's integers are machine integers of the declared kinds, signed overflow wraps where C leaves it undefined, and division by zero is defined, so a verdict about a VIMP program does not automatically transfer to a corresponding C program. The arithmetic diagnostics flag the operations where the difference can matter. The theorem is only as meaningful as the semantics it is stated against; the <a href="#limits">limits</a> section returns to this.</li>
           </ul>
         </div>
       </details>
@@ -4872,9 +4873,9 @@ fun main() {
 
           <div class="thm-cfg">
             <pre class="thm-program" data-lang="vimp" aria-label="Example program"><span class="pl">fun main() {</span>
-<span class="pl">  n = __voblint_nondet_int();</span>
+<span class="pl">  i32 n = __voblint_nondet_int();</span>
 <span class="pl">  if (n &gt; 0) {</span>
-<span class="pl">    q = 10 / n;</span>
+<span class="pl">    i32 q = 10 / n;</span>
 <span class="pl">    __voblint_check(n &gt;= 1);</span>
 <span class="pl">  } else {</span>
 <span class="pl">    if (n &gt; 5) { __voblint_check(n == 0); }</span>
@@ -5017,7 +5018,7 @@ fun main() {
             <ol class="zoom-levels">
               <li class="zoom-level" data-level="0">
                 <p class="zoom-kicker">What you see</p>
-                <pre class="zoom-code" data-lang="vimp"><code>i = 0;
+                <pre class="zoom-code" data-lang="vimp"><code>i32 i = 0;
 while (i &lt; 5) {
   i = i + 1;
 }
@@ -5403,7 +5404,7 @@ qed</code></pre>
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intervalDomain.ml#L35-L69" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Machine integers (ikind)</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
             <a class="align-voblint" href="Voblint/Voblint_VIMP/Core_Exp.html#Core_Exp.exp%7Ctype" title="Definition in the formalization">A kind on every operation</a>
-            <span class="align-note">Every variable has a machine kind, i32 unless declared otherwise, and the elaboration writes every conversion of C's usual arithmetic conversions explicitly into core VIMP, as CIL does with casts. Every domain converts its values soundly. The semantics wraps a signed overflow, which C leaves undefined. The domains follow Goblint's sem.int.signed_overflow: under assume_top, the default, an overflow gives the kind's whole range, and under assume_wraparound the domains wrap as the semantics does. The run's configuration selects one, and the soundness theorem holds for both. Goblint's third value, assume_none, assumes that no overflow happens and has no counterpart. Possible signed overflows, out-of-range conversions and zero divisors are reported as arithmetic diagnostics; unlike Goblint, unsigned wraparound is not.</span>
+            <span class="align-note">Every variable declares a machine kind, and the elaboration writes every conversion of C's usual arithmetic conversions explicitly into core VIMP, as CIL does with casts. Every domain converts its values soundly. The semantics wraps a signed overflow, which C leaves undefined. The domains follow Goblint's sem.int.signed_overflow: under assume_top, the default, an overflow gives the kind's whole range, and under assume_wraparound the domains wrap as the semantics does. The run's configuration selects one, and the soundness theorem holds for both. Goblint's third value, assume_none, assumes that no overflow happens and has no counterpart. Possible signed overflows, out-of-range conversions and zero divisors are reported as arithmetic diagnostics; unlike Goblint, unsigned wraparound is not.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Queries (ask)</a>
@@ -5504,7 +5505,7 @@ qed</code></pre>
             <ellipse cx="110" cy="220" rx="62" ry="32"/><text x="110" y="218">library</text><text x="110" y="234">&amp; I/O</text>
           </g>
 
-          <g class="island" tabindex="0" data-note="Inside VIMP: machine-integer variables of eight kinds, i32 by default, with C's usual arithmetic conversions made explicit; a signed overflow wraps, which C leaves undefined, and is reported as a diagnostic. Also `global` declarations, procedures with parameters, recursion and return values, `if` and `while`, `__voblint_check` assertions, and `__voblint_nondet_int()` for unknown input. A call is a statement, `f(x)` or `y = f(x)`, never part of an expression, and `main` does not return a value. Division is total: `a / 0` is `0` and `a % 0` is `a`, and a possible zero divisor is reported as a diagnostic.">
+          <g class="island" tabindex="0" data-note="Inside VIMP: machine-integer variables of eight kinds, each declared, with C's usual arithmetic conversions made explicit; a signed overflow wraps, which C leaves undefined, and is reported as a diagnostic. Also `global` declarations, procedures with parameters, recursion and return values, `if` and `while`, `__voblint_check` assertions, and `__voblint_nondet_int()` for unknown input. A call is a statement, `f(x)` or `y = f(x)`, never part of an expression, and `main` does not return a value. Division is total: `a / 0` is `0` and `a % 0` is `a`, and a possible zero divisor is reported as a diagnostic.">
             <path d="M300 180 C 340 140, 520 145, 560 190 S 560 290, 470 295 S 290 280, 300 180 Z"/>
             <text class="island-title" x="430" y="196">VIMP</text>
             <text x="430" y="222">machine integers · globals</text>

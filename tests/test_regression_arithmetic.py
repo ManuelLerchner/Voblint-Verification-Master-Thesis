@@ -26,9 +26,9 @@ def case(tmp_path, monkeypatch):
         "// PARAM: --analysis interval\n"
         "// EXPECT-ARITHMETIC\n"
         "fun main() {\n"
-        "  x = (1 / 0) + (1 / 0); // ARITH: ERROR division-by-zero; ERROR division-by-zero\n"
-        "  y = 1 % 0; // ARITH: WARN remainder-by-zero\n"
-        "  z = 1 / 2; // ARITH: NONE\n"
+        "  i32 x = (1 / 0) + (1 / 0); // ARITH: ERROR division-by-zero; ERROR division-by-zero\n"
+        "  i32 y = 1 % 0; // ARITH: WARN remainder-by-zero\n"
+        "  i32 z = 1 / 2; // ARITH: NONE\n"
         "}\n"
     )
     return path
@@ -110,7 +110,7 @@ def test_mismatches_fail_with_source_and_count(case, change, expected_problem):
 def test_lint_rejects_malformed_annotations(case, annotation):
     case.write_text(
         "// PARAM: --analysis interval\n// EXPECT-ARITHMETIC\n"
-        f"fun main() {{ x = 1 / 0; }} // ARITH: {annotation}\n"
+        f"fun main() {{ i32 x = 1 / 0; }} // ARITH: {annotation}\n"
     )
     assert any("malformed ARITH entry" in problem for problem in runner.lint_case(case))
 
@@ -146,7 +146,7 @@ def test_malformed_or_misattributed_output_fails(case, change):
 
 def test_directive_alone_requires_no_diagnostics(case):
     case.write_text(
-        "// PARAM: --analysis interval\n// EXPECT-ARITHMETIC\nfun main() { x = 1; }\n"
+        "// PARAM: --analysis interval\n// EXPECT-ARITHMETIC\nfun main() { i32 x = 1; }\n"
     )
     assert runner.expected_arithmetic(case) == Counter()
     assert runner.check_arithmetic(case, ["--analysis", "interval"], "") == (True, [])
@@ -156,7 +156,7 @@ def test_directive_alone_requires_no_diagnostics(case):
 
 
 def test_existing_fixtures_do_not_acquire_warning_expectations(case):
-    case.write_text("// PARAM: --analysis interval\nfun main() { x = 1 / 0; }\n")
+    case.write_text("// PARAM: --analysis interval\nfun main() { i32 x = 1 / 0; }\n")
     assert runner.expected_arithmetic(case) is None
     assert runner.check_arithmetic(
         case, ["--analysis", "interval"], diagnostic(case)

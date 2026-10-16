@@ -1,14 +1,12 @@
-(* Assembles a parsed program and decides what its integers mean.
+(* Assembles a parsed program and collects the kinds of its variables.
 
-   A program that writes no kind anywhere declares nothing, and every variable
-   takes the default kind i32 (kenv_of). A program that writes a kind on a
-   global line, a formal, a return type or a local declaration is typed, and
-   then every declaration must carry one:
+   Every global, formal and local declares its kind, and every procedure that
+   returns a value declares a return kind:
 
      global u8 g;
-     fun u16 f(u8 n) { u8 x; x = n + 1; return x; }
+     fun u16 f(u8 n) { u8 x = n + 1; return x; }
 
-   Its declarations become the verified elaboration's kind_decls, and the
+   The declarations become the verified elaboration's kind_decls, and the
    program goes to the analyzer as `run_voblint conf decls p`, whose soundness
    theorems cover the typed semantics. Declared locals are not zero: the parser
    lowers `u8 x;` to `x = __voblint_nondet_int();` where it is written, so a
@@ -18,8 +16,8 @@
    storage does. Block scoping is resolved by the parser (Vimp_scope), so every
    declared local reaches this module under a name unique in its procedure. *)
 
-type global_line = string list * Voblint.ikind option
-type formal = string * Voblint.ikind option
+type global_line = string list * Voblint.ikind
+type formal = string * Voblint.ikind
 
 (* (name, formals, return kind, declared locals, body with each declaration
    lowered in place) *)
@@ -100,13 +98,6 @@ let rec returns_value = function
   | Voblint.While (_, _, c) -> returns_value c
   | _ -> false
 
-let is_typed globals defs =
-  List.exists (fun (_, k) -> k <> None) globals
-  || List.exists
-       (fun (_, fs, rk, ls, _) ->
-         rk <> None || ls <> [] || List.exists (fun (_, k) -> k <> None) fs)
-       defs
-
 let fail fmt = Printf.ksprintf failwith fmt
 
 (* C gives an unsuffixed decimal literal the first of int, long, long long that
@@ -127,31 +118,16 @@ let check_distinct what names =
   in
   go [] names
 
-(* The declarations of a typed program, checked so that every variable resolves
-   to exactly one declared identity. *)
+(* The program's declarations, checked so that every variable resolves to
+   exactly one declared identity. *)
 let kind_decls globals defs =
   let global_kinds =
-    List.concat_map
-      (fun (xs, k) ->
-        match k with
-        | Some k -> List.map (fun x -> (x, k)) xs
-        | None ->
-            fail "global '%s' needs a kind in a typed program"
-              (String.concat ", " xs))
-      globals
+    List.concat_map (fun (xs, k) -> List.map (fun x -> (x, k)) xs) globals
   in
   let gnames = List.map fst global_kinds in
   check_distinct "global" gnames;
   let proc_decls (name, formals, ret, locals, body) =
-    let formal_kinds =
-      List.map
-        (fun (x, k) ->
-          match k with
-          | Some k -> (x, k)
-          | None ->
-              fail "formal '%s' of '%s' needs a kind in a typed program" x name)
-        formals
-    in
+    let formal_kinds = formals in
     let fnames = List.map fst formal_kinds and lnames = List.map fst locals in
     check_distinct (Printf.sprintf "variable of '%s'" name) (fnames @ lnames);
     List.iter
@@ -202,6 +178,5 @@ let program (globals : global_line list) (defs : definition list) :
   List.iter
     (fun (_, _, _, _, body) -> List.iter check_literal (com_literals [] body))
     defs;
-  last_kind_decls :=
-    if is_typed globals defs then kind_decls globals defs else [];
+  last_kind_decls := kind_decls globals defs;
   p

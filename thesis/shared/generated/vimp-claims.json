@@ -9,16 +9,6 @@
       "placement": "flow-sensitive"
     }
   },
-  "callee-uninit-local": {
-    "fixture": "thesis/shared/programs/callee-uninit.vimp",
-    "program": "fun f() {\n  __voblint_check(y == 0);\n  y = 1;\n}\nfun main() {\n  f();\n  f();\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
   "cfg-contexts-dot": {
     "fixture": "docs/readme-figures/contexts.vimp",
     "program": "fun i32 bump(i32 n) {\n  return n + 1;\n}\n\nfun main() {\n  i32 a = bump(5);\n  i32 b = bump(4);\n  __voblint_check(a == 6);\n  __voblint_check(b == 5);\n}",

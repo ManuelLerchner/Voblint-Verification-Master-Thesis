@@ -2,10 +2,9 @@
 
 Programs that declare machine kinds in C style: on a `global` line
 (`global u8 g;`), on a formal (`fun f(u8 n)`), as a return kind
-(`fun u16 f(...)`), or as a local declared anywhere in a body (`u8 x;`). A
-program that writes a kind on any declaration must write one on every global
-and formal, and must declare every local; a cast `(u8) e` alone does not make a
-program typed. A declared local starts at an arbitrary
+(`fun u16 f(...)`), or as a local declared anywhere in a body (`u8 x;`). Every
+global and formal carries a kind, every local is declared before its use, and
+`08` checks that an undeclared name is rejected. A declared local starts at an arbitrary
 value of its kind unless it has an initializer (`i8 x = 2;`), which assigns the
 value converted to the local's kind, as any assignment does; a global starts at
 zero. `11` checks initializers, `12` their left-to-right order, `13` and `14`
@@ -24,7 +23,7 @@ arguments at the usual arithmetic conversion of the two, as C's
 -1 is 4294967295, and `u8`/`i8` arguments are promoted to `i32`. `28` checks
 that the promotion costs no precision: under Sign, `min` of two `u8` values
 still fits a `u8` destination. Every fixture
-that converts or computes outside a kind (`01` to `05`, `07` to `09`, `11`,
+that converts or computes outside a kind (`01` to `05`, `07`, `09`, `11`,
 `19`, `20`, `24`, `25`, `27`) pins its diagnostics with `// EXPECT-ARITHMETIC`.
 
 Isabelle elaborates the parsed program (`elab_ptable`, an Isabelle definition):
@@ -33,9 +32,6 @@ every operation computes at its C kind, every conversion becomes an explicit
 semantics wraps a signed overflow (the `-fwrapv` reading), so check verdicts are
 about wrapping arithmetic; the signed-overflow diagnostics of `27-signed-overflow`
 name the operations that may overflow in C.
-
-A program that writes no kind gives every variable the default kind i32;
-`08` checks that.
 
 `26` pins the literal boundary: `-9223372036854775808` is one i64 literal, which
 C would read as unary minus applied to an unrepresentable constant.

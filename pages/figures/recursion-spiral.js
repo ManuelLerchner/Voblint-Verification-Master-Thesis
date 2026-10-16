@@ -16,7 +16,7 @@
       turns: 7,
       endless: true,
       verdict: "UNKNOWN",
-      code: "fun f(x) {\n  __voblint_check(x >= 0);\n\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
+      code: "fun f(i32 x) {\n  __voblint_check(x >= 0);\n\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
       grid: {
         join: { none: NO, cs1: NO, cs2: NO, cs3: NO, entry: NO },
         "per-origin": { none: NO, cs1: NO, cs2: NO, cs3: NO, entry: NO },
@@ -48,7 +48,7 @@
       turns: 11,
       endless: false,
       verdict: "PROVED",
-      code: "fun f(x) {\n  __voblint_check(x >= 0);\n\n  if (x < 10) {\n    f(x + 1);\n  }\n}\n\nfun main() {\n  f(0);\n}",
+      code: "fun f(i32 x) {\n  __voblint_check(x >= 0);\n\n  if (x < 10) {\n    f(x + 1);\n  }\n}\n\nfun main() {\n  f(0);\n}",
       grid: Object.fromEntries(
         ["join", "per-origin", "warrow", "warrow-per-origin", "bounded-narrowing"].map((g) => [
           g,

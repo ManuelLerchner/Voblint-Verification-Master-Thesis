@@ -86,7 +86,8 @@ let program (file : string) (src : string) :
       stmt_positions prog,
       header_positions () )
   with
-  | Vimp_lexer.Lex_error { line; col; msg } ->
+  | Vimp_lexer.Lex_error { line; col; msg }
+  | Vimp_scope.Error { line; col; msg } ->
       raise (Parse_error { file; line; col; msg })
   | Vimp_parser.Error ->
       let line, col = position_of lexbuf in
