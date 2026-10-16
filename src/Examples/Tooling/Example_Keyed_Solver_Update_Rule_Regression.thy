@@ -34,7 +34,7 @@ text \<open>
 \<close>
 
 text \<open>An edge step in the framework's own \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close> shape rather
-  than a \<^type>\<open>gdg_spec\<close>: what is under test is the generator's \<open>Side\<close> discipline, so
+  than a \<^type>\<open>dg_spec\<close>: what is under test is the generator's \<open>Side\<close> discipline, so
   the step is supplied directly to \<^const>\<open>dg_edge_program_at\<close> and its Side-free
   analogue. Only \<open>EA_Assign\<close> raises the published global, so the two predecessor
   edges below publish different values.\<close>
@@ -160,7 +160,7 @@ text \<open>Every field but \<open>dgs_enter\<close> is the local-only default. 
   one effectful field: it reads the solver's global unknown and answers it as the
   entered local, publishing nothing, so the entered frame differs from the caller's
   own local state by construction.\<close>
-definition w0_spec :: "(var_id, exp, pp \<times> ivl, w0_gk, unit, ivl, ivl) gdg_spec" where
+definition w0_spec :: "(pp \<times> ivl, w0_gk, unit, ivl, ivl) dg_spec" where
   "w0_spec = local_dg_spec_template\<lparr>
      dgs_enter := (\<lambda>ci m K. man_global m () (\<lambda>g. K [(man_local m, g)])),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer (\<lambda>dc de. dc \<squnion> de)) \<rparr>"

@@ -836,10 +836,6 @@ argv = [
 ]
 why = "Flow-insensitive globals: with Gx on the shared channel Sign leaves y at ≥0 at pp7, after both calls."
 
-[claims.ast-contexts]
-argv = ["--ast", "docs/readme-figures/contexts.vimp"]
-why = "The parsed imp_prog of the running example, drawn as the abstract-syntax figure of Chapter 3: main's body as nested Seq, bump's declaration in the procedure table."
-
 # Chapter 7, cooperating analyses: one program per direction, each run with
 # either analysis alone and with both activated.
 
@@ -1060,3 +1056,20 @@ argv = [
   "tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp",
 ]
 why = "Int widens the lower bound to the i32 limit, where i - 2 may overflow, so i becomes the kind top and i > 0 is UNKNOWN."
+
+[claims.elab-tour]
+argv = ["--analysis", "interval", "thesis/shared/programs/elab-tour.vimp"]
+why = "Section 3.2 figure: s < u compares at u32, so b is 0 and b == 0 is PROVED."
+
+[claims.elab-tour-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--dot",
+  "thesis/shared/programs/elab-tour.vimp",
+]
+why = "Section 3.2 figure: the edges show each statement in core form, e.g. return (u16) ((i32) n + 1), z := (u8) ((i32) x + 100), b := (u32) s < u and call f(x) without a conversion."
+
+[claims.elab-tour-ast]
+argv = ["--ast", "thesis/shared/programs/elab-tour.vimp"]
+why = "Section 3.2 figure: the surface program the parser hands to the analyzer, with declarations lowered to assignments and no kinds on operations."

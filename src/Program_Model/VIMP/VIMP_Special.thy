@@ -33,7 +33,7 @@ fun classify_special :: "special_desc \<Rightarrow> 'e list \<Rightarrow> 'e gsp
 | "classify_special SD_Max [a, b] = Some (Max a b)"
 | "classify_special _ _ = None"
 
-text \<open>Shared by \<open>gpstep\<close>'s \<open>Special\<close> rule and the CFG's \<open>gspecial_step\<close>, so the two
+text \<open>Shared by \<open>pstep\<close>'s \<open>Special\<close> rule and the CFG's \<open>special_step\<close>, so the two
   concrete semantics cannot drift. \<open>Nondet_Int\<close> admits every integer. The arguments are
   evaluated by \<open>ev\<close>, the evaluator of the language the call is written in.\<close>
 fun special_result :: "('e \<Rightarrow> 's \<Rightarrow> int) \<Rightarrow> 'e gspecial_call \<Rightarrow> 's \<Rightarrow> int \<Rightarrow> bool" where

@@ -98,7 +98,7 @@ definition pair_kind :: "kenv \<Rightarrow> exp \<Rightarrow> exp \<Rightarrow> 
   "pair_kind \<kappa> a b = (if src_kind \<kappa> a = src_kind \<kappa> b then src_kind \<kappa> a else None)"
 
 context
-  fixes sem :: sem_conf and \<kappa> :: kenv and ch :: "exp gchannel"
+  fixes sem :: sem_conf and \<kappa> :: kenv and ch :: "channel"
 begin
 
 definition nonrel_assign :: "var_id \<Rightarrow> exp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
@@ -241,7 +241,7 @@ lemma gamma_tabs_upd:
   by (intro gamma_tabsI in_kinds_upd) auto
 
 lemma nonrel_assign_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t"
   shows "t(x := ik_norm (\<kappa> x) (eval e t)) \<in> gamma_tabs \<kappa> (nonrel_assign x e \<sigma>)"
 proof -
   have "ik_norm (\<kappa> x) (eval e t) \<in> numeric_domain_class.gamma (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> x) (aeval_ask sem \<kappa> ch e \<sigma>))"
@@ -250,7 +250,7 @@ proof -
 qed
 
 lemma special_val_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t" and
     "special_result eval sc t v"
   shows "ik_norm (\<kappa> x) v \<in> numeric_domain_class.gamma (special_val sc x \<sigma>)"
 proof (cases sc)
@@ -282,7 +282,7 @@ next
 qed
 
 lemma nonrel_special_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t" and
     "special_result eval sc t v"
   shows "t(x := ik_norm (\<kappa> x) v) \<in> gamma_tabs \<kappa> (nonrel_special sc x \<sigma>)"
   unfolding nonrel_special_def
@@ -303,7 +303,7 @@ proof (cases "v = ReturnVar")
 qed (use assms in \<open>simp add: narrow_var_def\<close>)
 
 lemma refine_var_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t" and
     "eval e t \<in> numeric_domain_class.gamma a"
   shows "t \<in> gamma_tabs \<kappa> (refine_var e a \<sigma>)"
   using assms
@@ -409,16 +409,16 @@ next
 qed simp_all
 
 lemma nonrel_refine_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t" and
     "truthy (eval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (nonrel_refine b pol \<sigma>)"
 proof -
-  let ?\<gamma> = "\<lambda>\<sigma>. gamma_tabs \<kappa> \<sigma> \<inter> Collect (geval_query.channel_holds eval ch)"
+  let ?\<gamma> = "\<lambda>\<sigma>. gamma_tabs \<kappa> \<sigma> \<inter> Collect (eval_query.channel_holds ch)"
   have bare: "t \<in> ?\<gamma> (refine_var e (fst (refine_ik (if pol then CNe else CEq)
                  (aeval_ask sem \<kappa> ch e \<sigma>) (of_int_ik (exp_kind e) 0))) \<sigma>)"
     if "t \<in> ?\<gamma> \<sigma>" and "(eval e t \<noteq> 0) = pol" for e pol \<sigma> t
   proof -
-    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds eval ch t" using that(1) by auto
+    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "eval_query.channel_holds ch t" using that(1) by auto
     have holds: "cop_eval (if pol then CNe else CEq) (eval e t) 0" using that(2) by auto
     have "eval e t \<in> numeric_domain_class.gamma
             (fst (refine_ik (if pol then CNe else CEq) (aeval_ask sem \<kappa> ch e \<sigma>) (of_int_ik (exp_kind e) 0)))"
@@ -431,7 +431,7 @@ proof -
   proof (cases e)
     case (TCmp c l r)
     let ?c = "if pol then c else neg_cop c"
-    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds eval ch t" using that(1) by auto
+    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "eval_query.channel_holds ch t" using that(1) by auto
     have holds: "cop_eval ?c (eval l t) (eval r t)"
       using that(2) TCmp by (auto split: if_splits)
     obtain al ar where ref:
@@ -454,7 +454,7 @@ proof -
   qed
   have feas: "nonrel_feas e pol \<sigma>" if "t \<in> ?\<gamma> \<sigma>" and "(eval e t \<noteq> 0) = pol" for e pol \<sigma> t
   proof -
-    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds eval ch t" using that(1) by auto
+    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "eval_query.channel_holds ch t" using that(1) by auto
     have "eval e t \<in> numeric_domain_class.gamma (aeval_ask sem \<kappa> ch e \<sigma>)"
       by (rule aeval_ask_sound[OF g h])
     then show ?thesis
@@ -486,7 +486,7 @@ lemma gamma_tabs_restrict:
   by (simp add: gamma_tabs_def)
 
 lemma nonrel_branch_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t" and
     "truthy (eval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (nonrel_branch b pol \<sigma>)"
 proof -
@@ -503,7 +503,7 @@ proof -
 qed
 
 lemma ret_kd_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t"
   shows "eval e t \<in> numeric_domain_class.gamma (ret_kd e \<sigma>)"
 proof (cases "\<exists>ik v. e = TVar ik v")
   case True
@@ -523,7 +523,7 @@ next
 qed
 
 lemma nonrel_return_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t"
   shows "t(ReturnVar := (case r of None \<Rightarrow> t ReturnVar | Some e \<Rightarrow> eval e t))
            \<in> gamma_tabs \<kappa> (nonrel_return r \<sigma>)"
 proof (cases r)
@@ -538,7 +538,7 @@ text \<open>Binding a formal is an assignment in the callee's frame of a value t
   evaluates: each converts to the formal's kind.\<close>
 
 lemma bind_formals_sound:
-  assumes t: "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t"
+  assumes t: "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t"
     and s: "s \<in> gamma_tabs \<kappa> \<sigma>'"
   shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. eval e t) es)) s
            \<in> gamma_tabs \<kappa> (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem)
@@ -564,7 +564,7 @@ next
 qed
 
 lemma nonrel_enter_state_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "eval_query.channel_holds ch t"
   shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. eval e t) es))
            (enter_state is_global t)
            \<in> gamma_tabs \<kappa> (nonrel_enter_state ps es \<sigma>)"
@@ -617,11 +617,11 @@ text \<open>The component answers \<open>EvalInt\<close> by evaluating without a
   Every transfer evaluates through the channel it receives. The entry has one
   alternative, the caller's state paired with the entered one.\<close>
 
-fun nonrel_query :: "sem_conf \<Rightarrow> kenv \<Rightarrow> exp gchannel \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> exp gchannel" where
+fun nonrel_query :: "sem_conf \<Rightarrow> kenv \<Rightarrow> channel \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> channel" where
   "nonrel_query sem \<kappa> ch \<sigma> (EvalInt e) = answer_ik (aeval sem \<kappa> ch e \<sigma>)"
 
 definition nonrel_spec ::
-    "sem_conf \<Rightarrow> kenv \<Rightarrow> (var_id, exp, 'a::kind_int_domain tabs) glocal_spec" where
+    "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tabs local_spec" where
   "nonrel_spec sem \<kappa> =
      \<lparr> ls_query = nonrel_query sem \<kappa>,
        ls_skip = (\<lambda>ch d. d),
@@ -637,42 +637,41 @@ definition nonrel_spec ::
        ls_combine_assign = (\<lambda>ch ci. nonrel_combine_assign sem \<kappa> (ci_dst ci)) \<rparr>"
 
 theorem nonrel_spec_sound:
-  "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global (gamma_tabs \<kappa>)
-     (nonrel_spec sem \<kappa> :: (var_id, exp, 'a::kind_int_domain tabs) glocal_spec)"
+  "sound_local_spec \<kappa> (gamma_tabs \<kappa>)
+     (nonrel_spec sem \<kappa> :: 'a::kind_int_domain tabs local_spec)"
 proof -
-  interpret T: mcp_sem eval ReturnVar "kind_conv \<kappa>" is_global .
   show ?thesis
-  proof (rule T.sound_local_specI)
+  proof (rule sound_local_specI)
     show "\<And>x y. x \<le> y \<Longrightarrow> gamma_tabs \<kappa> x \<subseteq> gamma_tabs \<kappa> y"
       by (rule gamma_tabs_mono)
-    show "T.gsound_query (gamma_tabs \<kappa>) (ls_query (nonrel_spec sem \<kappa>))"
-      unfolding T.gsound_query_def
+    show "sound_query (gamma_tabs \<kappa>) (ls_query (nonrel_spec sem \<kappa>))"
+      unfolding sound_query_def
       apply (intro allI impI)
       subgoal for ch s x q
         by (cases q) (simp_all add: nonrel_spec_def answer_ik_sound aeval_sound)
       done
-    show "T.gsound_skip (gamma_tabs \<kappa>) (ls_skip (nonrel_spec sem \<kappa>))"
-      by (simp add: nonrel_spec_def T.gsound_skip_def)
-    show "T.gsound_assign (gamma_tabs \<kappa>) (ls_assign (nonrel_spec sem \<kappa>))"
-      by (auto simp: nonrel_spec_def T.gsound_assign_def intro!: nonrel_assign_sound)
-    show "T.gsound_special (gamma_tabs \<kappa>) (ls_special (nonrel_spec sem \<kappa>))"
-      by (auto simp: nonrel_spec_def T.gsound_special_def intro!: nonrel_special_sound)
-    show "T.gsound_branch (gamma_tabs \<kappa>) (ls_branch (nonrel_spec sem \<kappa>))"
-      by (auto simp: nonrel_spec_def T.gsound_branch_def intro!: nonrel_branch_sound)
-    show "T.gsound_body (gamma_tabs \<kappa>) (ls_body (nonrel_spec sem \<kappa>))"
-      by (simp add: nonrel_spec_def T.gsound_body_def)
-    show "T.gsound_return (gamma_tabs \<kappa>) (ls_return (nonrel_spec sem \<kappa>))"
-      by (auto simp: nonrel_spec_def T.gsound_return_def intro!: nonrel_return_sound)
-    show "T.gsound_event (gamma_tabs \<kappa>) (ls_event (nonrel_spec sem \<kappa>))"
-      by (simp add: nonrel_spec_def T.gsound_event_def)
-    show "T.gsound_enter (gamma_tabs \<kappa>) (ls_enter (nonrel_spec sem \<kappa>))"
-      unfolding T.gsound_enter_def
-      by (auto simp: nonrel_spec_def cfg_transfer_sem.call_enter_CallEdge intro:
+    show "sound_skip (gamma_tabs \<kappa>) (ls_skip (nonrel_spec sem \<kappa>))"
+      by (simp add: nonrel_spec_def sound_skip_def)
+    show "sound_assign \<kappa> (gamma_tabs \<kappa>) (ls_assign (nonrel_spec sem \<kappa>))"
+      by (auto simp: nonrel_spec_def sound_assign_def intro!: nonrel_assign_sound)
+    show "sound_special \<kappa> (gamma_tabs \<kappa>) (ls_special (nonrel_spec sem \<kappa>))"
+      by (auto simp: nonrel_spec_def sound_special_def intro!: nonrel_special_sound)
+    show "sound_branch (gamma_tabs \<kappa>) (ls_branch (nonrel_spec sem \<kappa>))"
+      by (auto simp: nonrel_spec_def sound_branch_def intro!: nonrel_branch_sound)
+    show "sound_body (gamma_tabs \<kappa>) (ls_body (nonrel_spec sem \<kappa>))"
+      by (simp add: nonrel_spec_def sound_body_def)
+    show "sound_return (gamma_tabs \<kappa>) (ls_return (nonrel_spec sem \<kappa>))"
+      by (auto simp: nonrel_spec_def sound_return_def intro!: nonrel_return_sound)
+    show "sound_event (gamma_tabs \<kappa>) (ls_event (nonrel_spec sem \<kappa>))"
+      by (simp add: nonrel_spec_def sound_event_def)
+    show "sound_enter \<kappa> (gamma_tabs \<kappa>) (ls_enter (nonrel_spec sem \<kappa>))"
+      unfolding sound_enter_def
+      by (auto simp: nonrel_spec_def call_enter_CallEdge intro:
         nonrel_enter_state_sound)
-    show "T.gsound_combine (gamma_tabs \<kappa>) (ls_combine_env (nonrel_spec sem \<kappa>))
+    show "sound_combine \<kappa> (gamma_tabs \<kappa>) (ls_combine_env (nonrel_spec sem \<kappa>))
         (ls_combine_assign (nonrel_spec sem \<kappa>))"
-      unfolding T.gsound_combine_def
-      by (auto simp: nonrel_spec_def cfg_transfer_sem.gcombine_collect_def intro:
+      unfolding sound_combine_def
+      by (auto simp: nonrel_spec_def combine_collect_def intro:
         nonrel_combine_sound)
   qed
 qed

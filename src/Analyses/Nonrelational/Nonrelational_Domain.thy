@@ -3,6 +3,10 @@ theory Nonrelational_Domain
     "Voblint_Framework.Analysis_Query"
 begin
 
+text \<open>The analyses reason about the conversion by its value: from here on it unfolds.\<close>
+
+declare kind_conv_simps [simp]
+
 text \<open>Values here are per variable, so \<open>\<gamma>\<close> is the class concretization alone.\<close>
 
 no_notation gamma_S ("\<gamma>")
@@ -325,8 +329,8 @@ context
   fixes sem :: sem_conf
 begin
 
-fun aeval :: "kenv \<Rightarrow> (exp gquery \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a"
-  and aeval_ask :: "kenv \<Rightarrow> (exp gquery \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
+fun aeval :: "kenv \<Rightarrow> (query \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a"
+  and aeval_ask :: "kenv \<Rightarrow> (query \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
   "aeval \<kappa> ch (TN ik n) \<sigma> = of_int_ik ik n"
 | "aeval \<kappa> ch (TVar ik v) \<sigma> = read_var \<kappa> \<sigma> v"
 | "aeval \<kappa> ch (TArith ik op a b) \<sigma> =
@@ -351,12 +355,12 @@ fun aeval :: "kenv \<Rightarrow> (exp gquery \<Rightarrow> answer) \<Rightarrow>
               | q \<Rightarrow> meet_ik (aeval \<kappa> ch e \<sigma>) (of_answer_ik (src_kind \<kappa> e) q)))"
 
 lemma aeval_ask_of_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds eval ch t"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "eval_query.channel_holds ch t"
     and "eval e t \<in> \<gamma> (aeval \<kappa> ch e \<sigma>)"
   shows "eval e t \<in> \<gamma> (aeval_ask \<kappa> ch e \<sigma>)"
 proof -
   have ans: "eval e t \<in> gamma_answer (ch (EvalInt e))"
-    using geval_query.channel_holdsD[OF assms(2), of "EvalInt e"] by simp
+    using eval_query.channel_holdsD[OF assms(2), of "EvalInt e"] by simp
   have rng: "\<And>k. src_kind \<kappa> e = Some k \<Longrightarrow> eval e t \<in> ik_range k"
     using src_kind_sound[OF gamma_tabsD(1)[OF assms(1)]] .
   show ?thesis
@@ -365,7 +369,7 @@ proof -
 qed
 
 theorem aeval_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds eval ch t"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "eval_query.channel_holds ch t"
   shows "eval e t \<in> \<gamma> (aeval \<kappa> ch e \<sigma>)"
 proof (induction e)
   case (TN ik n) show ?case by (simp add: of_int_ik_sound)
@@ -414,7 +418,7 @@ next
 qed
 
 corollary aeval_ask_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds eval ch t"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "eval_query.channel_holds ch t"
   shows "eval e t \<in> \<gamma> (aeval_ask \<kappa> ch e \<sigma>)"
   by (rule aeval_ask_of_sound[OF assms aeval_sound[OF assms]])
 

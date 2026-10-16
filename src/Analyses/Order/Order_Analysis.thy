@@ -225,13 +225,13 @@ text \<open>
   nobody, as those analyses do not.
 \<close>
 
-fun ord_query :: "exp gchannel \<Rightarrow> var_id order_rel lifted \<Rightarrow> exp gchannel" where
+fun ord_query :: "channel \<Rightarrow> var_id order_rel lifted \<Rightarrow> channel" where
   "ord_query ch (Lifted d) (EvalInt (TCmp c (TVar k x) (TVar k' y))) =
      (case ord_decide c d x y of Some b \<Rightarrow> answer_of_int (if b then 1 else 0) | None \<Rightarrow> \<top>)"
 | "ord_query ch d q = \<top>"
 
 lemma ord_query_sound:
-  "s \<in> gamma_ord \<kappa> d \<Longrightarrow> geval_holds eval q (ord_query ch (Lifted d) q) s"
+  "s \<in> gamma_ord \<kappa> d \<Longrightarrow> eval_holds q (ord_query ch (Lifted d) q) s"
   using ord_decide_sound
   by (cases "(ch, Lifted d, q)" rule: ord_query.cases) (auto split: option.splits)
 
@@ -258,7 +258,7 @@ definition ord_copy ::
    | _ \<Rightarrow> {})"
 
 definition ord_learn ::
-    "kenv \<Rightarrow> var_id list \<Rightarrow> exp gchannel \<Rightarrow> var_id \<Rightarrow> exp \<Rightarrow> var_id order_rel \<Rightarrow> var_id order_rel" where
+    "kenv \<Rightarrow> var_id list \<Rightarrow> channel \<Rightarrow> var_id \<Rightarrow> exp \<Rightarrow> var_id order_rel \<Rightarrow> var_id order_rel" where
   "ord_learn \<kappa> ys ch x e d =
      (case d of
         OBot \<Rightarrow> OBot
@@ -269,13 +269,13 @@ definition ord_learn ::
           \<union> set (map (\<lambda>y. (y, x)) (filter (\<lambda>y. y \<noteq> x
                 \<and> answer_const (ch (EvalInt (TCmp CLe (TVar (\<kappa> y) y) (TCast (\<kappa> x) e)))) = Some 1) ys))))"
 
-lemma geval_holds_constD:
-  "geval_holds ev (EvalInt e) a s \<Longrightarrow> answer_const a = Some n \<Longrightarrow> ev e s = n"
+lemma eval_holds_constD:
+  "eval_holds (EvalInt e) a s \<Longrightarrow> answer_const a = Some n \<Longrightarrow> eval e s = n"
   using gamma_int_dom_constant_subset by (cases a rule: answer_const.cases) auto
 
 lemma ord_learn_sound:
   assumes post: "s(x := ik_norm (\<kappa> x) (eval e s)) \<in> gamma_ord \<kappa> d"
-    and ch: "geval_query.channel_holds eval ch s"
+    and ch: "eval_query.channel_holds ch s"
   shows "s(x := ik_norm (\<kappa> x) (eval e s)) \<in> gamma_ord \<kappa> (ord_learn \<kappa> ys ch x e d)"
 proof (cases d)
   case OBot with post show ?thesis by simp
@@ -285,12 +285,12 @@ next
   have up: "s' x \<le> s' y"
     if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TCast (\<kappa> x) e) (TVar (\<kappa> y) y)))) = Some 1" for
       y
-    using that geval_holds_constD[OF geval_query.channel_holdsD[OF ch] that(2)]
+    using that eval_holds_constD[OF eval_query.channel_holdsD[OF ch] that(2)]
     by (simp add: s'_def split: if_splits)
   have down: "s' y \<le> s' x"
     if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TVar (\<kappa> y) y) (TCast (\<kappa> x) e)))) = Some 1" for
       y
-    using that geval_holds_constD[OF geval_query.channel_holdsD[OF ch] that(2)]
+    using that eval_holds_constD[OF eval_query.channel_holdsD[OF ch] that(2)]
     by (simp add: s'_def split: if_splits)
   have mem: "s' \<in> gamma_ord \<kappa> (OFacts t ps)" using post OFacts by (simp add: s'_def)
   have copy: "s' a \<le> s' b" if t: "t" and ab: "(a, b) \<in> ord_copy \<kappa> x e ps" for a b
@@ -328,7 +328,7 @@ text \<open>
   may change globals, so no fact survives it.
 \<close>
 
-definition ord_spec :: "kenv \<Rightarrow> var_id list \<Rightarrow> (var_id, exp, var_id order_rel lifted) glocal_spec"
+definition ord_spec :: "kenv \<Rightarrow> var_id list \<Rightarrow> var_id order_rel lifted local_spec"
   where
   "ord_spec \<kappa> ys =
      \<lparr> ls_query = ord_query,
@@ -361,11 +361,11 @@ lemma ord_enter_sound:
            (enter_state is_global s)
            \<in> gamma_ord \<kappa> (ord_enter ps es d)"
 proof -
-  have "in_kinds \<kappa> (vimp.gcall_enter \<kappa> (CallEdge dst ps es) s)" if "ord_in_kinds d" for dst
+  have "in_kinds \<kappa> (call_enter \<kappa> (CallEdge dst ps es) s)" if "ord_in_kinds d" for dst
     using assms that by (intro in_kinds_call_enter)
       (auto simp: ord_in_kinds_def split: lifted.splits order_rel.splits)
   then show ?thesis
-    by (auto simp: ord_enter_def vimp.call_enter_CallEdge)
+    by (auto simp: ord_enter_def call_enter_CallEdge)
 qed
 
 lemma ord_in_kinds_in_kinds: "s \<in> gamma_ord_lift \<kappa> d \<Longrightarrow> ord_in_kinds d \<Longrightarrow> in_kinds \<kappa> s"
@@ -377,39 +377,38 @@ lemma in_kinds_gcombine:
   by (cases dst) (auto simp: in_kinds_combine_env)
 
 theorem ord_spec_sound:
-  "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global (gamma_ord_lift \<kappa>) (ord_spec \<kappa> ys)"
+  "sound_local_spec \<kappa> (gamma_ord_lift \<kappa>) (ord_spec \<kappa> ys)"
 proof -
-  interpret T: mcp_sem eval ReturnVar "kind_conv \<kappa>" is_global .
   have L: "\<exists>x. d = Lifted x \<and> s \<in> gamma_ord \<kappa> x" if "s \<in> gamma_ord_lift \<kappa> d" for s d
     using that by (cases d) simp_all
   show ?thesis
-  proof (rule T.sound_local_specI)
+  proof (rule sound_local_specI)
     show "\<And>x y. x \<le> y \<Longrightarrow> gamma_ord_lift \<kappa> x \<subseteq> gamma_ord_lift \<kappa> y" by (rule gamma_ord_lift_mono)
-    show "T.gsound_query (gamma_ord_lift \<kappa>) (ls_query (ord_spec \<kappa> ys))"
-      by (auto simp: ord_spec_def T.gsound_query_def ord_query_sound dest!: L)
-    show "T.gsound_skip (gamma_ord_lift \<kappa>) (ls_skip (ord_spec \<kappa> ys))"
-      by (simp add: ord_spec_def T.gsound_skip_def)
-    show "T.gsound_body (gamma_ord_lift \<kappa>) (ls_body (ord_spec \<kappa> ys))"
-      by (simp add: ord_spec_def T.gsound_body_def)
-    show "T.gsound_event (gamma_ord_lift \<kappa>) (ls_event (ord_spec \<kappa> ys))"
-      by (simp add: ord_spec_def T.gsound_event_def)
-    show "T.gsound_assign (gamma_ord_lift \<kappa>) (ls_assign (ord_spec \<kappa> ys))"
-      by (auto dest!: L simp: ord_spec_def T.gsound_assign_def
+    show "sound_query (gamma_ord_lift \<kappa>) (ls_query (ord_spec \<kappa> ys))"
+      by (auto simp: ord_spec_def sound_query_def ord_query_sound dest!: L)
+    show "sound_skip (gamma_ord_lift \<kappa>) (ls_skip (ord_spec \<kappa> ys))"
+      by (simp add: ord_spec_def sound_skip_def)
+    show "sound_body (gamma_ord_lift \<kappa>) (ls_body (ord_spec \<kappa> ys))"
+      by (simp add: ord_spec_def sound_body_def)
+    show "sound_event (gamma_ord_lift \<kappa>) (ls_event (ord_spec \<kappa> ys))"
+      by (simp add: ord_spec_def sound_event_def)
+    show "sound_assign \<kappa> (gamma_ord_lift \<kappa>) (ls_assign (ord_spec \<kappa> ys))"
+      by (auto dest!: L simp: ord_spec_def sound_assign_def
           intro!: ord_learn_sound ord_forget_sound)
-    show "T.gsound_special (gamma_ord_lift \<kappa>) (ls_special (ord_spec \<kappa> ys))"
-      by (auto simp: ord_spec_def T.gsound_special_def dest!: L intro: ord_forget_sound)
-    show "T.gsound_branch (gamma_ord_lift \<kappa>) (ls_branch (ord_spec \<kappa> ys))"
-      using ord_branch_sound by (fastforce simp: ord_spec_def T.gsound_branch_def dest!: L)
-    show "T.gsound_return (gamma_ord_lift \<kappa>) (ls_return (ord_spec \<kappa> ys))"
-      by (auto simp: ord_spec_def T.gsound_return_def dest!: L intro: ord_forget_sound
+    show "sound_special \<kappa> (gamma_ord_lift \<kappa>) (ls_special (ord_spec \<kappa> ys))"
+      by (auto simp: ord_spec_def sound_special_def dest!: L intro: ord_forget_sound)
+    show "sound_branch (gamma_ord_lift \<kappa>) (ls_branch (ord_spec \<kappa> ys))"
+      using ord_branch_sound by (fastforce simp: ord_spec_def sound_branch_def dest!: L)
+    show "sound_return (gamma_ord_lift \<kappa>) (ls_return (ord_spec \<kappa> ys))"
+      by (auto simp: ord_spec_def sound_return_def dest!: L intro: ord_forget_sound
           split: option.splits)
-    show "T.gsound_enter (gamma_ord_lift \<kappa>) (ls_enter (ord_spec \<kappa> ys))"
-      by (auto simp: ord_spec_def T.gsound_enter_def cfg_transfer_sem.call_enter_CallEdge
+    show "sound_enter \<kappa> (gamma_ord_lift \<kappa>) (ls_enter (ord_spec \<kappa> ys))"
+      by (auto simp: ord_spec_def sound_enter_def call_enter_CallEdge
           intro: ord_enter_sound)
-    show "T.gsound_combine (gamma_ord_lift \<kappa>) (ls_combine_env (ord_spec \<kappa> ys))
+    show "sound_combine \<kappa> (gamma_ord_lift \<kappa>) (ls_combine_env (ord_spec \<kappa> ys))
         (ls_combine_assign (ord_spec \<kappa> ys))"
-      by (auto simp: ord_spec_def T.gsound_combine_def combine_env_identity_def
-          cfg_transfer_sem.gcombine_collect_def intro!: in_kinds_gcombine dest:
+      by (auto simp: ord_spec_def sound_combine_def combine_env_identity_def
+          combine_collect_def intro!: in_kinds_gcombine dest:
             ord_in_kinds_in_kinds)
   qed
 qed
@@ -427,8 +426,8 @@ text \<open>The same unit-context instance as the non-relational typed analyses,
   order component in place of a per-variable state. The concretization does not depend
   on the kind declarations, but the program's runs and initial stores do.\<close>
 
-global_interpretation order_analysis: gdg_analysis
-    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
+global_interpretation order_analysis: dg_analysis
+    "kenv_of ds" "\<lambda>_. init_stores (kenv_of ds)"
     "\<lambda>_ p. ord_spec (kenv_of ds) (ord_vars p)" "\<lambda>_ d. d = OBot" "\<lambda>_ d. d" "OFacts True {}"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ _ _ _ _. ()" "()"
     "TD_side_rule_Interp_solve r"
@@ -439,7 +438,7 @@ global_interpretation order_analysis: gdg_analysis
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
     "\<lambda>p. elab_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
   for ds r
-proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
+proof (rule dg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
     EmptyRd EmptyV SeedNe ClProved ClRefuted BotState InitSound SeedNeGlobal PEntry FinIntra
     FinCalls CallsUnique)
   case (CompSound p) show ?case by (rule ord_spec_sound)

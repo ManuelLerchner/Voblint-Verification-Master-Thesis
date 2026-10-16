@@ -1,13 +1,13 @@
 (* src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy *)
-inductive gactivation_context_rel ::
-  "('v, 'e, 'c) gcontext_policy \<Rightarrow> 'c \<Rightarrow> ('v, 'e) gcfg \<Rightarrow> 'v gactivation_trace \<Rightarrow> 'c \<Rightarrow> bool"
-  for adm :: "('v, 'e, 'c) gcontext_policy" and c\<^sub>0 :: 'c and g :: "('v, 'e) gcfg"
+inductive activation_context_rel ::
+  "kenv \<Rightarrow> 'c call_context_policy \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcfg \<Rightarrow> activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
+  for \<kappa> :: kenv and adm :: "'c call_context_policy" and c\<^sub>0 :: 'c and g :: "(var_id, exp) gcfg"
 where
-  Root [intro]: "gactivation_context_rel adm c\<^sub>0 g (Root xs) c\<^sub>0"
+  Root [intro]: "activation_context_rel \<kappa> adm c\<^sub>0 g (Root xs) c\<^sub>0"
 | Call [intro]:
-    "gactivation_context_rel adm c\<^sub>0 g caller c
-     \<Longrightarrow> gadmits_call_context g adm (sink_node caller) c p (sink_store caller) es c'
-     \<Longrightarrow> gactivation_context_rel adm c\<^sub>0 g (Call caller ((FunctionEntry p, es) # xs)) c'"
+    "activation_context_rel \<kappa> adm c\<^sub>0 g caller c
+     \<Longrightarrow> admits_call_context \<kappa> g adm (sink_node caller) c p (sink_store caller) es c'
+     \<Longrightarrow> activation_context_rel \<kappa> adm c\<^sub>0 g (Call caller ((FunctionEntry p, es) # xs)) c'"
 | Resume [intro]:
-    "gactivation_context_rel adm c\<^sub>0 g current c
-     \<Longrightarrow> gactivation_context_rel adm c\<^sub>0 g (Resume current callee xs) c"
+    "activation_context_rel \<kappa> adm c\<^sub>0 g current c
+     \<Longrightarrow> activation_context_rel \<kappa> adm c\<^sub>0 g (Resume current callee xs) c"

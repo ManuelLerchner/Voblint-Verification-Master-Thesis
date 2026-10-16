@@ -1,5 +1,5 @@
 (* src/Program_Model/Compile/Source_To_Trace.thy *)
-inductive stack_repr :: "('v, 'e) gcfg \<Rightarrow> 'v gcframe list \<Rightarrow> 'v gactivation_trace \<Rightarrow> bool" for g where
+inductive stack_repr :: "(var_id, exp) gcfg \<Rightarrow> cframe list \<Rightarrow> activation_trace \<Rightarrow> bool" for g where
   empty [intro]: "caller_of t = None \<Longrightarrow> stack_repr g [] t"
 | frame [intro]: "caller_of t = Some caller \<Longrightarrow> sink_store caller = s
           \<Longrightarrow> fst (hd (path_of t)) = FunctionEntry p

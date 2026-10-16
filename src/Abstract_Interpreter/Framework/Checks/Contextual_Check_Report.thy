@@ -206,7 +206,7 @@ subsection \<open>Contextual proved/refuted soundness\<close>
 
 text \<open>
   The \<open>Decided Check_Proved\<close>/\<open>Decided Check_Refuted\<close> analogues of
-  \<open>gclassify_checks_proved_sound\<close>/\<open>gclassify_checks_refuted_sound\<close>: an
+  \<open>classify_checks_proved_sound\<close>/\<open>classify_checks_refuted_sound\<close>: an
   aggregated verdict of \<^term>\<open>Decided Check_Proved\<close> forces every observation
   folded into it to be \<^const>\<open>Dead\<close> or \<^term>\<open>Decided Check_Proved\<close> --- never
   a disagreeing \<^term>\<open>Decided Check_Refuted\<close> or \<^term>\<open>Decided Check_Unknown\<close>,
@@ -302,8 +302,8 @@ proof
 qed
 
 text \<open>
-  The context-indexed report analogue of \<open>gclassify_checks_proved_sound\<close>/
-  \<open>gclassify_checks_refuted_sound\<close>, stated once for any decided,
+  The context-indexed report analogue of \<open>classify_checks_proved_sound\<close>/
+  \<open>classify_checks_refuted_sound\<close>, stated once for any decided,
   non-\<open>Check_Unknown\<close> aggregate: it forces the classifier's own reading at
   every \<^const>\<open>Lifted\<close> context to agree. The image set being folded is
   shown finite from the aggregate equation itself (\<open>Finite_Set.fold_infinite\<close>:

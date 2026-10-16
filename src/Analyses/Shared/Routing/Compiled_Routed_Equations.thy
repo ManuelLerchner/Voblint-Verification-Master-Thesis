@@ -34,10 +34,9 @@ definition compiled_routed_eqs_for ::
     "'K
       \<Rightarrow> ('N \<Rightarrow> 'K)
       \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'K)
-      \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'D \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'C)
-      \<Rightarrow> ('vr::linorder, 'e::linorder, pp \<times> 'C, 'K, 'N,
-           'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) gdg_spec
-      \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg
+      \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'C)
+      \<Rightarrow> (pp \<times> 'C, 'K, 'N, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec
+      \<Rightarrow> (var_id, exp) gcfg
       \<Rightarrow> 'D
       \<Rightarrow> 'G
       \<Rightarrow> (pp \<times> 'C, 'K, ('D, 'G) dg_state) eqsT"
@@ -76,7 +75,7 @@ lemma group_lookup_group_by_key:
   by (induction xs) (auto simp: group_by_key_def group_lookup_def split: option.splits)
 
 definition intra_predecessor_index ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (cfg_node, (cfg_node \<times> ('vr::linorder, 'e::linorder) gedge_action) list) rbt"
+    "(var_id, exp) gcfg \<Rightarrow> (cfg_node, (cfg_node \<times> (var_id, exp) gedge_action) list) rbt"
       where
   "intra_predecessor_index g =
      group_by_key (\<lambda>(u, a, w). w) (\<lambda>(u, a, w). Some (u, a)) (cfg_intra_list g)"
@@ -98,7 +97,7 @@ lemma map_group_lookup_intra_predecessor_index:
   by (simp add: intra_predecessor_addr_list_def group_lookup_intra_predecessor_index)
 
 definition call_target_index ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (cfg_node, (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> pname) list) rbt"
+    "(var_id, exp) gcfg \<Rightarrow> (cfg_node, (cfg_node \<times> (var_id, exp) gcall_action \<times> pname) list) rbt"
       where
   "call_target_index g =
      group_by_key (\<lambda>(c, ca, ce, k). k) (\<lambda>(c, ca, ce, k). call_target_at k (c, ca, ce, k))

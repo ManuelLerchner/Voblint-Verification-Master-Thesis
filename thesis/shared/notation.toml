@@ -108,25 +108,25 @@ group = "operator"
 reads = "the _op_ transfer of specification _S_"
 meaning = "the edge transfers of a D/G specification, one field per program construct, each named after the Goblint {Spec} method it answers to"
 forms = [
-  { const = "dgs_skip", record = "gdg_spec", args = [
+  { const = "dgs_skip", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_assign", record = "gdg_spec", args = [
+  { const = "dgs_assign", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_special", record = "gdg_spec", args = [
+  { const = "dgs_special", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_branch", record = "gdg_spec", args = [
+  { const = "dgs_branch", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_body", record = "gdg_spec", args = [
+  { const = "dgs_body", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_return", record = "gdg_spec", args = [
+  { const = "dgs_return", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_event", record = "gdg_spec", args = [
+  { const = "dgs_event", record = "dg_spec", args = [
     "S",
   ] },
 ]
@@ -136,13 +136,13 @@ group = "operator"
 reads = "the call-boundary transfers of specification _S_"
 meaning = "entry into a callee, answering (continuation, callee entry) pairs, and the two stages of the return: the environment stage and the assignment of the result"
 forms = [
-  { const = "dgs_enter", record = "gdg_spec", args = [
+  { const = "dgs_enter", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_combine_env", record = "gdg_spec", args = [
+  { const = "dgs_combine_env", record = "dg_spec", args = [
     "S",
   ] },
-  { const = "dgs_combine_assign", record = "gdg_spec", args = [
+  { const = "dgs_combine_assign", record = "dg_spec", args = [
     "S",
   ] },
 ]
@@ -151,7 +151,7 @@ forms = [
 group = "operator"
 reads = "the computed callee context"
 meaning = "the routing policy's abstract context function: the callee context the equations compute from an abstract entry value"
-forms = [{ const = "route", parameter_of = "grouted_context" }]
+forms = [{ const = "route", parameter_of = "routed_context" }]
 
 [[entry]]
 group = "operator"
@@ -209,7 +209,7 @@ group = "shorthand"
 reads = "_t_ carries context _c_"
 meaning = "the context relation of the locale's policy, between a valid activation trace and the contexts it may run in"
 forms = [
-  { locale = "gactivation_coverage", const = "carries", args = [
+  { locale = "activation_coverage", const = "carries", args = [
     "t",
     "c",
   ] },
@@ -220,7 +220,7 @@ group = "shorthand"
 reads = "_ctx′_ is admitted for the call at _u_"
 meaning = "some call edge at _u_ to _p_ enters _es_ from _s_, and the context relation admits _ctx′_ for it"
 forms = [
-  { locale = "gactivation_coverage", const = "admits", args = [
+  { locale = "activation_coverage", const = "admits", args = [
     "u",
     "ctx",
     "p",
@@ -234,4 +234,4 @@ forms = [
 group = "shorthand"
 reads = "the stores claimed at _v_ in _ctx_"
 meaning = 'proof-local shorthand for applying {\<gamma>\<^sub>M} to the value the published reader holds at (_v_, _ctx_), the claim handed to the coverage locale; it is not a separate semantic operation'
-forms = [{ locale = "grouted_context", const = "cover", args = ["v", "ctx"] }]
+forms = [{ locale = "routed_context", const = "cover", args = ["v", "ctx"] }]

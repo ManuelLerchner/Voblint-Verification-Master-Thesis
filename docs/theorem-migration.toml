@@ -2411,3 +2411,927 @@ old = "check_projection"
 new = ""
 kind = "constant"
 note = "Deleted as unused; verdict_report is the contextual surface a caller reads."
+
+# --- Generic semantic layer collapsed into core VIMP (2026-10-16) ---
+# Every locale and constant generic in the evaluator, return slot, write conversion and
+# global classifier had one instance (eval, ReturnVar, kind_conv κ, is_global). They are
+# defined directly over var_id and exp; the kind environment κ stays a parameter.
+# Kept generic: gcom, gproc_decl, gptable, gcfg, gedge_action, gcall_action, gspecial_call,
+# the gwf_* predicates and the compiler (surface and core instances), and the key-generic
+# executable store (gdefault_st, glocation, gabs_state).
+
+[[rename]]
+old = "vimp_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; pstep is a direct inductive with the kind environment as a parameter. Facts L.x are now plain x."
+
+[[rename]]
+old = "cfg_edge_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; edge semantics defined directly over core VIMP. Facts L.x are now plain x."
+
+[[rename]]
+old = "cfg_transfer_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; transfers defined directly over core VIMP. Facts L.x are now plain x."
+
+[[rename]]
+old = "cfg_exec_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; cstep is a direct inductive. Facts L.x are now plain x."
+
+[[rename]]
+old = "trace_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; valid_activation_trace is a direct inductive_set. Facts L.x are now plain x."
+
+[[rename]]
+old = "ctx_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; context relation and context-indexed collecting defined directly. Facts L.x are now plain x."
+
+[[rename]]
+old = "collect_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; node_collect defined directly. Facts L.x are now plain x."
+
+[[rename]]
+old = "residual_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; intra_step is a direct inductive. Facts L.x are now plain x."
+
+[[rename]]
+old = "simrel_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; its lemmas are stated directly at pstep and cstep. Facts L.x are now plain x."
+
+[[rename]]
+old = "bridge_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; its lemmas are stated directly at pstep, cstep and valid_activation_trace. Facts L.x are now plain x."
+
+[[rename]]
+old = "mcp_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; the sound_* predicates take the kind environment directly. Facts L.x are now plain x."
+
+[[rename]]
+old = "vimp"
+new = ""
+kind = "qualifier"
+note = "The global_interpretation vimp (VIMP_Semantics, CFG_Transfer, CFG_Exec, Activation_Trace_Collect, Source_To_Trace) is gone; vimp.x is plain x."
+
+[[rename]]
+old = "geval_query"
+new = "eval_query"
+kind = "qualifier"
+note = "Interpretation of query_algebra at eval_holds."
+
+[[rename]]
+old = "vimp_sem.gpstep"
+new = "pstep"
+kind = "constant"
+note = "Inductive pstep κ Π, notation κ,Π ⊢ c →p c'. Rules pstep.Call, pstep.ReturnSome, ... (formerly vimp_sem.gpstep.Call ...); the instance definition pstep_def is deleted."
+
+[[rename]]
+old = "cfg_exec_sem.gcstep"
+new = "cstep"
+kind = "constant"
+note = "Inductive cstep κ g, notation κ,g ⊢ c →c c'. cstep_def deleted."
+
+[[rename]]
+old = "trace_sem.gvalid_activation_trace"
+new = "valid_activation_trace"
+kind = "constant"
+note = "Inductive set valid_activation_trace κ g S, notation 𝒯. valid_activation_trace_def deleted."
+
+[[rename]]
+old = "ctx_sem.gactivation_collect"
+new = "activation_collect"
+kind = "constant"
+note = "Definition activation_collect κ adm c0 g S, notation 𝒜. The old instance definition activation_collect_def unfolded to the generic constant; it now unfolds to the set."
+
+[[rename]]
+old = "collect_sem.gnode_collect"
+new = "node_collect"
+kind = "constant"
+note = "Definition node_collect κ g S, notation 𝒞."
+
+[[rename]]
+old = "cfg_edge_sem.gspecial_step"
+new = "special_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_edge_sem.gedge_step"
+new = "edge_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_edge_sem.gcfg_intra_step"
+new = "cfg_intra_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gedge_collect"
+new = "edge_collect"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gcombine_collect"
+new = "combine_collect"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gcall_enter"
+new = "call_enter"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gedge_writes"
+new = "edge_writes"
+kind = "constant"
+note = "No parameters beyond the action; the return slot is ReturnVar."
+
+[[rename]]
+old = "gedge_reads"
+new = "edge_reads"
+kind = "constant"
+note = "The expression-variable function is exp_vars."
+
+[[rename]]
+old = "gedge_global_reads"
+new = "edge_global_reads"
+kind = "constant"
+note = "Takes the global classifier only."
+
+[[rename]]
+old = "gedge_global_writes"
+new = "edge_global_writes"
+kind = "constant"
+note = "Takes the global classifier only."
+
+[[rename]]
+old = "gcall_global_reads"
+new = "call_global_reads"
+kind = "constant"
+note = "Takes the global classifier only."
+
+[[rename]]
+old = "trace_sem.gcall_enter_store"
+new = "call_enter_store"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "ctx_sem.gadmits_call_context"
+new = "admits_call_context"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "ctx_sem.gactivation_context_rel"
+new = "activation_context_rel"
+kind = "constant"
+note = "Takes κ first."
+
+[[rename]]
+old = "ctx_sem.gcall_context_total_on"
+new = "call_context_total_on"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "residual_sem.gintra_step"
+new = "intra_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "simrel_sem.gret_store"
+new = "ret_store"
+kind = "constant"
+note = "No κ."
+
+[[rename]]
+old = "bridge_sem.gactivation_trace_repr"
+new = "activation_trace_repr"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "bridge_sem.glocated_activation_trace"
+new = "located_activation_trace"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "geval_holds"
+new = "eval_holds"
+kind = "constant"
+note = "No evaluator parameter; evaluates with eval."
+
+[[rename]]
+old = "mcp_sem.gsound_local_spec"
+new = "sound_local_spec"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_skip"
+new = "sound_skip"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_assign"
+new = "sound_assign"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_special"
+new = "sound_special"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_branch"
+new = "sound_branch"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_body"
+new = "sound_body"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_return"
+new = "sound_return"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_event"
+new = "sound_event"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_query"
+new = "sound_query"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_enter"
+new = "sound_enter"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_combine"
+new = "sound_combine"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "gkeyed_split_spec"
+new = "keyed_split_spec"
+kind = "constant"
+note = "Drops the expression-variable and return-slot parameters; keeps the global classifier."
+
+[[rename]]
+old = "verdict_holds"
+new = "verdict_holds"
+kind = "constant"
+note = "Drops the evaluator parameter."
+
+[[rename]]
+old = "check_stores"
+new = "check_stores"
+kind = "constant"
+note = "Drops the evaluator parameter."
+
+[[rename]]
+old = "gframe"
+new = "frame"
+kind = "type"
+note = "Datatype over store and var_id option; the surface synonym frame = vname gframe is gone."
+
+[[rename]]
+old = "gcframe"
+new = "cframe"
+kind = "type"
+
+[[rename]]
+old = "gcconf"
+new = "cconf"
+kind = "type"
+
+[[rename]]
+old = "gactivation_trace"
+new = "activation_trace"
+kind = "type"
+note = "No type parameter."
+
+[[rename]]
+old = "gactivation_path"
+new = "activation_path"
+kind = "type"
+
+[[rename]]
+old = "gcontext_policy"
+new = "call_context_policy"
+kind = "type"
+note = "('v,'e,'c) gcontext_policy becomes 'c call_context_policy; context_policy is the CLI datatype."
+
+[[rename]]
+old = "gcall_info"
+new = "call_info"
+kind = "type"
+note = "Record over var_id and exp; the surface synonym call_info is gone."
+
+[[rename]]
+old = "gquery"
+new = "query"
+kind = "type"
+
+[[rename]]
+old = "gchannel"
+new = "channel"
+kind = "type"
+
+[[rename]]
+old = "ganalysis_event"
+new = "analysis_event"
+kind = "type"
+
+[[rename]]
+old = "gman"
+new = "man"
+kind = "type"
+note = "Drops the expression type argument; likewise man_transfer, man_query, man_combine_transfer, man_enter_transfer."
+
+[[rename]]
+old = "gman_transfer"
+new = "man_transfer"
+kind = "type"
+
+[[rename]]
+old = "gman_query"
+new = "man_query"
+kind = "type"
+
+[[rename]]
+old = "gman_combine_transfer"
+new = "man_combine_transfer"
+kind = "type"
+
+[[rename]]
+old = "gman_enter_transfer"
+new = "man_enter_transfer"
+kind = "type"
+
+[[rename]]
+old = "gdg_spec"
+new = "dg_spec"
+kind = "type"
+note = "Drops the variable and expression type arguments."
+
+[[rename]]
+old = "glocal_spec"
+new = "local_spec"
+kind = "type"
+note = "'s local_spec."
+
+[[rename]]
+old = "gcertified_component"
+new = "certified_component"
+kind = "type"
+
+[[rename]]
+old = "gsolved_run"
+new = "solved_run"
+kind = "type"
+note = "('c,'n,'v) solved_run."
+
+[[rename]]
+old = "gactivation_coverage"
+new = "activation_coverage"
+kind = "locale"
+note = "Parameters κ g S cover adm c0."
+
+[[rename]]
+old = "ganalysis_contract"
+new = "analysis_contract"
+kind = "locale"
+note = "Parameters κ S γDG."
+
+[[rename]]
+old = "gdg_context_activation"
+new = "dg_context_activation"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "grouted_context"
+new = "routed_context"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "gdg_analysis_adapter"
+new = "dg_analysis_adapter"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "grouted_analysis"
+new = "routed_analysis"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "gdg_analysis"
+new = "dg_analysis"
+kind = "locale"
+note = "ev rv pconv pglob replaced by one κ; every instance passed eval ReturnVar (λ_. kind_conv (kenv_of ds)) (λ_. is_global)."
+
+[[rename]]
+old = "mcp_registry"
+new = "mcp_registry"
+kind = "locale"
+note = "ev rv pconv pglob replaced by κ."
+
+[[rename]]
+old = "collect_sem.gactivation_collect_sound"
+new = "activation_collect_sound"
+kind = "fact"
+
+[[rename]]
+old = "gactivation_collect_sound_live_unknowns"
+new = "activation_collect_sound_live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.source_run_has_activation_trace"
+new = "compile_prog_run_has_activation_trace"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.source_reaches_node_collect"
+new = ""
+kind = "fact"
+note = "Deleted: unused once out of the locale; source_reaches_node_collect (Source_To_Trace) states it at the elaborated program."
+
+[[rename]]
+old = "ganalysis_contract.gspec_wf"
+new = "analysis_contract.spec_wf"
+kind = "fact"
+
+[[rename]]
+old = "ganalysis_contract.ggammaDG_mono"
+new = "analysis_contract.gammaDG_mono"
+kind = "fact"
+
+[[rename]]
+old = "ganalysis_contract.gstep_sound"
+new = "analysis_contract.step_sound"
+kind = "fact"
+
+[[rename]]
+old = "ganalysis_contract.gcombine_sound"
+new = "analysis_contract.combine_sound"
+kind = "fact"
+
+[[rename]]
+old = "gkeyed_split_contract"
+new = "keyed_split_contract"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.grouting_adequate"
+new = "routed_context.routing_adequate"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.grouting_total"
+new = "routed_context.routing_total"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.ggammaDG_rd"
+new = "dg_analysis_adapter.gammaDG_rd"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gempty_sound"
+new = "dg_analysis_adapter.empty_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gclassify_proved"
+new = "dg_analysis_adapter.classify_proved"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gclassify_refuted"
+new = "dg_analysis_adapter.classify_refuted"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gvars_finite"
+new = "dg_analysis_adapter.vars_finite"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gcomp_sound"
+new = "dg_analysis.comp_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.genter_single"
+new = "dg_analysis.enter_single"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_contract"
+new = "dg_analysis.place_contract"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_enter_runs"
+new = "dg_analysis.place_enter_runs"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_enter_deps"
+new = "dg_analysis.place_enter_deps"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_entry_sound"
+new = "dg_analysis.place_entry_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_cmb_bot"
+new = "dg_analysis.place_cmb_bot"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_init"
+new = "dg_analysis.place_init"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gempty_rd"
+new = "dg_analysis.empty_rd"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gempty\\<^sub>V_sound"
+new = "dg_analysis.empty\\<^sub>V_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gseed_ne_buffer_key"
+new = "dg_analysis.seed_ne_buffer_key"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gseed_ne_global_of"
+new = "dg_analysis.seed_ne_global_of"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpentry"
+new = "dg_analysis.pentry"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpcfg_fin_intra"
+new = "dg_analysis.pcfg_fin_intra"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpcfg_fin_calls"
+new = "dg_analysis.pcfg_fin_calls"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpcfg_calls_unique"
+new = "dg_analysis.pcfg_calls_unique"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.ginit_sound"
+new = "dg_analysis.init_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gbot_state_empty"
+new = "dg_analysis.bot_state_empty"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.gcomb_fwd"
+new = "routed_context.comb_fwd"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns"
+new = "dg_analysis.live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns_cover"
+new = "dg_analysis.live_unknowns_cover"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns_sub"
+new = "dg_analysis.live_unknowns_sub"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns_of_result"
+new = "dg_analysis.live_unknowns_of_result"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gprog_cfg_finite"
+new = "dg_analysis.prog_cfg_finite"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_dep_closed"
+new = "dg_analysis.sol_vars_dep_closed"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_back_intra"
+new = "dg_analysis.sol_vars_back_intra"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_back_call_site"
+new = "dg_analysis.sol_vars_back_call_site"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_callee_result"
+new = "dg_analysis.sol_vars_callee_result"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_back_reach"
+new = "dg_analysis.sol_vars_back_reach"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.groot_live_key"
+new = "dg_analysis.root_live_key"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.ganalysis_contribs_wf"
+new = "dg_analysis.analysis_contribs_wf"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.ggamma_live_reader_le"
+new = "dg_analysis.gamma_live_reader_le"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.grouted_analysis_from_live_unknowns"
+new = "dg_analysis.routed_analysis_from_live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_activation_collect_sound_of_terminates"
+new = "dg_analysis.entry_state_activation_collect_sound_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_has_context_of_terminates"
+new = "dg_analysis.entry_state_has_context_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_lookup_sound_of_terminates"
+new = "dg_analysis.entry_state_lookup_sound_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_node_collect_eq_Union_of_terminates"
+new = "dg_analysis.entry_state_node_collect_eq_Union_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_result_node_sound"
+new = "dg_analysis.entry_state_result_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_routed_analysis_from_live_unknowns"
+new = "dg_analysis.entry_state_routed_analysis_from_live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_activation_collect_sound_of_terminates"
+new = "dg_analysis.fun_route_activation_collect_sound_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_report_proved_sound"
+new = "dg_analysis.fun_route_report_proved_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_report_refuted_sound"
+new = "dg_analysis.fun_route_report_refuted_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_result_node_sound"
+new = "dg_analysis.fun_route_result_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_state_at_sound"
+new = "dg_analysis.fun_route_state_at_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_whole_stateI"
+new = "dg_analysis_whole_stateI"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_keyedI"
+new = "dg_analysis_keyedI"
+kind = "fact"
+
+[[rename]]
+old = "gclassify_checks_proved_sound"
+new = "classify_checks_proved_sound"
+kind = "fact"
+
+[[rename]]
+old = "gclassify_checks_refuted_sound"
+new = "classify_checks_refuted_sound"
+kind = "fact"
+
+[[rename]]
+old = "answer_check_gsound"
+new = "answer_check_sound"
+kind = "fact"
+
+[[rename]]
+old = "answer_check_gproved"
+new = "answer_check_proved"
+kind = "fact"
+
+[[rename]]
+old = "answer_check_grefuted"
+new = "answer_check_refuted"
+kind = "fact"
+
+[[rename]]
+old = "geval_holds_constD"
+new = "eval_holds_constD"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.Call"
+new = "pstep.Call"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.ReturnSome"
+new = "pstep.ReturnSome"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.RestoreStep"
+new = "pstep.RestoreStep"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.UnwindAct"
+new = "pstep.UnwindAct"
+kind = "fact"
+
+[[rename]]
+old = "simrel_sem.csim_step"
+new = "csim_step"
+kind = "fact"
+
+[[rename]]
+old = "simrel_sem.source_progress"
+new = "source_progress"
+kind = "fact"
+
+[[rename]]
+old = "simrel_sem.csim_star"
+new = "csim_star"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.cstep_preserves_activation_trace_repr"
+new = "cstep_preserves_activation_trace_repr"
+kind = "fact"
+
+[[rename]]
+old = "mcp_sem.ls_channel_sound"
+new = "ls_channel_sound"
+kind = "fact"
+
+[[rename]]
+old = "mcp_sem.mcp_combine_sound"
+new = "mcp_combine_sound"
+kind = "fact"
+
+[[rename]]
+old = "mcp_sem.dg_spec_of_contract"
+new = "dg_spec_of_contract"
+kind = "fact"
+
+[[rename]]
+old = "cfg_transfer_sem.edge_step_frame"
+new = "edge_step_frame"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_eq_Union_activation_of_fun"
+new = "node_collect_eq_Union_activation_of_fun"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_eq_Union_activation_of_has_context"
+new = "node_collect_eq_Union_activation_of_has_context"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_I"
+new = "node_collect_I"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_E"
+new = "node_collect_E"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.source_store_in_activation_collect"
+new = "source_store_in_activation_collect"
+kind = "fact"
+
+[[rename]]
+old = "gactivation_coverage.node_collect_eq_Union_activation_collect"
+new = "activation_coverage.node_collect_eq_Union_activation_collect"
+kind = "fact"
+
+[[rename]]
+old = "gactivation_coverage.node_collect_covered"
+new = "activation_coverage.node_collect_covered"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.activation_collect_dg_sound"
+new = "routed_context.activation_collect_dg_sound"
+kind = "fact"
+
+[[rename]]
+old = "kind_conv_simps"
+new = "kind_conv_simps"
+kind = "fact"
+note = "No longer [simp] in the semantics; Nonrelational_Domain declares it [simp] for the analyses."
+
+[[rename]]
+old = "combine_env_rv_irrelevant"
+new = "combine_env_rv_irrelevant"
+kind = "fact"
+note = "Lost its premise ¬ glob rv, which holds for ReturnVar."
+
+[[rename]]
+old = "witness_pi"
+new = "witness_pi"
+kind = "constant"
+note = "Now a core program (unit, var_id, exp) gptable; witness_wf states gwf_compile_input exp_vars ReturnVar is_global."

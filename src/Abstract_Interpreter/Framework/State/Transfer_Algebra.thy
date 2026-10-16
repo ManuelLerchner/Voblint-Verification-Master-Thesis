@@ -13,7 +13,7 @@ text \<open>
   \<open>gamma_state\<close>.
 
   It defines no interface. What an analysis supplies to the framework is a
-  \<open>gdg_spec\<close>: one manager-native transfer per edge action, taking the manager and
+  \<open>dg_spec\<close>: one manager-native transfer per edge action, taking the manager and
   returning a program. This theory is the algebra those transfers compute in,
   stated once so that no whole-state domain re-proves it.
 
@@ -78,7 +78,7 @@ text \<open>
   \<^const>\<open>enter_binding\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Proc\<close>) are already generic in
   the state's codomain, and the concrete semantics is \<^const>\<open>enter_binding\<close> at
   the reset value \<open>0\<close> and the language's evaluator
-  (\<^const>\<open>cfg_transfer_sem.gcall_enter\<close>). An abstract domain runs the same constant at its own
+  (\<^const>\<open>call_enter\<close>). An abstract domain runs the same constant at its own
   \<open>top\<close> and its own evaluator, so the two can never drift apart: there is one
   definition and two instances of it.
 

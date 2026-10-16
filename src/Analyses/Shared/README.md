@@ -33,7 +33,7 @@ the chosen keys, route, specification, graph and initial state.
 `Result/Analysis_Surface` is what every instance reads it back through, at a given
 context.
 
-Above those, `Result/DG_Analysis`'s locale `gdg_analysis` owns the equation system,
+Above those, `Result/DG_Analysis`'s locale `dg_analysis` owns the equation system,
 the solve, the covered keys, the reader, the result table, the contextual report and
 the activation-indexed soundness endpoints, so a context policy costs an
 interpretation rather than a pipeline. `Voblint_Nonrelational` interprets it once per
@@ -73,7 +73,7 @@ the compiler nor the executable carrier. `Routing/` and `Analysis_Surface` need
 `Result/Analysis_Surface` for how a caller reads that back, and
 `Result/DG_Analysis` for the assembly that puts all of it together ---
 its `dg_pipeline` is the construction with no correctness assumptions and
-`gdg_analysis` the same objects under the domain and solver contracts.
+`dg_analysis` the same objects under the domain and solver contracts.
 `Result/DG_Live_Unknowns` states the endpoints from termination alone.
 
 `Routing/Context_Space_Finite` is cited by nothing, deliberately. It bounds the

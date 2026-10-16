@@ -186,7 +186,7 @@
     "source-configuration",
     "source configuration",
     _prog,
-    isa: isatype("gframe"),
+    isa: isatype("frame"),
     see: <sec:pstep>,
   )[
     A triple of the command that remains to run, the current store and a stack
@@ -210,7 +210,7 @@
     "entry-store",
     "entered store",
     _prog,
-    isa: [#isaconst("gcall_enter"), #isaconst("enter_state")],
+    isa: [#isaconst("call_enter"), #isaconst("enter_state")],
     see: <sec:pstep>,
   )[
     The store a callee starts with: the caller's globals, every other variable
@@ -221,7 +221,7 @@
     "return-merge",
     "return merge",
     _prog,
-    isa: [#isaconst("gcombine_collect"), #isaconst("combine_env"), #isaconst("combine_assign")],
+    isa: [#isaconst("combine_collect"), #isaconst("combine_env"), #isaconst("combine_assign")],
     see: <sec:calls>,
   )[
     The store at the caller's continuation: the caller's locals and the
@@ -306,7 +306,7 @@
     "activation-trace",
     "activation trace",
     _trace,
-    isa: isatype("gactivation_trace"),
+    isa: isatype("activation_trace"),
     see: <sec:activation-trace>,
   )[
     A record of one activation: #ctor("Root") for the initial activation,
@@ -354,7 +354,7 @@
     "call-context-rel",
     "call-context relation",
     _trace,
-    isa: [#isatype("gcontext_policy"), #isaconst("gadmits_call_context")],
+    isa: [#isatype("call_context_policy"), #isaconst("admits_call_context")],
     notation: isai("R"),
     see: <sec:contexts>,
   )[
@@ -367,7 +367,7 @@
     "trace-context",
     "context of a trace",
     _trace,
-    isa: isaconst("gactivation_context_rel"),
+    isa: isaconst("activation_context_rel"),
     see: <sec:contexts>,
   )[
     The inductive relation stating which contexts a trace carries. A
@@ -395,7 +395,7 @@
     "coverage-contract",
     "coverage contract",
     _trace,
-    isa: [#isalocale("gactivation_coverage"), #isaconst("gcall_context_total_on")],
+    isa: [#isalocale("activation_coverage"), #isaconst("call_context_total_on")],
     see: <sec:contract>,
   )[
     Five local obligations on a cover under which it contains every valid
@@ -495,7 +495,7 @@
   ],
 
   // -------------------------------------------------------------- equations --
-  term("dg-spec", "analysis specification", _eq, isa: isatype("gdg_spec"), see: <sec:sound-core>)[
+  term("dg-spec", "analysis specification", _eq, isa: isatype("dg_spec"), see: <sec:sound-core>)[
     The record of operations an analysis supplies, following Goblint's `Spec`:
     seven edge transfers (skip, assign, special, branch, body, return, event),
     the call entry, and the two combine stages.
@@ -555,7 +555,7 @@
     "sound-spec",
     "analysis soundness contract",
     _eq,
-    isa: isalocale("ganalysis_contract"),
+    isa: isalocale("analysis_contract"),
     see: <sec:sound-core>,
   )[
     The obligations a specification owes its concretization: monotonicity,
@@ -621,7 +621,7 @@
     "routing-adequacy",
     "routing adequacy",
     _eq,
-    isa: isalocale("grouted_context"),
+    isa: isalocale("routed_context"),
     see: <sec:eq-routing>,
   )[
     Whenever the call-context relation admits $c'$ for a covered call, one

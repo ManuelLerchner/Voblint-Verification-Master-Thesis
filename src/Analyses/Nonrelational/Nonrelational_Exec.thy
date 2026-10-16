@@ -68,7 +68,7 @@ lemma nonrel_rd_write_back:
   by (induction vs arbitrary: st) (auto simp: write_back_def fun_eq_iff)
 
 context
-  fixes sem :: sem_conf and \<kappa> :: kenv and ch :: "exp gchannel"
+  fixes sem :: sem_conf and \<kappa> :: kenv and ch :: "channel"
 begin
 
 subsection \<open>The operations on the carrier\<close>
@@ -228,7 +228,7 @@ text \<open>The component of \<open>Nonrelational_Transfer\<close> on the carrie
   a step whose result denotes nothing answers \<^const>\<open>Bot\<close>.\<close>
 
 definition nonrel_exec_spec ::
-    "sem_conf \<Rightarrow> kenv \<Rightarrow> (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec" where
+    "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tst lifted local_spec" where
   "nonrel_exec_spec sem \<kappa> =
      \<lparr> ls_query = (\<lambda>ch d q. case d of Bot \<Rightarrow> \<top> | Lifted x \<Rightarrow> nonrel_query sem \<kappa> ch (nonrel_rd x) q),
        ls_skip = (\<lambda>ch d. d),
@@ -276,97 +276,96 @@ proof (cases x; cases y)
 qed simp_all
 
 theorem nonrel_exec_spec_sound:
-  "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global (gamma_exec \<kappa>)
-     (nonrel_exec_spec sem \<kappa> :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec)"
+  "sound_local_spec \<kappa> (gamma_exec \<kappa>)
+     (nonrel_exec_spec sem \<kappa> :: 'a::kind_int_domain tst lifted local_spec)"
 proof -
-  interpret T: mcp_sem eval ReturnVar "kind_conv \<kappa>" is_global .
   note S = nonrel_spec_sound[of \<kappa>]
   show ?thesis
-  proof (rule T.sound_local_specI)
+  proof (rule sound_local_specI)
     show "\<And>x y. x \<le> y \<Longrightarrow> gamma_exec \<kappa> x \<subseteq> gamma_exec \<kappa> y"
       by (rule gamma_exec_mono)
-    show "T.gsound_query (gamma_exec \<kappa>) (ls_query (nonrel_exec_spec sem \<kappa>))"
-      unfolding T.gsound_query_def
+    show "sound_query (gamma_exec \<kappa>) (ls_query (nonrel_exec_spec sem \<kappa>))"
+      unfolding sound_query_def
       apply (intro allI impI)
       subgoal premises prems for ch s d q
       proof (cases d)
         case (Lifted x)
         with prems(1) have "s \<in> gamma_tabs \<kappa> (nonrel_rd x)" by simp
-        from T.sound_local_spec_queryD[OF S, unfolded T.gsound_query_def, rule_format,
+        from sound_local_spec_queryD[OF S, unfolded sound_query_def, rule_format,
             OF this prems(2)]
         show ?thesis by (simp add: nonrel_exec_spec_def nonrel_spec_def Lifted)
       qed (simp add: nonrel_exec_spec_def)
       done
-    show "T.gsound_skip (gamma_exec \<kappa>) (ls_skip (nonrel_exec_spec sem \<kappa>))"
-      by (simp add: nonrel_exec_spec_def T.gsound_skip_def)
-    show "T.gsound_body (gamma_exec \<kappa>) (ls_body (nonrel_exec_spec sem \<kappa>))"
-      by (simp add: nonrel_exec_spec_def T.gsound_body_def)
-    show "T.gsound_event (gamma_exec \<kappa>) (ls_event (nonrel_exec_spec sem \<kappa>))"
-      by (simp add: nonrel_exec_spec_def T.gsound_event_def)
-    show "T.gsound_assign (gamma_exec \<kappa>) (ls_assign (nonrel_exec_spec sem \<kappa>))"
-      unfolding T.gsound_assign_def
+    show "sound_skip (gamma_exec \<kappa>) (ls_skip (nonrel_exec_spec sem \<kappa>))"
+      by (simp add: nonrel_exec_spec_def sound_skip_def)
+    show "sound_body (gamma_exec \<kappa>) (ls_body (nonrel_exec_spec sem \<kappa>))"
+      by (simp add: nonrel_exec_spec_def sound_body_def)
+    show "sound_event (gamma_exec \<kappa>) (ls_event (nonrel_exec_spec sem \<kappa>))"
+      by (simp add: nonrel_exec_spec_def sound_event_def)
+    show "sound_assign \<kappa> (gamma_exec \<kappa>) (ls_assign (nonrel_exec_spec sem \<kappa>))"
+      unfolding sound_assign_def
       apply (intro allI impI)
       subgoal premises prems for ch d s y e
       proof (cases d)
         case (Lifted x)
         with prems(1) have "s \<in> gamma_tabs \<kappa> (nonrel_rd x)" by simp
-        from T.sound_local_spec_assignD[OF S, unfolded T.gsound_assign_def, rule_format,
+        from sound_local_spec_assignD[OF S, unfolded sound_assign_def, rule_format,
             OF this prems(2)]
         show ?thesis by (simp add: nonrel_exec_spec_def nonrel_spec_def Lifted)
       qed (use prems in simp)
       done
-    show "T.gsound_special (gamma_exec \<kappa>) (ls_special (nonrel_exec_spec sem \<kappa>))"
-      unfolding T.gsound_special_def
+    show "sound_special \<kappa> (gamma_exec \<kappa>) (ls_special (nonrel_exec_spec sem \<kappa>))"
+      unfolding sound_special_def
       apply (intro allI impI)
       subgoal premises prems for ch d s sc y t
       proof (cases d)
         case (Lifted x)
         with prems(1) have "s \<in> gamma_tabs \<kappa> (nonrel_rd x)" by simp
-        from T.sound_local_spec_specialD[OF S, unfolded T.gsound_special_def, rule_format,
+        from sound_local_spec_specialD[OF S, unfolded sound_special_def, rule_format,
             OF this prems(2) prems(3)]
         show ?thesis by (simp add: nonrel_exec_spec_def nonrel_spec_def Lifted)
       qed (use prems in simp)
       done
-    show "T.gsound_branch (gamma_exec \<kappa>) (ls_branch (nonrel_exec_spec sem \<kappa>))"
-      unfolding T.gsound_branch_def
+    show "sound_branch (gamma_exec \<kappa>) (ls_branch (nonrel_exec_spec sem \<kappa>))"
+      unfolding sound_branch_def
       apply (intro allI impI)
       subgoal premises prems for ch d s b pol
       proof (cases d)
         case (Lifted x)
         with prems(1) have "s \<in> gamma_tabs \<kappa> (nonrel_rd x)" by simp
-        from T.sound_local_spec_branchD[OF S, unfolded T.gsound_branch_def, rule_format,
+        from sound_local_spec_branchD[OF S, unfolded sound_branch_def, rule_format,
             OF this prems(2) prems(3)]
         show ?thesis by (simp add: nonrel_exec_spec_def nonrel_spec_def Lifted)
       qed (use prems in simp)
       done
-    show "T.gsound_return (gamma_exec \<kappa>) (ls_return (nonrel_exec_spec sem \<kappa>))"
-      unfolding T.gsound_return_def
+    show "sound_return (gamma_exec \<kappa>) (ls_return (nonrel_exec_spec sem \<kappa>))"
+      unfolding sound_return_def
       apply (intro allI impI)
       subgoal premises prems for ch d s r p
       proof (cases d)
         case (Lifted x)
         with prems(1) have "s \<in> gamma_tabs \<kappa> (nonrel_rd x)" by simp
-        from T.sound_local_spec_returnD[OF S, unfolded T.gsound_return_def, rule_format,
+        from sound_local_spec_returnD[OF S, unfolded sound_return_def, rule_format,
             OF this prems(2)]
         show ?thesis by (simp add: nonrel_exec_spec_def nonrel_spec_def Lifted)
       qed (use prems in simp)
       done
-    show "T.gsound_enter (gamma_exec \<kappa>) (ls_enter (nonrel_exec_spec sem \<kappa>))"
-      unfolding T.gsound_enter_def
+    show "sound_enter \<kappa> (gamma_exec \<kappa>) (ls_enter (nonrel_exec_spec sem \<kappa>))"
+      unfolding sound_enter_def
       apply (intro allI impI)
       subgoal premises prems for ch s ci p
       proof -
         from prems(1) obtain x where p: "fst p = Lifted x"
           and sx: "s \<in> gamma_tabs \<kappa> (nonrel_rd x)"
           by (cases "fst p") simp_all
-        from T.sound_local_spec_enterD[OF S, unfolded T.gsound_enter_def, rule_format,
+        from sound_local_spec_enterD[OF S, unfolded sound_enter_def, rule_format,
             where p = "(nonrel_rd x, nonrel_rd x)" and ci = ci, OF _ prems(2)] sx
         show ?thesis by (simp add: nonrel_exec_spec_def nonrel_spec_def p)
       qed
       done
-    show "T.gsound_combine (gamma_exec \<kappa>) (ls_combine_env (nonrel_exec_spec sem \<kappa>))
+    show "sound_combine \<kappa> (gamma_exec \<kappa>) (ls_combine_env (nonrel_exec_spec sem \<kappa>))
         (ls_combine_assign (nonrel_exec_spec sem \<kappa>))"
-      unfolding T.gsound_combine_def
+      unfolding sound_combine_def
       apply (intro allI impI)
       subgoal premises prems for ch ch' s t ci x de
       proof -
@@ -376,7 +375,7 @@ proof -
         from prems(3) obtain b where de: "de = Lifted b"
           and tb: "t \<in> gamma_tabs \<kappa> (nonrel_rd b)"
           by (cases de) simp_all
-        from T.sound_local_spec_combineD[OF S, unfolded T.gsound_combine_def, rule_format,
+        from sound_local_spec_combineD[OF S, unfolded sound_combine_def, rule_format,
             where ci = ci, OF sa prems(2) tb prems(4)]
         show ?thesis by (simp add: nonrel_exec_spec_def nonrel_spec_def x de)
       qed

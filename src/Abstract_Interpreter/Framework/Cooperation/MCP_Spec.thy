@@ -2,13 +2,6 @@ theory MCP_Spec
   imports "Voblint_Framework.DG_Spec_Sound" "Voblint_Domain.Reachability_Lift"
 begin
 
-text \<open>The soundness of a component is stated against the concrete semantics of the
-  language it runs on.\<close>
-
-locale mcp_sem = cfg_transfer_sem ev rv conv glob
-  for ev :: "'e \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
-    and conv :: "'vr option \<Rightarrow> int \<Rightarrow> int" and glob :: "'vr \<Rightarrow> bool"
-
 section \<open>Many cooperating analyses over one state\<close>
 
 text \<open>
@@ -20,7 +13,7 @@ text \<open>
   analyses are never read.
 
   Every operation of a component receives the query channel of the manager
-  Goblint hands it, \<open>man.ask\<close>, as a function \<^typ>\<open>'e gchannel\<close> from queries to
+  Goblint hands it, \<open>man.ask\<close>, as a function \<^typ>\<open>channel\<close> from queries to
   answers: its query handler (\<open>S.query man q\<close>), its edge transfers, its entry
   (\<open>S.enter man\<close>) and both stages of its return. The return stages also receive
   the callee's channel, which Goblint's normal-call transfer in \<open>constraints.ml\<close>
@@ -39,18 +32,18 @@ text \<open>
   as \<^class>\<open>numeric_domain\<close> keeps \<open>gamma\<close> out of \<^class>\<open>executable_domain\<close>.
 \<close>
 
-record ('vr,'e,'s) glocal_spec =
-  ls_query :: "'e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel"
-  ls_skip :: "'e gchannel \<Rightarrow> 's \<Rightarrow> 's"
-  ls_assign :: "'e gchannel \<Rightarrow> 'vr \<Rightarrow> 'e \<Rightarrow> 's \<Rightarrow> 's"
-  ls_special :: "'e gchannel \<Rightarrow> 'e gspecial_call \<Rightarrow> 'vr \<Rightarrow> 's \<Rightarrow> 's"
-  ls_branch :: "'e gchannel \<Rightarrow> 'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's"
-  ls_body :: "'e gchannel \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
-  ls_return :: "'e gchannel \<Rightarrow> 'e option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
-  ls_event :: "'e gchannel \<Rightarrow> 'e ganalysis_event \<Rightarrow> 's \<Rightarrow> 's"
-  ls_enter :: "'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list"
-  ls_combine_env :: "'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
-  ls_combine_assign :: "'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+record 's local_spec =
+  ls_query :: "channel \<Rightarrow> 's \<Rightarrow> channel"
+  ls_skip :: "channel \<Rightarrow> 's \<Rightarrow> 's"
+  ls_assign :: "channel \<Rightarrow> var_id \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's"
+  ls_special :: "channel \<Rightarrow> exp gspecial_call \<Rightarrow> var_id \<Rightarrow> 's \<Rightarrow> 's"
+  ls_branch :: "channel \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's"
+  ls_body :: "channel \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
+  ls_return :: "channel \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
+  ls_event :: "channel \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's"
+  ls_enter :: "channel \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list"
+  ls_combine_env :: "channel \<Rightarrow> channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+  ls_combine_assign :: "channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
 
 text \<open>
   The edge transfers are separate fields, one per kind of edge, as Goblint's
@@ -59,7 +52,7 @@ text \<open>
   step on an arbitrary edge is derived from them.
 \<close>
 
-definition ls_step :: "('vr,'e,'s) glocal_spec \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's"
+definition ls_step :: "'s local_spec \<Rightarrow> channel \<Rightarrow> (var_id,exp) gedge_action \<Rightarrow> 's \<Rightarrow> 's"
   where
   "ls_step c ch = local_spec_step (ls_skip c ch) (ls_assign c ch) (ls_special c ch)
      (ls_branch c ch) (ls_body c ch) (ls_return c ch) (ls_event c ch)"
@@ -92,10 +85,10 @@ text \<open>
 \<close>
 
 definition make_local_spec ::
-  "('e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel) \<Rightarrow> ('e gchannel \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's)
-   \<Rightarrow> ('e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list)
-   \<Rightarrow> ('e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's)
-   \<Rightarrow> ('e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> ('vr,'e,'s) glocal_spec" where
+  "(channel \<Rightarrow> 's \<Rightarrow> channel) \<Rightarrow> (channel \<Rightarrow> (var_id,exp) gedge_action \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (channel \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list)
+   \<Rightarrow> (channel \<Rightarrow> channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> 's local_spec" where
   "make_local_spec qry st en ce ca = \<lparr>
      ls_query = qry,
      ls_skip = (\<lambda>ch. st ch EA_Nop),
@@ -131,7 +124,7 @@ text \<open>
 \<close>
 
 abbreviation ls_combine ::
-  "('vr,'e,'s) glocal_spec \<Rightarrow> 'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
+  "'s local_spec \<Rightarrow> channel \<Rightarrow> channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
   "ls_combine c ch ch' ci x de \<equiv> ls_combine_assign c ch' ci (ls_combine_env c ch ch' ci x de) de"
 
 text \<open>
@@ -143,24 +136,21 @@ text \<open>
   store for the callee's channel.
 \<close>
 
-context mcp_sem
-begin
-
-definition gsound_local_spec ::
-  "('s::order \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('vr,'e,'s) glocal_spec \<Rightarrow> bool" where
-  "gsound_local_spec gm c \<longleftrightarrow>
+definition sound_local_spec ::
+  "kenv \<Rightarrow> ('s::order \<Rightarrow> store set) \<Rightarrow> 's local_spec \<Rightarrow> bool" where
+  "sound_local_spec \<kappa> gm c \<longleftrightarrow>
      (\<forall>x y. x \<le> y \<longrightarrow> gm x \<subseteq> gm y)
-     \<and> (\<forall>ch a x. gedge_collect a (gm x \<inter> Collect (geval_query.channel_holds ev ch))
+     \<and> (\<forall>ch a x. edge_collect \<kappa> a (gm x \<inter> Collect (eval_query.channel_holds ch))
                   \<subseteq> gm (ls_step c ch a x))
-     \<and> (\<forall>ch s ci p. s \<in> gm (fst p) \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow>
+     \<and> (\<forall>ch s ci p. s \<in> gm (fst p) \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow>
           (\<exists>q \<in> set (ls_enter c ch ci p). s \<in> gm (fst q)
-             \<and> gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+             \<and> call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
                  \<in> gm (snd q)))
-     \<and> (\<forall>ch ch' s t ci x de. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow>
-          t \<in> gm de \<longrightarrow> geval_query.channel_holds ev ch' t \<longrightarrow>
-          gcombine_collect (ci_dst ci) s t \<in> gm (ls_combine c ch ch' ci x de))
-     \<and> (\<forall>ch s x q. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow>
-          geval_holds ev q (ls_query c ch x q) s)"
+     \<and> (\<forall>ch ch' s t ci x de. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow>
+          t \<in> gm de \<longrightarrow> eval_query.channel_holds ch' t \<longrightarrow>
+          combine_collect \<kappa> (ci_dst ci) s t \<in> gm (ls_combine c ch ch' ci x de))
+     \<and> (\<forall>ch s x q. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow>
+          eval_holds q (ls_query c ch x q) s)"
 
 text \<open>
   The step obligation splits into one law per kind of edge, each about the
@@ -170,41 +160,41 @@ text \<open>
   again (\<open>sound_local_spec_update\<close>).
 \<close>
 
-definition gsound_skip :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "gsound_skip gm f \<longleftrightarrow>
-     (\<forall>ch x s. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> s \<in> gm (f ch x))"
+definition sound_skip :: "('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_skip gm f \<longleftrightarrow>
+     (\<forall>ch x s. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow> s \<in> gm (f ch x))"
 
-definition gsound_assign ::
-  "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'vr \<Rightarrow> 'e \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "gsound_assign gm f \<longleftrightarrow>
-     (\<forall>ch x s y e. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> s(y := conv (Some y) (ev e s)) \<in> gm (f ch y e x))"
+definition sound_assign ::
+  "kenv \<Rightarrow> ('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> var_id \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_assign \<kappa> gm f \<longleftrightarrow>
+     (\<forall>ch x s y e. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow> s(y := kind_conv \<kappa> (Some y) (eval e s)) \<in> gm (f ch y e x))"
 
-definition gsound_special ::
-  "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e gspecial_call \<Rightarrow> 'vr \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "gsound_special gm f \<longleftrightarrow>
-     (\<forall>ch x s sc y t. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> t \<in> gspecial_step sc y s
+definition sound_special ::
+  "kenv \<Rightarrow> ('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> exp gspecial_call \<Rightarrow> var_id \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_special \<kappa> gm f \<longleftrightarrow>
+     (\<forall>ch x s sc y t. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow> t \<in> special_step \<kappa> sc y s
         \<longrightarrow> t \<in> gm (f ch sc y x))"
 
-definition gsound_branch :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool"
+definition sound_branch :: "('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool"
   where
-  "gsound_branch gm f \<longleftrightarrow>
-     (\<forall>ch x s b pol. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> truthy (ev b s) = pol
+  "sound_branch gm f \<longleftrightarrow>
+     (\<forall>ch x s b pol. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow> truthy (eval b s) = pol
         \<longrightarrow> s \<in> gm (f ch b pol x))"
 
-definition gsound_body :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "gsound_body gm f \<longleftrightarrow>
-     (\<forall>ch x s p. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> s \<in> gm (f ch p x))"
+definition sound_body :: "('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_body gm f \<longleftrightarrow>
+     (\<forall>ch x s p. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow> s \<in> gm (f ch p x))"
 
-definition gsound_return ::
-  "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "gsound_return gm f \<longleftrightarrow>
-     (\<forall>ch x s r p. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s
-        \<longrightarrow> s(rv := (case r of None \<Rightarrow> s rv | Some a \<Rightarrow> ev a s)) \<in> gm (f ch r p x))"
+definition sound_return ::
+  "('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_return gm f \<longleftrightarrow>
+     (\<forall>ch x s r p. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s
+        \<longrightarrow> s(ReturnVar := (case r of None \<Rightarrow> s ReturnVar | Some a \<Rightarrow> eval a s)) \<in> gm (f ch r p x))"
 
-definition gsound_event ::
-  "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e ganalysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "gsound_event gm f \<longleftrightarrow>
-     (\<forall>ch x s evt. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> s \<in> gm (f ch evt x))"
+definition sound_event ::
+  "('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_event gm f \<longleftrightarrow>
+     (\<forall>ch x s evt. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow> s \<in> gm (f ch evt x))"
 
 text \<open>
   The laws of the other fields. The handler's answers hold at every store its
@@ -213,66 +203,67 @@ text \<open>
   because only their composition describes a concrete store.
 \<close>
 
-definition gsound_query :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel) \<Rightarrow> bool" where
-  "gsound_query gm h \<longleftrightarrow>
-     (\<forall>ch s x q. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> geval_holds ev q (h ch x q) s)"
+definition sound_query :: "('s \<Rightarrow> store set) \<Rightarrow> (channel \<Rightarrow> 's \<Rightarrow> channel) \<Rightarrow> bool" where
+  "sound_query gm h \<longleftrightarrow>
+     (\<forall>ch s x q. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow> eval_holds q (h ch x q) s)"
 
-definition gsound_enter ::
-  "('s \<Rightarrow> ('vr \<Rightarrow> int) set)
-   \<Rightarrow> ('e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list) \<Rightarrow> bool" where
-  "gsound_enter gm en \<longleftrightarrow>
-     (\<forall>ch s ci p. s \<in> gm (fst p) \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow>
+definition sound_enter ::
+  "kenv \<Rightarrow> ('s \<Rightarrow> store set)
+   \<Rightarrow> (channel \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list) \<Rightarrow> bool" where
+  "sound_enter \<kappa> gm en \<longleftrightarrow>
+     (\<forall>ch s ci p. s \<in> gm (fst p) \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow>
         (\<exists>q \<in> set (en ch ci p). s \<in> gm (fst q)
-           \<and> gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> gm (snd q)))"
+           \<and> call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> gm (snd q)))"
 
-definition gsound_combine ::
-  "('s \<Rightarrow> ('vr \<Rightarrow> int) set)
-   \<Rightarrow> ('e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's)
-   \<Rightarrow> ('e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "gsound_combine gm ce ca \<longleftrightarrow>
-     (\<forall>ch ch' s t ci x de. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow>
-        t \<in> gm de \<longrightarrow> geval_query.channel_holds ev ch' t \<longrightarrow>
-        gcombine_collect (ci_dst ci) s t \<in> gm (ca ch' ci (ce ch ch' ci x de) de))"
+definition sound_combine ::
+  "kenv \<Rightarrow> ('s \<Rightarrow> store set)
+   \<Rightarrow> (channel \<Rightarrow> channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_combine \<kappa> gm ce ca \<longleftrightarrow>
+     (\<forall>ch ch' s t ci x de. s \<in> gm x \<longrightarrow> eval_query.channel_holds ch s \<longrightarrow>
+        t \<in> gm de \<longrightarrow> eval_query.channel_holds ch' t \<longrightarrow>
+        combine_collect \<kappa> (ci_dst ci) s t \<in> gm (ca ch' ci (ce ch ch' ci x de) de))"
 
 theorem ls_step_sound_iff:
-  "(\<forall>ch a x. gedge_collect a (gm x \<inter> Collect (geval_query.channel_holds ev ch)) \<subseteq> gm (ls_step c ch a x))
-   \<longleftrightarrow> gsound_skip gm (ls_skip c) \<and> gsound_assign gm (ls_assign c) \<and> gsound_special gm (ls_special c)
-     \<and> gsound_branch gm (ls_branch c) \<and> gsound_body gm (ls_body c)
-     \<and> gsound_return gm (ls_return c) \<and> gsound_event gm (ls_event c)"
+  "(\<forall>ch a x. edge_collect \<kappa> a (gm x \<inter> Collect (eval_query.channel_holds ch)) \<subseteq> gm (ls_step c ch a x))
+   \<longleftrightarrow> sound_skip gm (ls_skip c) \<and> sound_assign \<kappa> gm (ls_assign c) \<and> sound_special \<kappa> gm (ls_special c)
+     \<and> sound_branch gm (ls_branch c) \<and> sound_body gm (ls_body c)
+     \<and> sound_return gm (ls_return c) \<and> sound_event gm (ls_event c)"
   (is "?step \<longleftrightarrow> ?fields")
 proof
   assume step: ?step
   have at: "t \<in> gm (ls_step c ch act x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" "t \<in> gedge_step act s" for ch act x s t
-    using step that unfolding gedge_collect_def by blast
+    if "s \<in> gm x" "eval_query.channel_holds ch s" "t \<in> edge_step \<kappa> act s" for ch act x s t
+    using step that unfolding edge_collect_def by blast
   have skip: "s \<in> gm (ls_skip c ch x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" for ch x s
+    if "s \<in> gm x" "eval_query.channel_holds ch s" for ch x s
   proof -
     have "s \<in> gm (ls_step c ch EA_Nop x)" by (rule at[OF that]) simp
     then show ?thesis by simp
   qed
-  have assign: "s(y := conv (Some y) (ev e s)) \<in> gm (ls_assign c ch y e x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" for ch x s y e
+  have assign: "s(y := kind_conv \<kappa> (Some y) (eval e s)) \<in> gm (ls_assign c ch y e x)"
+    if "s \<in> gm x" "eval_query.channel_holds ch s" for ch x s y e
   proof -
-    have "s(y := conv (Some y) (ev e s)) \<in> gm (ls_step c ch (EA_Assign y e) x)"
+    have "s(y := kind_conv \<kappa> (Some y) (eval e s)) \<in> gm (ls_step c ch (EA_Assign y e) x)"
       by (rule at[OF that]) simp
     then show ?thesis by simp
   qed
   have body: "s \<in> gm (ls_body c ch p x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" for ch x s p
+    if "s \<in> gm x" "eval_query.channel_holds ch s" for ch x s p
   proof -
     have "s \<in> gm (ls_step c ch (EA_Body p) x)" by (rule at[OF that]) simp
     then show ?thesis by simp
   qed
-  have ret: "s(rv := (case r of None \<Rightarrow> s rv | Some a \<Rightarrow> ev a s)) \<in> gm (ls_return c ch r p x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" for ch x s r p
+  have ret:
+    "s(ReturnVar := (case r of None \<Rightarrow> s ReturnVar | Some a \<Rightarrow> eval a s)) \<in> gm (ls_return c ch r p x)"
+    if "s \<in> gm x" "eval_query.channel_holds ch s" for ch x s r p
   proof -
-    have "s(rv := (case r of None \<Rightarrow> s rv | Some a \<Rightarrow> ev a s)) \<in> gm (ls_step c ch (EA_Ret r p) x)"
+    have "s(ReturnVar := (case r of None \<Rightarrow> s ReturnVar | Some a \<Rightarrow> eval a s)) \<in> gm (ls_step c ch (EA_Ret r p) x)"
       by (rule at[OF that]) simp
     then show ?thesis by simp
   qed
   have pol: "s \<in> gm (ls_branch c ch b pol x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" "truthy (ev b s) = pol" for ch b pol x s
+    if "s \<in> gm x" "eval_query.channel_holds ch s" "truthy (eval b s) = pol" for ch b pol x s
   proof (cases pol)
     case True
     have "s \<in> gm (ls_step c ch (EA_Assume b) x)"
@@ -284,50 +275,50 @@ proof
       by (rule at[OF that(1,2)]) (use that(3) False in simp)
     then show ?thesis using False by simp
   qed
-  have ev: "s \<in> gm (ls_event c ch evt x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" for ch evt x s
+  have eval: "s \<in> gm (ls_event c ch evt x)"
+    if "s \<in> gm x" "eval_query.channel_holds ch s" for ch evt x s
   proof (cases evt)
     case (Check_Event l e)
     have "s \<in> gm (ls_step c ch (EA_Check l e) x)" by (rule at[OF that]) simp
     then show ?thesis using Check_Event by simp
   qed
   have special: "t \<in> gm (ls_special c ch sc y x)"
-    if "s \<in> gm x" "geval_query.channel_holds ev ch s" "t \<in> gspecial_step sc y s" for ch x s sc y t
+    if "s \<in> gm x" "eval_query.channel_holds ch s" "t \<in> special_step \<kappa> sc y s" for ch x s sc y t
   proof -
     have "t \<in> gm (ls_step c ch (EA_Special sc y) x)"
-      by (rule at[OF that(1,2)]) (simp only: gedge_step.simps that(3))
+      by (rule at[OF that(1,2)]) (simp only: edge_step.simps that(3))
     then show ?thesis by (simp only: ls_step_simps)
   qed
   show ?fields
-    unfolding gsound_skip_def gsound_assign_def gsound_special_def gsound_branch_def gsound_body_def
-      gsound_return_def gsound_event_def
-    by (intro conjI allI impI; (rule skip assign special pol body ret ev; assumption))
+    unfolding sound_skip_def sound_assign_def sound_special_def sound_branch_def sound_body_def
+      sound_return_def sound_event_def
+    by (intro conjI allI impI; (rule skip assign special pol body ret eval; assumption))
 next
   assume F: ?fields
   show ?step
   proof (intro allI subsetI)
     fix ch a x t
-    assume "t \<in> gedge_collect a (gm x \<inter> Collect (geval_query.channel_holds ev ch))"
-    then obtain s where s: "s \<in> gm x" "geval_query.channel_holds ev ch s" "t \<in> gedge_step a s"
-      unfolding gedge_collect_def by blast
+    assume "t \<in> edge_collect \<kappa> a (gm x \<inter> Collect (eval_query.channel_holds ch))"
+    then obtain s where s: "s \<in> gm x" "eval_query.channel_holds ch s" "t \<in> edge_step \<kappa> a s"
+      unfolding edge_collect_def by blast
     show "t \<in> gm (ls_step c ch a x)"
     proof (cases a)
       case (EA_Special sc y)
-      have "t \<in> gspecial_step sc y s" using s(3) EA_Special by (simp only: gedge_step.simps)
+      have "t \<in> special_step \<kappa> sc y s" using s(3) EA_Special by (simp only: edge_step.simps)
       then show ?thesis
-        using F s(1,2) EA_Special unfolding gsound_special_def by (simp only: ls_step_simps)
+        using F s(1,2) EA_Special unfolding sound_special_def by (simp only: ls_step_simps)
     next
       case (EA_Assume b)
-      then have "t = s" "truthy (ev b s) = True" using s(3) by (simp_all split: if_splits)
+      then have "t = s" "truthy (eval b s) = True" using s(3) by (simp_all split: if_splits)
       then show ?thesis
-        using F s(1,2) EA_Assume unfolding gsound_branch_def by (simp only: ls_step_simps)
+        using F s(1,2) EA_Assume unfolding sound_branch_def by (simp only: ls_step_simps)
     next
       case (EA_AssumeNot b)
-      then have "t = s" "truthy (ev b s) = False" using s(3) by (simp_all split: if_splits)
+      then have "t = s" "truthy (eval b s) = False" using s(3) by (simp_all split: if_splits)
       then show ?thesis
-        using F s(1,2) EA_AssumeNot unfolding gsound_branch_def by (simp only: ls_step_simps)
-    qed (use F s in \<open>auto simp: gsound_skip_def gsound_assign_def gsound_body_def gsound_return_def
-                     gsound_event_def\<close>)
+        using F s(1,2) EA_AssumeNot unfolding sound_branch_def by (simp only: ls_step_simps)
+    qed (use F s in \<open>auto simp: sound_skip_def sound_assign_def sound_body_def sound_return_def
+                     sound_event_def\<close>)
   qed
 qed
 
@@ -338,45 +329,45 @@ text \<open>
 \<close>
 
 theorem sound_local_spec_iff:
-  "gsound_local_spec gm c \<longleftrightarrow>
+  "sound_local_spec \<kappa> gm c \<longleftrightarrow>
      (\<forall>x y. x \<le> y \<longrightarrow> gm x \<subseteq> gm y)
-     \<and> gsound_query gm (ls_query c)
-     \<and> gsound_skip gm (ls_skip c) \<and> gsound_assign gm (ls_assign c)
-     \<and> gsound_special gm (ls_special c) \<and> gsound_branch gm (ls_branch c)
-     \<and> gsound_body gm (ls_body c) \<and> gsound_return gm (ls_return c)
-     \<and> gsound_event gm (ls_event c)
-     \<and> gsound_enter gm (ls_enter c)
-     \<and> gsound_combine gm (ls_combine_env c) (ls_combine_assign c)"
-  unfolding gsound_local_spec_def ls_step_sound_iff gsound_query_def gsound_enter_def
-    gsound_combine_def
+     \<and> sound_query gm (ls_query c)
+     \<and> sound_skip gm (ls_skip c) \<and> sound_assign \<kappa> gm (ls_assign c)
+     \<and> sound_special \<kappa> gm (ls_special c) \<and> sound_branch gm (ls_branch c)
+     \<and> sound_body gm (ls_body c) \<and> sound_return gm (ls_return c)
+     \<and> sound_event gm (ls_event c)
+     \<and> sound_enter \<kappa> gm (ls_enter c)
+     \<and> sound_combine \<kappa> gm (ls_combine_env c) (ls_combine_assign c)"
+  unfolding sound_local_spec_def ls_step_sound_iff sound_query_def sound_enter_def
+    sound_combine_def
   by (intro iffI; elim conjE; intro conjI; assumption)
 
 lemma sound_local_specI:
   assumes "\<And>x y. x \<le> y \<Longrightarrow> gm x \<subseteq> gm y"
-    and "gsound_query gm (ls_query c)"
-    and "gsound_skip gm (ls_skip c)" and "gsound_assign gm (ls_assign c)"
-    and "gsound_special gm (ls_special c)" and "gsound_branch gm (ls_branch c)"
-    and "gsound_body gm (ls_body c)" and "gsound_return gm (ls_return c)"
-    and "gsound_event gm (ls_event c)"
-    and "gsound_enter gm (ls_enter c)"
-    and "gsound_combine gm (ls_combine_env c) (ls_combine_assign c)"
-  shows "gsound_local_spec gm c"
+    and "sound_query gm (ls_query c)"
+    and "sound_skip gm (ls_skip c)" and "sound_assign \<kappa> gm (ls_assign c)"
+    and "sound_special \<kappa> gm (ls_special c)" and "sound_branch gm (ls_branch c)"
+    and "sound_body gm (ls_body c)" and "sound_return gm (ls_return c)"
+    and "sound_event gm (ls_event c)"
+    and "sound_enter \<kappa> gm (ls_enter c)"
+    and "sound_combine \<kappa> gm (ls_combine_env c) (ls_combine_assign c)"
+  shows "sound_local_spec \<kappa> gm c"
   using assms unfolding sound_local_spec_iff by blast
 
 lemma sound_local_specD:
-  assumes "gsound_local_spec gm c"
+  assumes "sound_local_spec \<kappa> gm c"
   shows sound_local_spec_monoD: "x \<le> y \<Longrightarrow> gm x \<subseteq> gm y"
-    and sound_local_spec_queryD: "gsound_query gm (ls_query c)"
-    and sound_local_spec_skipD: "gsound_skip gm (ls_skip c)"
-    and sound_local_spec_assignD: "gsound_assign gm (ls_assign c)"
-    and sound_local_spec_specialD: "gsound_special gm (ls_special c)"
-    and sound_local_spec_branchD: "gsound_branch gm (ls_branch c)"
-    and sound_local_spec_bodyD: "gsound_body gm (ls_body c)"
-    and sound_local_spec_returnD: "gsound_return gm (ls_return c)"
-    and sound_local_spec_eventD: "gsound_event gm (ls_event c)"
-    and sound_local_spec_enterD: "gsound_enter gm (ls_enter c)"
+    and sound_local_spec_queryD: "sound_query gm (ls_query c)"
+    and sound_local_spec_skipD: "sound_skip gm (ls_skip c)"
+    and sound_local_spec_assignD: "sound_assign \<kappa> gm (ls_assign c)"
+    and sound_local_spec_specialD: "sound_special \<kappa> gm (ls_special c)"
+    and sound_local_spec_branchD: "sound_branch gm (ls_branch c)"
+    and sound_local_spec_bodyD: "sound_body gm (ls_body c)"
+    and sound_local_spec_returnD: "sound_return gm (ls_return c)"
+    and sound_local_spec_eventD: "sound_event gm (ls_event c)"
+    and sound_local_spec_enterD: "sound_enter \<kappa> gm (ls_enter c)"
     and sound_local_spec_combineD:
-      "gsound_combine gm (ls_combine_env c) (ls_combine_assign c)"
+      "sound_combine \<kappa> gm (ls_combine_env c) (ls_combine_assign c)"
   using assms unfolding sound_local_spec_iff by blast+
 
 text \<open>
@@ -386,34 +377,32 @@ text \<open>
 \<close>
 
 lemma sound_local_spec_update:
-  assumes "gsound_local_spec gm c"
+  assumes "sound_local_spec \<kappa> gm c"
   shows sound_local_spec_update_query:
-      "gsound_query gm h \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_query := h\<rparr>)"
+      "sound_query gm h \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_query := h\<rparr>)"
     and sound_local_spec_update_skip:
-      "gsound_skip gm sk \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_skip := sk\<rparr>)"
+      "sound_skip gm sk \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_skip := sk\<rparr>)"
     and sound_local_spec_update_assign:
-      "gsound_assign gm asn \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_assign := asn\<rparr>)"
+      "sound_assign \<kappa> gm asn \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_assign := asn\<rparr>)"
     and sound_local_spec_update_special:
-      "gsound_special gm sp \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_special := sp\<rparr>)"
+      "sound_special \<kappa> gm sp \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_special := sp\<rparr>)"
     and sound_local_spec_update_branch:
-      "gsound_branch gm br \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_branch := br\<rparr>)"
+      "sound_branch gm br \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_branch := br\<rparr>)"
     and sound_local_spec_update_body:
-      "gsound_body gm bd \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_body := bd\<rparr>)"
+      "sound_body gm bd \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_body := bd\<rparr>)"
     and sound_local_spec_update_return:
-      "gsound_return gm rt \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_return := rt\<rparr>)"
+      "sound_return gm rt \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_return := rt\<rparr>)"
     and sound_local_spec_update_event:
-      "gsound_event gm evt \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_event := evt\<rparr>)"
+      "sound_event gm evt \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_event := evt\<rparr>)"
     and sound_local_spec_update_enter:
-      "gsound_enter gm en \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_enter := en\<rparr>)"
+      "sound_enter \<kappa> gm en \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_enter := en\<rparr>)"
     and sound_local_spec_update_combine_env:
-      "gsound_combine gm ce (ls_combine_assign c)
-       \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_combine_env := ce\<rparr>)"
+      "sound_combine \<kappa> gm ce (ls_combine_assign c)
+       \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_combine_env := ce\<rparr>)"
     and sound_local_spec_update_combine_assign:
-      "gsound_combine gm (ls_combine_env c) ca
-       \<Longrightarrow> gsound_local_spec gm (c\<lparr>ls_combine_assign := ca\<rparr>)"
+      "sound_combine \<kappa> gm (ls_combine_env c) ca
+       \<Longrightarrow> sound_local_spec \<kappa> gm (c\<lparr>ls_combine_assign := ca\<rparr>)"
   using assms unfolding sound_local_spec_iff by simp_all
-
-end
 
 subsection \<open>Conservative defaults\<close>
 
@@ -427,44 +416,39 @@ text \<open>
   no law of its own, only the composed return does.
 \<close>
 
-definition query_unknown :: "'e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel" where
+definition query_unknown :: "channel \<Rightarrow> 's \<Rightarrow> channel" where
   "query_unknown ch x = \<top>"
 
-definition skip_identity :: "'e gchannel \<Rightarrow> 's \<Rightarrow> 's" where
+definition skip_identity :: "channel \<Rightarrow> 's \<Rightarrow> 's" where
   "skip_identity ch x = x"
 
-definition body_identity :: "'e gchannel \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's" where
+definition body_identity :: "channel \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's" where
   "body_identity ch p x = x"
 
-definition event_identity :: "'e gchannel \<Rightarrow> 'e ganalysis_event \<Rightarrow> 's \<Rightarrow> 's" where
+definition event_identity :: "channel \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's" where
   "event_identity ch ev x = x"
 
-definition branch_identity :: "'e gchannel \<Rightarrow> 'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's" where
+definition branch_identity :: "channel \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's" where
   "branch_identity ch b pol x = x"
 
-definition combine_env_identity :: "'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+definition combine_env_identity :: "channel \<Rightarrow> channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
   where
   "combine_env_identity ch ch' ci x de = x"
 
-context mcp_sem
-begin
+lemma sound_query_unknown: "sound_query gm query_unknown"
+  by (simp add: sound_query_def query_unknown_def)
 
-lemma sound_query_unknown: "gsound_query gm query_unknown"
-  by (simp add: gsound_query_def query_unknown_def)
+lemma sound_skip_identity: "sound_skip gm skip_identity"
+  by (simp add: sound_skip_def skip_identity_def)
 
-lemma sound_skip_identity: "gsound_skip gm skip_identity"
-  by (simp add: gsound_skip_def skip_identity_def)
+lemma sound_body_identity: "sound_body gm body_identity"
+  by (simp add: sound_body_def body_identity_def)
 
-lemma sound_body_identity: "gsound_body gm body_identity"
-  by (simp add: gsound_body_def body_identity_def)
+lemma sound_event_identity: "sound_event gm event_identity"
+  by (simp add: sound_event_def event_identity_def)
 
-lemma sound_event_identity: "gsound_event gm event_identity"
-  by (simp add: gsound_event_def event_identity_def)
-
-lemma sound_branch_identity: "gsound_branch gm branch_identity"
-  by (simp add: gsound_branch_def branch_identity_def)
-
-end
+lemma sound_branch_identity: "sound_branch gm branch_identity"
+  by (simp add: sound_branch_def branch_identity_def)
 
 text \<open>
   A local specification that supplies only the five operations without a
@@ -474,29 +458,25 @@ text \<open>
 \<close>
 
 definition conservative_local_spec ::
-  "('e gchannel \<Rightarrow> 'vr \<Rightarrow> 'e \<Rightarrow> 's \<Rightarrow> 's)
-   \<Rightarrow> ('e gchannel \<Rightarrow> 'e gspecial_call \<Rightarrow> 'vr \<Rightarrow> 's \<Rightarrow> 's)
-   \<Rightarrow> ('e gchannel \<Rightarrow> 'e option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's)
-   \<Rightarrow> ('e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list)
-   \<Rightarrow> ('e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> ('vr,'e,'s) glocal_spec" where
+  "(channel \<Rightarrow> var_id \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (channel \<Rightarrow> exp gspecial_call \<Rightarrow> var_id \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (channel \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (channel \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list)
+   \<Rightarrow> (channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> 's local_spec" where
   "conservative_local_spec asn sp rt en ca = \<lparr>
      ls_query = query_unknown, ls_skip = skip_identity, ls_assign = asn,
      ls_special = sp, ls_branch = branch_identity, ls_body = body_identity,
      ls_return = rt, ls_event = event_identity, ls_enter = en,
      ls_combine_env = combine_env_identity, ls_combine_assign = ca \<rparr>"
 
-context mcp_sem
-begin
-
 theorem sound_conservative_local_spec:
   assumes "\<And>x y. x \<le> y \<Longrightarrow> gm x \<subseteq> gm y"
-    and "gsound_assign gm asn" and "gsound_special gm sp" and "gsound_return gm rt"
-    and "gsound_enter gm en" and "gsound_combine gm combine_env_identity ca"
-  shows "gsound_local_spec gm (conservative_local_spec asn sp rt en ca)"
+    and "sound_assign \<kappa> gm asn" and "sound_special \<kappa> gm sp" and "sound_return gm rt"
+    and "sound_enter \<kappa> gm en" and "sound_combine \<kappa> gm combine_env_identity ca"
+  shows "sound_local_spec \<kappa> gm (conservative_local_spec asn sp rt en ca)"
   by (rule sound_local_specI)
      (simp_all add: conservative_local_spec_def assms sound_query_unknown sound_skip_identity
         sound_body_identity sound_event_identity sound_branch_identity)
-end
 
 text \<open>
   A component leaves a concretization alone when none of its operations
@@ -505,7 +485,7 @@ text \<open>
   others.
 \<close>
 
-definition mcp_frame :: "('vr,'e,'s) glocal_spec \<Rightarrow> ('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> bool" where
+definition mcp_frame :: "'s local_spec \<Rightarrow> ('s \<Rightarrow> store set) \<Rightarrow> bool" where
   "mcp_frame c gm \<longleftrightarrow>
      (\<forall>ch a x. gm (ls_step c ch a x) = gm x)
      \<and> (\<forall>ch ci p q. q \<in> set (ls_enter c ch ci p) \<longrightarrow>
@@ -517,9 +497,9 @@ text \<open>
   They are independent when each leaves the others' concretizations alone.
 \<close>
 
-type_synonym ('vr,'e,'s) gcertified_component = "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<times> ('vr,'e,'s) glocal_spec"
+type_synonym 's certified_component = "('s \<Rightarrow> store set) \<times> 's local_spec"
 
-fun mcp_independent :: "('vr,'e,'s) gcertified_component list \<Rightarrow> bool" where
+fun mcp_independent :: "'s certified_component list \<Rightarrow> bool" where
   "mcp_independent [] \<longleftrightarrow> True"
 | "mcp_independent ((g, c) # gcs) \<longleftrightarrow>
      (\<forall>(g', c') \<in> set gcs. mcp_frame c g' \<and> mcp_frame c' g) \<and> mcp_independent gcs"
@@ -539,7 +519,7 @@ text \<open>
   often a handler runs.
 \<close>
 
-fun ask_rec :: "('e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel) \<Rightarrow> nat \<Rightarrow> 'e gquery set \<Rightarrow> 's \<Rightarrow> 'e gchannel" where
+fun ask_rec :: "(channel \<Rightarrow> 's \<Rightarrow> channel) \<Rightarrow> nat \<Rightarrow> query set \<Rightarrow> 's \<Rightarrow> channel" where
   "ask_rec H 0 asked x q =
      Code.abort (STR ''query recursion exceeded query_depth'') (\<lambda>_. \<top>)"
 | "ask_rec H (Suc n) asked x q =
@@ -551,36 +531,26 @@ text \<open>
   handler's answer under it holds.
 \<close>
 
-context mcp_sem
-begin
-
 lemma ask_rec_sound:
-  assumes "\<And>ch q. geval_query.channel_holds ev ch s \<Longrightarrow> geval_holds ev q (H ch x q) s"
-  shows "geval_query.channel_holds ev (ask_rec H n asked x) s"
+  assumes "\<And>ch q. eval_query.channel_holds ch s \<Longrightarrow> eval_holds q (H ch x q) s"
+  shows "eval_query.channel_holds (ask_rec H n asked x) s"
 proof (induction n arbitrary: asked)
   case 0
-  then show ?case by (simp add: geval_query.channel_holds_def)
+  then show ?case by (simp add: eval_query.channel_holds_def)
 next
   case (Suc n)
   then show ?case
-    using assms by (auto simp: geval_query.channel_holds_def)
+    using assms by (auto simp: eval_query.channel_holds_def)
 qed
 
-end
-
-definition ls_channel :: "('vr,'e,'s) glocal_spec \<Rightarrow> 's \<Rightarrow> 'e gchannel" where
+definition ls_channel :: "'s local_spec \<Rightarrow> 's \<Rightarrow> channel" where
   "ls_channel c x = ask_rec (ls_query c) query_depth {} x"
 
-context mcp_sem
-begin
-
 lemma ls_channel_sound:
-  assumes "gsound_local_spec \<gamma>\<^sub>c c" and "s \<in> \<gamma>\<^sub>c x"
-  shows "geval_query.channel_holds ev (ls_channel c x) s"
+  assumes "sound_local_spec \<kappa> \<gamma>\<^sub>c c" and "s \<in> \<gamma>\<^sub>c x"
+  shows "eval_query.channel_holds (ls_channel c x) s"
   unfolding ls_channel_def
-  by (rule ask_rec_sound) (use assms in \<open>simp add: gsound_local_spec_def\<close>)
-
-end
+  by (rule ask_rec_sound) (use assms in \<open>simp add: sound_local_spec_def\<close>)
 
 lemma ls_channel_const: "ls_query c = (\<lambda>ch x. h x) \<Longrightarrow> ls_channel c = h"
   by (simp add: ls_channel_def query_depth_def fun_eq_iff eval_nat_numeral)
@@ -599,16 +569,16 @@ text \<open>
 \<close>
 
 definition mcp_step ::
-  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's" where
+  "'s local_spec list \<Rightarrow> channel \<Rightarrow> (var_id,exp) gedge_action \<Rightarrow> 's \<Rightarrow> 's" where
   "mcp_step cs ch a x = fold (\<lambda>c y. ls_step c ch a y) cs x"
 
 definition mcp_en_from ::
-  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> 's enter_result list"
+  "'s local_spec list \<Rightarrow> channel \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> 's enter_result list"
     where
   "mcp_en_from cs ch ci p = fold (\<lambda>c ps. concat (map (ls_enter c ch ci) ps)) cs [p]"
 
 definition mcp_comb ::
-  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+  "'s local_spec list \<Rightarrow> channel \<Rightarrow> channel \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
     where
   "mcp_comb cs ch ch' ci x de = fold (\<lambda>c y. ls_combine c ch ch' ci y de) cs x"
 
@@ -617,10 +587,10 @@ text \<open>
   channel, as \<open>MCP.query'\<close> meets the results of all analyses.
 \<close>
 
-definition mcp_qry :: "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel" where
+definition mcp_qry :: "'s local_spec list \<Rightarrow> channel \<Rightarrow> 's \<Rightarrow> channel" where
   "mcp_qry cs ch x q = fold (\<lambda>c r. r \<sqinter> ls_query c ch x q) cs \<top>"
 
-definition mcp_gamma :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) list \<Rightarrow> 's \<Rightarrow> ('vr \<Rightarrow> int) set" where
+definition mcp_gamma :: "('s \<Rightarrow> store set) list \<Rightarrow> 's \<Rightarrow> store set" where
   "mcp_gamma \<Gamma> x = (\<Inter>\<gamma>\<^sub>i \<in> set \<Gamma>. \<gamma>\<^sub>i x)"
 
 section \<open>Soundness of the combination\<close>
@@ -658,12 +628,9 @@ lemma mcp_independent_Cons_frames:
     "mcp_independent gcs"
   using assms by auto
 
-context mcp_sem
-begin
-
 lemma mcp_step_sound:
-  assumes "\<forall>(g, c) \<in> set gcs. gsound_local_spec g c" and "mcp_independent gcs"
-  shows "gedge_collect a (mcp_gamma (map fst gcs) x \<inter> Collect (geval_query.channel_holds ev ch))
+  assumes "\<forall>(g, c) \<in> set gcs. sound_local_spec \<kappa> g c" and "mcp_independent gcs"
+  shows "edge_collect \<kappa> a (mcp_gamma (map fst gcs) x \<inter> Collect (eval_query.channel_holds ch))
            \<subseteq> mcp_gamma (map fst gcs) (mcp_step (map snd gcs) ch a x)"
   using assms
 proof (induction gcs arbitrary: x)
@@ -672,22 +639,22 @@ proof (induction gcs arbitrary: x)
 next
   case (Cons gc gcs)
   obtain g c where gc: "gc = (g, c)" by fastforce
-  let ?O = "Collect (geval_query.channel_holds ev ch)"
+  let ?O = "Collect (eval_query.channel_holds ch)"
   let ?x1 = "ls_step c ch a x"
   have frames: "\<forall>g' \<in> fst ` set gcs. mcp_frame c g'" "\<forall>c' \<in> snd ` set gcs. mcp_frame c' g"
     "mcp_independent gcs"
     using mcp_independent_Cons_frames[OF Cons.prems(2)[unfolded gc]] by simp_all
-  have own: "gedge_collect a (g x \<inter> ?O) \<subseteq> g ?x1"
-    using Cons.prems(1) unfolding gc by (simp add: gsound_local_spec_def)
+  have own: "edge_collect \<kappa> a (g x \<inter> ?O) \<subseteq> g ?x1"
+    using Cons.prems(1) unfolding gc by (simp add: sound_local_spec_def)
   have own_kept: "g (mcp_step (map snd gcs) ch a ?x1) = g ?x1"
     unfolding mcp_step_def by (rule gamma_fold_step) (use frames in auto)
-  have rest: "gedge_collect a (mcp_gamma (map fst gcs) ?x1 \<inter> ?O)
+  have rest: "edge_collect \<kappa> a (mcp_gamma (map fst gcs) ?x1 \<inter> ?O)
       \<subseteq> mcp_gamma (map fst gcs) (mcp_step (map snd gcs) ch a ?x1)"
     by (rule Cons.IH) (use Cons.prems(1) frames in auto)
   have rest_eq: "mcp_gamma (map fst gcs) ?x1 = mcp_gamma (map fst gcs) x"
     by (rule mcp_gamma_frame(1)) (use frames in auto)
-  have "gedge_collect a (mcp_gamma (map fst (gc # gcs)) x \<inter> ?O)
-          \<subseteq> gedge_collect a (g x \<inter> ?O) \<inter> gedge_collect a (mcp_gamma (map fst gcs) ?x1 \<inter> ?O)"
+  have "edge_collect \<kappa> a (mcp_gamma (map fst (gc # gcs)) x \<inter> ?O)
+          \<subseteq> edge_collect \<kappa> a (g x \<inter> ?O) \<inter> edge_collect \<kappa> a (mcp_gamma (map fst gcs) ?x1 \<inter> ?O)"
     unfolding gc by (intro Int_greatest edge_collect_mono) (auto simp: rest_eq)
   also have "\<dots> \<subseteq> mcp_gamma (map fst (gc # gcs)) (mcp_step (map snd (gc # gcs)) ch a x)"
     using own own_kept rest unfolding gc by (auto simp: mcp_step_def)
@@ -695,10 +662,10 @@ next
 qed
 
 lemma mcp_comb_sound:
-  assumes "\<forall>(g, c) \<in> set gcs. gsound_local_spec g c" and "mcp_independent gcs"
-    and "s \<in> mcp_gamma (map fst gcs) x" and "geval_query.channel_holds ev ch s"
-    and "t \<in> mcp_gamma (map fst gcs) de" and "geval_query.channel_holds ev ch' t"
-  shows "gcombine_collect (ci_dst ci) s t
+  assumes "\<forall>(g, c) \<in> set gcs. sound_local_spec \<kappa> g c" and "mcp_independent gcs"
+    and "s \<in> mcp_gamma (map fst gcs) x" and "eval_query.channel_holds ch s"
+    and "t \<in> mcp_gamma (map fst gcs) de" and "eval_query.channel_holds ch' t"
+  shows "combine_collect \<kappa> (ci_dst ci) s t
            \<in> mcp_gamma (map fst gcs) (mcp_comb (map snd gcs) ch ch' ci x de)"
   using assms
 proof (induction gcs arbitrary: x)
@@ -711,13 +678,13 @@ next
   have frames: "\<forall>g' \<in> fst ` set gcs. mcp_frame c g'" "\<forall>c' \<in> snd ` set gcs. mcp_frame c' g"
     "mcp_independent gcs"
     using mcp_independent_Cons_frames[OF Cons.prems(2)[unfolded gc]] by simp_all
-  have own: "gcombine_collect (ci_dst ci) s t \<in> g ?x1"
-    using Cons.prems(1,3-6) unfolding gc by (simp add: gsound_local_spec_def)
+  have own: "combine_collect \<kappa> (ci_dst ci) s t \<in> g ?x1"
+    using Cons.prems(1,3-6) unfolding gc by (simp add: sound_local_spec_def)
   have own_kept: "g (mcp_comb (map snd gcs) ch ch' ci ?x1 de) = g ?x1"
     unfolding mcp_comb_def by (rule gamma_fold_comb) (use frames in auto)
   have rest_eq: "mcp_gamma (map fst gcs) ?x1 = mcp_gamma (map fst gcs) x"
     by (rule mcp_gamma_frame(2)) (use frames in auto)
-  have rest: "gcombine_collect (ci_dst ci) s t
+  have rest: "combine_collect \<kappa> (ci_dst ci) s t
       \<in> mcp_gamma (map fst gcs) (mcp_comb (map snd gcs) ch ch' ci ?x1 de)"
     by (rule Cons.IH) (use Cons.prems frames rest_eq gc in auto)
   show ?case
@@ -732,12 +699,12 @@ text \<open>
 \<close>
 
 lemma mcp_en_fold_sound:
-  assumes "\<forall>(g, c) \<in> set gcs. gsound_local_spec g c" and "mcp_independent gcs"
+  assumes "\<forall>(g, c) \<in> set gcs. sound_local_spec \<kappa> g c" and "mcp_independent gcs"
     and "\<forall>c \<in> snd ` set gcs. \<forall>d \<in> set ds. mcp_frame c d"
     and "\<exists>p \<in> set ps. s \<in> mcp_gamma (map fst gcs) (fst p) \<and> s \<in> mcp_gamma ds (fst p)
                        \<and> E \<in> mcp_gamma ds (snd p)"
-    and A: "geval_query.channel_holds ev ch s"
-    and E: "E = gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s"
+    and A: "eval_query.channel_holds ch s"
+    and E: "E = call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s"
   shows "\<exists>p \<in> set (fold (\<lambda>c ps. concat (map (ls_enter c ch ci) ps)) (map snd gcs) ps).
            s \<in> mcp_gamma (map fst gcs) (fst p) \<and> s \<in> mcp_gamma ds (fst p)
            \<and> E \<in> mcp_gamma (map fst gcs) (snd p) \<and> E \<in> mcp_gamma ds (snd p)"
@@ -754,9 +721,9 @@ next
   obtain p where p: "p \<in> set ps" "s \<in> g (fst p)" "s \<in> mcp_gamma (map fst gcs) (fst p)"
       "s \<in> mcp_gamma ds (fst p)" "E \<in> mcp_gamma ds (snd p)"
     using Cons.prems(4) unfolding gc by auto
-  have "gsound_local_spec g c" using Cons.prems(1) unfolding gc by simp
+  have "sound_local_spec \<kappa> g c" using Cons.prems(1) unfolding gc by simp
   then obtain q where q: "q \<in> set (ls_enter c ch ci p)" "s \<in> g (fst q)" "E \<in> g (snd q)"
-    using p(2) A unfolding E gsound_local_spec_def by meson
+    using p(2) A unfolding E sound_local_spec_def by meson
   have keep: "d (fst q) = d (fst p) \<and> d (snd q) = d (snd p)"
     if "d \<in> fst ` set gcs \<union> set ds" for d
   proof -
@@ -770,7 +737,7 @@ next
           s \<in> mcp_gamma (map fst gcs) (fst p) \<and> s \<in> mcp_gamma (g # ds) (fst p)
           \<and> E \<in> mcp_gamma (map fst gcs) (snd p) \<and> E \<in> mcp_gamma (g # ds) (snd p)"
   proof (rule Cons.IH)
-    show "\<forall>(g, c) \<in> set gcs. gsound_local_spec g c" using Cons.prems(1) by simp
+    show "\<forall>(g, c) \<in> set gcs. sound_local_spec \<kappa> g c" using Cons.prems(1) by simp
     show "mcp_independent gcs" by (fact frames(3))
     show "\<forall>c' \<in> snd ` set gcs. \<forall>d \<in> set (g # ds). mcp_frame c' d"
       using frames(2) Cons.prems(3) unfolding gc by auto
@@ -793,22 +760,20 @@ next
 qed
 
 lemma mcp_qry_fold_sound:
-  "s \<in> mcp_gamma (map fst gcs) x \<Longrightarrow> geval_query.channel_holds ev ch s
-   \<Longrightarrow> \<forall>(g, c) \<in> set gcs. gsound_local_spec g c
-   \<Longrightarrow> geval_holds ev q r s
-   \<Longrightarrow> geval_holds ev q (fold (\<lambda>c r. r \<sqinter> ls_query c ch x q) (map snd gcs) r) s"
+  "s \<in> mcp_gamma (map fst gcs) x \<Longrightarrow> eval_query.channel_holds ch s
+   \<Longrightarrow> \<forall>(g, c) \<in> set gcs. sound_local_spec \<kappa> g c
+   \<Longrightarrow> eval_holds q r s
+   \<Longrightarrow> eval_holds q (fold (\<lambda>c r. r \<sqinter> ls_query c ch x q) (map snd gcs) r) s"
 proof (induction gcs arbitrary: r)
   case (Cons gc gcs)
   obtain g c where gc: "gc = (g, c)" by fastforce
-  have "geval_holds ev q (ls_query c ch x q) s"
-    using Cons.prems unfolding gc by (simp add: gsound_local_spec_def)
-  with Cons.prems(4) have "geval_holds ev q (r \<sqinter> ls_query c ch x q) s"
-    by (rule geval_query.inf_sound)
+  have "eval_holds q (ls_query c ch x q) s"
+    using Cons.prems unfolding gc by (simp add: sound_local_spec_def)
+  with Cons.prems(4) have "eval_holds q (r \<sqinter> ls_query c ch x q) s"
+    by (rule eval_query.inf_sound)
   then show ?case
     using Cons.IH[of "r \<sqinter> ls_query c ch x q"] Cons.prems(1-3) unfolding gc by simp
 qed simp
-
-end
 
 section \<open>A component as a specification\<close>
 
@@ -823,17 +788,17 @@ text \<open>
 
 text \<open>The step a component takes on an edge, with its own channel.\<close>
 
-definition closed_step :: "('vr,'e,'s) glocal_spec \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's" where
+definition closed_step :: "'s local_spec \<Rightarrow> (var_id,exp) gedge_action \<Rightarrow> 's \<Rightarrow> 's" where
   "closed_step c a d = ls_step c (ls_channel c d) a d"
 
 text \<open>\<open>\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> d\<close> is the abstract transfer of action \<open>a\<close>, the counterpart of
   the abstract evaluation \<open>\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d\<close>; the subscript names the component.\<close>
 
-abbreviation abs_step :: "('vr,'e) gedge_action \<Rightarrow> ('vr,'e,'s) glocal_spec \<Rightarrow> 's \<Rightarrow> 's"
+abbreviation abs_step :: "(var_id,exp) gedge_action \<Rightarrow> 's local_spec \<Rightarrow> 's \<Rightarrow> 's"
   ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>\<^bsub>_\<^esub>") where
   "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> \<equiv> closed_step c a"
 
-definition dg_spec_of :: "('vr,'e,'s) glocal_spec \<Rightarrow> ('vr,'e,'x,'k,'v,'s::bot,'G) gdg_spec" where
+definition dg_spec_of :: "'s local_spec \<Rightarrow> ('x, 'k, 'v, 's::bot, 'G) dg_spec" where
   "dg_spec_of c = local_dg_spec_template\<lparr>
      dgs_skip := local_transfer \<lbrakk>EA_Nop\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>,
      dgs_assign := (\<lambda>x e. local_transfer \<lbrakk>EA_Assign x e\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>),
@@ -887,37 +852,34 @@ text \<open>
   laws it proves against every holding channel apply to that one.
 \<close>
 
-context mcp_sem
-begin
-
 lemma closed_step_sound:
-  assumes sound: "gsound_local_spec gm c"
-  shows "gedge_collect a (gm d) \<subseteq> gm (\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> d)"
+  assumes sound: "sound_local_spec \<kappa> gm c"
+  shows "edge_collect \<kappa> a (gm d) \<subseteq> gm (\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> d)"
 proof -
-  have "gm d = gm d \<inter> Collect (geval_query.channel_holds ev (ls_channel c d))"
+  have "gm d = gm d \<inter> Collect (eval_query.channel_holds (ls_channel c d))"
     using ls_channel_sound[OF sound] by blast
-  moreover have "gedge_collect a (gm d \<inter> Collect (geval_query.channel_holds ev (ls_channel c d)))
+  moreover have "edge_collect \<kappa> a (gm d \<inter> Collect (eval_query.channel_holds (ls_channel c d)))
       \<subseteq> gm (ls_step c (ls_channel c d) a d)"
-    using sound unfolding gsound_local_spec_def by blast
+    using sound unfolding sound_local_spec_def by blast
   ultimately show ?thesis by (simp add: closed_step_def)
 qed
 
 lemma closed_combine_sound:
-  assumes sound: "gsound_local_spec gm c" and "s \<in> gm dc" and "t \<in> gm de"
-  shows "gcombine_collect (ci_dst ci) s t
+  assumes sound: "sound_local_spec \<kappa> gm c" and "s \<in> gm dc" and "t \<in> gm de"
+  shows "combine_collect \<kappa> (ci_dst ci) s t
            \<in> gm (ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de)"
   using assms ls_channel_sound[OF sound assms(2)] ls_channel_sound[OF sound assms(3)]
-  unfolding gsound_local_spec_def by blast
+  unfolding sound_local_spec_def by blast
 
 theorem dg_spec_of_contract:
-  assumes sound: "gsound_local_spec gm c"
-  shows "ganalysis_contract ev rv conv glob (dg_spec_of c) (\<lambda>d g. gm d)"
+  assumes sound: "sound_local_spec \<kappa> gm c"
+  shows "analysis_contract \<kappa> (dg_spec_of c) (\<lambda>d g. gm d)"
 proof (unfold_locales, goal_cases wf mono step comb)
   case wf
   then show ?case by (rule dg_spec_wf_dg_spec_of)
 next
   case mono
-  then show ?case using sound unfolding gsound_local_spec_def by metis
+  then show ?case using sound unfolding sound_local_spec_def by metis
 next
   case (step a \<tau> src gk)
   then show ?case
@@ -927,8 +889,6 @@ next
   then show ?case
     by (simp add: local_combine_transfer_def closed_combine_sound[OF sound])
 qed
-
-end
 
 section \<open>Several components as one\<close>
 
@@ -944,25 +904,22 @@ text \<open>
   only the env stage receives.
 \<close>
 
-fun mcp_combine :: "('vr,'e,'s) glocal_spec list \<Rightarrow> ('vr,'e,'s) glocal_spec" where
+fun mcp_combine :: "'s local_spec list \<Rightarrow> 's local_spec" where
   "mcp_combine [c] = c"
 | "mcp_combine cs =
      make_local_spec (mcp_qry cs) (mcp_step cs) (mcp_en_from cs) (mcp_comb cs) (\<lambda>ch' ci dc de. dc)"
 
-definition mcp_spec :: "('vr,'e,'s) glocal_spec list \<Rightarrow> ('vr,'e,'x,'k,'v,'s::bot,'G) gdg_spec" where
+definition mcp_spec :: "'s local_spec list \<Rightarrow> ('x, 'k, 'v, 's::bot, 'G) dg_spec" where
   "mcp_spec cs = dg_spec_of (mcp_combine cs)"
 
-context mcp_sem
-begin
-
 theorem mcp_combine_sound:
-  assumes sound: "\<forall>(\<gamma>\<^sub>i, c\<^sub>i) \<in> set comps. gsound_local_spec \<gamma>\<^sub>i c\<^sub>i"
+  assumes sound: "\<forall>(\<gamma>\<^sub>i, c\<^sub>i) \<in> set comps. sound_local_spec \<kappa> \<gamma>\<^sub>i c\<^sub>i"
     and indep: "mcp_independent comps" and ne: "comps \<noteq> []"
-  shows "gsound_local_spec (mcp_gamma (map fst comps)) (mcp_combine (map snd comps))"
+  shows "sound_local_spec \<kappa> (mcp_gamma (map fst comps)) (mcp_combine (map snd comps))"
 proof (cases "\<exists>x. comps = [x]")
   case True
   then obtain \<gamma>\<^sub>i c\<^sub>i where "comps = [(\<gamma>\<^sub>i, c\<^sub>i)]" by fastforce
-  then show ?thesis using sound by (simp add: gsound_local_spec_def mcp_gamma_def)
+  then show ?thesis using sound by (simp add: sound_local_spec_def mcp_gamma_def)
 next
   case False
   have comb: "mcp_combine (map snd comps) =
@@ -971,30 +928,28 @@ next
     using False ne by (cases "map snd comps" rule: mcp_combine.cases) (auto simp: Cons_eq_map_conv)
   have enter: "\<exists>q \<in> set (mcp_en_from (map snd comps) ch ci p).
                  s \<in> mcp_gamma (map fst comps) (fst q)
-                 \<and> gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+                 \<and> call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
                      \<in> mcp_gamma (map fst comps) (snd q)"
-    if "s \<in> mcp_gamma (map fst comps) (fst p)" "geval_query.channel_holds ev ch s" for ch s ci p
+    if "s \<in> mcp_gamma (map fst comps) (fst p)" "eval_query.channel_holds ch s" for ch s ci p
     using mcp_en_fold_sound[OF sound indep, of "[]" "[p]" s _ ch ci] that
     by (auto simp: mcp_en_from_def)
   have mono: "\<forall>x y. x \<le> y \<longrightarrow> mcp_gamma (map fst comps) x \<subseteq> mcp_gamma (map fst comps) y"
-    using sound by (fastforce simp: mcp_gamma_def gsound_local_spec_def)
-  have qry: "\<forall>ch s x q. s \<in> mcp_gamma (map fst comps) x \<longrightarrow> geval_query.channel_holds ev ch s
-               \<longrightarrow> geval_holds ev q (mcp_qry (map snd comps) ch x q) s"
+    using sound by (fastforce simp: mcp_gamma_def sound_local_spec_def)
+  have qry: "\<forall>ch s x q. s \<in> mcp_gamma (map fst comps) x \<longrightarrow> eval_query.channel_holds ch s
+               \<longrightarrow> eval_holds q (mcp_qry (map snd comps) ch x q) s"
     unfolding mcp_qry_def using mcp_qry_fold_sound[OF _ _ sound] by simp
   show ?thesis
-    unfolding comb gsound_local_spec_def
+    unfolding comb sound_local_spec_def
     using mono mcp_step_sound[OF sound indep] mcp_comb_sound[OF sound indep] enter qry
     by simp
 qed
 
 theorem mcp_contract:
-  assumes "\<forall>(\<gamma>\<^sub>i, c\<^sub>i) \<in> set comps. gsound_local_spec \<gamma>\<^sub>i c\<^sub>i" and "mcp_independent comps"
+  assumes "\<forall>(\<gamma>\<^sub>i, c\<^sub>i) \<in> set comps. sound_local_spec \<kappa> \<gamma>\<^sub>i c\<^sub>i" and "mcp_independent comps"
     and "comps \<noteq> []"
   shows
-    "ganalysis_contract ev rv conv glob (mcp_spec (map snd comps)) (\<lambda>d g. mcp_gamma (map fst comps) d)"
+    "analysis_contract \<kappa> (mcp_spec (map snd comps)) (\<lambda>d g. mcp_gamma (map fst comps) d)"
   unfolding mcp_spec_def by (rule dg_spec_of_contract[OF mcp_combine_sound[OF assms]])
-
-end
 
 section \<open>A component on one field of a larger state\<close>
 
@@ -1007,7 +962,7 @@ text \<open>
 \<close>
 
 definition lens_of ::
-  "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> ('vr,'e,'c) glocal_spec \<Rightarrow> ('vr,'e,'s) glocal_spec"
+  "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> 'c local_spec \<Rightarrow> 's local_spec"
 where
   "lens_of get put c = make_local_spec
      (\<lambda>ch x. ls_query c ch (get x))
@@ -1023,36 +978,31 @@ lemma get_mc_comb_lens_of:
     "get (ls_combine (lens_of get put c) ch ch' ci x de) = ls_combine c ch ch' ci (get x) (get de)"
   by (simp add: lens_of_def assms)
 
-context mcp_sem
-begin
-
 theorem lens_of_sound:
-  assumes sound: "gsound_local_spec g c"
+  assumes sound: "sound_local_spec \<kappa> g c"
     and get_put: "\<And>x v. get (put x v) = v"
     and get_mono: "\<And>x y. x \<le> y \<Longrightarrow> get x \<le> get y"
-  shows "gsound_local_spec (\<lambda>x. g (get x)) (lens_of get put c)"
+  shows "sound_local_spec \<kappa> (\<lambda>x. g (get x)) (lens_of get put c)"
 proof -
   have enter: "\<exists>q \<in> set (ls_enter (lens_of get put c) ch ci p).
                  s \<in> g (get (fst q))
-                 \<and> gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+                 \<and> call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
                      \<in> g (get (snd q))"
-    if s_in: "s \<in> g (get (fst p))" and A: "geval_query.channel_holds ev ch s" for ch s ci p
+    if s_in: "s \<in> g (get (fst p))" and A: "eval_query.channel_holds ch s" for ch s ci p
   proof -
     have "s \<in> g (fst (get (fst p), get (snd p)))" using s_in by simp
     then obtain q where "q \<in> set (ls_enter c ch ci (get (fst p), get (snd p)))" "s \<in> g (fst q)"
-        "gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
-      using sound A unfolding gsound_local_spec_def by metis
+        "call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
+      using sound A unfolding sound_local_spec_def by metis
     then show ?thesis
       by (intro bexI[of _ "(put (fst p) (fst q), put (snd p) (snd q))"])
          (auto simp: lens_of_def get_put)
   qed
   show ?thesis
     using sound get_mono enter
-    unfolding gsound_local_spec_def get_mc_comb_lens_of[of get put, OF get_put]
+    unfolding sound_local_spec_def get_mc_comb_lens_of[of get put, OF get_put]
     by (simp add: lens_of_def get_put)
 qed
-
-end
 
 section \<open>Replacing a component's handler\<close>
 
@@ -1064,19 +1014,14 @@ text \<open>
 \<close>
 
 definition with_qry ::
-  "('e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel) \<Rightarrow> ('vr,'e,'s) glocal_spec \<Rightarrow> ('vr,'e,'s) glocal_spec" where
+  "(channel \<Rightarrow> 's \<Rightarrow> channel) \<Rightarrow> 's local_spec \<Rightarrow> 's local_spec" where
   "with_qry h c = c\<lparr>ls_query := h\<rparr>"
 
-context mcp_sem
-begin
-
 theorem with_qry_sound:
-  assumes "gsound_local_spec gm c"
-    and "\<And>ch s x q. s \<in> gm x \<Longrightarrow> geval_query.channel_holds ev ch s \<Longrightarrow> geval_holds ev q (h ch x q) s"
-  shows "gsound_local_spec gm (with_qry h c)"
-  using assms unfolding gsound_local_spec_def with_qry_def by simp
-
-end
+  assumes "sound_local_spec \<kappa> gm c"
+    and "\<And>ch s x q. s \<in> gm x \<Longrightarrow> eval_query.channel_holds ch s \<Longrightarrow> eval_holds q (h ch x q) s"
+  shows "sound_local_spec \<kappa> gm (with_qry h c)"
+  using assms unfolding sound_local_spec_def with_qry_def by simp
 
 lemma with_qry_frame: "mcp_frame c g \<Longrightarrow> mcp_frame (with_qry h c) g"
   by (simp add: mcp_frame_def with_qry_def)
@@ -1093,38 +1038,33 @@ text \<open>
   soon as one active analysis is, as Goblint's \<open>MCP\<close> raises \<open>Deadcode\<close>.
 \<close>
 
-definition map_local_spec :: "('s \<Rightarrow> 's) \<Rightarrow> ('vr,'e,'s) glocal_spec \<Rightarrow> ('vr,'e,'s) glocal_spec" where
+definition map_local_spec :: "('s \<Rightarrow> 's) \<Rightarrow> 's local_spec \<Rightarrow> 's local_spec" where
   "map_local_spec k c = make_local_spec (ls_query c)
      (\<lambda>ch a x. k (ls_step c ch a x))
      (\<lambda>ch ci p. map (\<lambda>(q, e). (q, k e)) (ls_enter c ch ci p))
      (ls_combine_env c)
      (\<lambda>ch' ci x de. k (ls_combine_assign c ch' ci x de))"
 
-context mcp_sem
-begin
-
 theorem map_local_spec_sound:
-  assumes sound: "gsound_local_spec g c"
+  assumes sound: "sound_local_spec \<kappa> g c"
     and keep: "\<And>x. g (k x) = g x"
-  shows "gsound_local_spec g (map_local_spec k c)"
+  shows "sound_local_spec \<kappa> g (map_local_spec k c)"
 proof -
   have enter: "\<exists>q \<in> set (ls_enter (map_local_spec k c) ch ci p).
                  s \<in> g (fst q)
-                 \<and> gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
-    if s_in: "s \<in> g (fst p)" and A: "geval_query.channel_holds ev ch s" for ch s ci p
+                 \<and> call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
+    if s_in: "s \<in> g (fst p)" and A: "eval_query.channel_holds ch s" for ch s ci p
   proof -
     obtain q where "q \<in> set (ls_enter c ch ci p)" "s \<in> g (fst q)"
-        "gcall_enter (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
-      using sound s_in A unfolding gsound_local_spec_def by metis
+        "call_enter \<kappa> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
+      using sound s_in A unfolding sound_local_spec_def by metis
     then show ?thesis
       by (intro bexI[of _ "(fst q, k (snd q))"]) (auto simp: map_local_spec_def keep)
   qed
   show ?thesis
-    using sound enter unfolding gsound_local_spec_def
+    using sound enter unfolding sound_local_spec_def
     by (simp add: map_local_spec_def keep)
 qed
-
-end
 
 section \<open>Components whose entry answers once\<close>
 
@@ -1134,7 +1074,7 @@ text \<open>
   normalization keep that shape.
 \<close>
 
-definition single_entry :: "('vr,'e,'s) glocal_spec \<Rightarrow> bool" where
+definition single_entry :: "'s local_spec \<Rightarrow> bool" where
   "single_entry c \<longleftrightarrow> (\<forall>ch ci p. \<exists>e. ls_enter c ch ci p = [(fst p, e)])"
 
 lemma single_entryD:

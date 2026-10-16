@@ -6,10 +6,10 @@ section \<open>A reusable bounded call-string context\<close>
 
 text \<open>
   The call-string route/enter-context pair: this theory owns only the call-string
-  \<^emph>\<open>data\<close> and the one closed-term equality that makes \<open>grouted_context\<close>'s
+  \<^emph>\<open>data\<close> and the one closed-term equality that makes \<open>routed_context\<close>'s
   routing agreement trivial for any bound \<open>k\<close> --- it deliberately does not
   import \<open>Routed_Context\<close> or \<open>DG_Ctx_Activation\<close>, and fixes no domain, no solver, and
-  no CFG. \<open>cs_route\<close>/\<open>cs_context\<close> (defined below) plug into \<open>grouted_context\<close>'s
+  no CFG. \<open>cs_route\<close>/\<open>cs_context\<close> (defined below) plug into \<open>routed_context\<close>'s
   \<open>route\<close>/\<open>enterc\<close> parameters at whatever concrete instantiation a caller chooses; nothing
   here decides what that instantiation is.
 \<close>
@@ -27,11 +27,11 @@ text \<open>The equation-level route: push the call site, keep only the most rec
   the entered abstract/executable value \<open>d\<close> entirely, so it is representation-independent
   for \<^emph>\<open>any\<close> domain without a per-domain commute lemma (\<open>cs_route_indep_of_data\<close> below).\<close>
 
-definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> ('v, 'e) gcall_action \<Rightarrow> call_string" where
+definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> ('v, exp) gcall_action \<Rightarrow> call_string" where
   "cs_route k u ctx d ca = take k (u # ctx)"
 
 text \<open>The trace-semantic context function whose graph, \<open>context_policy_of_fun (cs_context k)\<close>,
-  instantiates \<open>grouted_context\<close>'s \<open>adm\<close>: same closed term as \<^const>\<open>cs_route\<close>,
+  instantiates \<open>routed_context\<close>'s \<open>adm\<close>: same closed term as \<^const>\<open>cs_route\<close>,
   over the concrete store \<open>'s\<close> the activation-trace semantics supplies instead of an
   abstract/executable \<open>'d\<close>.\<close>
 

@@ -14,7 +14,7 @@ threads are only partially ordered, so this layer does not reuse the name.
 | `Activation_Trace_Def.thy` | `activation_trace`, `valid_activation_trace`, caller and ancestor structure |
 | `Activation_Trace_Context.thy` | `key`, the context entry invariant, and `activation_collect` |
 | `Activation_Trace_Collect.thy` | `node_collect`, introduction rules, and least-fixpoint characterization |
-| `Activation_Trace_Abstract.thy` | The `gactivation_coverage` locale and its generic postfix soundness theorem |
+| `Activation_Trace_Abstract.thy` | The `activation_coverage` locale and its generic postfix soundness theorem |
 
 `activation_trace` has root, call, and resume constructors. Each trace contains its own
 activation path and links called activations to their immediate caller. Nested and recursive returns therefore resume structurally without encoding an

@@ -568,8 +568,8 @@ definition declared_globals :: "imp_prog \<Rightarrow> var_id list" where
   "declared_globals p = map GlobalId (declared_global_vars p)"
 
 lemma mcp_cs_keyed:
-  "gdg_analysis
-    eval ReturnVar (\<lambda>_. kind_conv (kenv_of ds)) (\<lambda>_. is_global) (\<lambda>_. init_stores (kenv_of ds))
+  "dg_analysis
+    (kenv_of ds) (\<lambda>_. init_stores (kenv_of ds))
     (mcp_comp sem ds (activation_of as)) (mcp_emp (activation_of as)) mcp_rd
     (mcp_init ds (activation_of as))
     Analysis_Buffer Analysis_Global Activation_Seed
@@ -579,14 +579,14 @@ lemma mcp_cs_keyed:
     \<bottom> (mcp_classify sem ds (activation_of as)) (mcp.act_gamma ds (activation_of as))
     (mcp_empty_v (activation_of as))
     (TD_side_rule_Interp_solve_c r)
-    (\<lambda>p c. gkeyed_split_spec exp_vars ReturnVar is_global (split_cmb gs) (split_rl gs)
+    (\<lambda>p c. keyed_split_spec is_global (split_cmb gs) (split_rl gs)
        split_global_at split_free c)
     (\<lambda>p d e. split_cmb gs d (full_view split_global_at gs e)) (\<lambda>\<G>. split_rl gs) (\<lambda>\<G> d. Bot)
     (\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init ds (activation_of as))))) gs)
-    (\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads exp_vars is_global (ci_args ci))
-       e (split_free (gcall_global_reads exp_vars is_global (ci_args ci)))))
+    (\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (call_global_reads is_global (ci_args ci))
+       e (split_free (call_global_reads is_global (ci_args ci)))))
     (\<lambda>p. elab_cfg p ds) (\<lambda>_. FunctionEntry prog_main_name)"
-proof (rule gdg_analysis_keyedI[OF td_certified_solver], goal_cases CompSound EnterSingle CmbMono
+proof (rule dg_analysis_keyedI[OF td_certified_solver], goal_cases CompSound EnterSingle CmbMono
     CmbRl RlCmb CmbBot RgMono RgFree Mix InitView EmptyRd EmptyV SeedNe SeedNeGlobal ClProved
     ClRefuted BotState InitSound PEntry FinIntra FinCalls CallsUnique)
   case (CompSound p)
@@ -654,8 +654,8 @@ qed
 
 text \<open>The two context policies again, with each owned global at its own unknown.\<close>
 
-global_interpretation mcp_split: gdg_analysis
-    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
+global_interpretation mcp_split: dg_analysis
+    "kenv_of ds" "\<lambda>_. init_stores (kenv_of ds)"
     "mcp_comp sem ds (activation_of as)" "mcp_emp (activation_of as)" mcp_rd
     "mcp_init ds (activation_of as)"
     Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
@@ -664,18 +664,18 @@ global_interpretation mcp_split: gdg_analysis
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify sem ds (activation_of as)" "mcp.act_gamma ds (activation_of as)"
     "mcp_empty_v (activation_of as)" "TD_side_rule_Interp_solve_c r"
-    "\<lambda>p c. gkeyed_split_spec exp_vars ReturnVar is_global (split_cmb gs) (split_rl gs)
+    "\<lambda>p c. keyed_split_spec is_global (split_cmb gs) (split_rl gs)
        split_global_at split_free c"
     "\<lambda>p d e. split_cmb gs d (full_view split_global_at gs e)" "\<lambda>\<G>. split_rl gs" "\<lambda>\<G> d. Bot"
     "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init ds (activation_of as))))) gs"
-    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads exp_vars is_global (ci_args ci))
-       e (split_free (gcall_global_reads exp_vars is_global (ci_args ci))))"
+    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (call_global_reads is_global (ci_args ci))
+       e (split_free (call_global_reads is_global (ci_args ci))))"
     "\<lambda>p. elab_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
   for sem ds as r k gs
   by (rule mcp_cs_keyed)
 
-global_interpretation mcp_split_es: gdg_analysis
-    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
+global_interpretation mcp_split_es: dg_analysis
+    "kenv_of ds" "\<lambda>_. init_stores (kenv_of ds)"
     "mcp_comp sem ds (activation_of as)" "mcp_emp (activation_of as)" mcp_rd
     "mcp_init ds (activation_of as)"
     Analysis_Buffer Analysis_Global Activation_Seed "mcp_route (activation_of as)" mcp_root_ctx
@@ -684,12 +684,12 @@ global_interpretation mcp_split_es: gdg_analysis
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify sem ds (activation_of as)" "mcp.act_gamma ds (activation_of as)"
     "mcp_empty_v (activation_of as)" "TD_side_rule_Interp_solve_c r"
-    "\<lambda>p c. gkeyed_split_spec exp_vars ReturnVar is_global (split_cmb gs) (split_rl gs)
+    "\<lambda>p c. keyed_split_spec is_global (split_cmb gs) (split_rl gs)
        split_global_at split_free c"
     "\<lambda>p d e. split_cmb gs d (full_view split_global_at gs e)" "\<lambda>\<G>. split_rl gs" "\<lambda>\<G> d. Bot"
     "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init ds (activation_of as))))) gs"
-    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads exp_vars is_global (ci_args ci))
-       e (split_free (gcall_global_reads exp_vars is_global (ci_args ci))))"
+    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (call_global_reads is_global (ci_args ci))
+       e (split_free (call_global_reads is_global (ci_args ci))))"
     "\<lambda>p. elab_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
   for sem ds as r gs
   by (rule mcp_cs_keyed)
@@ -702,17 +702,17 @@ lemma mcp_split_node_sound:
     and solves: "mcp_split.terminates sem ds as k r gs is_global p"
   shows "reaching ds p v \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of as)
            (mcp_split.state_at sem ds as k r gs is_global p ctx v))"
-  using mcp_split.gfun_route_result_node_sound
+  using mcp_split.fun_route_result_node_sound
       [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "cs_context k" v]
-  by (simp add: node_collect_def cs_route_def cs_context_def)
+  by (simp add: cs_route_def cs_context_def)
 
 lemma mcp_split_es_node_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "mcp_split_es.terminates sem ds as r gs is_global p"
   shows "reaching ds p v \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of as)
            (mcp_split_es.state_at sem ds as r gs is_global p ctx v))"
-  using mcp_split_es.gentry_state_result_node_sound
+  using mcp_split_es.entry_state_result_node_sound
       [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v]
-  by (simp add: node_collect_def)
+  by simp
 
 end

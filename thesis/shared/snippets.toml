@@ -20,7 +20,7 @@ why = "Background, Isabelle mechanisms: a type class, the solver's widening oper
 [snippets.sound_intersection]
 why = "Background, Isabelle mechanisms: a small locale with one parameter and three assumptions; Chapter 5, the domain interface figure."
 
-[snippets.gpstep]
+[snippets.pstep]
 why = "Chapter 3, source execution: every rule of the VIMP small-step semantics."
 
 [snippets.gcfg]
@@ -29,7 +29,7 @@ why = "Chapter 3, the control-flow-graph record: local edges, call edges, entry 
 [snippets.compile_proc]
 why = "Chapter 3, compilation: a procedure body between its entry node and its epilogue."
 
-[snippets.gcstep]
+[snippets.cstep]
 why = "Chapter 3, graph execution: every rule of the control-flow-graph semantics."
 
 [snippets.csim]
@@ -47,24 +47,24 @@ proof = true
 why = "The creating caller of a trace (traces chapter)."
 
 [snippets.valid_activation_trace]
-name = "trace_sem.gvalid_activation_trace"
+name = "valid_activation_trace"
 why = "The four rules of valid activation traces (traces chapter)."
 
 [snippets.node_collect]
-name = "collect_sem.gnode_collect"
+name = "node_collect"
 why = "The context-insensitive collecting semantics (traces chapter)."
 
 [snippets.activation_collect]
-name = "ctx_sem.gactivation_collect"
+name = "activation_collect"
 why = "The context-indexed collecting semantics (traces chapter)."
 
 [snippets.dg_spec]
-name = "gdg_spec"
+name = "dg_spec"
 file = "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy"
 why = "Chapter 6, the contract section: the record of operations an analysis supplies."
 
 [snippets.eval_holds]
-name = "geval_holds"
+name = "eval_holds"
 file = "src/Abstract_Interpreter/Framework/Cooperation/Analysis_Query.thy"
 why = "Chapter 7, when an answer to an EvalInt query holds at a store."
 
@@ -73,7 +73,7 @@ file = "src/Abstract_Interpreter/Framework/Cooperation/Analysis_Query.thy"
 why = "Chapter 7, a channel holds at a store when each of its answers holds there."
 
 [snippets.local_spec]
-name = "glocal_spec"
+name = "local_spec"
 file = "src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy"
 why = "Chapter 7, the local specification: every operation takes a channel as its first argument."
 
@@ -94,12 +94,12 @@ file = "vendor/td-verification/Basics_side.thy"
 why = "Chapter 8, the solver interface the equations are encoded into."
 
 [snippets.man]
-name = "gman"
+name = "man"
 file = "src/Abstract_Interpreter/Framework/Spec/DG_Manager.thy"
 why = "Chapter 6, shared facts: the manager a transfer receives, its reads, publications and queries."
 
 [snippets.man_transfer]
-name = "gman_transfer"
+name = "man_transfer"
 file = "src/Abstract_Interpreter/Framework/Spec/DG_Manager.thy"
 why = "Chapter 6, shared facts: a transfer maps a manager to a program yielding the next local value."
 
@@ -145,7 +145,7 @@ why = "Results chapter: at a node without a diagnostic, no arithmetic obligation
 why = "Main-statements appendix: the unreachability endpoint."
 
 [snippets.source_run_has_activation_trace]
-name = "bridge_sem.source_run_has_activation_trace"
+name = "compile_prog_run_has_activation_trace"
 why = "Main-statements appendix: every source run is represented by a valid trace."
 
 [snippets.csim_step]
@@ -157,8 +157,11 @@ why = "Chapter 3, adequacy: a well-formed program never gets stuck before it fin
 [snippets.csim_star]
 why = "Main-statements appendix: the compiled graph simulates every source run."
 
-[snippets.gactivation_collect_sound]
-name = "collect_sem.gactivation_collect_sound"
+[snippets.eval_elaborate]
+why = "Section 3.2: elaboration agrees with the direct reading src_eval on stores within their kinds."
+
+[snippets.activation_collect_sound]
+name = "activation_collect_sound"
 why = "Main-statements appendix: the local obligations bound the context-indexed collecting semantics."
 
 [snippets.activation_collect_dg_sound]
@@ -168,27 +171,27 @@ why = "Main-statements appendix: a solved D/G table bounds the collecting semant
 why = "Figure gallery example."
 
 [snippets.analysis_contract]
-name = "ganalysis_contract"
+name = "analysis_contract"
 why = "Chapter 6, the analysis contract."
 
 [snippets.activation_trace]
-name = "gactivation_trace"
+name = "activation_trace"
 why = "Chapter 4, the activation trace datatype."
 
 [snippets.context_policy]
-name = "gcontext_policy"
+name = "call_context_policy"
 why = "Chapter 4, the type of a call-context relation."
 
 [snippets.activation_context_rel]
-name = "gactivation_context_rel"
+name = "activation_context_rel"
 why = "Chapter 4, which contexts a trace may carry."
 
 [snippets.call_context_total_on]
-name = "gcall_context_total_on"
+name = "call_context_total_on"
 why = "Chapter 4, conditional totality of a call-context relation."
 
 [snippets.activation_coverage]
-name = "gactivation_coverage"
+name = "activation_coverage"
 why = "Chapter 4, the coverage contract: five local obligations."
 
 [snippets.return_at_caller_context_unsound]
@@ -208,14 +211,14 @@ why = "Chapter 4, under the whole contract the buckets recover the collection."
 why = "Chapter 4, the claims of all contexts contain the collection."
 
 [snippets.activation_path]
-name = "gactivation_path"
+name = "activation_path"
 why = "Chapter 4, an activation path: a list of node-store pairs."
 
 [snippets.stack_repr]
 why = "Chapter 4, a frame stack matches a trace caller chain."
 
 [snippets.activation_trace_repr]
-name = "gactivation_trace_repr"
+name = "activation_trace_repr"
 why = "Chapter 4, a valid trace represents a graph configuration."
 
 [snippets.cstep_preserves_activation_trace_repr]
@@ -276,7 +279,7 @@ why = "Chapter 5, the inverse operators and their soundness laws, a parent of so
 why = "Chapter 5, the truth test every expression-level interface of a domain shares."
 
 [snippets.sound_local_spec]
-name = "gsound_local_spec"
+name = "sound_local_spec"
 why = "Chapter 7, the obligation of one cooperating analysis, stated against every sound channel."
 
 [snippets.ls_channel_sound]

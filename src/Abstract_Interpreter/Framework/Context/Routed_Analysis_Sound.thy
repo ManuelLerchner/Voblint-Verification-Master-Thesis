@@ -44,8 +44,8 @@ text \<open>
   The reader returns only the local half. The global half enters through the
   concretization the locale below pairs with it, which publishes each local
   value together with the solved global at \<open>Inr buffer_key\<close>. Under that
-  pairing the two coverage obligations \<^locale>\<open>gdg_context_activation\<close> asks for
-  hold by construction, given \<open>ggammaDG_rd\<close> and that the publication map takes
+  pairing the two coverage obligations \<^locale>\<open>dg_context_activation\<close> asks for
+  hold by construction, given \<open>gammaDG_rd\<close> and that the publication map takes
   \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the context policy,
   so no instance need prove them again.
 \<close>
@@ -65,28 +65,27 @@ text \<open>
   check report's proved/refuted verdicts.
 \<close>
 
-locale grouted_analysis =
-  gdg_analysis_adapter ev rv conv glob S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma
+locale routed_analysis =
+  dg_analysis_adapter \<kappa> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma
     vars x0 "solved_local_reader vars sigma" seed is_bot
     "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
     adm rd \<gamma>\<^sub>V empty\<^sub>V classify
-  for ev :: "'e::linorder \<Rightarrow> ('vr::linorder \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
-    and conv :: "'vr option \<Rightarrow> int \<Rightarrow> int" and glob :: "'vr \<Rightarrow> bool"
-    and S :: "('vr, 'e, pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) gdg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> ('vr \<Rightarrow> int) set"
+  for \<kappa> :: kenv
+    and S ::
+      "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
     and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c"
     and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
-    and adm :: "('vr, 'e, 'c) gcontext_policy"
+    and adm :: "'c call_context_policy"
     and rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
-    and \<gamma>\<^sub>V :: "'v \<Rightarrow> ('vr \<Rightarrow> int) set"
+    and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
-    and classify :: "'e \<Rightarrow> 'v \<Rightarrow> check_result"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
 
 end

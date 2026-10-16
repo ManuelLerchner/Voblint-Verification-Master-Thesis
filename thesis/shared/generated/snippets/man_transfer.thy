@@ -1,3 +1,3 @@
 (* src/Abstract_Interpreter/Framework/Spec/DG_Manager.thy *)
-type_synonym ('e,'x,'k,'v,'dl,'dg) gman_transfer =
-  "('e,'x,'k,'v,'dl,'dg) gman \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
+  "('x, 'k, 'v, 'dl, 'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"

@@ -393,6 +393,26 @@
       "placement": "flow-sensitive"
     }
   },
+  "elab-tour": {
+    "fixture": "thesis/shared/programs/elab-tour.vimp",
+    "program": "fun u16 f(u8 n) {\n  return n + 1;\n}\n\nfun main() {\n  u8 x = 200;\n  u8 z = x + 100;\n  i32 s = -1;\n  u32 u = 1;\n  i32 b = s < u;\n  u16 r = f(x);\n  __voblint_check(b == 0);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "elab-tour-dot": {
+    "fixture": "thesis/shared/programs/elab-tour.vimp",
+    "program": "fun u16 f(u8 n) {\n  return n + 1;\n}\n\nfun main() {\n  u8 x = 200;\n  u8 z = x + 100;\n  i32 s = -1;\n  u32 u = 1;\n  i32 b = s < u;\n  u16 r = f(x);\n  __voblint_check(b == 0);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "flavors-blackcurrant": {
     "fixture": "tests/regression/28-flavors/known-imprecision/04-blackcurrant_narrowing_foiled.vimp",
     "program": "fun main() {\n  i32 i = 0;\n  i32 c;\n  while (1) {\n    c = __voblint_nondet_int();\n    if (c) {\n      i = i + 1;\n      if (i >= 10) {\n        i = 0;\n      }\n    }\n    __voblint_check(i <= 9);\n  }\n}",

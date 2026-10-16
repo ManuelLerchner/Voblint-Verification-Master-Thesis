@@ -55,14 +55,14 @@ qed simp
 
 lemma in_kinds_call_enter:
   assumes t: "in_kinds \<kappa> t"
-  shows "in_kinds \<kappa> (vimp.gcall_enter \<kappa> (CallEdge dst pars es) t)"
+  shows "in_kinds \<kappa> (call_enter \<kappa> (CallEdge dst pars es) t)"
 proof -
   have "n \<in> ik_range (\<kappa> x)"
     if "(x, n) \<in> set (zip pars (map2 (\<lambda>x. kind_conv \<kappa> (Some x)) pars (map (\<lambda>e. eval e t) es)))"
     for x n
-    using that by (auto simp: zip_map2_self)
+    using that by (auto simp: zip_map2_self kind_conv_simps)
   then show ?thesis
-    unfolding vimp.call_enter_CallEdge
+    unfolding call_enter_CallEdge
     by (rule in_kinds_bind_formals[OF in_kinds_enter_state[OF t]])
 qed
 
@@ -74,13 +74,15 @@ lemma valid_activation_trace_callers_in_kinds:
     and t: "t \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
   shows "in_kinds \<kappa> (sink_store t) \<and> (\<forall>c \<in> ancestors t. in_kinds \<kappa> (sink_store c))"
   using t
-proof (induction t rule: vimp.gvalid_activation_trace.induct)
+proof (induction t rule: valid_activation_trace.induct)
   case (root s)
   then show ?case by (simp add: S)
 next
   case (intra t a v s')
   then show ?case
-    by (cases a) (auto simp: in_kinds_def split: option.splits if_splits simp del: ik_range_iff)
+    by (cases a)
+      (auto simp: in_kinds_def kind_conv_simps split: option.splits if_splits simp del:
+        ik_range_iff)
 next
   case (call caller dst pars args p cont)
   then show ?case by (simp add: in_kinds_call_enter)
@@ -90,9 +92,9 @@ next
   have "in_kinds \<kappa> (sink_store caller)" "\<forall>c \<in> ancestors caller. in_kinds \<kappa> (sink_store c)"
     and callee: "in_kinds \<kappa> (sink_store callee)"
     by auto
-  moreover have "in_kinds \<kappa> (vimp.gcombine_collect \<kappa> dst (sink_store caller) (sink_store callee))"
+  moreover have "in_kinds \<kappa> (combine_collect \<kappa> dst (sink_store caller) (sink_store callee))"
     using calculation
-    by (cases dst) (auto simp: vimp.gcombine_collect_def in_kinds_combine_env)
+    by (cases dst) (auto simp: combine_collect_def in_kinds_combine_env kind_conv_simps)
   ultimately show ?case by (simp add: sink_store_def)
 qed
 
@@ -107,7 +109,7 @@ theorem node_collect_in_kinds:
     and "s \<in> \<C>\<^bsub>\<kappa>,g,S\<^esub> v"
   shows "in_kinds \<kappa> s"
   using assms(3) valid_activation_trace_in_kinds [OF assms(1,2)]
-  by (auto simp: vimp.gnode_collect_def)
+  by (auto simp: node_collect_def)
 
 subsection \<open>The typed graph has typed calls\<close>
 

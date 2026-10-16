@@ -5,7 +5,7 @@ begin
 section \<open>What a manager-native specification owes a concretization\<close>
 
 text \<open>
-  Soundness of a manager-native \<open>gdg_spec\<close> relates its returned local value
+  Soundness of a manager-native \<open>dg_spec\<close> relates its returned local value
   to an environment of analysis-visible globals. The manager maps each global
   name to a solver key; \<open>genv\<close> reads the global component at those keys.
 
@@ -79,8 +79,8 @@ text \<open>
 \<close>
 
 definition enter_runs ::
-  "('e,'x,'k,'v,'D::bounded_semilattice_sup_bot,'G::bounded_semilattice_sup_bot) gman_enter_transfer
-   \<Rightarrow> ('e,'x,'k,'v,'D,'G) gman \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
+  "('x, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) man_enter_transfer
+   \<Rightarrow> ('x, 'k, 'v, 'D, 'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
    \<Rightarrow> 'D enter_result list \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state) \<Rightarrow> bool"
 where
   "enter_runs T m sigma pairs pub \<longleftrightarrow>
@@ -144,8 +144,8 @@ text \<open>
 \<close>
 
 definition enter_deps ::
-  "('e,'x,'k,'v,'D::bounded_semilattice_sup_bot,'G::bounded_semilattice_sup_bot) gman_enter_transfer
-   \<Rightarrow> ('e,'x,'k,'v,'D,'G) gman \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
+  "('x, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) man_enter_transfer
+   \<Rightarrow> ('x, 'k, 'v, 'D, 'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
    \<Rightarrow> 'D enter_result list \<Rightarrow> ('x + 'k) set \<Rightarrow> bool"
 where
   "enter_deps T m sigma pairs deps \<longleftrightarrow>
@@ -175,9 +175,9 @@ text \<open>
   the solved system actually selects --- a property this locale alone cannot
   state, since it never mentions how a call compiles.
 
-  So \<open>ganalysis_contract\<close> is the entry-independent part and not a complete soundness
+  So \<open>analysis_contract\<close> is the entry-independent part and not a complete soundness
   statement: interpreting it alone leaves a call's entry entirely unconstrained.
-  \<open>grouted_context\<close> (\<open>Routed_Context\<close>, downstream in this session) is
+  \<open>routed_context\<close> (\<open>Routed_Context\<close>, downstream in this session) is
   the complete statement, extending this contract with that entry obligation for
   the routed equation shape, and is what an analysis should be asked to
   establish.
@@ -201,7 +201,7 @@ text \<open>
 
   Both levels earn their place, which is why there are two of them.
   \<open>combine_transfer_program\<close> is used at an arbitrary
-  \<^type>\<open>gman_combine_transfer\<close>, while
+  \<^type>\<open>man_combine_transfer\<close>, while
   \<open>dg_spec_combine_program\<close> is used at a selected specification, by
   \<open>combine_sound_program\<close> below, which restates the return obligation at
   two \<^emph>\<open>solver addresses\<close>. That is what the value form cannot express: a
@@ -211,7 +211,7 @@ text \<open>
 \<close>
 
 definition combine_program_at ::
-  "('e,'x,'k,'v,'dl,'dg) gman_combine_transfer
+  "('x, 'k, 'v, 'dl, 'dg) man_combine_transfer
    \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
 where
@@ -223,14 +223,14 @@ where
      }"
 
 definition combine_transfer_program ::
-  "('e,'x,'k,'v,'dl::bot,'dg::bot) gman_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('x, 'k, 'v, 'dl::bot, 'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
   "combine_transfer_program T src_cc src_ex unknown_of =
      sp_map (\<lambda>d. DG d \<bottom>) (combine_program_at T src_cc src_ex unknown_of)"
 
 definition dg_spec_combine_program ::
-  "('vr,'e,'x,'k,'v,'dl::bot,'dg::bot) gdg_spec \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('x, 'k, 'v, 'dl::bot, 'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
   "dg_spec_combine_program S ci src_cc src_ex unknown_of =
@@ -333,21 +333,20 @@ text \<open>The contract a specification signs: its concretization is monotone, 
   describe the result against that environment joined with what the program publishes:
   a global the step does not write is still what was read, so a step owes no
   publication for it.\<close>
-locale ganalysis_contract = cfg_transfer_sem ev rv conv glob
-  for ev :: "'e \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
-    and conv :: "'vr option \<Rightarrow> int \<Rightarrow> int" and glob :: "'vr \<Rightarrow> bool" +
-  fixes S :: "('vr,'e,'x,'k,'v,'D::bounded_semilattice_sup_bot,
-                'G::bounded_semilattice_sup_bot) gdg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> ('vr \<Rightarrow> int) set"
-  assumes gspec_wf: "dg_spec_wf S"
-    and ggammaDG_mono:
+locale analysis_contract =
+  fixes \<kappa> :: kenv
+    and S ::
+      "('x, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
+  assumes spec_wf: "dg_spec_wf S"
+    and gammaDG_mono:
       "\<lbrakk>d \<le> d'; e \<le> e'\<rbrakk> \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d e \<subseteq> \<gamma>\<^sub>D\<^sub>G d' e'"
-    and gstep_sound:
-      "gedge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
+    and step_sound:
+      "edge_collect \<kappa> a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
          \<subseteq> \<gamma>\<^sub>D\<^sub>G (edge_out S a src key \<tau>) (genv key \<tau> \<squnion> edge_pub S a src key \<tau>)"
-    and gcombine_sound:
+    and combine_sound:
       "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G q (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G r (genv key \<tau>)\<rbrakk> \<Longrightarrow>
-        gcombine_collect (ci_dst ci) s t
+        combine_collect \<kappa> (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key q r \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key q r \<tau>)"
 
 text \<open>
@@ -359,13 +358,13 @@ text \<open>
   lost for a generator that reads both sides from unknowns.
 \<close>
 
-lemma (in ganalysis_contract) combine_sound_program:
+lemma (in analysis_contract) combine_sound_program:
   assumes sc: "s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src_cc)) (genv key \<tau>)"
     and se: "t \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src_ex)) (genv key \<tau>)"
-  shows "gcombine_collect (ci_dst ci) s t
+  shows "combine_collect \<kappa> (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_program (dg_spec_combine_program S ci src_cc src_ex key) \<tau>))
               (genv key \<tau> \<squnion> genv key (sides_of_program (dg_spec_combine_program S ci src_cc src_ex key) \<tau>))"
-  using gcombine_sound[where q = "dg_local (\<tau> src_cc)" and r = "dg_local (\<tau> src_ex)"
+  using combine_sound[where q = "dg_local (\<tau> src_cc)" and r = "dg_local (\<tau> src_ex)"
       and \<tau> = \<tau> and key = key and ci = ci, OF sc se]
   by (simp add: dg_spec_combine_program_def traverse_combine_transfer_program
       sides_combine_transfer_program)

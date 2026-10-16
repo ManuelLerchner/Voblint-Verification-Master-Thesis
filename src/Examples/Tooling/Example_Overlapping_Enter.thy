@@ -58,7 +58,7 @@ abbreviation p_result :: cfg_node where "p_result \<equiv> FunctionResult (STR '
 abbreviation ov_ca :: "(var_id, exp) gcall_action" where
   "ov_ca \<equiv> CallEdge (Some y_id) [a_id] [TVar I32 x_id]"
 
-abbreviation ov_ci :: "(var_id, exp) gcall_info" where
+abbreviation ov_ci :: "call_info" where
   "ov_ci \<equiv> call_info_of ov_ca (STR ''p'')"
 
 text \<open>Node layout, computed rather than assumed: \<open>main\<close> assigns at \<open>Statement 2\<close>,
@@ -90,22 +90,23 @@ text \<open>The stock alternatives, followed by each with \<open>x\<close> forgo
   the formals forgotten in the entry.\<close>
 
 definition ov_enter ::
-  "sem_conf \<Rightarrow> kenv \<Rightarrow> exp gchannel \<Rightarrow> (var_id, exp) gcall_info
+  "sem_conf \<Rightarrow> kenv \<Rightarrow> channel \<Rightarrow> call_info
    \<Rightarrow> 'a::kind_int_domain tst lifted \<times> 'a tst lifted \<Rightarrow> ('a tst lifted \<times> 'a tst lifted) list" where
   "ov_enter sem \<kappa> ch ci p =
      (let alts = ls_enter (nonrel_exec_spec sem \<kappa>) ch ci p
       in alts @ map (\<lambda>(c, e). (forget_vars [x_id] c, forget_vars (ci_formals ci) e)) alts)"
 
-definition ov_comp :: "(var_id, exp, ivl tst lifted) glocal_spec" where
+definition ov_comp :: "ivl tst lifted local_spec" where
   "ov_comp = (nonrel_exec_spec default_sem_conf ov_kenv)\<lparr>ls_enter := ov_enter default_sem_conf ov_kenv\<rparr>"
 
-definition ov_spec :: "(var_id, exp, pp \<times> ivl kd list, (unit, ivl kd list) global_unknown, unit,
-    ivl tst lifted, ivl tst lifted) gdg_spec" where
+definition ov_spec ::
+  "(pp \<times> ivl kd list, (unit, ivl kd list) global_unknown, unit, ivl tst lifted, ivl tst lifted) dg_spec"
+    where
   "ov_spec = dg_spec_of ov_comp"
 
 text \<open>The alternatives the specification's entry answers at a caller state.\<close>
 
-definition ov_alts :: "(var_id, exp) gcall_info \<Rightarrow> ivl tst lifted
+definition ov_alts :: "call_info \<Rightarrow> ivl tst lifted
     \<Rightarrow> (ivl tst lifted \<times> ivl tst lifted) list" where
   "ov_alts ci d = ls_enter ov_comp (ls_channel ov_comp d) ci (d, d)"
 
@@ -125,26 +126,26 @@ text \<open>The stock alternatives are among the override's, so the entry law ca
   every other field is the stock component's.\<close>
 
 lemma ov_enter_sound:
-  "mcp_sem.gsound_enter eval (kind_conv \<kappa>) is_global (gamma_exec \<kappa>)
+  "sound_enter \<kappa> (gamma_exec \<kappa>)
      (ov_enter sem \<kappa> :: _ \<Rightarrow> _ \<Rightarrow> 'a::kind_int_domain tst lifted \<times> _ \<Rightarrow> _)"
 proof -
-  note stock = mcp_sem.sound_local_spec_enterD[OF nonrel_exec_spec_sound[of \<kappa> sem, where 'a = 'a]]
+  note stock = sound_local_spec_enterD[OF nonrel_exec_spec_sound[of \<kappa> sem, where 'a = 'a]]
   have sub: "\<And>ch ci p. set (ls_enter (nonrel_exec_spec sem \<kappa>) ch ci p)
       \<subseteq> set (ov_enter sem \<kappa> ch ci (p :: 'a tst lifted \<times> 'a tst lifted))"
     by (auto simp: ov_enter_def Let_def)
   show ?thesis
-    using stock sub unfolding mcp_sem.gsound_enter_def by blast
+    using stock sub unfolding sound_enter_def by blast
 qed
 
 lemma ov_comp_sound:
-  "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv ov_kenv) is_global (gamma_exec ov_kenv) ov_comp"
+  "sound_local_spec ov_kenv (gamma_exec ov_kenv) ov_comp"
   unfolding ov_comp_def
-  by (rule mcp_sem.sound_local_spec_update_enter[OF nonrel_exec_spec_sound ov_enter_sound])
+  by (rule sound_local_spec_update_enter[OF nonrel_exec_spec_sound ov_enter_sound])
 
 lemma analysis_contract_ov_spec:
-  "ganalysis_contract eval ReturnVar (kind_conv ov_kenv) is_global ov_spec
+  "analysis_contract ov_kenv ov_spec
      (\<lambda>d _. gamma_exec ov_kenv d)"
-  unfolding ov_spec_def by (rule mcp_sem.dg_spec_of_contract[OF ov_comp_sound])
+  unfolding ov_spec_def by (rule dg_spec_of_contract[OF ov_comp_sound])
 
 subsection \<open>The routed equation system, solved\<close>
 
@@ -336,12 +337,12 @@ text \<open>
   store in its entry, and routes to that context.
 \<close>
 
-abbreviation ov_R :: "(var_id, exp, ivl kd list) gcontext_policy" where
+abbreviation ov_R :: "(ivl kd list) call_context_policy" where
   "ov_R \<equiv> routed_entry_context_rel ov_alts (\<lambda>d _. gamma_exec ov_kenv d) (snd ov_sol)
             Analysis_Global ov_route"
 
 abbreviation ov_call_enter :: "store \<Rightarrow> store" where
-  "ov_call_enter \<equiv> vimp.gcall_enter ov_kenv ov_ca"
+  "ov_call_enter \<equiv> call_enter ov_kenv ov_ca"
 
 text \<open>The concrete caller store at the call site: \<open>x = 1\<close>, everything else \<open>0\<close>.\<close>
 
@@ -386,10 +387,10 @@ lemma ov_routes:
 lemma ov_entry1_covered:
   "ov_call_enter ov_caller_store \<in> gamma_exec ov_kenv ov_entry1"
 proof -
-  have ch: "geval_query.channel_holds eval (ls_channel ov_comp ov_caller) ov_caller_store"
-    by (rule mcp_sem.ls_channel_sound[OF ov_comp_sound ov_caller_store_covered])
-  note law = mcp_sem.sound_local_spec_enterD[OF nonrel_exec_spec_sound[of ov_kenv default_sem_conf,
-      where 'a = ivl], unfolded mcp_sem.gsound_enter_def, rule_format]
+  have ch: "eval_query.channel_holds (ls_channel ov_comp ov_caller) ov_caller_store"
+    by (rule ls_channel_sound[OF ov_comp_sound ov_caller_store_covered])
+  note law = sound_local_spec_enterD[OF nonrel_exec_spec_sound[of ov_kenv default_sem_conf,
+      where 'a = ivl], unfolded sound_enter_def, rule_format]
   from law[where s = ov_caller_store and p = "(ov_caller, ov_caller)"
       and ch = "ls_channel ov_comp ov_caller" and ci = ov_ci] ov_caller_store_covered ch
   show ?thesis by (simp add: nonrel_exec_spec_def ov_entry1_def)
@@ -475,14 +476,14 @@ text \<open>Adequacy, totality and return forwarding: every alternative the rela
   is one the entry ran, its context is solved, and the stock alternative covers every
   covered caller.\<close>
 
-interpretation ov_routed: grouted_context eval ReturnVar "kind_conv ov_kenv" is_global ov_spec
+interpretation ov_routed: routed_context ov_kenv ov_spec
   "\<lambda>d _. gamma_exec ov_kenv d" ov_cfg "Analysis_Global ()" Analysis_Global ov_route
   Bot "Lifted (nonrel_init_st [])" Bot "snd ov_sol" "fst ov_sol" "(cfg_exit ov_cfg, [])"
   "solved_local_reader (fst ov_sol) (snd ov_sol)" Activation_Seed "static_resolve ov_cfg"
   "\<lambda>d. d = Bot" "gamma_exec ov_kenv" ov_R
-proof (rule grouted_context.intro, goal_cases Act Base Ax)
+proof (rule routed_context.intro, goal_cases Act Base Ax)
   case Act
-  show ?case by (rule gdg_context_activation.intro[OF analysis_contract_ov_spec ov_dg_base])
+  show ?case by (rule dg_context_activation.intro[OF analysis_contract_ov_spec ov_dg_base])
 next
   case Base
   show ?case
@@ -513,7 +514,7 @@ next
     let ?d = "dg_local (snd ov_sol (Inl (u, ctx)))"
     obtain cont' entry where mem: "(cont', entry) \<in> set (ov_alts ?ci ?d)"
         and ccov: "s \<in> gamma_exec ov_kenv cont'"
-        and ecov: "vimp.gcall_enter ov_kenv (CallEdge dst pars args) s \<in> gamma_exec ov_kenv entry"
+        and ecov: "call_enter ov_kenv (CallEdge dst pars args) s \<in> gamma_exec ov_kenv entry"
         and req: "ctx' = ov_route u ctx entry (CallEdge dst pars args)"
       using Adequate(4) unfolding routed_entry_context_rel_def by auto
     have edge: "u = Statement 3" "CallEdge dst pars args = ov_ca" "p = STR ''p''"
@@ -529,12 +530,12 @@ next
     case (Total u ctx dst pars args p cont s)
     let ?ci = "call_info_of (CallEdge dst pars args) p"
     let ?d = "dg_local (snd ov_sol (Inl (u, ctx)))"
-    have ch: "geval_query.channel_holds eval (ls_channel ov_comp ?d) s"
-      by (rule mcp_sem.ls_channel_sound[OF ov_comp_sound Total(3)])
-    note law = mcp_sem.sound_local_spec_enterD[OF ov_comp_sound,
-        unfolded mcp_sem.gsound_enter_def, rule_format]
+    have ch: "eval_query.channel_holds (ls_channel ov_comp ?d) s"
+      by (rule ls_channel_sound[OF ov_comp_sound Total(3)])
+    note law = sound_local_spec_enterD[OF ov_comp_sound,
+        unfolded sound_enter_def, rule_format]
     have "entry_pairs_cover (gamma_exec ov_kenv) s
-        (vimp.gcall_enter ov_kenv (CallEdge dst pars args) s) (ov_alts ?ci ?d)"
+        (call_enter ov_kenv (CallEdge dst pars args) s) (ov_alts ?ci ?d)"
       using law[where s = s and p = "(?d, ?d)" and ch = "ls_channel ov_comp ?d" and ci = ?ci]
         Total(3) ch
       unfolding entry_pairs_cover_def ov_alts_def by fastforce
@@ -551,7 +552,6 @@ text \<open>The payoff of the interpretation: every store the activation-indexed
 lemma ov_activation_collect_sound:
   "\<A>\<^bsub>ov_kenv,ov_R,[],ov_cfg,init_stores ov_kenv\<^esub> v c
    \<subseteq> gamma_exec ov_kenv (solved_local_reader (fst ov_sol) (snd ov_sol) (Inl (v, c)))"
-  unfolding activation_collect_def
 proof (rule ov_routed.activation_collect_dg_sound)
   show "(cfg_entry ov_cfg, []) \<in> fst ov_sol" by (rule ov_entry_solved)
   show "init_stores ov_kenv \<subseteq> gamma_exec ov_kenv (Lifted (nonrel_init_st []))"
@@ -568,15 +568,15 @@ lemma ov_empty_pairs_never_cover:
   "\<not> entry_pairs_cover (gamma_exec ov_kenv) ov_caller_store (ov_call_enter ov_caller_store) []"
   by simp
 
-definition ov_empty_comp :: "(var_id, exp, ivl tst lifted) glocal_spec" where
+definition ov_empty_comp :: "ivl tst lifted local_spec" where
   "ov_empty_comp = (nonrel_exec_spec default_sem_conf ov_kenv)\<lparr>ls_enter := (\<lambda>ch ci p. [])\<rparr>"
 
 lemma ov_empty_enter_unsound:
-  "\<not> mcp_sem.gsound_enter eval (kind_conv ov_kenv) is_global (gamma_exec ov_kenv)
+  "\<not> sound_enter ov_kenv (gamma_exec ov_kenv)
        (ls_enter ov_empty_comp)"
-  unfolding mcp_sem.gsound_enter_def ov_empty_comp_def
+  unfolding sound_enter_def ov_empty_comp_def
   using ov_caller_store_covered
-    mcp_sem.ls_channel_sound[OF ov_comp_sound ov_caller_store_covered]
+    ls_channel_sound[OF ov_comp_sound ov_caller_store_covered]
   by fastforce
 
 text \<open>What the missing obligation would let through. With the entry answering \<open>[]\<close>, the

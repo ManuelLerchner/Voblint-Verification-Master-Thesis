@@ -29,7 +29,7 @@ shared D/G pipeline, the report, and the public theorems about `run_voblint`.
 | --- | --- |
 | `Analysis_Config.thy` | `analysis`, `context_policy`, `program_globals`, `voblint_conf`, and `reaching ds p v`: the stores that reach a node of `elab_cfg p ds` from `init_stores`, which every public theorem is stated over |
 | `MCP_Carrier.thy` | the combined state `mcp_st` and its fields, each analysis on its own field (`field`, `val_gamma`, `answer`), and the `mcp` interpretation of `mcp_registry` over core VIMP |
-| `MCP.thy` | `activation_of`, the initial state `mcp_init`, and the pipeline instances `mcp_cs` (call-string contexts) and `mcp_es` (entry-state contexts) of `gdg_analysis`, with `mcp_cs_verdict_sound` and `mcp_es_verdict_sound` |
+| `MCP.thy` | `activation_of`, the initial state `mcp_init`, and the pipeline instances `mcp_cs` (call-string contexts) and `mcp_es` (entry-state contexts) of `dg_analysis`, with `mcp_cs_verdict_sound` and `mcp_es_verdict_sound` |
 | `Dispatch_Carrier.thy` | each domain's injective ordering key for listing contexts, and how a field's state is shown |
 | `MCP_Split.thy` | the carrier laws that let the combined state split by global name, field by field, and the flow-insensitive instances `mcp_split` and `mcp_split_es` |
 | `Arithmetic_Diagnostics.thy` | arithmetic obligations and structured diagnostics, independent of the language |

@@ -30,7 +30,7 @@ the folder tree and the session graph are the same thing. `ROOTS` lists them all
 | [`Program_Model/VIMP/`](Program_Model/VIMP/) | `Voblint_VIMP` | the whole language: machine kinds, surface syntax, elaboration to core VIMP, evaluation `eval`, conversion `kind_conv`, the generic step rules and the canonical `pstep` |
 | [`Abstract_Interpreter/Domain/`](Abstract_Interpreter/Domain/) | `Voblint_Domain` | what an abstract value and an abstract state are: sound-domain classes, concretization, the dead-code lift, pointwise states, the integer value lattices |
 | [`Abstract_Interpreter/Solver/`](Abstract_Interpreter/Solver/) | `Voblint_Solver` | the strategy-tree equation language of the vendored solver, its monotonicity and post-solution vocabulary. Never sees a CFG. |
-| [`Program_Model/CFG/`](Program_Model/CFG/) | `Voblint_CFG` | the graph model, its generic semantics and the canonical instances `cstep`, `valid_activation_trace`, `activation_collect`, `node_collect` — what a soundness claim is stated *about*. Never mentions the compiler. |
+| [`Program_Model/CFG/`](Program_Model/CFG/) | `Voblint_CFG` | the graph model and its semantics `cstep`, `valid_activation_trace`, `activation_collect`, `node_collect` — what a soundness claim is stated *about*. Never mentions the compiler. |
 | [`Program_Model/Compile/`](Program_Model/Compile/) | `Voblint_Compile` | the compiler (`elab_cfg`), its structural invariants, forward simulation, and the bridge from a source run to a valid activation trace |
 | [`Abstract_Interpreter/Framework/`](Abstract_Interpreter/Framework/) | `Voblint_Framework` | the D/G analysis framework: transfer contract, equation generator, cooperation of analyses, collecting soundness for an arbitrary CFG. No domain, no compiler. |
 | [`Abstract_Interpreter/Exec/`](Abstract_Interpreter/Exec/) | `Voblint_Exec` | the executable carrier, and transport from the solver's association lists to the function-valued states soundness is stated over |
@@ -57,8 +57,8 @@ TD   ---> Solver -------^                                                       
 
 The source-level endpoints sit *below* the analysis family, not after it:
 `Voblint_Result` holds the domain-free source bridge (`Source_Activation_Sound`)
-and the routed endpoints (`gfun_route_result_node_sound`,
-`gentry_state_activation_collect_sound_of_terminates` in `DG_Live_Unknowns`) every
+and the routed endpoints (`fun_route_result_node_sound`,
+`entry_state_activation_collect_sound_of_terminates` in `DG_Live_Unknowns`) every
 pipeline instance reads, so each inherits them from an ancestor heap rather than
 re-deriving them.
 
@@ -70,7 +70,7 @@ and the publication surface with the source-level endpoints.
 [`Analyses/Nonrelational/`](Analyses/Nonrelational/) (`Voblint_Nonrelational`) is the
 kind-aware non-relational pipeline: abstract states `var_id ⇒ 'a kd` over any
 kind-aware integer domain, the transfer (`nonrel_spec`), its executable carrier
-(`nonrel_exec_spec`) and the instances `nonrel` and `nonrel_es` of `gdg_analysis`.
+(`nonrel_exec_spec`) and the instances `nonrel` and `nonrel_es` of `dg_analysis`.
 It is the parent of [`Sign/`](Analyses/Sign/), [`Interval/`](Analyses/Interval/),
 [`Parity/`](Analyses/Parity/), [`Congruence/`](Analyses/Congruence/),
 [`Int/`](Analyses/Int/) and [`Analyses/Order/`](Analyses/Order/)

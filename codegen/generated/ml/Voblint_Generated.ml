@@ -3299,6 +3299,12 @@ let rec equal_src_expa
 
 let equal_src_exp = ({equal = equal_src_expa} : src_exp equal);;
 
+type query = EvalInt of exp;;
+
+let rec equal_querya (EvalInt x) (EvalInt ya) = equal_expa x ya;;
+
+let equal_query = ({equal = equal_querya} : query equal);;
+
 let rec equal_option _A x0 x1 = match x0, x1 with None, Some x2 -> false
                           | Some x2, None -> false
                           | Some x2, Some y2 -> eq _A x2 y2
@@ -4065,12 +4071,6 @@ let kind_int_domain_ivl =
      raw_aop_ik = raw_aop_ik_ivl; fits_ik = fits_ik_ivl;
      answer_ik = answer_ik_ivl; of_answer_ik = of_answer_ik_ivl}
     : ivl kind_int_domain);;
-
-type 'a gquery = EvalInt of 'a;;
-
-let rec equal_gquerya _A (EvalInt x) (EvalInt ya) = eq _A x ya;;
-
-let rec equal_gquery _A = ({equal = equal_gquerya _A} : 'a gquery equal);;
 
 let rec equal_paritya x0 x1 = match x0, x1 with POdd, PTop -> false
                         | PTop, POdd -> false
@@ -6094,7 +6094,26 @@ type ('a, 'b, 'c) gcfg_ext =
 
 type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c;;
 
-type 'a ganalysis_event = Check_Event of (nat * nat) * 'a;;
+type ('a, 'b, 'c) strategy_tree = Answer of 'c |
+  QueryL of 'a * ('c -> ('a, 'b, 'c) strategy_tree) |
+  QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
+  Side of 'b * 'c * ('a, 'b, 'c) strategy_tree;;
+
+type ('a, 'b, 'c, 'd, 'e, 'f) man_ext =
+  Man_ext of
+    'd * ('c ->
+           ('e -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+             ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      ('c ->
+        'e -> (unit -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+                ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (query ->
+        (unit int_dom_ext query_lift ->
+          ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+          ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      'f;;
+
+type analysis_event = Check_Event of (nat * nat) * exp;;
 
 type report_value = Interval_Value of ivl kd | Congruence_Value of congruence kd
   | Int_Value of unit int_tuple kd | Sign_Value of sign kd |
@@ -6104,25 +6123,6 @@ type ('a, 'b, 'c, 'd) state_ext =
   State_ext of
     'a set * (('a, 'b) sum, ('a list)) fmap * 'a set * (('a, 'b) sum -> 'c) *
       'd;;
-
-type ('a, 'b, 'c) strategy_tree = Answer of 'c |
-  QueryL of 'a * ('c -> ('a, 'b, 'c) strategy_tree) |
-  QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
-  Side of 'b * 'c * ('a, 'b, 'c) strategy_tree;;
-
-type ('a, 'b, 'c, 'd, 'e, 'f, 'g) gman_ext =
-  Gman_ext of
-    'e * ('d ->
-           ('f -> ('b, 'c, ('e, 'f) dg_state) strategy_tree) ->
-             ('b, 'c, ('e, 'f) dg_state) strategy_tree) *
-      ('d ->
-        'f -> (unit -> ('b, 'c, ('e, 'f) dg_state) strategy_tree) ->
-                ('b, 'c, ('e, 'f) dg_state) strategy_tree) *
-      ('a gquery ->
-        (unit int_dom_ext query_lift ->
-          ('b, 'c, ('e, 'f) dg_state) strategy_tree) ->
-          ('b, 'c, ('e, 'f) dg_state) strategy_tree) *
-      'g;;
 
 type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
   Context_Call_String of cfg_node list;;
@@ -6159,6 +6159,61 @@ type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 type 'a report_context = Report_Unit | Report_Entry of 'a |
   Report_Call_String of cfg_node list;;
 
+type 'a call_info_ext =
+  Call_info_ext of var_id option * string * var_id list * exp list * 'a;;
+
+type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
+  Dg_spec_ext of
+    (('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+      ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+        ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (var_id ->
+        exp ->
+          ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+            ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+              ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (exp gspecial_call ->
+        var_id ->
+          ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+            ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+              ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (exp ->
+        bool ->
+          ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+            ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+              ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (string ->
+        ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+          ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+            ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (exp option ->
+        string ->
+          ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+            ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+              ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (unit call_info_ext ->
+        ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+          (('d * 'd) list -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+            ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (analysis_event ->
+        ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+          ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+            ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (unit call_info_ext ->
+        ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+          'd -> ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+                  ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (unit call_info_ext ->
+        ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+          'd -> ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+                  ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      (('a, 'b, 'c, 'd, 'e, unit) man_ext ->
+        query ->
+          (unit int_dom_ext query_lift ->
+            ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
+            ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
+      'f;;
+
 type 'a unknown_node = Local_Node of cfg_node * nat | Global_Node of 'a;;
 
 type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
@@ -6167,59 +6222,6 @@ type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
 type ('a, 'b) analysis_edge = Intra_Dep of ('a, 'b) gedge_action |
   Enter_Dep of ('a, 'b) gcall_action | Combine_Dep of ('a, 'b) gcall_action |
   Continue_Dep of ('a, 'b) gcall_action | Global_Read | Global_Write;;
-
-type ('a, 'b, 'c) gcall_info_ext =
-  Gcall_info_ext of 'a option * string * 'a list * 'b list * 'c;;
-
-type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) gdg_spec_ext =
-  Gdg_spec_ext of
-    (('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-      ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-        ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      ('a ->
-        'b -> ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-                ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-                  ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      ('b gspecial_call ->
-        'a -> ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-                ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-                  ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      ('b ->
-        bool ->
-          ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-            ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-              ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      (string ->
-        ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-          ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-            ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      ('b option ->
-        string ->
-          ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-            ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-              ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      (('a, 'b, unit) gcall_info_ext ->
-        ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-          (('f * 'f) list -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-            ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      ('b ganalysis_event ->
-        ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-          ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-            ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      (('a, 'b, unit) gcall_info_ext ->
-        ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-          'f -> ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-                  ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      (('a, 'b, unit) gcall_info_ext ->
-        ('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-          'f -> ('f -> ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-                  ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      (('b, 'c, 'd, 'e, 'f, 'g, unit) gman_ext ->
-        'b gquery ->
-          (unit int_dom_ext query_lift ->
-            ('c, 'd, ('f, 'g) dg_state) strategy_tree) ->
-            ('c, 'd, ('f, 'g) dg_state) strategy_tree) *
-      'h;;
 
 type context_policy = Call_String of nat | Entry_State;;
 
@@ -6231,6 +6233,28 @@ type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 type 'a result_global_unknown = Global_Named of 'a |
   Global_Seed of string * nat option;;
 
+type ('a, 'b) local_spec_ext =
+  Local_spec_ext of
+    ((query -> unit int_dom_ext query_lift) ->
+      'a -> query -> unit int_dom_ext query_lift) *
+      ((query -> unit int_dom_ext query_lift) -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> var_id -> exp -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) ->
+        exp gspecial_call -> var_id -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> exp -> bool -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> string -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) ->
+        exp option -> string -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> analysis_event -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) ->
+        unit call_info_ext -> 'a * 'a -> ('a * 'a) list) *
+      ((query -> unit int_dom_ext query_lift) ->
+        (query -> unit int_dom_ext query_lift) ->
+          unit call_info_ext -> 'a -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) ->
+        unit call_info_ext -> 'a -> 'a -> 'a) *
+      'b;;
+
 type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
 
@@ -6239,37 +6263,15 @@ type 'a imp_prog_ext =
     (string * (unit, string, src_exp, unit) gproc_decl_ext) list * string list *
       'a;;
 
-type ('a, 'b, 'c, 'd) glocal_spec_ext =
-  Glocal_spec_ext of
-    (('b gquery -> unit int_dom_ext query_lift) ->
-      'c -> 'b gquery -> unit int_dom_ext query_lift) *
-      (('b gquery -> unit int_dom_ext query_lift) -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) -> 'a -> 'b -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) ->
-        'b gspecial_call -> 'a -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) -> 'b -> bool -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) -> string -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) ->
-        'b option -> string -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) ->
-        'b ganalysis_event -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) ->
-        ('a, 'b, unit) gcall_info_ext -> 'c * 'c -> ('c * 'c) list) *
-      (('b gquery -> unit int_dom_ext query_lift) ->
-        ('b gquery -> unit int_dom_ext query_lift) ->
-          ('a, 'b, unit) gcall_info_ext -> 'c -> 'c -> 'c) *
-      (('b gquery -> unit int_dom_ext query_lift) ->
-        ('a, 'b, unit) gcall_info_ext -> 'c -> 'c -> 'c) *
+type ('a, 'b, 'c, 'd) solved_run_ext =
+  Solved_run_ext of
+    ('a, 'c) solved_table * ('b -> 'c lifted) * (string -> 'a -> 'c lifted) *
+      (cfg_node -> 'a -> (var_id, exp) gedge_action -> 'c lifted) *
+      (cfg_node -> 'a -> (var_id, exp) gcall_action -> string -> 'a option) *
       'd;;
 
 type 'a call_route_ext =
   Call_route_ext of cfg_node * nat * string * nat list * 'a;;
-
-type ('a, 'b, 'c, 'd, 'e, 'f) gsolved_run_ext =
-  Gsolved_run_ext of
-    ('c, 'e) solved_table * ('d -> 'e lifted) * (string -> 'c -> 'e lifted) *
-      (cfg_node -> 'c -> ('a, 'b) gedge_action -> 'e lifted) *
-      (cfg_node -> 'c -> ('a, 'b) gcall_action -> string -> 'c option) * 'f;;
 
 type ('a, 'b, 'c, 'd) footprints_ext =
   Footprints_ext of
@@ -6855,23 +6857,23 @@ let rec top_query_lift _A = QTop;;
 let rec sp_return a k = k a;;
 
 let rec man_ask_update
-  man_aska (Gman_ext (man_local, man_global, man_sideg, man_ask, more)) =
-    Gman_ext (man_local, man_global, man_sideg, man_aska man_ask, more);;
+  man_aska (Man_ext (man_local, man_global, man_sideg, man_ask, more)) =
+    Man_ext (man_local, man_global, man_sideg, man_aska man_ask, more);;
 
-let rec ask_with _A
+let rec ask_with
   qa n asked m q =
     (if equal_nata n zero_nat
       then failwith "query recursion exceeded query_depth"
              (fun _ ->
                sp_return
                  (top_query_lift (order_int_dom_ext bounded_lattice_unit)))
-      else (if member (equal_gquery _A) q asked
+      else (if member equal_query q asked
              then sp_return
                     (top_query_lift (order_int_dom_ext bounded_lattice_unit))
              else qa (man_ask_update
                        (fun _ ->
-                         ask_with _A qa (minus_nat n one_nat)
-                           (inserta (equal_gquery _A) q asked) m)
+                         ask_with qa (minus_nat n one_nat)
+                           (inserta equal_query q asked) m)
                        m)
                     q));;
 
@@ -6948,38 +6950,38 @@ let rec live
     | Order, r ->
         not (equal_lifteda (equal_order_rel equal_var_id) (slot6 r) Bot);;
 
-let rec ask_rec _A
+let rec ask_rec
   h n asked x q =
     (if equal_nata n zero_nat
       then failwith "query recursion exceeded query_depth"
              (fun _ -> top_query_lift (order_int_dom_ext bounded_lattice_unit))
-      else (if member (equal_gquery _A) q asked
+      else (if member equal_query q asked
              then top_query_lift (order_int_dom_ext bounded_lattice_unit)
-             else h (ask_rec _A h (minus_nat n one_nat)
-                      (inserta (equal_gquery _A) q asked) x)
+             else h (ask_rec h (minus_nat n one_nat)
+                      (inserta equal_query q asked) x)
                     x
                     q));;
 
 let rec ls_combine_assign
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_combine_assign;;
 
 let rec ls_combine_env
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_combine_env;;
 
 let rec ls_query
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_query;;
 
 let rec ls_enter
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_enter;;
@@ -6988,7 +6990,7 @@ let rec event_action (Check_Event (l, cnd)) = EA_Check (l, cnd);;
 
 let rec make_local_spec
   qry st en ce ca =
-    Glocal_spec_ext
+    Local_spec_ext
       (qry, (fun ch -> st ch EA_Nop), (fun ch x e -> st ch (EA_Assign (x, e))),
         (fun ch sc x -> st ch (EA_Special (sc, x))),
         (fun ch b pol -> st ch (if pol then EA_Assume b else EA_AssumeNot b)),
@@ -6996,43 +6998,43 @@ let rec make_local_spec
         (fun ch ev -> st ch (event_action ev)), en, ce, ca, ());;
 
 let rec ls_special
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_special;;
 
 let rec ls_return
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_return;;
 
 let rec ls_branch
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_branch;;
 
 let rec ls_assign
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_assign;;
 
 let rec ls_event
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_event;;
 
 let rec ls_skip
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_skip;;
 
 let rec ls_body
-  (Glocal_spec_ext
+  (Local_spec_ext
     (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
       ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
     = ls_body;;
@@ -7214,8 +7216,8 @@ let rec exp_vars
 
 let query_depth : nat = nat_of_integer (Z.of_int 1024);;
 
-let rec outer_man _A
-  q m = man_ask_update (fun _ -> ask_with _A q query_depth bot_set m) m;;
+let rec outer_man
+  q m = man_ask_update (fun _ -> ask_with q query_depth bot_set m) m;;
 
 let rec fmfilter
   p (Fmap_of_list m) = Fmap_of_list (filtera (fun (k, _) -> p k) m);;
@@ -7451,9 +7453,6 @@ let rec special_st _A
             special_val _A sem kappa ch sc x
               (default_st_to_fun equal_var_id
                 (bot_kd _A.ik_domain_kind_int_domain) is_global st)));;
-
-let rec ci_formals
-  (Gcall_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
 
 let rec is_empty_kd _A = function KBot -> true
                          | KD (k, a) -> empty_ik _A k a
@@ -7734,6 +7733,9 @@ let rec assign_st _A
                 (default_st_to_fun equal_var_id
                   (bot_kd _A.ik_domain_kind_int_domain) is_global st))));;
 
+let rec ci_formals
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
+
 let rec enter_frame_D_default_st_rep _A top_val s = ((top_val, []), snd s);;
 
 let rec enter_frame_D_default_st _A
@@ -7764,14 +7766,14 @@ let rec enter_st _A
       (enter_frame_D_default_st (bot_kd _A.ik_domain_kind_int_domain) KTop st);;
 
 let rec ci_args
-  (Gcall_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
 
 let rec ci_dst
-  (Gcall_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
 
 let rec nonrel_exec_spec _A
   sem kappa =
-    Glocal_spec_ext
+    Local_spec_ext
       ((fun ch d q ->
          (match d
            with Bot -> top_query_lift (order_int_dom_ext bounded_lattice_unit)
@@ -8129,7 +8131,7 @@ let rec ord_enter ps es d = OFacts (ord_in_kinds d, bot_set);;
 
 let rec ord_spec
   kappa ys =
-    Glocal_spec_ext
+    Local_spec_ext
       (ord_query, (fun _ d -> d),
         (fun ch x e ->
           map_lift
@@ -8652,10 +8654,10 @@ let rec mcp_step cs ch a x = fold (fun c -> ls_step c ch a) cs x;;
 
 let rec ls_query_update
   ls_querya
-    (Glocal_spec_ext
+    (Local_spec_ext
       (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
         ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
-    = Glocal_spec_ext
+    = Local_spec_ext
         (ls_querya ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body,
           ls_return, ls_event, ls_enter, ls_combine_env, ls_combine_assign,
           more);;
@@ -8680,21 +8682,79 @@ let rec conf_globals
       more))
     = conf_globals;;
 
-let rec dgs_combine_assign_update
-  dgs_combine_assigna
-    (Gdg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Gdg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_event, dgs_combine_env,
-          dgs_combine_assigna dgs_combine_assign, dgs_query, more);;
+let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
+
+let rec genv key tau v = dg_global (tau (Inr (key v)));;
+
+let rec dg_result_for
+  rd emp rc gk sol =
+    Solved_Table
+      (fst sol,
+        (fun v ctx ->
+          map_lift rd
+            (canonicalize_lift emp
+              (rc (dg_local (snd sol (Inl (v, ctx)))) (genv gk (snd sol))))));;
+
+let rec ls_channel c x = ask_rec (ls_query c) query_depth bot_set x;;
+
+let rec comp_entry _B
+  comp g p ci w =
+    snd (hd (ls_enter (comp g p) (ls_channel (comp g p) w) ci (w, w)));;
+
+let rec entry_alt _B
+  comp place_rl place_enter ga p ci d g =
+    (let w = place_enter p ci d g in
+      (place_rl ga w, place_rl ga (comp_entry _B comp ga p ci w)));;
+
+let rec entry_of _B
+  comp place_rl place_enter ga p ci d g =
+    snd (entry_alt _B comp place_rl place_enter ga p ci d g);;
+
+let rec closed_step c a d = ls_step c (ls_channel c d) a d;;
+
+let rec ce_formals (CallEdge (x1, x2, x3)) = x2;;
+
+let rec ce_args (CallEdge (x1, x2, x3)) = x3;;
+
+let rec ce_dst (CallEdge (x1, x2, x3)) = x1;;
+
+let rec call_info_of
+  ca p = Call_info_ext (ce_dst ca, p, ce_formals ca, ce_args ca, ());;
+
+let rec solved_run_of (_B1, _B2)
+  comp emp rd global_of seed route place_cmb place_rl place_enter g p sol =
+    (let c = comp g p in
+     let ga = genv global_of (snd sol) in
+     let read = (fun d -> map_lift (rd g) (canonicalize_lift (emp p) d)) in
+      Solved_run_ext
+        (dg_result_for (rd g) (emp p) (place_cmb p) global_of sol,
+          (fun n -> map_lift (rd g) (ga n)),
+          (fun f ctx ->
+            read (place_cmb p
+                    (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))
+                   ga)),
+          (fun v ctx a ->
+            read (let b = place_cmb p (dg_local (snd sol (Inl (v, ctx)))) ga in
+                   closed_step c a b)),
+          (fun u ctx ca q ->
+            (let d =
+               entry_of _B2 comp place_rl place_enter g p (call_info_of ca q)
+                 (dg_local (snd sol (Inl (u, ctx)))) ga
+               in
+              (if equal_lifteda _B1 d Bot then None
+                else Some (route g u ctx d ca)))),
+          ()));;
+
+let rec conf_sem
+  (Voblint_conf_ext
+    (conf_analyses, conf_context, conf_globals, conf_program_globals, conf_sem,
+      more))
+    = conf_sem;;
 
 let rec sp_bind m f k = m (fun v -> f v k);;
 
 let rec man_sideg
-  (Gman_ext (man_local, man_global, man_sideg, man_ask, more)) = man_sideg;;
+  (Man_ext (man_local, man_global, man_sideg, man_ask, more)) = man_sideg;;
 
 let rec publish_at
   m rg x2 r = match m, rg, x2, r with m, rg, [], r -> sp_return ()
@@ -8702,7 +8762,7 @@ let rec publish_at
         sp_bind (man_sideg m x (rg x r)) (fun _ -> publish_at m rg xs r);;
 
 let rec man_local
-  (Gman_ext (man_local, man_global, man_sideg, man_ask, more)) = man_local;;
+  (Man_ext (man_local, man_global, man_sideg, man_ask, more)) = man_local;;
 
 let rec keyed_combine_transfer _A
   cmb rl rg free w h m de =
@@ -8711,19 +8771,30 @@ let rec keyed_combine_transfer _A
       (fun _ ->
         sp_return (rl (h (cmb (man_local m) (free [])) (cmb de (free [])))));;
 
+let rec dgs_combine_assign_update
+  dgs_combine_assigna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_event, dgs_combine_env,
+          dgs_combine_assigna dgs_combine_assign, dgs_query, more);;
+
 let rec join_list _A
   xs = foldr (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup)
          xs (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot);;
 
 let rec man_global
-  (Gman_ext (man_local, man_global, man_sideg, man_ask, more)) = man_global;;
+  (Man_ext (man_local, man_global, man_sideg, man_ask, more)) = man_global;;
 
-let rec read_view _E
+let rec read_view _D
   m rg x2 acc = match m, rg, x2, acc with m, rg, [], acc -> sp_return acc
     | m, rg, x :: xs, acc ->
         sp_bind (man_global m x)
           (fun g ->
-            read_view _E m rg xs (sup _E.sup_semilattice_sup (rg x g) acc));;
+            read_view _D m rg xs (sup _D.sup_semilattice_sup (rg x g) acc));;
 
 let rec keyed_enter_transfer _A
   cmb rl rg free r w en m =
@@ -8739,45 +8810,12 @@ let rec keyed_enter_transfer _A
 
 let rec dgs_special_update
   dgs_speciala
-    (Gdg_spec_ext
+    (Dg_spec_ext
       (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
         dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
         more))
-    = Gdg_spec_ext
+    = Dg_spec_ext
         (dgs_skip, dgs_assign, dgs_speciala dgs_special, dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_return_update
-  dgs_returna
-    (Gdg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Gdg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
-          dgs_returna dgs_return, dgs_enter, dgs_event, dgs_combine_env,
-          dgs_combine_assign, dgs_query, more);;
-
-let rec dgs_branch_update
-  dgs_brancha
-    (Gdg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Gdg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_brancha dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_assign_update
-  dgs_assigna
-    (Gdg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Gdg_spec_ext
-        (dgs_skip, dgs_assigna dgs_assign, dgs_special, dgs_branch, dgs_body,
           dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
           dgs_query, more);;
 
@@ -8789,95 +8827,103 @@ let rec keyed_transfer _A
         sp_bind (publish_at m rg w (f (cmb (man_local m) g)))
           (fun _ -> sp_return (rl (f (cmb (man_local m) g)))));;
 
-let rec dgs_event_update
-  dgs_eventa
-    (Gdg_spec_ext
+let rec dgs_return_update
+  dgs_returna
+    (Dg_spec_ext
       (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
         dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
         more))
-    = Gdg_spec_ext
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_returna dgs_return, dgs_enter, dgs_event, dgs_combine_env,
+          dgs_combine_assign, dgs_query, more);;
+
+let rec dgs_branch_update
+  dgs_brancha
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_brancha dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_assign_update
+  dgs_assigna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assigna dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_event_update
+  dgs_eventa
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
         (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
           dgs_enter, dgs_eventa dgs_event, dgs_combine_env, dgs_combine_assign,
           dgs_query, more);;
 
 let rec dgs_enter_update
   dgs_entera
-    (Gdg_spec_ext
+    (Dg_spec_ext
       (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
         dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
         more))
-    = Gdg_spec_ext
+    = Dg_spec_ext
         (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
           dgs_entera dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
           dgs_query, more);;
 
 let rec dgs_skip_update
   dgs_skipa
-    (Gdg_spec_ext
+    (Dg_spec_ext
       (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
         dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
         more))
-    = Gdg_spec_ext
+    = Dg_spec_ext
         (dgs_skipa dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
           dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
           dgs_query, more);;
 
 let rec dgs_body_update
   dgs_bodya
-    (Gdg_spec_ext
+    (Dg_spec_ext
       (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
         dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
         more))
-    = Gdg_spec_ext
+    = Dg_spec_ext
         (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_bodya dgs_body,
           dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
           dgs_query, more);;
 
-let rec gedge_writes rv x1 = match rv, x1 with rv, EA_Assign (x, a) -> [x]
-                       | rv, EA_Special (sc, x) -> [x]
-                       | rv, EA_Ret (e, p) -> [rv]
-                       | rv, EA_Nop -> []
-                       | rv, EA_Assume v -> []
-                       | rv, EA_AssumeNot v -> []
-                       | rv, EA_Body v -> []
-                       | rv, EA_Check (v, va) -> [];;
-
 let rec global_names_in _A g xs = remdups _A (filtera g xs);;
 
-let rec gedge_global_writes _A
-  rv g a = global_names_in _A g (gedge_writes rv a);;
+let rec edge_writes = function EA_Assign (x, a) -> [x]
+                      | EA_Special (sc, x) -> [x]
+                      | EA_Ret (e, p) -> [ReturnVar]
+                      | EA_Nop -> []
+                      | EA_Assume v -> []
+                      | EA_AssumeNot v -> []
+                      | EA_Body v -> []
+                      | EA_Check (v, va) -> [];;
 
-let rec edge_expressions = function EA_Assign (x, e) -> [e]
-                           | EA_Assume e -> [e]
-                           | EA_AssumeNot e -> [e]
-                           | EA_Check (l, e) -> [e]
-                           | EA_Ret (Some e, p) -> [e]
-                           | EA_Special (Min (a, b), x) -> [a; b]
-                           | EA_Special (Max (a, b), x) -> [a; b]
-                           | EA_Nop -> []
-                           | EA_Special (Nondet_Int, va) -> []
-                           | EA_Body v -> []
-                           | EA_Ret (None, va) -> [];;
-
-let rec gedge_reads (_B1, _B2)
-  evars a =
-    sorted_list_of_set (_B1, _B2)
-      (sup_seta _B1 (image evars (Set (edge_expressions a))));;
-
-let rec gedge_global_reads (_B1, _B2)
-  evars g a = global_names_in _B1 g (gedge_reads (_B1, _B2) evars a);;
-
-let rec gcall_global_reads (_B1, _B2)
-  evars g es =
-    global_names_in _B1 g
-      (sorted_list_of_set (_B1, _B2) (sup_seta _B1 (image evars (Set es))));;
+let rec edge_global_writes
+  g a = global_names_in equal_var_id g (edge_writes a);;
 
 let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
 
 let rec local_enter_transfer f m = sp_return (f (man_local m));;
 
-let local_dg_spec_template : ('a, 'b, 'c, 'd, 'e, 'f, 'g, unit) gdg_spec_ext
-  = Gdg_spec_ext
+let local_dg_spec_template : ('a, 'b, 'c, 'd, 'e, unit) dg_spec_ext
+  = Dg_spec_ext
       ((fun m -> sp_return (id (man_local m))),
         (fun _ _ m -> sp_return (id (man_local m))),
         (fun _ _ m -> sp_return (id (man_local m))),
@@ -8892,35 +8938,53 @@ let local_dg_spec_template : ('a, 'b, 'c, 'd, 'e, 'f, 'g, unit) gdg_spec_ext
           sp_return (top_query_lift (order_int_dom_ext bounded_lattice_unit))),
         ());;
 
-let rec ls_channel _B c x = ask_rec _B (ls_query c) query_depth bot_set x;;
+let rec edge_expressions = function EA_Assign (x, e) -> [e]
+                           | EA_Assume e -> [e]
+                           | EA_AssumeNot e -> [e]
+                           | EA_Check (l, e) -> [e]
+                           | EA_Ret (Some e, p) -> [e]
+                           | EA_Special (Min (a, b), x) -> [a; b]
+                           | EA_Special (Max (a, b), x) -> [a; b]
+                           | EA_Nop -> []
+                           | EA_Special (Nondet_Int, va) -> []
+                           | EA_Body v -> []
+                           | EA_Ret (None, va) -> [];;
 
-let rec closed_step _B c a d = ls_step c (ls_channel _B c d) a d;;
+let rec edge_reads
+  a = sorted_list_of_set (equal_var_id, linorder_var_id)
+        (sup_seta equal_var_id (image exp_vars (Set (edge_expressions a))));;
 
-let rec gkeyed_split_spec _A (_B1, _B2) _C
-  evars rv g cmb rl rg free c =
+let rec edge_global_reads g a = global_names_in equal_var_id g (edge_reads a);;
+
+let rec call_global_reads
+  g es =
+    global_names_in equal_var_id g
+      (sorted_list_of_set (equal_var_id, linorder_var_id)
+        (sup_seta equal_var_id (image exp_vars (Set es))));;
+
+let rec keyed_split_spec _A
+  g cmb rl rg free c =
     (let step =
        (fun a ->
-         keyed_transfer _C cmb rl rg free
-           (gedge_global_reads (_B1, _B2) evars g a)
-           (gedge_global_writes _B1 rv g a) (closed_step _A c a))
+         keyed_transfer _A cmb rl rg free (edge_global_reads g a)
+           (edge_global_writes g a) (closed_step c a))
        in
       dgs_combine_assign_update
         (fun _ ci ->
-          keyed_combine_transfer _C cmb rl rg free
-            (global_names_in _B1 g
+          keyed_combine_transfer _A cmb rl rg free
+            (global_names_in equal_var_id g
               (match ci_dst ci with None -> [] | Some x -> [x]))
             (fun dc de ->
-              ls_combine_assign c (ls_channel _A c de) ci
-                (ls_combine_env c (ls_channel _A c dc) (ls_channel _A c de) ci
-                  dc de)
+              ls_combine_assign c (ls_channel c de) ci
+                (ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de)
                 de))
         (dgs_event_update (fun _ ev -> step (event_action ev))
           (dgs_enter_update
             (fun _ ci ->
-              keyed_enter_transfer _C cmb rl rg free
-                (gcall_global_reads (_B1, _B2) evars g (ci_args ci))
-                (global_names_in _B1 g (ci_formals ci))
-                (fun d -> ls_enter c (ls_channel _A c d) ci (d, d)))
+              keyed_enter_transfer _A cmb rl rg free
+                (call_global_reads g (ci_args ci))
+                (global_names_in equal_var_id g (ci_formals ci))
+                (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
             (dgs_return_update (fun _ e p -> step (EA_Ret (e, p)))
               (dgs_body_update (fun _ p -> step (EA_Body p))
                 (dgs_branch_update
@@ -8930,72 +8994,6 @@ let rec gkeyed_split_spec _A (_B1, _B2) _C
                     (dgs_assign_update (fun _ x e -> step (EA_Assign (x, e)))
                       (dgs_skip_update (fun _ -> step EA_Nop)
                         local_dg_spec_template)))))))));;
-
-let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
-
-let rec genv key tau v = dg_global (tau (Inr (key v)));;
-
-let rec dg_result_for
-  rd emp rc gk sol =
-    Solved_Table
-      (fst sol,
-        (fun v ctx ->
-          map_lift rd
-            (canonicalize_lift emp
-              (rc (dg_local (snd sol (Inl (v, ctx)))) (genv gk (snd sol))))));;
-
-let rec comp_entry _A (_C1, _C2) _D
-  comp g p ci w =
-    snd (hd (ls_enter (comp g p) (ls_channel _C1 (comp g p) w) ci (w, w)));;
-
-let rec entry_alt _A (_C1, _C2) _D
-  comp place_rl place_enter ga p ci d g =
-    (let w = place_enter p ci d g in
-      (place_rl ga w,
-        place_rl ga (comp_entry _A (_C1, _C2) _D comp ga p ci w)));;
-
-let rec entry_of _A (_C1, _C2) _D
-  comp place_rl place_enter ga p ci d g =
-    snd (entry_alt _A (_C1, _C2) _D comp place_rl place_enter ga p ci d g);;
-
-let rec ce_formals (CallEdge (x1, x2, x3)) = x2;;
-
-let rec ce_args (CallEdge (x1, x2, x3)) = x3;;
-
-let rec ce_dst (CallEdge (x1, x2, x3)) = x1;;
-
-let rec call_info_of
-  ca p = Gcall_info_ext (ce_dst ca, p, ce_formals ca, ce_args ca, ());;
-
-let rec solved_run_of _A (_C1, _C2) (_D1, _D2)
-  comp emp rd global_of seed route place_cmb place_rl place_enter g p sol =
-    (let c = comp g p in
-     let ga = genv global_of (snd sol) in
-     let read = (fun d -> map_lift (rd g) (canonicalize_lift (emp p) d)) in
-      Gsolved_run_ext
-        (dg_result_for (rd g) (emp p) (place_cmb p) global_of sol,
-          (fun n -> map_lift (rd g) (ga n)),
-          (fun f ctx ->
-            read (place_cmb p
-                    (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))
-                   ga)),
-          (fun v ctx a ->
-            read (let b = place_cmb p (dg_local (snd sol (Inl (v, ctx)))) ga in
-                   closed_step _C1 c a b)),
-          (fun u ctx ca q ->
-            (let d =
-               entry_of _A (_C1, _C2) _D2 comp place_rl place_enter g p
-                 (call_info_of ca q) (dg_local (snd sol (Inl (u, ctx)))) ga
-               in
-              (if equal_lifteda _D1 d Bot then None
-                else Some (route g u ctx d ca)))),
-          ()));;
-
-let rec conf_sem
-  (Voblint_conf_ext
-    (conf_analyses, conf_context, conf_globals, conf_program_globals, conf_sem,
-      more))
-    = conf_sem;;
 
 let rec group_lookup _A
   m k = (match lookup _A m k with None -> [] | Some ys -> ys);;
@@ -9019,14 +9017,15 @@ let rec cfg_intra_list (_A1, _A2) (_B1, _B2)
               linorder_cfg_node)))
         (intra g);;
 
-let rec intra_predecessor_index (_A1, _A2) (_B1, _B2)
+let rec intra_predecessor_index
   g = group_by_key linorder_cfg_node (fun (_, (_, w)) -> w)
         (fun (u, (a, _)) -> Some (u, a))
-        (cfg_intra_list (_A1, _A2) (_B1, _B2) g);;
+        (cfg_intra_list (equal_var_id, linorder_var_id)
+          (equal_exp, linorder_exp) g);;
 
 let rec sp_read_global g k = QueryG (g, k);;
 
-let rec routed_entry_seed_programs _C _D _E _F
+let rec routed_entry_seed_programs _C _D
   seed route ctx v =
     (match v with Statement _ -> []
       | FunctionEntry _ ->
@@ -9034,10 +9033,10 @@ let rec routed_entry_seed_programs _C _D _E _F
            (fun seed_state ->
              sp_return
                (DG (dg_local seed_state,
-                     bot _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
+                     bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
       | FunctionResult _ -> []);;
 
-let rec routed_contribution_programs _A _B _E _F
+let rec routed_contribution_programs _C _D
   pred_sel site_sel route it cmb extra g ctx v =
     map (fun (a, b) -> it ctx a b) (pred_sel g v ctx) @
       map (fun (cc, ca) -> cmb route ctx ca cc v) (site_sel g v) @
@@ -9096,39 +9095,39 @@ let rec sp_compile_with encode p = p (comp (fun a -> Answer a) encode);;
 
 let rec sp_compile p = sp_compile_with id p;;
 
-let rec routed_node_rhs_buffered _A _B _D _E _F
+let rec routed_node_rhs_buffered _B _C _D
   pred_sel site_sel buffer_key_at route it_c cmb_c extra g bot0 d_0 g_0 =
     (fun (v, c) ->
       (let acc0 =
          DG ((if equal_cfg_nodea v (cfg_entry g)
-               then sup _E.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+               then sup _C.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
                       bot0 d_0
                else bot0),
               (if equal_cfg_nodea v (cfg_entry g) then g_0
-                else bot _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                else bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
          in
        let t =
          sp_compile
            (fold_rhs_program
              (semilattice_sup_dg_state
-               _E.semilattice_sup_bounded_semilattice_sup_bot
-               _F.semilattice_sup_bounded_semilattice_sup_bot)
+               _C.semilattice_sup_bounded_semilattice_sup_bot
+               _D.semilattice_sup_bounded_semilattice_sup_bot)
              acc0
-             (routed_contribution_programs _A _B _E _F pred_sel site_sel route
-               it_c cmb_c extra g c v))
+             (routed_contribution_programs _C _D pred_sel site_sel route it_c
+               cmb_c extra g c v))
          in
-        buffer_sides _D (bounded_semilattice_sup_bot_dg_state _E _F)
+        buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
           (fun _ -> less_eq_nat (size_list (site_sel g v)) one_nat)
           (sp_lift_tree t
             (fun res ->
               Side (buffer_key_at c,
-                     DG (bot _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+                     DG (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
                           dg_global res),
                      Answer
                        (DG (dg_local res,
-                             bot _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
+                             bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
 
-let rec call_target_at _A _B
+let rec call_target_at
   v x1 = match v, x1 with
     v, (c, (ca, (FunctionEntry p, k))) ->
       (if equal_cfg_nodea k v then Some (c, (ca, p)) else None)
@@ -9147,32 +9146,33 @@ let rec cfg_calls_list (_A1, _A2) (_B1, _B2)
               (linorder_prod linorder_cfg_node linorder_cfg_node))))
         (calls g);;
 
-let rec call_target_index (_A1, _A2) (_B1, _B2)
+let rec call_target_index
   g = group_by_key linorder_cfg_node (fun (_, (_, (_, k))) -> k)
-        (fun (c, (ca, (ce, k))) -> call_target_at _A2 _B2 k (c, (ca, (ce, k))))
-        (cfg_calls_list (_A1, _A2) (_B1, _B2) g);;
+        (fun (c, (ca, (ce, k))) -> call_target_at k (c, (ca, (ce, k))))
+        (cfg_calls_list (equal_var_id, linorder_var_id)
+          (equal_exp, linorder_exp) g);;
 
 let rec sp_read_local x k = QueryL (x, k);;
 
 let rec sp_publish g d k = Side (g, d, k ());;
 
 let rec dgs_combine_assign
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_combine_assign;;
 
 let rec dgs_combine_env
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_combine_env;;
 
 let rec man_local_update
-  man_locala (Gman_ext (man_local, man_global, man_sideg, man_ask, more)) =
-    Gman_ext (man_locala man_local, man_global, man_sideg, man_ask, more);;
+  man_locala (Man_ext (man_local, man_global, man_sideg, man_ask, more)) =
+    Man_ext (man_locala man_local, man_global, man_sideg, man_ask, more);;
 
 let rec dg_spec_combine_transfer
   s ci m exit =
@@ -9189,39 +9189,39 @@ let rec dg_sideg _D gk gd = sp_publish gk (DG (bot _D, gd));;
 
 let rec mk_dg_man _A
   d unknown_of =
-    Gman_ext
+    Man_ext
       (d, (fun v -> dg_read_global (unknown_of v)),
         (fun v -> dg_sideg _A (unknown_of v)),
         (fun _ ->
           sp_return (top_query_lift (order_int_dom_ext bounded_lattice_unit))),
         ());;
 
-let rec routed_call_alternative_program _A _B _F _G
+let rec routed_call_alternative_program _D _E
   s global_of seed route is_bot ctx ca cc p alt =
     (let (cont, entry) = alt in
       (if is_bot entry
         then sp_map
                (fun d ->
-                 DG (d, bot _G.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                 DG (d, bot _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
                (dg_spec_combine_transfer s (call_info_of ca p)
                  (mk_dg_man
-                   _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot cont
+                   _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot cont
                    global_of)
-                 (bot _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                 (bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
         else (let ctxa = route cc ctx entry ca in
                sp_bind
                  (sp_publish (seed (FunctionEntry p) ctxa)
                    (DG (entry,
-                         bot _G.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
+                         bot _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
                  (fun _ ->
                    sp_bind (sp_read_local (FunctionResult p, ctxa))
                      (fun callee_state ->
                        sp_map
                          (fun d ->
-                           DG (d, bot _G.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                           DG (d, bot _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
                          (dg_spec_combine_transfer s (call_info_of ca p)
                            (mk_dg_man
-                             _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                             _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                              cont global_of)
                            (dg_local callee_state)))))));;
 
@@ -9239,37 +9239,37 @@ let rec side_rhs_fold_dg _A _B
               ps);;
 
 let rec dgs_enter
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_enter;;
 
-let rec routed_callee_call_program _A _B _F _G
+let rec routed_callee_call_program _D _E
   s global_of seed route is_bot ctx ca cc caller p =
     sp_bind
       (dgs_enter s (call_info_of ca p)
-        (mk_dg_man _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
+        (mk_dg_man _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
           global_of))
       (fun pairs ->
-        side_rhs_fold_dg _F _G
-          (bot _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-          (map (routed_call_alternative_program _A _B _F _G s global_of seed
-                 route is_bot ctx ca cc p)
+        side_rhs_fold_dg _D _E
+          (bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+          (map (routed_call_alternative_program _D _E s global_of seed route
+                 is_bot ctx ca cc p)
             pairs));;
 
-let rec routed_call_program _A _B _F _G
+let rec routed_call_program _D _E
   s global_of seed resolve is_bot route ctx ca cc v =
     sp_bind (sp_read_local (cc, ctx))
       (fun caller_state ->
-        side_rhs_fold_dg _F _G
-          (bot _F.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-          (map (routed_callee_call_program _A _B _F _G s global_of seed route
-                 is_bot ctx ca cc (dg_local caller_state))
+        side_rhs_fold_dg _D _E
+          (bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+          (map (routed_callee_call_program _D _E s global_of seed route is_bot
+                 ctx ca cc (dg_local caller_state))
             (resolve v cc ca (dg_local caller_state))));;
 
 let rec dgs_query
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
@@ -9280,58 +9280,58 @@ let rec sp_read_at = function Inl x -> sp_read_local x
 
 let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return dg_local);;
 
-let rec transfer_program_at _E
+let rec transfer_program_at _D
   transfer src unknown_of =
-    sp_bind (dg_read_at src) (fun d -> transfer (mk_dg_man _E d unknown_of));;
+    sp_bind (dg_read_at src) (fun d -> transfer (mk_dg_man _D d unknown_of));;
 
-let rec transfer_program _E _F
+let rec transfer_program _D _E
   t src unknown_of =
-    sp_map (fun d -> DG (d, bot _F)) (transfer_program_at _E t src unknown_of);;
+    sp_map (fun d -> DG (d, bot _E)) (transfer_program_at _D t src unknown_of);;
 
 let rec dgs_special
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_special;;
 
 let rec dgs_return
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_return;;
 
 let rec dgs_branch
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_branch;;
 
 let rec dgs_assign
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_assign;;
 
 let rec dgs_event
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_event;;
 
 let rec dgs_skip
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
     = dgs_skip;;
 
 let rec dgs_body
-  (Gdg_spec_ext
+  (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
       more))
@@ -9347,67 +9347,68 @@ let rec dg_spec_step
     | s, EA_Ret (e, p) -> dgs_return s e p
     | s, EA_Check (l, cnd) -> dgs_event s (Check_Event (l, cnd));;
 
-let rec dg_spec_edge_program _B _F _G
+let rec dg_spec_edge_program _D _E
   s a src unknown_of =
-    transfer_program _F _G
-      (fun m -> dg_spec_step s a (outer_man _B (dgs_query s) m)) src
-      unknown_of;;
+    transfer_program _D _E
+      (fun m -> dg_spec_step s a (outer_man (dgs_query s) m)) src unknown_of;;
 
-let rec compiled_routed_eqs_for _A (_D1, _D2) (_E1, _E2) (_F1, _F2) _G
+let rec compiled_routed_eqs_for _A (_D1, _D2) _E
   global global_of seed route s g initial initial_global =
-    (let preds = intra_predecessor_index (_E1, _E2) (_F1, _F2) g in
-     let targets = call_target_index (_E1, _E2) (_F1, _F2) g in
-      routed_node_rhs_buffered _E2 _F2 _A _D2 _G
+    (let preds = intra_predecessor_index g in
+     let targets = call_target_index g in
+      routed_node_rhs_buffered _A _D2 _E
         (fun _ v ctx ->
           map (fun (u, a) -> (Inl (u, ctx), a))
             (group_lookup linorder_cfg_node preds v))
         (fun _ v ->
-          remdups (equal_prod equal_cfg_node (equal_gcall_action _E1 _F1))
+          remdups
+            (equal_prod equal_cfg_node
+              (equal_gcall_action equal_var_id equal_exp))
             (map (fun (c, (ca, _)) -> (c, ca))
               (group_lookup linorder_cfg_node targets v)))
         (fun _ -> global) route
         (fun _ src a ->
-          dg_spec_edge_program _F1
+          dg_spec_edge_program
             _D2.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-            _G.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
+            _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
             global_of)
-        (routed_call_program _E2 _F2 _D2 _G s global_of seed
+        (routed_call_program _D2 _E s global_of seed
           (fun v cc ca _ ->
             map_filter
               (fun x ->
                 (if (let (c, (a, _)) = x in
-                      equal_cfg_nodea c cc && equal_gcall_actiona _E1 _F1 a ca)
+                      equal_cfg_nodea c cc &&
+                        equal_gcall_actiona equal_var_id equal_exp a ca)
                   then Some (let (_, (_, p)) = x in p) else None))
               (group_lookup linorder_cfg_node targets v))
           (fun d ->
             eq _D1 d
               (bot _D2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
-        (routed_entry_seed_programs _D2 _E2 _F2 _G seed) g
+        (routed_entry_seed_programs _D2 _E seed) g
         (bot _D2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
         initial_global);;
 
-let rec init_publications _C _D _F
+let rec init_publications _C _E
   global_of root_ctx place_inits pentry g p x =
     (if equal_proda equal_cfg_node _C x (pentry p, root_ctx)
       then map (fun (n, d) -> (global_of n, DG (Bot, d))) (place_inits g p)
       else []);;
 
-let rec analysis_spec _A _C _D comp place_spec g p = place_spec p (comp g p);;
+let rec analysis_spec _B comp place_spec g p = place_spec p (comp g p);;
 
 let rec init_sides xs t = foldr (fun (a, b) -> (fun c -> Side (a, b, c))) xs t;;
 
 let rec with_init init t = (fun x -> init_sides (init x) (t x));;
 
-let rec equations (_A1, _A2) (_C1, _C2) (_D1, _D2) _E _G
+let rec equations (_B1, _B2) _C _E
   comp init_st buffer_key global_of seed route root_ctx place_spec place_rg
     place_inits pcfg pentry g p =
     with_init
-      (init_publications _G _A2 _D2 global_of root_ctx place_inits pentry g p)
-      (compiled_routed_eqs_for _E
-        ((equal_lifted _D1), (bounded_semilattice_sup_bot_lifted _D2))
-        (_A1, _A2) (_C1, _C2) (bounded_semilattice_sup_bot_lifted _D2)
-        buffer_key global_of seed (route g)
-        (analysis_spec _A2 _C2 _D2 comp place_spec g p) (pcfg p)
+      (init_publications _E _B2 global_of root_ctx place_inits pentry g p)
+      (compiled_routed_eqs_for _C
+        ((equal_lifted _B1), (bounded_semilattice_sup_bot_lifted _B2))
+        (bounded_semilattice_sup_bot_lifted _B2) buffer_key global_of seed
+        (route g) (analysis_spec _B2 comp place_spec g p) (pcfg p)
         (Lifted init_st) (place_rg g (Lifted init_st)));;
 
 let rec view_of _B
@@ -10499,8 +10500,7 @@ let rec mcp_answer
       asa (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
 
 let rec mcp_ask
-  sem ds asa v =
-    ask_rec equal_exp (mcp_answer sem ds asa) query_depth bot_set v;;
+  sem ds asa v = ask_rec (mcp_answer sem ds asa) query_depth bot_set v;;
 
 let rec mcp_classify sem ds asa = answer_check truth_exp (mcp_ask sem ds asa);;
 
@@ -10571,23 +10571,15 @@ let rec arithmetic_diagnostics _B
              (zip (upt zero_nat (size_list obligations)) obligations))
       sites;;
 
-let rec run_shared
-  (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
-    = run_shared;;
-
 let rec ea_check_cond (EA_Check (x81, x82)) = x82;;
 
+let rec run_shared
+  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
+    run_shared;;
+
 let rec run_table
-  (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
-    = run_table;;
-
-let rec run_succ
-  (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
-    = run_succ;;
-
-let rec run_seed
-  (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
-    = run_seed;;
+  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
+    run_table;;
 
 let rec is_EA_Check = function EA_Nop -> false
                       | EA_Assign (x21, x22) -> false
@@ -10597,6 +10589,14 @@ let rec is_EA_Check = function EA_Nop -> false
                       | EA_Body x6 -> false
                       | EA_Ret (x71, x72) -> false
                       | EA_Check (x81, x82) -> true;;
+
+let rec run_succ
+  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
+    run_succ;;
+
+let rec run_seed
+  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
+    run_seed;;
 
 let rec ea_check_label (EA_Check (x81, x82)) = x81;;
 
@@ -10633,12 +10633,12 @@ let rec live_targets
     (match succ u ctx ca q with None -> [] | Some ctxa -> [ctxa]);;
 
 let rec run_step
-  (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
-    = run_step;;
+  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
+    run_step;;
 
-let rec report_row _C
+let rec report_row _A
   sr classify classify_ob conds obls edges i ctx v =
-    (let state = lookup_table _C (run_table sr) v ctx in
+    (let state = lookup_table _A (run_table sr) v ctx in
       Result_state_ext
         (v, i, state,
           map (fun c -> (c, classify_point classify c state))
@@ -10658,21 +10658,26 @@ let rec cfg_node_list (_A1, _A2) (_B1, _B2)
             (cfg_calls_list (_A1, _A2) (_B1, _B2) g) @
             [cfg_entry g]);;
 
-let rec report_of (_B1, _B2) (_C1, _C2) _F
+let rec report_of _D
   config vars g globals sites classify_ob procs ctx_key ctx_tag classify sr =
     (let r = run_table sr in
      let ctxs =
-       ordered_by_key _F (equal_order_key, linorder_order_key) ctx_key
+       ordered_by_key _D (equal_order_key, linorder_order_key) ctx_key
          (image snd (covered_keys r))
        in
      let indexed = enumerate zero_nat ctxs in
      let nodes =
-       cfg_node_list (_B1, _B2) (_C1, _C2) g @
+       cfg_node_list (equal_var_id, linorder_var_id) (equal_exp, linorder_exp)
+         g @
          sorted_list_of_set (equal_cfg_node, linorder_cfg_node)
            (minus_set equal_cfg_node (image fst (covered_keys r))
-             (Set (cfg_node_list (_B1, _B2) (_C1, _C2) g)))
+             (Set (cfg_node_list (equal_var_id, linorder_var_id)
+                    (equal_exp, linorder_exp) g)))
        in
-     let intra = cfg_intra_list (_B1, _B2) (_C1, _C2) g in
+     let intra =
+       cfg_intra_list (equal_var_id, linorder_var_id) (equal_exp, linorder_exp)
+         g
+       in
      let steps =
        group_by_key linorder_cfg_node (fun (u, (_, _)) -> u)
          (fun (_, (a, w)) -> Some (a, w)) intra
@@ -10686,15 +10691,15 @@ let rec report_of (_B1, _B2) (_C1, _C2) _F
      let obligations =
        group_by_key linorder_cfg_node fst (comp (fun a -> Some a) snd) sites in
      let state_at =
-       report_row _F sr classify classify_ob checks obligations steps in
+       report_row _D sr classify classify_ob checks obligations steps in
      let route_at =
        (fun u ca ce i ctx ->
          Call_route_ext
            (u, i, callee_of_entry ce,
-             (match lookup_table _F r u ctx with Bot -> []
+             (match lookup_table _D r u ctx with Bot -> []
                | Lifted _ ->
                  remdups equal_nat
-                   (maps (context_indices _F indexed)
+                   (maps (context_indices _D indexed)
                      (live_targets (run_succ sr) u ctx ca
                        (callee_of_entry ce)))),
              ()))
@@ -10704,7 +10709,7 @@ let rec report_of (_B1, _B2) (_C1, _C2) _F
          (match
            filtera
              (fun (_, ctx) ->
-               member (equal_prod equal_cfg_node _F) (FunctionEntry f, ctx)
+               member (equal_prod equal_cfg_node _D) (FunctionEntry f, ctx)
                  (covered_keys r))
              indexed
            with [] -> [Result_global_ext (Global_Seed (f, None), Bot, ())]
@@ -10719,7 +10724,7 @@ let rec report_of (_B1, _B2) (_C1, _C2) _F
           maps (fun (i, ctx) ->
                  map_filter
                    (fun x ->
-                     (if member (equal_prod equal_cfg_node _F) (x, ctx)
+                     (if member (equal_prod equal_cfg_node _D) (x, ctx)
                            (covered_keys r)
                        then Some (state_at i ctx x) else None))
                    nodes)
@@ -10728,17 +10733,19 @@ let rec report_of (_B1, _B2) (_C1, _C2) _F
                  map_filter
                    (fun x ->
                      (if (let (_, ctx) = x in
-                           member (equal_prod equal_cfg_node _F) (u, ctx)
+                           member (equal_prod equal_cfg_node _D) (u, ctx)
                              (covered_keys r))
                        then Some (let (a, b) = x in route_at u ca ce a b)
                        else None))
                    indexed)
-            (cfg_calls_list (_B1, _B2) (_C1, _C2) g),
-          result_checks_of (_B1, _B2) (_C1, _C2) _F g r classify,
+            (cfg_calls_list (equal_var_id, linorder_var_id)
+              (equal_exp, linorder_exp) g),
+          result_checks_of (equal_var_id, linorder_var_id)
+            (equal_exp, linorder_exp) _D g r classify,
           map (fun x -> Result_global_ext (Global_Named x, run_shared sr x, ()))
             globals @
             maps seeds_of procs,
-          arithmetic_diagnostics _F sites r classify_ob, ()));;
+          arithmetic_diagnostics _D sites r classify_ob, ()));;
 
 let rec special_vars = function Nondet_Int -> []
                        | Min (a, b) -> var_list a @ var_list b
@@ -10769,8 +10776,8 @@ let rec cfg_vars
 
 let rec prog_report_of _A
   conf ds p gs ctx_key ctx_tag sr =
-    report_of (equal_var_id, linorder_var_id) (equal_exp, linorder_exp) _A conf
-      (cfg_vars (elab_cfg p ds)) (elab_cfg p ds) gs (prog_obligation_sites ds p)
+    report_of _A conf (cfg_vars (elab_cfg p ds)) (elab_cfg p ds) gs
+      (prog_obligation_sites ds p)
       (obligation_classify (conf_sem conf) ds
         (activation_of (conf_analyses conf)))
       (prog_main_name :: prog_procs p) ctx_key ctx_tag
@@ -10994,22 +11001,22 @@ let rec mcp_comp
 
 let rec dgs_combine_env_update
   dgs_combine_enva
-    (Gdg_spec_ext
+    (Dg_spec_ext
       (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
         dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
         more))
-    = Gdg_spec_ext
+    = Dg_spec_ext
         (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
           dgs_enter, dgs_event, dgs_combine_enva dgs_combine_env,
           dgs_combine_assign, dgs_query, more);;
 
 let rec dgs_query_update
   dgs_querya
-    (Gdg_spec_ext
+    (Dg_spec_ext
       (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
         dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
         more))
-    = Gdg_spec_ext
+    = Dg_spec_ext
         (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
           dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
           dgs_querya dgs_query, more);;
@@ -11018,44 +11025,41 @@ let rec local_transfer f m = sp_return (f (man_local m));;
 
 let rec local_query h m q = sp_return (h (man_local m) q);;
 
-let rec dg_spec_of _B _C
-  c = dgs_query_update (fun _ -> local_query (ls_channel _B c))
+let rec dg_spec_of _A
+  c = dgs_query_update (fun _ -> local_query (ls_channel c))
         (dgs_combine_assign_update
           (fun _ ci ->
             local_combine_transfer
-              (fun dc de -> ls_combine_assign c (ls_channel _B c de) ci dc de))
+              (fun dc de -> ls_combine_assign c (ls_channel c de) ci dc de))
           (dgs_combine_env_update
             (fun _ ci ->
               local_combine_transfer
                 (fun dc de ->
-                  ls_combine_env c (ls_channel _B c dc) (ls_channel _B c de) ci
-                    dc de))
+                  ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc
+                    de))
             (dgs_event_update
-              (fun _ ev -> local_transfer (closed_step _B c (event_action ev)))
+              (fun _ ev -> local_transfer (closed_step c (event_action ev)))
               (dgs_enter_update
                 (fun _ ci ->
                   local_enter_transfer
-                    (fun d -> ls_enter c (ls_channel _B c d) ci (d, d)))
+                    (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
                 (dgs_return_update
-                  (fun _ e p ->
-                    local_transfer (closed_step _B c (EA_Ret (e, p))))
+                  (fun _ e p -> local_transfer (closed_step c (EA_Ret (e, p))))
                   (dgs_body_update
-                    (fun _ p -> local_transfer (closed_step _B c (EA_Body p)))
+                    (fun _ p -> local_transfer (closed_step c (EA_Body p)))
                     (dgs_branch_update
                       (fun _ b pol ->
                         local_transfer
-                          (closed_step _B c
+                          (closed_step c
                             (if pol then EA_Assume b else EA_AssumeNot b)))
                       (dgs_special_update
                         (fun _ sc x ->
-                          local_transfer
-                            (closed_step _B c (EA_Special (sc, x))))
+                          local_transfer (closed_step c (EA_Special (sc, x))))
                         (dgs_assign_update
                           (fun _ x e ->
-                            local_transfer
-                              (closed_step _B c (EA_Assign (x, e))))
+                            local_transfer (closed_step c (EA_Assign (x, e))))
                           (dgs_skip_update
-                            (fun _ -> local_transfer (closed_step _B c EA_Nop))
+                            (fun _ -> local_transfer (closed_step c EA_Nop))
                             local_dg_spec_template))))))))));;
 
 let rec st_lift_empty _A
@@ -11103,7 +11107,7 @@ let rec cs_run
           map_option
             (fun sol ->
               prog_report_of (equal_list equal_cfg_node) conf ds p [] key tag
-                (solved_run_of linorder_var_id (equal_exp, linorder_exp)
+                (solved_run_of
                   ((equal_analysis_product
                      (equal_lifted
                        (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -12016,8 +12020,7 @@ let rec cs_run
     (warrowing_lifted
       ((bounded_semilattice_sup_bot_order_rel equal_var_id),
         (warrowing_order_rel equal_var_id))))))))))))))))))
-              r (equations (equal_var_id, linorder_var_id)
-                  (equal_exp, linorder_exp)
+              r (equations
                   ((equal_analysis_product
                      (equal_lifted
                        (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -12117,7 +12120,7 @@ let rec cs_run
                   (fun a -> Analysis_Global a)
                   (fun a b -> Activation_Seed (a, b)) (fun _ -> cs_route k) []
                   (fun _ ->
-                    dg_spec_of equal_exp
+                    dg_spec_of
                       (bot_lifted
                         (semilattice_sup_analysis_product
                           (semilattice_sup_lifted
@@ -12171,7 +12174,7 @@ ik_domain_parity)))
             map_option
               (fun sol ->
                 prog_report_of (equal_list equal_cfg_node) conf ds p gs key tag
-                  (solved_run_of linorder_var_id (equal_exp, linorder_exp)
+                  (solved_run_of
                     ((equal_analysis_product
                        (equal_lifted
                          (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -12971,71 +12974,83 @@ ik_domain_parity)))
 (ownership_split_lifted
   ((semilattice_sup_order_rel equal_var_id),
     (ownership_split_order_rel equal_var_id))))))))))
-                          (gcall_global_reads (equal_var_id, linorder_var_id)
-                            exp_vars is_global (ci_args ci))
-                          e (split_free_lifted
-                              ((semilattice_sup_analysis_product
+                          (call_global_reads is_global (ci_args ci)) e
+                          (split_free_lifted
+                            ((semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_gdefault_st
+                                   (split_key_var_id.infinite_key_split_key,
+                                     equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_ivl)))
+                               (semilattice_sup_analysis_product
                                  (semilattice_sup_lifted
                                    (semilattice_sup_gdefault_st
                                      (split_key_var_id.infinite_key_split_key,
                                        equal_var_id)
                                      (bounded_semilattice_sup_bot_kd
-                                       ik_domain_ivl)))
+                                       ik_domain_congruence)))
                                  (semilattice_sup_analysis_product
-                                   (semilattice_sup_lifted
-                                     (semilattice_sup_gdefault_st
-                                       (split_key_var_id.infinite_key_split_key,
- equal_var_id)
-                                       (bounded_semilattice_sup_bot_kd
- ik_domain_congruence)))
                                    (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_gdefault_st
+ (split_key_var_id.infinite_key_split_key, equal_var_id)
+ (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))
                                      (semilattice_sup_analysis_product
                                        (semilattice_sup_lifted
  (semilattice_sup_gdefault_st
    (split_key_var_id.infinite_key_split_key, equal_var_id)
    (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))
-                                       (semilattice_sup_analysis_product
- (semilattice_sup_lifted
-   (semilattice_sup_gdefault_st
-     (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))
- (semilattice_sup_lifted
-   (semilattice_sup_gdefault_st
-     (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))))
+                                       (semilattice_sup_lifted
+ (semilattice_sup_gdefault_st
+   (split_key_var_id.infinite_key_split_key, equal_var_id)
+   (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_gdefault_st
+ (split_key_var_id.infinite_key_split_key, equal_var_id)
+ (bounded_semilattice_sup_bot_kd ik_domain_sign)))
                                      (semilattice_sup_analysis_product
                                        (semilattice_sup_lifted
  (semilattice_sup_gdefault_st
    (split_key_var_id.infinite_key_split_key, equal_var_id)
-   (bounded_semilattice_sup_bot_kd ik_domain_sign)))
-                                       (semilattice_sup_analysis_product
- (semilattice_sup_lifted
-   (semilattice_sup_gdefault_st
-     (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_parity)))
- (semilattice_sup_lifted (semilattice_sup_order_rel equal_var_id))))))),
+   (bounded_semilattice_sup_bot_kd ik_domain_parity)))
+                                       (semilattice_sup_lifted
+ (semilattice_sup_order_rel equal_var_id))))))),
+                              (ownership_split_analysis_product
+                                (ownership_split_lifted
+                                  ((semilattice_sup_gdefault_st
+                                     (split_key_var_id.infinite_key_split_key,
+                                       equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_ivl)),
+                                    (ownership_split_gdefault_st
+                                      (equal_var_id, split_key_var_id)
+                                      ((bounded_semilattice_sup_bot_kd
+ ik_domain_ivl).order_bot_bounded_semilattice_sup_bot,
+(order_top_kd ik_domain_ivl)))))
                                 (ownership_split_analysis_product
                                   (ownership_split_lifted
                                     ((semilattice_sup_gdefault_st
                                        (split_key_var_id.infinite_key_split_key,
  equal_var_id)
                                        (bounded_semilattice_sup_bot_kd
- ik_domain_ivl)),
+ ik_domain_congruence)),
                                       (ownership_split_gdefault_st
 (equal_var_id, split_key_var_id)
 ((bounded_semilattice_sup_bot_kd
-   ik_domain_ivl).order_bot_bounded_semilattice_sup_bot,
-  (order_top_kd ik_domain_ivl)))))
+   ik_domain_congruence).order_bot_bounded_semilattice_sup_bot,
+  (order_top_kd ik_domain_congruence)))))
                                   (ownership_split_analysis_product
-                                    (ownership_split_lifted
-                                      ((semilattice_sup_gdefault_st
- (split_key_var_id.infinite_key_split_key, equal_var_id)
- (bounded_semilattice_sup_bot_kd ik_domain_congruence)),
-(ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-  ((bounded_semilattice_sup_bot_kd
-     ik_domain_congruence).order_bot_bounded_semilattice_sup_bot,
-    (order_top_kd ik_domain_congruence)))))
                                     (ownership_split_analysis_product
+                                      (ownership_split_lifted
+((semilattice_sup_gdefault_st
+   (split_key_var_id.infinite_key_split_key, equal_var_id)
+   (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
+  (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
+    ((bounded_semilattice_sup_bot_kd
+       ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
+      (order_top_kd ik_domain_int_tuple)))))
                                       (ownership_split_analysis_product
 (ownership_split_lifted
   ((semilattice_sup_gdefault_st
@@ -13045,47 +13060,36 @@ ik_domain_parity)))
       ((bounded_semilattice_sup_bot_kd
          ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
         (order_top_kd ik_domain_int_tuple)))))
-(ownership_split_analysis_product
-  (ownership_split_lifted
-    ((semilattice_sup_gdefault_st
-       (split_key_var_id.infinite_key_split_key, equal_var_id)
-       (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
-      (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-        ((bounded_semilattice_sup_bot_kd
-           ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
-          (order_top_kd ik_domain_int_tuple)))))
-  (ownership_split_lifted
-    ((semilattice_sup_gdefault_st
-       (split_key_var_id.infinite_key_split_key, equal_var_id)
-       (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
-      (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-        ((bounded_semilattice_sup_bot_kd
-           ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
-          (order_top_kd ik_domain_int_tuple)))))))
+(ownership_split_lifted
+  ((semilattice_sup_gdefault_st
+     (split_key_var_id.infinite_key_split_key, equal_var_id)
+     (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
+    (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
+      ((bounded_semilattice_sup_bot_kd
+         ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
+        (order_top_kd ik_domain_int_tuple)))))))
+                                    (ownership_split_analysis_product
+                                      (ownership_split_lifted
+((semilattice_sup_gdefault_st
+   (split_key_var_id.infinite_key_split_key, equal_var_id)
+   (bounded_semilattice_sup_bot_kd ik_domain_sign)),
+  (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
+    ((bounded_semilattice_sup_bot_kd
+       ik_domain_sign).order_bot_bounded_semilattice_sup_bot,
+      (order_top_kd ik_domain_sign)))))
                                       (ownership_split_analysis_product
 (ownership_split_lifted
   ((semilattice_sup_gdefault_st
      (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_sign)),
+     (bounded_semilattice_sup_bot_kd ik_domain_parity)),
     (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
       ((bounded_semilattice_sup_bot_kd
-         ik_domain_sign).order_bot_bounded_semilattice_sup_bot,
-        (order_top_kd ik_domain_sign)))))
-(ownership_split_analysis_product
-  (ownership_split_lifted
-    ((semilattice_sup_gdefault_st
-       (split_key_var_id.infinite_key_split_key, equal_var_id)
-       (bounded_semilattice_sup_bot_kd ik_domain_parity)),
-      (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-        ((bounded_semilattice_sup_bot_kd
-           ik_domain_parity).order_bot_bounded_semilattice_sup_bot,
-          (order_top_kd ik_domain_parity)))))
-  (ownership_split_lifted
-    ((semilattice_sup_order_rel equal_var_id),
-      (ownership_split_order_rel equal_var_id)))))))))
-                              (gcall_global_reads
-                                (equal_var_id, linorder_var_id) exp_vars
-                                is_global (ci_args ci)))))
+         ik_domain_parity).order_bot_bounded_semilattice_sup_bot,
+        (order_top_kd ik_domain_parity)))))
+(ownership_split_lifted
+  ((semilattice_sup_order_rel equal_var_id),
+    (ownership_split_order_rel equal_var_id)))))))))
+                            (call_global_reads is_global (ci_args ci)))))
                     is_global p sol))
               (solve_c_traced
                 (equal_prod equal_cfg_node (equal_list equal_cfg_node))
@@ -13903,8 +13907,7 @@ ik_domain_parity)))
       (warrowing_lifted
         ((bounded_semilattice_sup_bot_order_rel equal_var_id),
           (warrowing_order_rel equal_var_id))))))))))))))))))
-                r (equations (equal_var_id, linorder_var_id)
-                    (equal_exp, linorder_exp)
+                r (equations
                     ((equal_analysis_product
                        (equal_lifted
                          (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -14007,8 +14010,7 @@ ik_domain_parity)))
                     (fun a -> Analysis_Global a)
                     (fun a b -> Activation_Seed (a, b)) (fun _ -> cs_route k) []
                     (fun _ ->
-                      gkeyed_split_spec equal_exp
-                        (equal_var_id, linorder_var_id)
+                      keyed_split_spec
                         (bounded_semilattice_sup_bot_lifted
                           (semilattice_sup_analysis_product
                             (semilattice_sup_lifted
@@ -14051,7 +14053,7 @@ ik_domain_sign)))
                                     (semilattice_sup_lifted
                                       (semilattice_sup_order_rel
 equal_var_id))))))))
-                        exp_vars ReturnVar is_global
+                        is_global
                         (split_cmb_lifted
                           ((semilattice_sup_analysis_product
                              (semilattice_sup_lifted
@@ -14752,7 +14754,7 @@ let rec es_run
                           (equal_list (equal_kd equal_parity))
                           (equal_list equal_unit))))))
                 conf ds p [] mcp_ctx_key (fun a -> Report_Entry a)
-                (solved_run_of linorder_var_id (equal_exp, linorder_exp)
+                (solved_run_of
                   ((equal_analysis_product
                      (equal_lifted
                        (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -15691,8 +15693,7 @@ let rec es_run
     (warrowing_lifted
       ((bounded_semilattice_sup_bot_order_rel equal_var_id),
         (warrowing_order_rel equal_var_id))))))))))))))))))
-              r (equations (equal_var_id, linorder_var_id)
-                  (equal_exp, linorder_exp)
+              r (equations
                   ((equal_analysis_product
                      (equal_lifted
                        (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -15819,7 +15820,7 @@ let rec es_run
                   (fun a b -> Activation_Seed (a, b))
                   (mcp_route (activation_of asa)) mcp_root_ctx
                   (fun _ ->
-                    dg_spec_of equal_exp
+                    dg_spec_of
                       (bot_lifted
                         (semilattice_sup_analysis_product
                           (semilattice_sup_lifted
@@ -15888,7 +15889,7 @@ ik_domain_parity)))
                             (equal_list (equal_kd equal_parity))
                             (equal_list equal_unit))))))
                   conf ds p gs mcp_ctx_key (fun a -> Report_Entry a)
-                  (solved_run_of linorder_var_id (equal_exp, linorder_exp)
+                  (solved_run_of
                     ((equal_analysis_product
                        (equal_lifted
                          (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -16689,71 +16690,83 @@ ik_domain_parity)))
 (ownership_split_lifted
   ((semilattice_sup_order_rel equal_var_id),
     (ownership_split_order_rel equal_var_id))))))))))
-                          (gcall_global_reads (equal_var_id, linorder_var_id)
-                            exp_vars is_global (ci_args ci))
-                          e (split_free_lifted
-                              ((semilattice_sup_analysis_product
+                          (call_global_reads is_global (ci_args ci)) e
+                          (split_free_lifted
+                            ((semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_gdefault_st
+                                   (split_key_var_id.infinite_key_split_key,
+                                     equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_ivl)))
+                               (semilattice_sup_analysis_product
                                  (semilattice_sup_lifted
                                    (semilattice_sup_gdefault_st
                                      (split_key_var_id.infinite_key_split_key,
                                        equal_var_id)
                                      (bounded_semilattice_sup_bot_kd
-                                       ik_domain_ivl)))
+                                       ik_domain_congruence)))
                                  (semilattice_sup_analysis_product
-                                   (semilattice_sup_lifted
-                                     (semilattice_sup_gdefault_st
-                                       (split_key_var_id.infinite_key_split_key,
- equal_var_id)
-                                       (bounded_semilattice_sup_bot_kd
- ik_domain_congruence)))
                                    (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_gdefault_st
+ (split_key_var_id.infinite_key_split_key, equal_var_id)
+ (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))
                                      (semilattice_sup_analysis_product
                                        (semilattice_sup_lifted
  (semilattice_sup_gdefault_st
    (split_key_var_id.infinite_key_split_key, equal_var_id)
    (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))
-                                       (semilattice_sup_analysis_product
- (semilattice_sup_lifted
-   (semilattice_sup_gdefault_st
-     (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))
- (semilattice_sup_lifted
-   (semilattice_sup_gdefault_st
-     (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))))
+                                       (semilattice_sup_lifted
+ (semilattice_sup_gdefault_st
+   (split_key_var_id.infinite_key_split_key, equal_var_id)
+   (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_gdefault_st
+ (split_key_var_id.infinite_key_split_key, equal_var_id)
+ (bounded_semilattice_sup_bot_kd ik_domain_sign)))
                                      (semilattice_sup_analysis_product
                                        (semilattice_sup_lifted
  (semilattice_sup_gdefault_st
    (split_key_var_id.infinite_key_split_key, equal_var_id)
-   (bounded_semilattice_sup_bot_kd ik_domain_sign)))
-                                       (semilattice_sup_analysis_product
- (semilattice_sup_lifted
-   (semilattice_sup_gdefault_st
-     (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_parity)))
- (semilattice_sup_lifted (semilattice_sup_order_rel equal_var_id))))))),
+   (bounded_semilattice_sup_bot_kd ik_domain_parity)))
+                                       (semilattice_sup_lifted
+ (semilattice_sup_order_rel equal_var_id))))))),
+                              (ownership_split_analysis_product
+                                (ownership_split_lifted
+                                  ((semilattice_sup_gdefault_st
+                                     (split_key_var_id.infinite_key_split_key,
+                                       equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_ivl)),
+                                    (ownership_split_gdefault_st
+                                      (equal_var_id, split_key_var_id)
+                                      ((bounded_semilattice_sup_bot_kd
+ ik_domain_ivl).order_bot_bounded_semilattice_sup_bot,
+(order_top_kd ik_domain_ivl)))))
                                 (ownership_split_analysis_product
                                   (ownership_split_lifted
                                     ((semilattice_sup_gdefault_st
                                        (split_key_var_id.infinite_key_split_key,
  equal_var_id)
                                        (bounded_semilattice_sup_bot_kd
- ik_domain_ivl)),
+ ik_domain_congruence)),
                                       (ownership_split_gdefault_st
 (equal_var_id, split_key_var_id)
 ((bounded_semilattice_sup_bot_kd
-   ik_domain_ivl).order_bot_bounded_semilattice_sup_bot,
-  (order_top_kd ik_domain_ivl)))))
+   ik_domain_congruence).order_bot_bounded_semilattice_sup_bot,
+  (order_top_kd ik_domain_congruence)))))
                                   (ownership_split_analysis_product
-                                    (ownership_split_lifted
-                                      ((semilattice_sup_gdefault_st
- (split_key_var_id.infinite_key_split_key, equal_var_id)
- (bounded_semilattice_sup_bot_kd ik_domain_congruence)),
-(ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-  ((bounded_semilattice_sup_bot_kd
-     ik_domain_congruence).order_bot_bounded_semilattice_sup_bot,
-    (order_top_kd ik_domain_congruence)))))
                                     (ownership_split_analysis_product
+                                      (ownership_split_lifted
+((semilattice_sup_gdefault_st
+   (split_key_var_id.infinite_key_split_key, equal_var_id)
+   (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
+  (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
+    ((bounded_semilattice_sup_bot_kd
+       ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
+      (order_top_kd ik_domain_int_tuple)))))
                                       (ownership_split_analysis_product
 (ownership_split_lifted
   ((semilattice_sup_gdefault_st
@@ -16763,47 +16776,36 @@ ik_domain_parity)))
       ((bounded_semilattice_sup_bot_kd
          ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
         (order_top_kd ik_domain_int_tuple)))))
-(ownership_split_analysis_product
-  (ownership_split_lifted
-    ((semilattice_sup_gdefault_st
-       (split_key_var_id.infinite_key_split_key, equal_var_id)
-       (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
-      (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-        ((bounded_semilattice_sup_bot_kd
-           ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
-          (order_top_kd ik_domain_int_tuple)))))
-  (ownership_split_lifted
-    ((semilattice_sup_gdefault_st
-       (split_key_var_id.infinite_key_split_key, equal_var_id)
-       (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
-      (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-        ((bounded_semilattice_sup_bot_kd
-           ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
-          (order_top_kd ik_domain_int_tuple)))))))
+(ownership_split_lifted
+  ((semilattice_sup_gdefault_st
+     (split_key_var_id.infinite_key_split_key, equal_var_id)
+     (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)),
+    (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
+      ((bounded_semilattice_sup_bot_kd
+         ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot,
+        (order_top_kd ik_domain_int_tuple)))))))
+                                    (ownership_split_analysis_product
+                                      (ownership_split_lifted
+((semilattice_sup_gdefault_st
+   (split_key_var_id.infinite_key_split_key, equal_var_id)
+   (bounded_semilattice_sup_bot_kd ik_domain_sign)),
+  (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
+    ((bounded_semilattice_sup_bot_kd
+       ik_domain_sign).order_bot_bounded_semilattice_sup_bot,
+      (order_top_kd ik_domain_sign)))))
                                       (ownership_split_analysis_product
 (ownership_split_lifted
   ((semilattice_sup_gdefault_st
      (split_key_var_id.infinite_key_split_key, equal_var_id)
-     (bounded_semilattice_sup_bot_kd ik_domain_sign)),
+     (bounded_semilattice_sup_bot_kd ik_domain_parity)),
     (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
       ((bounded_semilattice_sup_bot_kd
-         ik_domain_sign).order_bot_bounded_semilattice_sup_bot,
-        (order_top_kd ik_domain_sign)))))
-(ownership_split_analysis_product
-  (ownership_split_lifted
-    ((semilattice_sup_gdefault_st
-       (split_key_var_id.infinite_key_split_key, equal_var_id)
-       (bounded_semilattice_sup_bot_kd ik_domain_parity)),
-      (ownership_split_gdefault_st (equal_var_id, split_key_var_id)
-        ((bounded_semilattice_sup_bot_kd
-           ik_domain_parity).order_bot_bounded_semilattice_sup_bot,
-          (order_top_kd ik_domain_parity)))))
-  (ownership_split_lifted
-    ((semilattice_sup_order_rel equal_var_id),
-      (ownership_split_order_rel equal_var_id)))))))))
-                              (gcall_global_reads
-                                (equal_var_id, linorder_var_id) exp_vars
-                                is_global (ci_args ci)))))
+         ik_domain_parity).order_bot_bounded_semilattice_sup_bot,
+        (order_top_kd ik_domain_parity)))))
+(ownership_split_lifted
+  ((semilattice_sup_order_rel equal_var_id),
+    (ownership_split_order_rel equal_var_id)))))))))
+                            (call_global_reads is_global (ci_args ci)))))
                     is_global p sol))
               (solve_c_traced
                 (equal_prod equal_cfg_node
@@ -17649,8 +17651,7 @@ ik_domain_parity)))
       (warrowing_lifted
         ((bounded_semilattice_sup_bot_order_rel equal_var_id),
           (warrowing_order_rel equal_var_id))))))))))))))))))
-                r (equations (equal_var_id, linorder_var_id)
-                    (equal_exp, linorder_exp)
+                r (equations
                     ((equal_analysis_product
                        (equal_lifted
                          (equal_gdefault_st (infinite_key_var_id, equal_var_id)
@@ -17780,8 +17781,7 @@ ik_domain_parity)))
                     (fun a b -> Activation_Seed (a, b))
                     (mcp_route (activation_of asa)) mcp_root_ctx
                     (fun _ ->
-                      gkeyed_split_spec equal_exp
-                        (equal_var_id, linorder_var_id)
+                      keyed_split_spec
                         (bounded_semilattice_sup_bot_lifted
                           (semilattice_sup_analysis_product
                             (semilattice_sup_lifted
@@ -17824,7 +17824,7 @@ ik_domain_sign)))
                                     (semilattice_sup_lifted
                                       (semilattice_sup_order_rel
 equal_var_id))))))))
-                        exp_vars ReturnVar is_global
+                        is_global
                         (split_cmb_lifted
                           ((semilattice_sup_analysis_product
                              (semilattice_sup_lifted
@@ -18448,9 +18448,7 @@ let rec com_exps
 
 let footprints : (var_id, exp, var_id, unit) footprints_ext
   = Footprints_ext
-      (gedge_global_reads (equal_var_id, linorder_var_id) exp_vars,
-        gedge_global_writes equal_var_id ReturnVar,
-        gcall_global_reads (equal_var_id, linorder_var_id) exp_vars,
+      (edge_global_reads, edge_global_writes, call_global_reads,
         (fun g (CallEdge (dst, pars, _)) ->
           global_names_in equal_var_id g
             ((match dst with None -> [] | Some x -> [x]) @ pars)),

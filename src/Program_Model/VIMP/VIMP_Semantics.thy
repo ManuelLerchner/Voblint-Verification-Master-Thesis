@@ -10,7 +10,7 @@ text \<open>
   converts an assigned value, an actual argument and a returned value, and the semantics
   converts the two values it writes itself, a call result and a library result, to the
   destination's kind. This theory fixes the globals and the initial stores of that
-  semantics and instantiates the generic semantic core with them.
+  semantics and defines it.
 \<close>
 
 text \<open>The globals are the \<^const>\<open>GlobalId\<close> identities. A call keeps them and resets
@@ -27,43 +27,157 @@ text \<open>A program starts with its globals at zero and every other identity h
 definition init_stores :: "kenv \<Rightarrow> store set" where
   "init_stores \<kappa> = {t. all_in_kinds \<kappa> t \<and> (\<forall>x. t (GlobalId x) = 0)}"
 
-section \<open>The typed language instance\<close>
+section \<open>Frame-stack small-step semantics\<close>
 
 text \<open>
-  The generic semantic core is parametric in the evaluator, the globals, the return slot
-  and the conversion applied when a value is written. The typed language instantiates it
-  with \<^const>\<open>eval\<close>, the \<^const>\<open>GlobalId\<close> identities, the shared slot
-  \<^const>\<open>ReturnVar\<close>, and conversion to the destination's kind, as C converts on
-  assignment. A variable read carries no conversion: an identity holds a value of its own
-  kind, since every write converts.
+  A written value is converted to the kind of its destination, as C converts on
+  assignment. \<open>kind_conv\<close> takes the destination as an option because a call without
+  a destination converts nothing. A variable read carries no conversion: an identity
+  holds a value of its own kind, since every write converts.
 \<close>
 
 definition kind_conv :: "kenv \<Rightarrow> var_id option \<Rightarrow> int \<Rightarrow> int" where
   "kind_conv \<kappa> dst n = (case dst of None \<Rightarrow> n | Some v \<Rightarrow> ik_norm (\<kappa> v) n)"
 
-lemma kind_conv_simps [simp]:
+text \<open>Not \<open>[simp]\<close>: the semantics' rules are stated with the conversion folded, and
+  unfolding it in a goal would keep them from matching.\<close>
+
+lemma kind_conv_simps:
   "kind_conv \<kappa> None n = n"
   "kind_conv \<kappa> (Some v) n = ik_norm (\<kappa> v) n"
   by (simp_all add: kind_conv_def)
 
-definition pstep :: "kenv \<Rightarrow> ('a, var_id, exp) gptable
-    \<Rightarrow> ('a, var_id, exp) gcom \<times> store \<times> var_id gframe list
-    \<Rightarrow> ('a, var_id, exp) gcom \<times> store \<times> var_id gframe list \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p/ _)" [51, 51, 51, 51] 50) where
-  "pstep \<kappa> = vimp_sem.gpstep eval is_global ReturnVar (kind_conv \<kappa>)"
+text \<open>A frame records the caller's store and the destination of the pending call.\<close>
+
+datatype frame = Frame (frame_store: store) (frame_dest: "var_id option")
+
+text \<open>The reference semantics every soundness claim is ultimately about.  A configuration is
+  a command, a store, and a stack of caller frames; a call pushes one frame and continues in
+  the callee body followed by \<open>Restore\<close>, a return writes the return slot and hands control to
+  \<open>Unwind\<close>, which discards the rest of the callee body until that \<open>Restore\<close> pops the frame.
+  \<open>Restore\<close> and \<open>Unwind\<close> exist only here, in configurations the semantics builds; no source
+  program contains them.
+
+  \<^const>\<open>eval\<close> evaluates an expression, \<^const>\<open>is_global\<close> classifies the variables a
+  call keeps, \<^const>\<open>ReturnVar\<close> is the return slot (Goblint's single
+  \<^verbatim>\<open>return_varinfo\<close>), and \<^const>\<open>kind_conv\<close> converts a value written to a
+  destination, as Goblint converts a stored value to its target's declared type. A call
+  converts each actual to its formal, as an assignment converts to its destination, so
+  every entry store holds each formal at its own kind. Elaboration has already
+  converted an actual it produced, as CIL does, and there the conversion changes
+  nothing. A returned value is converted once, to the caller's destination.\<close>
+
+inductive pstep :: "kenv \<Rightarrow> ('a, var_id, exp) gptable
+    \<Rightarrow> 'a com \<times> store \<times> frame list \<Rightarrow> 'a com \<times> store \<times> frame list \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p/ _)" [51, 51, 51, 51] 50)
+  for \<kappa> :: kenv and \<Pi> :: "('a, var_id, exp) gptable"
+where
+  Assign:  "\<kappa>,\<Pi> \<turnstile> (Assign i x a, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := kind_conv \<kappa> (Some x) (eval a s)), frs)"
+| Check:   "\<kappa>,\<Pi> \<turnstile> (Check i l c, s, frs) \<rightarrow>\<^sub>p (SKIP i, s, frs)"
+| Seq1:    "\<kappa>,\<Pi> \<turnstile> (Seq (SKIP i) c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
+| Seq2:    "\<kappa>,\<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p (c1', s', frs')
+             \<Longrightarrow> \<kappa>,\<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p (Seq c1' c2, s', frs')"
+| IfTrue:  "truthy (eval b s) \<Longrightarrow> \<kappa>,\<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p (c1, s, frs)"
+| IfFalse: "\<not> truthy (eval b s) \<Longrightarrow> \<kappa>,\<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
+| While:   "\<kappa>,\<Pi> \<turnstile> (While i b c, s, frs) \<rightarrow>\<^sub>p (If i b (Seq c (While i b c)) (SKIP i), s, frs)"
+| Call:    "\<Pi> p = Some decl
+             \<Longrightarrow> length actuals = length (formals decl)
+             \<Longrightarrow> distinct (formals decl)
+             \<Longrightarrow> vals = map (\<lambda>e. eval e s) actuals
+             \<Longrightarrow> callee = bind_formals (formals decl)
+                           (map2 (\<lambda>x. kind_conv \<kappa> (Some x)) (formals decl) vals)
+                           (enter_state is_global s)
+             \<Longrightarrow> \<kappa>,\<Pi> \<turnstile> (Call i dst p actuals, s, frs)
+                   \<rightarrow>\<^sub>p (Seq (body decl) (Restore i), callee, Frame s dst # frs)"
+| Special: "special_table p = Some desc
+             \<Longrightarrow> classify_special desc actuals = Some sc
+             \<Longrightarrow> special_result eval sc s v
+             \<Longrightarrow> \<kappa>,\<Pi> \<turnstile> (Call i (Some x) p actuals, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := kind_conv \<kappa> (Some x) v), frs)"
+| RestoreStep:
+    "\<kappa>,\<Pi> \<turnstile> (Restore i, s, Frame fr dst # frs)
+       \<rightarrow>\<^sub>p (SKIP i, combine_assign dst (kind_conv \<kappa> dst (s ReturnVar)) (combine_env is_global fr s), frs)"
+| ReturnSome:
+    "\<kappa>,\<Pi> \<turnstile> (Return i (Some e), s, frs) \<rightarrow>\<^sub>p (Unwind i, s(ReturnVar := eval e s), frs)"
+| ReturnNone:
+    "\<kappa>,\<Pi> \<turnstile> (Return i None, s, frs) \<rightarrow>\<^sub>p (Unwind i, s, frs)"
+| UnwindDead:
+    "\<not> is_Restore c2 \<Longrightarrow> \<kappa>,\<Pi> \<turnstile> (Seq (Unwind i) c2, s, frs) \<rightarrow>\<^sub>p (Unwind i, s, frs)"
+| UnwindAct:
+    "\<kappa>,\<Pi> \<turnstile> (Seq (Unwind j) (Restore i), s, Frame fr dst # frs)
+       \<rightarrow>\<^sub>p (SKIP i, combine_assign dst (kind_conv \<kappa> dst (s ReturnVar)) (combine_env is_global fr s), frs)"
 
 abbreviation psteps :: "kenv \<Rightarrow> ('a, var_id, exp) gptable
-    \<Rightarrow> ('a, var_id, exp) gcom \<times> store \<times> var_id gframe list
-    \<Rightarrow> ('a, var_id, exp) gcom \<times> store \<times> var_id gframe list \<Rightarrow> bool"
+    \<Rightarrow> 'a com \<times> store \<times> frame list \<Rightarrow> 'a com \<times> store \<times> frame list \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p\<^sup>*/ _)" [51, 51, 51, 51] 50) where
   "psteps \<kappa> \<Pi> x y \<equiv> star (pstep \<kappa> \<Pi>) x y"
 
-text \<open>The typed source semantics is the generic one at these parameters.\<close>
+inductive_cases SkipSE[elim!]: "\<kappa>,\<Pi> \<turnstile> (SKIP i, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases AssignSE[elim!]: "\<kappa>,\<Pi> \<turnstile> (Assign i x a, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases CheckSE[elim!]: "\<kappa>,\<Pi> \<turnstile> (Check i l c, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases SeqSE[elim]: "\<kappa>,\<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases IfSE[elim!]: "\<kappa>,\<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases WhileSE[elim]: "\<kappa>,\<Pi> \<turnstile> (While i b c, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases CallSE[elim]: "\<kappa>,\<Pi> \<turnstile> (Call i dst p actuals, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases RestoreSE[elim!]: "\<kappa>,\<Pi> \<turnstile> (Restore i, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases ReturnSE[elim!]: "\<kappa>,\<Pi> \<turnstile> (Return i e, s, frs) \<rightarrow>\<^sub>p cfg"
+inductive_cases UnwindSE[elim!]: "\<kappa>,\<Pi> \<turnstile> (Unwind i, s, frs) \<rightarrow>\<^sub>p cfg"
 
-global_interpretation vimp: vimp_sem eval is_global ReturnVar "kind_conv \<kappa>"
-  rewrites "vimp_sem.gpstep eval is_global ReturnVar (kind_conv \<kappa>) = pstep \<kappa>"
-  for \<kappa> :: kenv
-  by (simp add: pstep_def)
+declare pstep.intros [simp, intro]
+
+lemma combine_env_rv_irrelevant [simp]:
+  "combine_env is_global fr (t(ReturnVar := v)) = combine_env is_global fr t"
+  by (rule ext) simp
+
+lemma psteps_Seq2:
+  "\<kappa>,\<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p\<^sup>* (c1', s', frs')
+   \<Longrightarrow> \<kappa>,\<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p\<^sup>* (Seq c1' c2, s', frs')"
+  by (induction rule: star.induct[of "pstep \<kappa> \<Pi>", split_format(complete)])
+     (auto intro: star.step)
+
+subsection \<open>Frame-stack extension\<close>
+
+text \<open>A step never inspects the frames below the one it works on, so any run stays valid
+  with more callers underneath.  This is what lets a proof about a procedure in isolation be
+  reused at an arbitrary call depth.\<close>
+
+lemma pstep_frame_extend:
+  "\<kappa>,\<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow>
+   \<kappa>,\<Pi> \<turnstile> (c, s, frs @ extra) \<rightarrow>\<^sub>p (c', s', frs' @ extra)"
+  by (induction "(c, s, frs)" "(c', s', frs')"
+        arbitrary: c s frs c' s' frs' rule: pstep.induct)
+     auto
+
+subsection \<open>Call completion\<close>
+
+text \<open>Running a whole call in one step of reasoning: a body that finishes under its own
+  frame lets the caller resume with the frame popped and the return slot written.  Callers
+  use these instead of replaying the \<open>Restore\<close> bookkeeping at every call site.\<close>
+
+lemma pstep_Call:
+  assumes "\<Pi> p = Some decl"
+      and "length actuals = length (formals decl)"
+      and "distinct (formals decl)"
+  shows "\<kappa>,\<Pi> \<turnstile> (Call i dst p actuals, s, frs) \<rightarrow>\<^sub>p (Seq (body decl) (Restore i),
+            bind_formals (formals decl)
+              (map2 (\<lambda>x. kind_conv \<kappa> (Some x)) (formals decl) (map (\<lambda>e. eval e s) actuals))
+              (enter_state is_global s),
+            Frame s dst # frs)"
+  using assms by (rule pstep.Call) (rule refl)+
+
+lemma pstep_Call_parameterless [intro]:
+  assumes "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
+  shows
+    "\<kappa>,\<Pi> \<turnstile> (Call i dst p [], s, frs) \<rightarrow>\<^sub>p (Seq c (Restore i), enter_state is_global s, Frame s dst # frs)"
+proof -
+  have "\<kappa>,\<Pi> \<turnstile> (Call i dst p [], s, frs) \<rightarrow>\<^sub>p (Seq (body (\<lparr>formals = [], body = c\<rparr>)) (Restore i),
+           bind_formals (formals (\<lparr>formals = [], body = c\<rparr>))
+             (map2 (\<lambda>x. kind_conv \<kappa> (Some x)) (formals (\<lparr>formals = [], body = c\<rparr>))
+               (map (\<lambda>e. eval e s) []))
+             (enter_state is_global s),
+           Frame s dst # frs)"
+    using assms by (rule pstep_Call) simp_all
+  then show ?thesis by simp
+qed
 
 subsection \<open>A declaration without an initializer\<close>
 
@@ -83,17 +197,17 @@ lemma pstep_declare:
 proof
   assume "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p (c', s', frs')"
   then show "c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
-    using assms by (auto elim!: vimp.CallSE simp: special_table_def)
+    using assms by (auto elim!: CallSE simp: special_table_def kind_conv_simps)
 next
   assume "c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
   then obtain n where n: "n \<in> ik_range (\<kappa> x)" and eq: "c' = SKIP i" "frs' = frs" "s' = s(x := n)"
     by blast
   have "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := kind_conv \<kappa> (Some x) n), frs)"
-    by (rule vimp.Special[where desc = SD_Nondet_Int and sc = "Nondet_Int :: exp gspecial_call"])
+    by (rule pstep.Special[where desc = SD_Nondet_Int and sc = "Nondet_Int :: exp gspecial_call"])
        (simp_all add: special_table_def)
   with n eq
   show "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p (c', s', frs')"
-    by (simp del: ik_range_iff)
+    by (simp add: kind_conv_simps del: ik_range_iff)
 qed
 
 corollary pstep_declare_forgets:

@@ -10,9 +10,8 @@ There is one language at two levels. The parser builds *surface VIMP*
 (`elaborate`, `elab_com`, `elab_ptable`) resolves each name to a variable identity
 `var_id`, gives every node a machine kind `ikind`, and makes C's implicit conversions
 explicit, producing *core VIMP* (`exp`, `com`). The canonical step relation `pstep`
-executes core VIMP; it is the instance of the generic `vimp_sem.gpstep` at `eval`,
-`is_global`, the return slot `ReturnVar` and `kind_conv`, the conversion to the
-destination's kind on every write. Surface VIMP has no semantics of its own: a
+executes core VIMP with `eval`, `is_global`, the return slot `ReturnVar` and
+`kind_conv`, the conversion to the destination's kind on every write. Surface VIMP has no semantics of its own: a
 surface program means the core semantics of its elaboration. That is a definition,
 part of the adequacy argument, not a proved transformation.
 
@@ -23,12 +22,12 @@ part of the adequacy argument, not a proved transformation.
 | `VIMP_Globals.thy` | locals/globals classifier: fresh callee stores and caller/callee store combination |
 | `VIMP_Expr.thy` | C division and remainder (`c_div`, `c_mod`), `truthy`, expression footprints and `lits_fit` |
 | `VIMP_Special.thy` | special-call vocabulary (`__voblint_nondet_int`, `min`, `max`) |
-| `VIMP_Proc.thy` | the command syntax `gcom` generic in annotation, variable and expression type; declarations, frames, the generic step rules `vimp_sem.gpstep`, well-formedness |
+| `VIMP_Proc.thy` | the command syntax `gcom` generic in annotation, variable and expression type; declarations and well-formedness |
 | `VIMP_Program.thy` | the `imp_prog` record and program-level lookups |
 | `Var_Id.thy` | variable identities `var_id` (`GlobalId`, `ScopedId`, `ReturnId`, `ReturnVar`), name resolution, kind environments `kenv` and stores `store = var_id ⇒ int` |
 | `Core_Exp.thy` | core expressions `exp`, their evaluation `eval`, kinds and typing, and `elaborate` from `src_exp` |
 | `Core_Com.thy` | core commands `com`, `elab_com`, typing, and `kind_decls`/`kenv_of` (an undeclared identity is `I32`) |
-| `VIMP_Semantics.thy` | `init_stores` (globals zero, every value in its kind), `kind_conv`, the canonical `pstep`, and `elab_ptable` |
+| `VIMP_Semantics.thy` | `init_stores` (globals zero, every value in its kind), `kind_conv`, the frames, `pstep`, and `elab_ptable` |
 | `VIMP_Grammar_Generated.thy` | Generated from `manifests/vimp-grammar.yaml`; never edited by hand |
 | `VIMP_Notation.thy` | The `imp` and `program` quotations |
 

@@ -2,9 +2,15 @@
   "facts": {
     "activation_collect_dg_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>grouted_context ev rv conv glob S \\<gamma>\\<^sub>D\\<^sub>G g\n          buffer_key global_of route bot0.0 d\\<^sub>0 g\\<^sub>0 sigma vars\n          x0.0 sg seed resolve is_bot \\<gamma>\\<^sub>M adm;\n (cfg_entry g, c\\<^sub>0) \\<in> vars;\n S0.0 \\<subseteq> \\<gamma>\\<^sub>D\\<^sub>G d\\<^sub>0 e\\<^sub>0;\n e\\<^sub>0 \\<le> genv global_of sigma\\<rbrakk>\n\\<Longrightarrow> ctx_sem.gactivation_collect ev rv conv glob adm c\\<^sub>0\n                   g S0.0 v c\n                  \\<subseteq> \\<gamma>\\<^sub>M (sg (Inl (v, c)))",
+      "statement": "\\<lbrakk>routed_context \\<kappa> S \\<gamma>\\<^sub>D\\<^sub>G g buffer_key\n          global_of route bot0.0 d\\<^sub>0 g\\<^sub>0 sigma vars x0.0 sg seed\n          resolve is_bot \\<gamma>\\<^sub>M adm;\n (cfg_entry g, c\\<^sub>0) \\<in> vars;\n S0.0 \\<subseteq> \\<gamma>\\<^sub>D\\<^sub>G d\\<^sub>0 e\\<^sub>0;\n e\\<^sub>0 \\<le> genv global_of sigma\\<rbrakk>\n\\<Longrightarrow> \\<A>\\<^bsub>\\<kappa>,adm,c\\<^sub>0,g,S0.0\\<^esub> v c\n                  \\<subseteq> \\<gamma>\\<^sub>M (sg (Inl (v, c)))",
       "theory": "Routed_Context",
       "why": "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
+    },
+    "activation_collect_sound": {
+      "oracles": [],
+      "statement": "activation_coverage \\<kappa> g S cover adm c\\<^sub>0 \\<Longrightarrow>\n\\<A>\\<^bsub>\\<kappa>,adm,c\\<^sub>0,g,S\\<^esub> v c \\<subseteq> cover v c",
+      "theory": "Activation_Backbone",
+      "why": "Main-statements appendix: the activation coverage theorem."
     },
     "compile.simps(4)": {
       "oracles": [],
@@ -32,79 +38,55 @@
     },
     "csim_star": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<Pi>,g,\\<rho> \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n star (vimp_sem.gpstep ev glob rv conv \\<Pi>) (c, s, frs) src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     star (cfg_exec_sem.gcstep ev rv conv glob g)\n                      (v, t, stk) cfg' \\<and>\n                     \\<Pi>,g,\\<rho> \\<turnstile> src' \\<approx> cfg'",
+      "statement": "\\<lbrakk>\\<Pi>,g,\\<rho> \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<kappa>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p\\<^sup>*\n src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<kappa>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g,\\<rho> \\<turnstile> src' \\<approx> cfg'",
       "theory": "Simulation_Preservation",
       "why": "Main-statements appendix: simulation of source runs by the compiled graph."
     },
     "csim_step": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<Pi>,g,\\<rho> \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n vimp_sem.gpstep ev glob rv conv \\<Pi> (c, s, frs) src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     star (cfg_exec_sem.gcstep ev rv conv glob g)\n                      (v, t, stk) cfg' \\<and>\n                     \\<Pi>,g,\\<rho> \\<turnstile> src' \\<approx> cfg'",
+      "statement": "\\<lbrakk>\\<Pi>,g,\\<rho> \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<kappa>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<kappa>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g,\\<rho> \\<turnstile> src' \\<approx> cfg'",
       "theory": "Simulation_Preservation",
       "why": "Program-model chapter: one source step is matched by the compiled graph."
     },
     "cstep_preserves_activation_trace_repr": {
       "oracles": [],
-      "statement": "\\<lbrakk>gwf_compile_input vars rv glob \\<Pi> ps;\n cfg_exec_sem.gcstep ev rv conv glob (compile_prog \\<Pi> ps) cf cf';\n bridge_sem.gactivation_trace_repr ev glob rv conv (compile_prog \\<Pi> ps) S\n  cf t\\<rbrakk>\n\\<Longrightarrow> \\<exists>t'.\n                     bridge_sem.gactivation_trace_repr ev glob rv conv\n                      (compile_prog \\<Pi> ps) S cf' t'",
+      "statement": "\\<lbrakk>gwf_compile_input vars ReturnVar is_global \\<Pi> ps;\n \\<kappa>,compile_prog \\<Pi> ps \\<turnstile> cf \\<rightarrow>\\<^sub>c cf';\n activation_trace_repr \\<kappa> (compile_prog \\<Pi> ps) S cf t\\<rbrakk>\n\\<Longrightarrow> \\<exists>t'.\n                     activation_trace_repr \\<kappa> (compile_prog \\<Pi> ps)\n                      S cf' t'",
       "theory": "Source_To_Trace",
       "why": "Chapter 4: one graph step is matched by a trace rule."
     },
-    "gactivation_collect_sound": {
+    "eval_elaborate": {
       "oracles": [],
-      "statement": "gactivation_coverage ev rv conv glob g S cover adm\n c\\<^sub>0 \\<Longrightarrow>\nctx_sem.gactivation_collect ev rv conv glob adm c\\<^sub>0 g S v c\n\\<subseteq> cover v c",
-      "theory": "Activation_Backbone",
-      "why": "Main-statements appendix: the activation coverage theorem."
-    },
-    "gpstep.Call": {
-      "oracles": [],
-      "statement": "\\<lbrakk>\\<Pi> p = Some decl; length actuals = length (formals decl);\n distinct (formals decl); vals = map (\\<lambda>e. ev e s) actuals;\n callee =\n bind_formals (formals decl)\n  (map2 (\\<lambda>x. conv (Some x)) (formals decl) vals)\n  (enter_state glob s)\\<rbrakk>\n\\<Longrightarrow> vimp_sem.gpstep ev glob rv conv \\<Pi>\n                   (gcom.Call i dst p actuals, s, frs)\n                   (Seq (body decl) (Restore i), callee, Frame s dst # frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule for a call."
-    },
-    "gpstep.RestoreStep": {
-      "oracles": [],
-      "statement": "vimp_sem.gpstep ev glob rv conv \\<Pi> (Restore i, s, Frame fr dst # frs)\n (SKIP i, combine_assign dst (conv dst (s rv)) (combine_env glob fr s), frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule that restores the caller's frame."
-    },
-    "gpstep.ReturnSome": {
-      "oracles": [],
-      "statement": "vimp_sem.gpstep ev glob rv conv \\<Pi> (Return i (Some e), s, frs)\n (Unwind i, s(rv := ev e s), frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule for returning a value."
-    },
-    "gpstep.UnwindAct": {
-      "oracles": [],
-      "statement": "vimp_sem.gpstep ev glob rv conv \\<Pi>\n (Seq (Unwind j) (Restore i), s, Frame fr dst # frs)\n (SKIP i, combine_assign dst (conv dst (s rv)) (combine_env glob fr s), frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
+      "statement": "all_in_kinds \\<kappa> t \\<Longrightarrow>\neval (elaborate \\<rho> \\<kappa> ik e) t =\nsrc_eval (\\<kappa> \\<circ> \\<rho>) ik e (t \\<circ> \\<rho>)",
+      "theory": "Core_Exp",
+      "why": "Section 3.2: elaboration preserves the meaning of a surface expression."
     },
     "ls_channel_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>mcp_sem.gsound_local_spec ev rv conv glob \\<gamma>\\<^sub>c c;\n s \\<in> \\<gamma>\\<^sub>c x\\<rbrakk>\n\\<Longrightarrow> geval_query.channel_holds ev (ls_channel c x) s",
+      "statement": "\\<lbrakk>sound_local_spec \\<kappa> \\<gamma>\\<^sub>c c;\n s \\<in> \\<gamma>\\<^sub>c x\\<rbrakk>\n\\<Longrightarrow> eval_query.channel_holds (ls_channel c x) s",
       "theory": "MCP_Spec",
       "why": "Cooperation chapter: the channel the framework supplies holds at every store of the state."
     },
     "mcp_combine_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<forall>(\\<gamma>\\<^sub>i, c\\<^sub>i)\\<in>set comps.\n            mcp_sem.gsound_local_spec ev rv conv glob \\<gamma>\\<^sub>i\n             c\\<^sub>i;\n mcp_independent comps; comps \\<noteq> []\\<rbrakk>\n\\<Longrightarrow> mcp_sem.gsound_local_spec ev rv conv glob\n                   (mcp_gamma (map fst comps)) (mcp_combine (map snd comps))",
+      "statement": "\\<lbrakk>\\<forall>(\\<gamma>\\<^sub>i, c\\<^sub>i)\\<in>set comps.\n            sound_local_spec \\<kappa> \\<gamma>\\<^sub>i c\\<^sub>i;\n mcp_independent comps; comps \\<noteq> []\\<rbrakk>\n\\<Longrightarrow> sound_local_spec \\<kappa> (mcp_gamma (map fst comps))\n                   (mcp_combine (map snd comps))",
       "theory": "MCP_Spec",
       "why": "Cooperation chapter: independent sound components combine into a sound component."
     },
     "node_collect_covered": {
       "oracles": [],
-      "statement": "gactivation_coverage ev rv conv glob g S cover adm\n c\\<^sub>0 \\<Longrightarrow>\ncollect_sem.gnode_collect ev rv conv glob g S v\n\\<subseteq> \\<Union> (range (cover v))",
+      "statement": "activation_coverage \\<kappa> g S cover adm c\\<^sub>0 \\<Longrightarrow>\n\\<C>\\<^bsub>\\<kappa>,g,S\\<^esub> v \\<subseteq> \\<Union> (range (cover v))",
       "theory": "Activation_Trace_Abstract",
       "why": "Chapter 4: the claims of all contexts contain the node collecting semantics."
     },
     "node_collect_eq_Union_activation_collect": {
       "oracles": [],
-      "statement": "gactivation_coverage ev rv conv glob g S cover adm\n c\\<^sub>0 \\<Longrightarrow>\ncollect_sem.gnode_collect ev rv conv glob g S v =\n\\<Union>\n (range (ctx_sem.gactivation_collect ev rv conv glob adm c\\<^sub>0 g S v))",
+      "statement": "activation_coverage \\<kappa> g S cover adm c\\<^sub>0 \\<Longrightarrow>\n\\<C>\\<^bsub>\\<kappa>,g,S\\<^esub> v =\n\\<Union> (range (\\<A>\\<^bsub>\\<kappa>,adm,c\\<^sub>0,g,S\\<^esub> v))",
       "theory": "Activation_Trace_Abstract",
       "why": "Chapter 4: exhaustive buckets under the coverage contract."
     },
     "nonrel_refine_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>t \\<in> gamma_tabs \\<kappa> \\<sigma>;\n geval_query.channel_holds eval ch t; truthy (eval b t) = pol\\<rbrakk>\n\\<Longrightarrow> t \\<in> gamma_tabs \\<kappa>\n                           (nonrel_refine sem \\<kappa> ch b pol \\<sigma>)",
+      "statement": "\\<lbrakk>t \\<in> gamma_tabs \\<kappa> \\<sigma>;\n eval_query.channel_holds ch t; truthy (eval b t) = pol\\<rbrakk>\n\\<Longrightarrow> t \\<in> gamma_tabs \\<kappa>\n                           (nonrel_refine sem \\<kappa> ch b pol \\<sigma>)",
       "theory": "Nonrelational_Transfer",
       "why": "Chapter 5, the guard refinement drops no store that passes the guard."
     },
@@ -115,6 +97,30 @@
       "statement": "\\<exists>res v stk.\n   run_voblint nv_conf [] nv_prog = Analysed res \\<and>\n   map (\\<lambda>chk. (check_point chk, check_verdict chk))\n    (report_checks res) =\n   [(Statement 4, Decided Check_Proved),\n    (Statement 5, Decided Check_Proved)] \\<and>\n   elab_ptable nv_prog [],elab_cfg nv_prog [],prog_main_name \\<turnstile>\n   (nv_checks, nv_final, []) \\<approx> (v, nv_final, stk) \\<and>\n   nv_final \\<in> reaching [] nv_prog v \\<and>\n   (\\<exists>d.\n       Lifted d \\<in> report_states_at res v \\<and>\n       nv_final\n       \\<in> mcp.act_gamma [] (activation_of (conf_analyses nv_conf))\n              d) \\<and>\n   \\<not> DEAD res v",
       "theory": "Example_Non_Vacuity",
       "why": "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
+    },
+    "pstep.Call": {
+      "oracles": [],
+      "statement": "\\<lbrakk>\\<Pi> p = Some decl; length actuals = length (formals decl);\n distinct (formals decl); vals = map (\\<lambda>e. eval e s) actuals;\n callee =\n bind_formals (formals decl)\n  (map2 (\\<lambda>x. kind_conv \\<kappa> (Some x)) (formals decl) vals)\n  (enter_state is_global s)\\<rbrakk>\n\\<Longrightarrow> \\<kappa>,\\<Pi> \\<turnstile>\n                  (gcom.Call i dst p actuals, s, frs) \\<rightarrow>\\<^sub>p\n                  (Seq (body decl) (Restore i), callee, Frame s dst # frs)",
+      "theory": "VIMP_Semantics",
+      "why": "Program-model chapter: the source step rule for a call."
+    },
+    "pstep.RestoreStep": {
+      "oracles": [],
+      "statement": "\\<kappa>,\\<Pi> \\<turnstile>\n(Restore i, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i,\n combine_assign dst (kind_conv \\<kappa> dst (s ReturnVar))\n  (combine_env is_global fr s),\n frs)",
+      "theory": "VIMP_Semantics",
+      "why": "Program-model chapter: the source step rule that restores the caller's frame."
+    },
+    "pstep.ReturnSome": {
+      "oracles": [],
+      "statement": "\\<kappa>,\\<Pi> \\<turnstile>\n(Return i (Some e), s, frs) \\<rightarrow>\\<^sub>p\n(Unwind i, s(ReturnVar := eval e s), frs)",
+      "theory": "VIMP_Semantics",
+      "why": "Program-model chapter: the source step rule for returning a value."
+    },
+    "pstep.UnwindAct": {
+      "oracles": [],
+      "statement": "\\<kappa>,\\<Pi> \\<turnstile>\n(Seq (Unwind j) (Restore i), s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i,\n combine_assign dst (kind_conv \\<kappa> dst (s ReturnVar))\n  (combine_env is_global fr s),\n frs)",
+      "theory": "VIMP_Semantics",
+      "why": "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
     },
     "return_at_caller_context_unsound": {
       "oracles": [
@@ -168,13 +174,13 @@
     },
     "run_voblint_spine": {
       "oracles": [],
-      "statement": "\\<lbrakk>run_voblint conf ds p = Analysed res;\n s0.0 \\<in> init_stores (kenv_of ds);\n kenv_of ds,elab_ptable p ds \\<turnstile>\n (main_body (elab_ptable p ds), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n \\<And>t.\n    t \\<in> \\<T>\\<^bsub>kenv_of\n                         ds,elab_cfg p\n                             ds,init_stores\n                                 (kenv_of ds)\\<^esub> \\<Longrightarrow>\n    \\<exists>c.\n       vimp.gactivation_context_rel (kenv_of ds) adm c\\<^sub>0\n        (elab_cfg p ds) t c;\n \\<And>v.\n    \\<Union>\n     (range\n       (\\<A>\\<^bsub>kenv_of\n                     ds,adm,c\\<^sub>0,elab_cfg p\n ds,init_stores (kenv_of ds)\\<^esub>\n         v)) =\n    reaching ds p v\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t c.\n                     elab_ptable p\n                      ds,elab_cfg p ds,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     vimp.gactivation_trace_repr (kenv_of ds)\n                      (elab_cfg p ds) (init_stores (kenv_of ds)) (v, s, stk)\n                      t \\<and>\n                     vimp.gactivation_context_rel (kenv_of ds) adm c\\<^sub>0\n                      (elab_cfg p ds) t c \\<and>\n                     s \\<in> \\<A>\\<^bsub>kenv_of\n    ds,adm,c\\<^sub>0,elab_cfg p ds,init_stores (kenv_of ds)\\<^esub>\n                              v c \\<and>\n                     \\<Union>\n                      (range\n                        (\\<A>\\<^bsub>kenv_of\nds,adm,c\\<^sub>0,elab_cfg p ds,init_stores (kenv_of ds)\\<^esub>\n                          v)) =\n                     reaching ds p v \\<and>\n                     (\\<exists>d.\n                         Lifted d \\<in> report_states_at res v \\<and>\n                         s \\<in> mcp.act_gamma ds\n                                  (activation_of (conf_analyses conf))\n                                  d) \\<and>\n                     (\\<forall>c.\n                         PROVED res v c \\<longrightarrow>\n                         truthy (eval c s)) \\<and>\n                     (\\<forall>c.\n                         REFUTED res v c \\<longrightarrow>\n                         \\<not> truthy (eval c s))",
+      "statement": "\\<lbrakk>run_voblint conf ds p = Analysed res;\n s0.0 \\<in> init_stores (kenv_of ds);\n kenv_of ds,elab_ptable p ds \\<turnstile>\n (main_body (elab_ptable p ds), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n \\<And>t.\n    t \\<in> \\<T>\\<^bsub>kenv_of\n                         ds,elab_cfg p\n                             ds,init_stores\n                                 (kenv_of ds)\\<^esub> \\<Longrightarrow>\n    \\<exists>c.\n       activation_context_rel (kenv_of ds) adm c\\<^sub>0 (elab_cfg p ds) t\n        c;\n \\<And>v.\n    \\<Union>\n     (range\n       (\\<A>\\<^bsub>kenv_of\n                     ds,adm,c\\<^sub>0,elab_cfg p\n ds,init_stores (kenv_of ds)\\<^esub>\n         v)) =\n    reaching ds p v\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t c.\n                     elab_ptable p\n                      ds,elab_cfg p ds,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr (kenv_of ds) (elab_cfg p ds)\n                      (init_stores (kenv_of ds)) (v, s, stk) t \\<and>\n                     activation_context_rel (kenv_of ds) adm c\\<^sub>0\n                      (elab_cfg p ds) t c \\<and>\n                     s \\<in> \\<A>\\<^bsub>kenv_of\n    ds,adm,c\\<^sub>0,elab_cfg p ds,init_stores (kenv_of ds)\\<^esub>\n                              v c \\<and>\n                     \\<Union>\n                      (range\n                        (\\<A>\\<^bsub>kenv_of\nds,adm,c\\<^sub>0,elab_cfg p ds,init_stores (kenv_of ds)\\<^esub>\n                          v)) =\n                     reaching ds p v \\<and>\n                     (\\<exists>d.\n                         Lifted d \\<in> report_states_at res v \\<and>\n                         s \\<in> mcp.act_gamma ds\n                                  (activation_of (conf_analyses conf))\n                                  d) \\<and>\n                     (\\<forall>c.\n                         PROVED res v c \\<longrightarrow>\n                         truthy (eval c s)) \\<and>\n                     (\\<forall>c.\n                         REFUTED res v c \\<longrightarrow>\n                         \\<not> truthy (eval c s))",
       "theory": "Run_Voblint",
       "why": "Results chapter: a source run's trace, its context and the chain to the verdicts, once for every policy."
     },
     "source_progress": {
       "oracles": [],
-      "statement": "\\<lbrakk>gwf_source_program vars rv glob \\<Pi>;\n star (vimp_sem.gpstep ev glob rv conv \\<Pi>) (main_body \\<Pi>, s0.0, [])\n  (c, s, frs)\\<rbrakk>\n\\<Longrightarrow> is_SKIP c \\<and> frs = [] \\<or>\n                  (\\<exists>cfg'.\n                      vimp_sem.gpstep ev glob rv conv \\<Pi> (c, s, frs)\n                       cfg')",
+      "statement": "\\<lbrakk>gwf_source_program vars ReturnVar is_global \\<Pi>;\n \\<kappa>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (c, s, frs)\\<rbrakk>\n\\<Longrightarrow> is_SKIP c \\<and> frs = [] \\<or>\n                  (\\<exists>cfg'.\n                      \\<kappa>,\\<Pi> \\<turnstile>\n                      (c, s, frs) \\<rightarrow>\\<^sub>p cfg')",
       "theory": "Source_Progress",
       "why": "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
     },
@@ -186,7 +192,7 @@
     },
     "source_run_has_activation_trace": {
       "oracles": [],
-      "statement": "\\<lbrakk>gwf_compile_input vars rv glob \\<Pi> ps; s0.0 \\<in> S;\n star (vimp_sem.gpstep ev glob rv conv \\<Pi>) (main_body \\<Pi>, s0.0, [])\n  (residual, s, frs)\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t.\n                     \\<Pi>,compile_prog \\<Pi> ps,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     bridge_sem.gactivation_trace_repr ev glob rv conv\n                      (compile_prog \\<Pi> ps) S (v, s, stk) t",
+      "statement": "\\<lbrakk>gwf_compile_input vars ReturnVar is_global \\<Pi> ps; s0.0 \\<in> S;\n \\<kappa>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs)\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t.\n                     \\<Pi>,compile_prog \\<Pi> ps,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr \\<kappa> (compile_prog \\<Pi> ps)\n                      S (v, s, stk) t",
       "theory": "Source_To_Trace",
       "why": "Main-statements appendix: source runs are represented by valid traces."
     },

@@ -41,15 +41,15 @@ text \<open>
 locale analysis_surface =
   fixes table :: "'p \<Rightarrow> ('c, 'a) solved_table"
     and bot_state :: 'a
-    and classify :: "'e::linorder \<Rightarrow> 'a \<Rightarrow> check_result"
-    and pcfg :: "'p \<Rightarrow> ('vr::linorder, 'e) gcfg"
+    and classify :: "exp \<Rightarrow> 'a \<Rightarrow> check_result"
+    and pcfg :: "'p \<Rightarrow> (var_id, exp) gcfg"
 begin
 
 definition state_at :: "'p \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'a" where
   "state_at p ctx v =
      (case lookup_table (table p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
 
-definition report :: "'p \<Rightarrow> 'c \<Rightarrow> (pp \<times> 'e \<times> check_result) list" where
+definition report :: "'p \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result) list" where
   "report p ctx = classify_checks (pcfg p) (state_at p ctx) classify"
 
 text \<open>
@@ -102,7 +102,7 @@ lemma fst_reach_state_at [simp]:
   by (simp add: reach_state_at_def split: lifted.splits)
 
 definition report_with_state ::
-  "'p \<Rightarrow> 'c \<Rightarrow> (pp \<times> 'e \<times> check_result \<times> bool \<times> 'a) list" where
+  "'p \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
   "report_with_state p ctx =
      classify_checks_with_state (pcfg p) (reach_state_at p ctx)
        (\<lambda>c (_, s). classify c s)"

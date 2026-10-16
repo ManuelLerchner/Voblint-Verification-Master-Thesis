@@ -51,35 +51,35 @@ text \<open>
   \<^term>\<open>Check_Unknown\<close> gets no counterpart.
 \<close>
 
-theorem gclassify_checks_proved_sound:
-  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> ('vr::linorder \<Rightarrow> int) set" and ev :: "'e::linorder \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> int"
+theorem classify_checks_proved_sound:
+  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Proved) \<in> set (classify_checks g env classify)"
-    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> truthy (ev c s)"
+    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> truthy (eval c s)"
     and node_sound: "reach v \<le> \<gamma>\<^sub>S (env v)"
-  shows "\<forall>s \<in> reach v. truthy (ev c s)"
+  shows "\<forall>s \<in> reach v. truthy (eval c s)"
 proof
   fix s assume s: "s \<in> reach v"
   have "classify c (env v) = Check_Proved"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Proved env classify] by auto
   moreover have "s \<in> \<gamma>\<^sub>S (env v)" using node_sound s by blast
-  ultimately show "truthy (ev c s)" using classify_proved by blast
+  ultimately show "truthy (eval c s)" using classify_proved by blast
 qed
 
-theorem gclassify_checks_refuted_sound:
-  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> ('vr::linorder \<Rightarrow> int) set" and ev :: "'e::linorder \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> int"
+theorem classify_checks_refuted_sound:
+  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Refuted) \<in> set (classify_checks g env classify)"
     and classify_refuted: "\<And>d s. classify c d = Check_Refuted
-                              \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<not> truthy (ev c s)"
+                              \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<not> truthy (eval c s)"
     and node_sound: "reach v \<le> \<gamma>\<^sub>S (env v)"
-  shows "\<forall>s \<in> reach v. \<not> truthy (ev c s)"
+  shows "\<forall>s \<in> reach v. \<not> truthy (eval c s)"
 proof
   fix s assume s: "s \<in> reach v"
   have "classify c (env v) = Check_Refuted"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Refuted env classify] by auto
   moreover have "s \<in> \<gamma>\<^sub>S (env v)" using node_sound s by blast
-  ultimately show "\<not> truthy (ev c s)" using classify_refuted by blast
+  ultimately show "\<not> truthy (eval c s)" using classify_refuted by blast
 qed
 
 text \<open>
@@ -87,8 +87,8 @@ text \<open>
   classification, with the node's own abstract state attached to each entry.
   \<^const>\<open>classify_checks\<close> stays the soundness-critical primitive every domain
   cites directly; the projection lemma below shows this report is exactly that
-  one with a fourth field added, so \<open>gclassify_checks_proved_sound\<close> and
-  \<open>gclassify_checks_refuted_sound\<close> reach it through the projection without
+  one with a fourth field added, so \<open>classify_checks_proved_sound\<close> and
+  \<open>classify_checks_refuted_sound\<close> reach it through the projection without
   restatement.
 \<close>
 

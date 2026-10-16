@@ -46,7 +46,7 @@ semantics of its elaboration. That meaning is part of the adequacy argument, not
 proved transformation.
 
 Each step is an Isabelle theorem:
-[`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy)
+[`source_reaches_node_collect`](src/Program_Model/Compile/Source_To_Trace.thy)
 (a run is simulated at a node whose collected stores contain its store),
 [`report_state_sound`](src/Executable_Surface/CLI/Run_Report.thy) and
 [`report_check_sound`](src/Executable_Surface/CLI/Run_Report.thy) (the report
@@ -422,7 +422,7 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 | 𝒯<sub>κ,g,S</sub> | the valid activation traces of _g_ from _S_ | [`valid_activation_trace`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst) | the activation traces of graph _g_ from initial stores _S_ |
 | 𝒞<sub>κ,g,S</sub> v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |
 | 𝒜<sub>κ,adm,c₀,g,S</sub> v c | the stores collected at _v_ in context _c_ | [`activation_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst) | the stores valid activation traces carrying context _c_ reach at node _v_; _adm_ admits callee contexts and the root runs in _c₀_ |
-| carries t c<br>In `gactivation_coverage`, short for gactivation&#95;context&#95;rel adm c<sub>0</sub> g | _t_ carries context _c_ | [`carries`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.gactivation_coverage.carries%7Cconst) | the context relation of the locale's policy, between a valid activation trace and the contexts it may run in |
+| carries t c<br>In `activation_coverage`, short for activation&#95;context&#95;rel κ adm c<sub>0</sub> g | _t_ carries context _c_ | [`carries`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst) | the context relation of the locale's policy, between a valid activation trace and the contexts it may run in |
 
 <!-- notation:end -->
 
@@ -449,29 +449,29 @@ settings.
 Analyses are factored the way Goblint factors them: **D** holds the abstract facts
 attached to program points, **G** the information published and consumed across
 points. The framework's interface is
-[`gdg_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy), the Isabelle
+[`dg_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy), the Isabelle
 counterpart of Goblint's
 [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
 (transfer, entry, combine and communication). Equation generation with context
 routing, solver integration and the lifting to source-level soundness are proved
-once, for any `gdg_spec` with a
-[`ganalysis_contract`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
+once, for any `dg_spec` with a
+[`analysis_contract`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
 relating it to concrete stores; see
 [`src/Abstract_Interpreter/Framework/README.md`](src/Abstract_Interpreter/Framework/README.md).
 
 Every analysis selectable through `run_voblint` enters through a smaller
-interface, a [`glocal_spec`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy):
+interface, a [`local_spec`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy):
 one transfer per edge kind plus entry and combine, over local state only, with
-the soundness condition `gsound_local_spec`. `dg_spec_of` lifts it to a `gdg_spec`,
+the soundness condition `sound_local_spec`. `dg_spec_of` lifts it to a `dg_spec`,
 and `dg_spec_of_contract` supplies the contract. The activated analyses run as one
 state, one field each, as in Goblint's MCP
 ([`MCP_Registry`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Registry.thy),
 [`MCP_Carrier`](src/Executable_Surface/CLI/MCP_Carrier.thy)), and answer each
 other's queries. With flow-insensitive program globals,
-[`gkeyed_split_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Keyed_Split_Spec.thy)
+[`keyed_split_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Keyed_Split_Spec.thy)
 wraps that specification so each edge reads only the globals its expressions
 mention and publishes only the globals it may assign, each at its own unknown,
-and `gkeyed_split_contract` carries the contract over.
+and `keyed_split_contract` carries the contract over.
 
 A numeric domain enters as an instance of the class
 [`kind_int_domain`](src/Analyses/Nonrelational/Nonrelational_Domain.thy): values at
@@ -482,7 +482,7 @@ written once over any such domain and proved sound once (`nonrel_spec_sound`); i
 executable carrier is `nonrel_exec_spec`
 ([`Nonrelational_Exec`](src/Analyses/Nonrelational/Nonrelational_Exec.thy)). Sign,
 Interval, Parity, Congruence and the Interval-Congruence product `int_tuple` are
-instances. The relational Order analysis writes its `glocal_spec` by hand
+instances. The relational Order analysis writes its `local_spec` by hand
 ([`ord_spec`](src/Analyses/Order/Order_Analysis.thy)). Deriving transfer functions
 from certified value operations follows Nipkow's Isabelle abstract interpreter (see
 [Foundations](#foundations)).

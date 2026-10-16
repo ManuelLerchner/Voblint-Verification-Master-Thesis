@@ -92,18 +92,18 @@ lemma elab_cfg_calls_source_unique: "calls_source_unique (elab_cfg p ds)"
   unfolding calls_source_unique_def elab_cfg_def using compile_prog_calls_source_unique by blast
 
 lemma nonrel_exec_spec_sound_rd:
-  "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global
+  "sound_local_spec \<kappa>
      (\<lambda>d. gamma_lift (gamma_tabs \<kappa>) (map_lift nonrel_rd d))
-     (nonrel_exec_spec sem \<kappa> :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec)"
+     (nonrel_exec_spec sem \<kappa> :: 'a::kind_int_domain tst lifted local_spec)"
   using nonrel_exec_spec_sound[of \<kappa> sem, where 'a = 'a] by (simp add: gamma_exec_def[abs_def])
 
 text \<open>What the component owes the pipeline does not depend on the context policy, so it
   is proved once, for any route and root context.\<close>
 
 lemma nonrel_routed:
-  "gdg_analysis
-    eval ReturnVar (\<lambda>_. kind_conv (kenv_of ds)) (\<lambda>_. is_global) (\<lambda>_. init_stores (kenv_of ds))
-    (\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec)
+  "dg_analysis
+    (kenv_of ds) (\<lambda>_. init_stores (kenv_of ds))
+    (\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: 'a::kind_int_domain tst lifted local_spec)
     (\<lambda>_. st_is_bot) (\<lambda>\<G>. \<rho>\<^bsub>\<G>\<^esub>) (nonrel_init_st ds)
     (Analysis_Global ()) Analysis_Global Activation_Seed
     (TD_side_rule_Interp_solve r)
@@ -113,7 +113,7 @@ lemma nonrel_routed:
     (TD_side_rule_Interp_solve_c r)
     (\<lambda>_ c. dg_spec_of c) (\<lambda>p d e. d) (\<lambda>_ d. d) (\<lambda>_ d. Bot) (\<lambda>_ p. []) (\<lambda>p ci d e. d)
     (\<lambda>p. elab_cfg p ds) (\<lambda>_. FunctionEntry prog_main_name)"
-proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
+proof (rule dg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
     EmptyRd EmptyV SeedNe ClProved ClRefuted BotState InitSound SeedNeGlobal PEntry FinIntra
     FinCalls CallsUnique)
   case (CompSound p) show ?case by (rule nonrel_exec_spec_sound_rd)
@@ -146,9 +146,9 @@ next
   case (CallsUnique p) show ?case by (rule elab_cfg_calls_source_unique)
 qed
 
-global_interpretation nonrel: gdg_analysis
-    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
-    "\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec"
+global_interpretation nonrel: dg_analysis
+    "kenv_of ds" "\<lambda>_. init_stores (kenv_of ds)"
+    "\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: 'a::kind_int_domain tst lifted local_spec"
     "\<lambda>_. st_is_bot" "\<lambda>\<G>. \<rho>\<^bsub>\<G>\<^esub>" "nonrel_init_st ds"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
@@ -178,9 +178,9 @@ definition nonrel_es_ctx ::
         (case d of Lifted st \<Rightarrow> map (\<rho>\<^bsub>\<G>\<^esub> st) pars
          | Bot \<Rightarrow> map (\<lambda>_. \<bottom>) pars))"
 
-global_interpretation nonrel_es: gdg_analysis
-    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
-    "\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec"
+global_interpretation nonrel_es: dg_analysis
+    "kenv_of ds" "\<lambda>_. init_stores (kenv_of ds)"
+    "\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: 'a::kind_int_domain tst lifted local_spec"
     "\<lambda>_. st_is_bot" "\<lambda>\<G>. \<rho>\<^bsub>\<G>\<^esub>" "nonrel_init_st ds"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>\<G> u ctx d ca. nonrel_es_ctx \<G> d ca" "[]"
     "TD_side_rule_Interp_solve r"

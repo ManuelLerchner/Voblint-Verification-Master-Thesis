@@ -21,7 +21,7 @@ text \<open>
   transition from the caller's own carried context, so a return may only compose a callee
   whose context came from the caller it is resuming --- not any context that happens to
   cover that callee's entry.  This correlation is not an extra parameter to assume:
-  \<open>activation_context_rel_caller_entry\<close> makes it a theorem about \<^const>\<open>trace_sem.gvalid_activation_trace\<close>.
+  \<open>activation_context_rel_caller_entry\<close> makes it a theorem about \<^const>\<open>valid_activation_trace\<close>.
 
   \<open>TOTAL\<close> is what makes the buckets meaningful rather than merely safe.  A resumed caller
   may carry a context under which its callee was never assigned one; the callee's exit
@@ -40,48 +40,47 @@ text \<open>\<open>cover\<close> is the claim itself, \<open>adm\<close> the con
   \<open>c\<^sub>0\<close> the context the seed stores arrive under.  An analysis interprets this once,
   with its own solved table in place of \<open>cover\<close>; nothing below asks how that table was
   computed.\<close>
-locale gactivation_coverage = collect_sem ev rv conv glob
-  for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and rv :: 'v
-    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int" and glob :: "'v \<Rightarrow> bool" +
-  fixes g :: "('v, 'e) gcfg" and S :: "('v \<Rightarrow> int) set"
-    and cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> ('v \<Rightarrow> int) set"
-    and adm :: "('v, 'e, 'c) gcontext_policy"
+locale activation_coverage =
+  fixes \<kappa> :: kenv
+    and g :: "(var_id, exp) gcfg" and S :: "store set"
+    and cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
+    and adm :: "'c call_context_policy"
     and c\<^sub>0 :: 'c
   assumes INIT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) c\<^sub>0"
     and INTRA[intro]: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> gedge_step a s \<Longrightarrow> s' \<in> cover v c"
+        \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> edge_step \<kappa> a s \<Longrightarrow> s' \<in> cover v c"
     and CALL[intro]: "\<And>u dst pars args p cont c c' s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> cover u c
         \<Longrightarrow> c' \<in> adm u c (call_info_of (CallEdge dst pars args) p) s
-              (gcall_enter (CallEdge dst pars args) s)
-        \<Longrightarrow> gcall_enter (CallEdge dst pars args) s \<in> cover (FunctionEntry p) c'"
+              (call_enter \<kappa> (CallEdge dst pars args) s)
+        \<Longrightarrow> call_enter \<kappa> (CallEdge dst pars args) s \<in> cover (FunctionEntry p) c'"
     and RETURN[intro]: "\<And>u dst pars args p cont c c' p' s t es.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> cover u c
-        \<Longrightarrow> gadmits_call_context g adm u c p' s es c'
+        \<Longrightarrow> admits_call_context \<kappa> g adm u c p' s es c'
         \<Longrightarrow> t \<in> cover (FunctionResult p) c'
-        \<Longrightarrow> gcombine_collect dst s t \<in> cover cont c"
-    and TOTAL: "gcall_context_total_on cover adm g"
+        \<Longrightarrow> combine_collect \<kappa> dst s t \<in> cover cont c"
+    and TOTAL: "call_context_total_on \<kappa> cover adm g"
 begin
 
 text \<open>The trace-level objects at the locale's fixed arguments: the collection \<open>\<C>\<close>, the
   valid activation traces \<open>\<T>\<close>, the context relation \<open>carries\<close>, the buckets \<open>\<A>\<close>, and the
   admitted call contexts \<open>admits\<close>.\<close>
-abbreviation collect :: "cfg_node \<Rightarrow> ('v \<Rightarrow> int) set" ("\<C>")
-  where "\<C> \<equiv> gnode_collect g S"
-abbreviation traces :: "'v gactivation_trace set" ("\<T>")
-  where "\<T> \<equiv> gvalid_activation_trace g S"
-abbreviation carries :: "'v gactivation_trace \<Rightarrow> 'c \<Rightarrow> bool"
-  where "carries \<equiv> gactivation_context_rel adm c\<^sub>0 g"
-abbreviation buckets :: "cfg_node \<Rightarrow> 'c \<Rightarrow> ('v \<Rightarrow> int) set" ("\<A>")
-  where "\<A> \<equiv> gactivation_collect adm c\<^sub>0 g S"
-abbreviation admits :: "cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> 'c \<Rightarrow> bool"
-  where "admits \<equiv> gadmits_call_context g adm"
+abbreviation collect :: "cfg_node \<Rightarrow> store set" ("\<C>")
+  where "\<C> \<equiv> \<C>\<^bsub>\<kappa>,g,S\<^esub>"
+abbreviation traces :: "activation_trace set" ("\<T>")
+  where "\<T> \<equiv> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
+abbreviation carries :: "activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
+  where "carries \<equiv> activation_context_rel \<kappa> adm c\<^sub>0 g"
+abbreviation buckets :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set" ("\<A>")
+  where "\<A> \<equiv> \<A>\<^bsub>\<kappa>,adm,c\<^sub>0,g,S\<^esub>"
+abbreviation admits :: "cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
+  where "admits \<equiv> admits_call_context \<kappa> g adm"
 
 text \<open>\<open>trace_covered u\<close>: \<open>u\<close> carries some context, and its sink store is admitted at its
   own node under every context it carries.\<close>
-definition trace_covered :: "'v gactivation_trace \<Rightarrow> bool" where
+definition trace_covered :: "activation_trace \<Rightarrow> bool" where
   "trace_covered u \<longleftrightarrow>
      (\<exists>c. carries u c)
      \<and> (\<forall>c. carries u c \<longrightarrow> sink_store u \<in> cover (sink_node u) c)"
@@ -113,7 +112,7 @@ text \<open>\<open>intra_covered\<close>: an intra edge preserves the carried co
   and covers the concrete step through \<open>INTRA\<close> at each of them.\<close>
 lemma intra_covered:
   assumes e: "(sink_node t, a, v) \<in> intra g"
-    and st: "s' \<in> gedge_step a (sink_store t)" and pne: "path_of t \<noteq> []" and iht: "trace_covered t"
+    and st: "s' \<in> edge_step \<kappa> a (sink_store t)" and pne: "path_of t \<noteq> []" and iht: "trace_covered t"
   shows "trace_covered (extend t (v, s'))"
   using iht unfolding trace_covered_def
   by (auto simp: activation_context_rel_extend[OF pne] intro: INTRA[OF e _ st])
@@ -125,9 +124,9 @@ lemma call_covered:
   assumes e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and ihc: "trace_covered caller"
   shows "trace_covered (Call caller
-           [(FunctionEntry p, gcall_enter (CallEdge dst pars args) (sink_store caller))])"
+           [(FunctionEntry p, call_enter \<kappa> (CallEdge dst pars args) (sink_store caller))])"
 proof -
-  let ?es = "gcall_enter (CallEdge dst pars args) (sink_store caller)"
+  let ?es = "call_enter \<kappa> (CallEdge dst pars args) (sink_store caller)"
   from ihc obtain c where c: "carries caller c"
     and cov: "sink_store caller \<in> cover (sink_node caller) c"
     by (rule trace_covered_someE)
@@ -135,7 +134,7 @@ proof -
     adm: "admits (sink_node caller) c p (sink_store caller) ?es c'"
     by (rule call_context_total_onE[OF TOTAL e cov])
   have some: "carries (Call caller [(FunctionEntry p, ?es)]) c'"
-    using c adm by (rule gactivation_context_rel.Call)
+    using c adm by (rule activation_context_rel.Call)
   show ?thesis
   proof (rule trace_coveredI[OF some])
     fix c' assume "carries (Call caller [(FunctionEntry p, ?es)]) c'"
@@ -144,7 +143,7 @@ proof -
       by (auto simp: activation_context_rel_Call_iff)
     from adm0 obtain dst' pars' args' cont'
       where e': "(sink_node caller, CallEdge dst' pars' args', FunctionEntry p, cont') \<in> calls g"
-        and es: "?es = gcall_enter (CallEdge dst' pars' args') (sink_store caller)"
+        and es: "?es = call_enter \<kappa> (CallEdge dst' pars' args') (sink_store caller)"
         and Rc: "c' \<in> adm (sink_node caller) c0 (call_info_of (CallEdge dst' pars' args') p)
                    (sink_store caller) ?es"
       by (rule admits_call_contextE)
@@ -169,12 +168,12 @@ lemma return_covered:
     and ih_caller: "trace_covered caller"
     and ih_callee: "trace_covered callee"
   shows "trace_covered (Resume caller callee (path_of caller
-               @ [(cont, gcombine_collect dst (sink_store caller) (sink_store callee))]))"
+               @ [(cont, combine_collect \<kappa> dst (sink_store caller) (sink_store callee))]))"
 proof -
   let ?u = "Resume caller callee (path_of caller
-    @ [(cont, gcombine_collect dst (sink_store caller) (sink_store callee))])"
+    @ [(cont, combine_collect \<kappa> dst (sink_store caller) (sink_store callee))])"
   have sn: "sink_node ?u = cont"
-    and ss: "sink_store ?u = gcombine_collect dst (sink_store caller) (sink_store callee)"
+    and ss: "sink_store ?u = combine_collect \<kappa> dst (sink_store caller) (sink_store callee)"
     by (simp_all add: sink_node_def sink_store_def)
   from ih_caller obtain c1 where c1: "carries caller c1"
     by (rule trace_covered_someE)
@@ -187,7 +186,7 @@ proof -
     by (rule activation_context_rel_caller_entryE[OF callee_val cof ce])
   from adm obtain dst' pars' args' cont'
     where e': "(sink_node caller, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls g"
-      and es: "entry_store callee = gcall_enter (CallEdge dst' pars' args') (sink_store caller)"
+      and es: "entry_store callee = call_enter \<kappa> (CallEdge dst' pars' args') (sink_store caller)"
     by (rule admits_call_contextE)
   show ?thesis
   proof (rule trace_coveredI[OF some])
@@ -196,13 +195,13 @@ proof -
     have s_cov: "sink_store caller \<in> cover (sink_node caller) c"
       using ih_caller cc by (rule trace_coveredD)
     obtain c' where adm': "admits (sink_node caller) c p' (sink_store caller)
-                             (gcall_enter (CallEdge dst' pars' args') (sink_store caller)) c'"
+                             (call_enter \<kappa> (CallEdge dst' pars' args') (sink_store caller)) c'"
       by (rule call_context_total_onE[OF TOTAL e' s_cov])
     have tc': "carries callee c'"
       by (rule activation_context_rel_caller_entryI[OF callee_val cof hd cc adm'[folded es]])
     have t_cov: "sink_store callee \<in> cover (FunctionResult p) c'"
       using trace_coveredD[OF ih_callee tc'] res by simp
-    have "gcombine_collect dst (sink_store caller) (sink_store callee) \<in> cover cont c"
+    have "combine_collect \<kappa> dst (sink_store caller) (sink_store callee) \<in> cover cont c"
       by (rule RETURN[OF comb s_cov adm'[folded es] t_cov])
     then show "sink_store ?u \<in> cover (sink_node ?u) c" by (simp add: sn ss)
   qed
@@ -210,7 +209,7 @@ qed
 
 subsection \<open>The generic soundness theorem\<close>
 
-text \<open>The bound holds along the whole caller chain, by \<open>gvalid_activation_trace\<close> rule induction
+text \<open>The bound holds along the whole caller chain, by \<open>valid_activation_trace\<close> rule induction
   feeding the four closure lemmas.  The chain, not a per-node statement, is what the
   \<open>RETURN\<close> case needs: it recovers its caller structurally, and the caller lies in the
   callee's chain.\<close>
@@ -221,7 +220,7 @@ proof (rule caller_chain_closure)
   then show "trace_covered (Root [(cfg_entry g, s)])" by (rule init_covered)
 next
   fix t a v s' assume ht: "t \<in> \<T>" and ch: "\<forall>u \<in> callers t. trace_covered u"
-    and e: "(sink_node t, a, v) \<in> intra g" and st: "s' \<in> gedge_step a (sink_store t)"
+    and e: "(sink_node t, a, v) \<in> intra g" and st: "s' \<in> edge_step \<kappa> a (sink_store t)"
   have pt: "path_of t \<noteq> []" using ht valid_activation_trace_path_nonempty by blast
   have iht: "trace_covered t" using ch callers_refl by blast
   show "trace_covered (extend t (v, s'))" by (rule intra_covered[OF e st pt iht])
@@ -231,7 +230,7 @@ next
     and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
   have ihc: "trace_covered caller" using ch callers_refl by blast
   show "trace_covered (Call caller
-          [(FunctionEntry p, gcall_enter (CallEdge dst pars args) (sink_store caller))])"
+          [(FunctionEntry p, call_enter \<kappa> (CallEdge dst pars args) (sink_store caller))])"
     by (rule call_covered[OF e ihc])
 next
   fix callee caller p dst pars args cont
@@ -241,12 +240,12 @@ next
   have ih_caller: "trace_covered caller" using ch cof callers_caller_subset callers_refl by blast
   have ih_callee: "trace_covered callee" using ch callers_refl by blast
   show "trace_covered (Resume caller callee (path_of caller
-             @ [(cont, gcombine_collect dst (sink_store caller) (sink_store callee))]))"
+             @ [(cont, combine_collect \<kappa> dst (sink_store caller) (sink_store callee))]))"
     by (rule return_covered[OF cv cof res e ih_caller ih_callee])
 qed
 
 text \<open>Every valid activation trace carries a context, and its sink lies in every slot it carries:
-  \<open>gvalid_activation_trace\<close> is soundly over-approximated by \<open>trace_covered\<close>.\<close>
+  \<open>valid_activation_trace\<close> is soundly over-approximated by \<open>trace_covered\<close>.\<close>
 theorem valid_activation_trace_covered: "t \<in> \<T> \<Longrightarrow> trace_covered t"
 proof -
   assume "t \<in> \<T>"
@@ -307,8 +306,8 @@ text \<open>The interface is satisfiable for every graph, seed set, and initial 
   wide \<open>cover\<close> is chosen --- \<open>TOTAL\<close> genuinely constrains the context policy, not merely
   the cover.\<close>
 
-lemma (in collect_sem) activation_coverage_exists:
-  "gactivation_coverage ev rv conv glob g S (\<lambda>_ _. UNIV) (context_policy_of_fun (\<lambda>_ _ _. ())) ()"
+lemma activation_coverage_exists:
+  "activation_coverage \<kappa> g S (\<lambda>_ _. UNIV) (context_policy_of_fun (\<lambda>_ _ _. ())) ()"
   by unfold_locales auto
 
 end

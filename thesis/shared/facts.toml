@@ -28,50 +28,54 @@ why = "Arithmetic-safety endpoint cited in the introduction."
 
 [facts.source_run_has_activation_trace]
 why = "Main-statements appendix: source runs are represented by valid traces."
-fact = "bridge_sem.source_run_has_activation_trace"
+fact = "compile_prog_run_has_activation_trace"
 
 [facts.csim_step]
 why = "Program-model chapter: one source step is matched by the compiled graph."
-fact = "simrel_sem.csim_step"
+fact = "csim_step"
 
 [facts.source_progress]
 why = "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
-fact = "simrel_sem.source_progress"
+fact = "source_progress"
 session = "Voblint_Compile"
 theory = "Voblint_Compile.Source_Progress"
 
 [facts.csim_star]
 why = "Main-statements appendix: simulation of source runs by the compiled graph."
-fact = "simrel_sem.csim_star"
+fact = "csim_star"
 
-[facts.gactivation_collect_sound]
+[facts.eval_elaborate]
+why = "Section 3.2: elaboration preserves the meaning of a surface expression."
+fact = "eval_elaborate"
+
+[facts.activation_collect_sound]
 why = "Main-statements appendix: the activation coverage theorem."
-fact = "collect_sem.gactivation_collect_sound"
+fact = "activation_collect_sound"
 
 [facts.activation_collect_dg_sound]
 why = "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
-fact = "grouted_context.activation_collect_dg_sound"
+fact = "routed_context.activation_collect_dg_sound"
 
 [facts.nv_source_certified]
 why = "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
 session = "Voblint_Examples"
 theory = "Voblint_Examples.Example_Non_Vacuity"
 
-[facts."gpstep.Call"]
+[facts."pstep.Call"]
 why = "Program-model chapter: the source step rule for a call."
-fact = "vimp_sem.gpstep.Call"
+fact = "pstep.Call"
 
-[facts."gpstep.ReturnSome"]
+[facts."pstep.ReturnSome"]
 why = "Program-model chapter: the source step rule for returning a value."
-fact = "vimp_sem.gpstep.ReturnSome"
+fact = "pstep.ReturnSome"
 
-[facts."gpstep.RestoreStep"]
+[facts."pstep.RestoreStep"]
 why = "Program-model chapter: the source step rule that restores the caller's frame."
-fact = "vimp_sem.gpstep.RestoreStep"
+fact = "pstep.RestoreStep"
 
-[facts."gpstep.UnwindAct"]
+[facts."pstep.UnwindAct"]
 why = "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
-fact = "vimp_sem.gpstep.UnwindAct"
+fact = "pstep.UnwindAct"
 
 [facts."compile.simps(4)"]
 why = "Program-model chapter: compiling a sequence hands the first command the second's entry."
@@ -100,23 +104,23 @@ why = "Chapter 4: source-reachable stores are collected."
 
 [facts.node_collect_eq_Union_activation_collect]
 why = "Chapter 4: exhaustive buckets under the coverage contract."
-fact = "gactivation_coverage.node_collect_eq_Union_activation_collect"
+fact = "activation_coverage.node_collect_eq_Union_activation_collect"
 
 [facts.node_collect_covered]
 why = "Chapter 4: the claims of all contexts contain the node collecting semantics."
-fact = "gactivation_coverage.node_collect_covered"
+fact = "activation_coverage.node_collect_covered"
 
 [facts.cstep_preserves_activation_trace_repr]
 why = "Chapter 4: one graph step is matched by a trace rule."
-fact = "bridge_sem.cstep_preserves_activation_trace_repr"
+fact = "cstep_preserves_activation_trace_repr"
 
 [facts.ls_channel_sound]
 why = "Cooperation chapter: the channel the framework supplies holds at every store of the state."
-fact = "mcp_sem.ls_channel_sound"
+fact = "ls_channel_sound"
 
 [facts.mcp_combine_sound]
 why = "Cooperation chapter: independent sound components combine into a sound component."
-fact = "mcp_sem.mcp_combine_sound"
+fact = "mcp_combine_sound"
 
 [facts.routed_node_rhs_parts]
 why = "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."

@@ -82,7 +82,7 @@ text \<open>Each selectable analysis runs its own specification on one slot of t
   stores the slot denotes.\<close>
 
 definition field ::
-  "sem_conf \<Rightarrow> kenv \<Rightarrow> imp_prog \<Rightarrow> analysis \<Rightarrow> (var_id, exp, mcp_st lifted) glocal_spec" where
+  "sem_conf \<Rightarrow> kenv \<Rightarrow> imp_prog \<Rightarrow> analysis \<Rightarrow> mcp_st lifted local_spec" where
   "field sem \<kappa> p a = (case a of
       Interval \<Rightarrow> lens_of (lift_get slot1) (lift_put set_slot1) (nonrel_exec_spec sem \<kappa>)
     | Congruence \<Rightarrow> lens_of (lift_get slot2) (lift_put set_slot2) (nonrel_exec_spec sem \<kappa>)
@@ -140,10 +140,10 @@ fun field_empty :: "analysis \<Rightarrow> mcp_st \<Rightarrow> bool" where
 | "field_empty Order r = (slot6 r = Bot)"
 
 definition t_answer ::
-  "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tabs lifted \<Rightarrow> exp gchannel \<Rightarrow> exp gchannel" where
+  "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tabs lifted \<Rightarrow> channel \<Rightarrow> channel" where
   "t_answer sem \<kappa> x ch q = (case x of Bot \<Rightarrow> \<top> | Lifted d \<Rightarrow> nonrel_query sem \<kappa> ch d q)"
 
-fun answer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> analysis \<Rightarrow> mcp_val \<Rightarrow> exp gchannel \<Rightarrow> exp gchannel" where
+fun answer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> analysis \<Rightarrow> mcp_val \<Rightarrow> channel \<Rightarrow> channel" where
   "answer sem \<kappa> Interval v ch = t_answer sem \<kappa> (slot1 v) ch"
 | "answer sem \<kappa> Congruence v ch = t_answer sem \<kappa> (slot2 v) ch"
 | "answer sem \<kappa> (Ana_Int Refine_Never) v ch = t_answer sem \<kappa> (slot3n v) ch"
@@ -173,25 +173,24 @@ text \<open>Each field is sound for its own slot and leaves every other slot's s
   \<^locale>\<open>mcp_registry\<close>.\<close>
 
 lemma t_answer_sound:
-  assumes "s \<in> gamma_lift (gamma_tabs \<kappa>) x" and "geval_query.channel_holds eval ch s"
-  shows "geval_holds eval q (t_answer sem \<kappa> (x :: 'a::kind_int_domain tabs lifted) ch q) s"
+  assumes "s \<in> gamma_lift (gamma_tabs \<kappa>) x" and "eval_query.channel_holds ch s"
+  shows "eval_holds q (t_answer sem \<kappa> (x :: 'a::kind_int_domain tabs lifted) ch q) s"
 proof (cases x)
   case (Lifted d)
-  interpret T: mcp_sem eval ReturnVar "kind_conv \<kappa>" is_global .
   from assms Lifted have "s \<in> gamma_tabs \<kappa> d" by simp
-  from T.sound_local_spec_queryD[OF nonrel_spec_sound[of \<kappa>, where 'a = 'a],
-      unfolded T.gsound_query_def, rule_format, OF this assms(2)]
+  from sound_local_spec_queryD[OF nonrel_spec_sound[of \<kappa>, where 'a = 'a],
+      unfolded sound_query_def, rule_format, OF this assms(2)]
   show ?thesis by (simp add: t_answer_def Lifted nonrel_spec_def)
 qed (simp add: t_answer_def)
 
 lemma lens_lift_sound:
   fixes f :: "mcp_st \<Rightarrow> 'c::{semilattice_sup, order_bot}"
-  assumes sound: "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global g cmp"
+  assumes sound: "sound_local_spec \<kappa> g cmp"
     and get_put: "\<And>r v. f (u r v) = v" and get_bot: "f \<bottom> = \<bottom>"
     and mono: "\<And>r r'. r \<le> r' \<Longrightarrow> f r \<le> f r'"
-  shows "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global
+  shows "sound_local_spec \<kappa>
            (\<lambda>x. g (lift_get f x)) (lens_of (lift_get f) (lift_put u) cmp)"
-  by (rule mcp_sem.lens_of_sound[OF sound])
+  by (rule lens_of_sound[OF sound])
      (simp_all add: lift_get_put[OF get_put get_bot] lift_get_mono[OF mono])
 
 lemma lens_lift_frame:
@@ -201,11 +200,11 @@ lemma lens_lift_frame:
 
 lemma lens_lift_sound_eq:
   fixes f :: "mcp_st \<Rightarrow> 'c::{semilattice_sup, order_bot}"
-  assumes sound: "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global gm cmp"
+  assumes sound: "sound_local_spec \<kappa> gm cmp"
     and get_put: "\<And>r v. f (u r v) = v" and get_bot: "f \<bottom> = \<bottom>"
     and mono: "\<And>r r'. r \<le> r' \<Longrightarrow> f r \<le> f r'"
     and eq: "\<And>x. g x = gm (lift_get f x)"
-  shows "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global g
+  shows "sound_local_spec \<kappa> g
            (lens_of (lift_get f) (lift_put u) cmp)"
 proof -
   have "g = (\<lambda>x. gm (lift_get f x))" by (rule ext) (rule eq)
@@ -222,7 +221,7 @@ lemma mcp_bot_slots [simp]:
   by (simp_all add: bot_analysis_product_def bot_lifted_def)
 
 lemma field_sound:
-  "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global
+  "sound_local_spec \<kappa>
      (\<lambda>x. gamma_lift (val_gamma \<kappa> a) (map_lift (mcp_rd is_global) x)) (field sem \<kappa> p a)"
 proof -
   note nonrel = lens_lift_sound_eq[OF nonrel_exec_spec_sound]
@@ -245,7 +244,7 @@ lemma field_frame:
         split: lifted.splits)
 
 lemma ord_answer_sound:
-  "s \<in> gamma_ord_lift \<kappa> x \<Longrightarrow> geval_holds eval q (ord_query ch x q) s"
+  "s \<in> gamma_ord_lift \<kappa> x \<Longrightarrow> eval_holds q (ord_query ch x q) s"
   by (cases x) (simp_all add: ord_query_sound)
 
 lemma single_entry_nonrel_exec_spec: "single_entry (nonrel_exec_spec sem \<kappa>)"
@@ -258,7 +257,7 @@ lemma single_entry_field: "single_entry (field sem \<kappa> p a)"
   by (cases a rule: analysis_cases) (auto simp: field_def intro!: single_entry_lens_of lift_put_get
       single_entry_nonrel_exec_spec single_entry_ord_spec)
 
-global_interpretation mcp: mcp_registry eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global"
+global_interpretation mcp: mcp_registry "kenv_of ds"
     truth_exp "\<lambda>\<G> p a. field sem (kenv_of ds) p a" live mcp_rd "val_gamma (kenv_of ds)" val_empty
     "\<lambda>p. field_empty" "answer sem (kenv_of ds)"
   for sem ds

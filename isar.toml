@@ -107,6 +107,9 @@ allow = [
   "dg_tree_st_commute_seqcomp",
   # rule 3: a non-asking component's channel is its handler, hiding ask_rec
   "ls_channel_const",
+  # rule 4: functional-policy member of the source_store_in_activation_collect family,
+  # named in the Source_To_Trace prose; it owes no context witness
+  "source_store_in_activation_collect_of_fun",
   # rule 1: elim rule of sound_local_spec paired with sound_local_specI (fixed by user)
   "sound_local_specD",
   # rule 4: frame member of the ask_assign closure family whose sound and single_entry members are

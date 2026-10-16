@@ -84,7 +84,6 @@ definition map_result_global :: "('s \<Rightarrow> 't) \<Rightarrow> ('n, 's) re
      \<lparr> global_unknown = global_unknown g,
        global_state = map_lift f (global_state g) \<rparr>"
 
-
 subsection \<open>The report\<close>
 
 text \<open>
@@ -111,7 +110,6 @@ record ('k, 'x, 'vr, 'e, 'n, 's) analysis_report =
   report_checks :: "'e result_check list"
   report_globals :: "('n, 's) result_global list"
   report_diagnostics :: "'e arithmetic_diagnostic list"
-
 
 subsection \<open>One builder for every context policy\<close>
 
@@ -213,11 +211,11 @@ text \<open>
 \<close>
 
 definition report_row ::
-    "('vr, 'e, 'c, 'n, 's) gsolved_run \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result)
-       \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
-       \<Rightarrow> (pp, 'e list) rbt \<Rightarrow> (pp, 'e arithmetic_obligation list list) rbt
-       \<Rightarrow> (pp, (('vr, 'e) gedge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp
-       \<Rightarrow> ('e, 's) result_state" where
+    "('c, 'n, 's) solved_run \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> (exp arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, exp arithmetic_obligation list list) rbt
+       \<Rightarrow> (pp, ((var_id, exp) gedge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp
+       \<Rightarrow> (exp, 's) result_state" where
   "report_row sr classify classify_ob conds obls edges i ctx v =
      (let state = lookup_table (run_table sr) v ctx
       in \<lparr> state_point = v, state_context = i,
@@ -243,12 +241,12 @@ text \<open>
 \<close>
 
 definition report_of ::
-    "'k \<Rightarrow> 'vr list \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'n list
-       \<Rightarrow> (pp \<times> 'e arithmetic_obligation list) list
-       \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
+    "'k \<Rightarrow> var_id list \<Rightarrow> (var_id, exp) gcfg \<Rightarrow> 'n list
+       \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list
+       \<Rightarrow> (exp arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
        \<Rightarrow> pname list \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> 'x)
-       \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> ('vr, 'e, 'c, 'n, 's) gsolved_run
-       \<Rightarrow> ('k, 'x, 'vr, 'e, 'n, 's) analysis_report" where
+       \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> ('c, 'n, 's) solved_run
+       \<Rightarrow> ('k, 'x, var_id, exp, 'n, 's) analysis_report" where
   "report_of config vars g globals sites classify_ob procs ctx_key ctx_tag classify sr =
      (let r = run_table sr;
           ctxs = ordered_by_key ctx_key (snd ` covered_keys r);

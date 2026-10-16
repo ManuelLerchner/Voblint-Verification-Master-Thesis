@@ -34,25 +34,25 @@ lemma mem_report_checks_at [simp]:
   by (simp add: report_checks_at_def)
 
 text \<open>
-  What a decided verdict says about a store, under an evaluator \<open>ev\<close>:
+  What a decided verdict says about a store:
   \<open>Check_Proved\<close> that the condition holds, \<open>Check_Refuted\<close> that it fails,
   \<open>Check_Unknown\<close> nothing.
 \<close>
 
-fun verdict_holds :: "('e \<Rightarrow> 't \<Rightarrow> int) \<Rightarrow> check_result \<Rightarrow> 'e \<Rightarrow> 't \<Rightarrow> bool" where
-  "verdict_holds ev Check_Proved e s = truthy (ev e s)"
-| "verdict_holds ev Check_Refuted e s = (\<not> truthy (ev e s))"
-| "verdict_holds ev Check_Unknown e s = True"
+fun verdict_holds :: "check_result \<Rightarrow> exp \<Rightarrow> store \<Rightarrow> bool" where
+  "verdict_holds Check_Proved e s = truthy (eval e s)"
+| "verdict_holds Check_Refuted e s = (\<not> truthy (eval e s))"
+| "verdict_holds Check_Unknown e s = True"
 
 text \<open>
   The stores a check's verdict admits. A \<open>Dead\<close> check claims nothing about stores;
   its claim, that the point is unreached, is \<open>DEAD\<close> below.
 \<close>
 
-definition check_stores :: "('e \<Rightarrow> 't \<Rightarrow> int) \<Rightarrow> 'e result_check \<Rightarrow> 't set" where
-  "check_stores ev c = (case check_verdict c of
-                          Decided r \<Rightarrow> {s. verdict_holds ev r (check_exp c) s}
-                        | Dead \<Rightarrow> UNIV)"
+definition check_stores :: "exp result_check \<Rightarrow> store set" where
+  "check_stores c = (case check_verdict c of
+                       Decided r \<Rightarrow> {s. verdict_holds r (check_exp c) s}
+                     | Dead \<Rightarrow> UNIV)"
 
 text \<open>
   The verdict a report gives a condition at a point. \<open>PROVED res v c\<close> says the

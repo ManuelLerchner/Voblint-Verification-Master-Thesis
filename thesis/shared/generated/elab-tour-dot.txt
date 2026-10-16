@@ -1,0 +1,43 @@
+digraph AnalysisCFG {
+  graph [rankdir=TB,ordering=out,splines=polyline,nodesep=0.5,ranksep=0.8,remincross=true,mclimit=4,fontname="Menlo"];
+  node [shape=box,style=filled,fillcolor=lightgreen,fontname="Menlo",id="\N",URL="javascript:show_info('\N');"];
+  edge [fontname="Menlo",fontsize=10,arrowsize=0.8];
+  subgraph cluster_ctx_0 {
+    label="f / unit";
+    style=rounded; color=gray70; penwidth=1;
+    f_pp1_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp1\nunreachable",tooltip="pp1\nunreachable"];
+    f_exit_f_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_f",tooltip="exit_f\ninterval:\n  n=[200,200]"];
+    f_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  n=[200,200]"];
+    f_entry_f_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_f",tooltip="entry_f\ninterval:\n  n=[200,200]"];
+  }
+  subgraph cluster_ctx_1 {
+    label="main / unit";
+    style=rounded; color=gray70; penwidth=1;
+    main_pp3_ctx0 [shape=box,style="rounded,filled",color=firebrick,penwidth=2,fillcolor=mistyrose,label="pp3\nunsigned integer overflow in conversion whenever this operation is evaluated: (u8) ((i32) x + 100)",tooltip="pp3\ninterval:\n  b=⊤\n  r=⊤\n  s=⊤\n  u=⊤\n  x=[200,200]\n  z=⊤\nunsigned integer overflow in conversion whenever this operation is evaluated: (u8) ((i32) x + 100)"];
+    main_pp4_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp4",tooltip="pp4\ninterval:\n  b=⊤\n  r=⊤\n  s=⊤\n  u=⊤\n  x=[200,200]\n  z=[44,44]"];
+    main_pp5_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\ninterval:\n  b=⊤\n  r=⊤\n  s=[-1,-1]\n  u=⊤\n  x=[200,200]\n  z=[44,44]"];
+    main_pp6_ctx0 [shape=box,style="rounded,filled",color=firebrick,penwidth=2,fillcolor=mistyrose,label="pp6\nunsigned integer overflow in conversion whenever this operation is evaluated: (u32) s",tooltip="pp6\ninterval:\n  b=⊤\n  r=⊤\n  s=[-1,-1]\n  u=[1,1]\n  x=[200,200]\n  z=[44,44]\nunsigned integer overflow in conversion whenever this operation is evaluated: (u32) s"];
+    main_pp9_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp9",tooltip="pp9\ninterval:\n  b=[0,0]\n  r=[201,201]\n  s=[-1,-1]\n  u=[1,1]\n  x=[200,200]\n  z=[44,44]"];
+    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\ninterval:\n  b=[0,0]\n  r=[201,201]\n  s=[-1,-1]\n  u=[1,1]\n  x=[200,200]\n  z=[44,44]"];
+    main_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\ninterval:\n  b=⊤\n  r=⊤\n  s=⊤\n  u=⊤\n  x=⊤\n  z=⊤"];
+    main_pp7_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp7",tooltip="pp7\ninterval:\n  b=[0,0]\n  r=⊤\n  s=[-1,-1]\n  u=[1,1]\n  x=[200,200]\n  z=[44,44]"];
+    main_pp8_ctx0 [shape=box,style="rounded,filled",color=darkgreen,penwidth=2,fillcolor=palegreen,label="pp8\ncheck b == 0",tooltip="pp8\ninterval:\n  b=[0,0]\n  r=[201,201]\n  s=[-1,-1]\n  u=[1,1]\n  x=[200,200]\n  z=[44,44]\ncheck b == 0"];
+    main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\ninterval:\n  b=⊤\n  r=⊤\n  s=⊤\n  u=⊤\n  x=⊤\n  z=⊤"];
+  }
+  f_pp0_ctx0 -> f_exit_f_ctx0 [weight=20,label="return (u16) ((i32) n + 1)"];
+  f_pp1_ctx0 -> f_exit_f_ctx0 [weight=20,label="return"];
+  main_pp2_ctx0 -> main_pp3_ctx0 [weight=20,label="x := 200"];
+  main_pp3_ctx0 -> main_pp4_ctx0 [weight=20,label="z := (u8) ((i32) x + 100)"];
+  main_pp4_ctx0 -> main_pp5_ctx0 [weight=20,label="s := -1"];
+  main_pp5_ctx0 -> main_pp6_ctx0 [weight=20,label="u := 1"];
+  main_pp6_ctx0 -> main_pp7_ctx0 [weight=20,label="b := (u32) s < u"];
+  main_pp8_ctx0 -> main_pp9_ctx0 [weight=20,label="check(b == 0)"];
+  main_pp9_ctx0 -> main_exit_main_ctx0 [weight=20,label="return"];
+  f_entry_f_ctx0 -> f_pp0_ctx0 [weight=20,label="body(f)"];
+  main_entry_main_ctx0 -> main_pp2_ctx0 [weight=20,label="body(main)"];
+  main_pp7_ctx0 -> f_entry_f_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call f(x)"];
+  f_exit_f_ctx0 -> main_pp8_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := f(x)"];
+  main_pp7_ctx0 -> main_pp8_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+}
+thesis/shared/programs/elab-tour.vimp:7:6: error: unsigned integer overflow in conversion whenever this operation is evaluated: (u8) ((i32) x + 100) [interval]
+thesis/shared/programs/elab-tour.vimp:10:7: error: unsigned integer overflow in conversion whenever this operation is evaluated: (u32) s [interval]

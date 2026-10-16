@@ -82,7 +82,6 @@ lemma report_run_shape:
   by (auto simp: report_run_def cs_run_def es_run_def prog_report_of_def
       report_of_def Let_def split: context_policy.splits program_globals.splits)
 
-
 text \<open>
   The report contract in one statement: an analysed answer was given for a valid
   activation and a well-formed program, and is a report of exactly that
@@ -424,12 +423,12 @@ theorem run_voblint_spine:
     and exec:
       "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>kenv_of ds,g,S\<^esub>
-                   \<Longrightarrow> \<exists>c. vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
+                   \<Longrightarrow> \<exists>c. activation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
     and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c')
                    = reaching ds p v"
   shows "\<exists>v stk t c. elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
-           \<and> vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c
+           \<and> activation_trace_repr (kenv_of ds) g S (v, s, stk) t
+           \<and> activation_context_rel (kenv_of ds) adm c\<^sub>0 g t c
            \<and> s \<in> \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c') = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v
@@ -441,12 +440,12 @@ proof -
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
   have cfg: "g = compile_prog (elab_ptable p ds) (prog_procs p)"
     unfolding g_def by (rule elab_cfg_def)
-  from vimp.source_store_in_activation_collect
+  from source_store_in_activation_collect
          [OF elab_wf_compile_input[OF wf] s0 exec has_ctx[unfolded cfg]]
   obtain v stk t c
     where sim: "elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-      and rep: "vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t"
-      and rel: "vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
+      and rep: "activation_trace_repr (kenv_of ds) g S (v, s, stk) t"
+      and rel: "activation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
       and mem: "s \<in> \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c"
     unfolding cfg by blast
   have s: "s \<in> reaching ds p v" using mem buckets[of v] by blast
@@ -473,8 +472,8 @@ theorem run_voblint_call_string_chain:
     and exec:
       "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
-           \<and> vimp.gactivation_context_rel (kenv_of ds) adm [] g t c
+           \<and> activation_trace_repr (kenv_of ds) g S (v, s, stk) t
+           \<and> activation_context_rel (kenv_of ds) adm [] g t c
            \<and> s \<in> \<A>\<^bsub>kenv_of ds,adm,[],g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,[],g,S\<^esub> v c') = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v
@@ -482,13 +481,13 @@ theorem run_voblint_call_string_chain:
            \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (eval c s))
            \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (eval c s))"
 proof -
-  have has_ctx: "\<exists>c. vimp.gactivation_context_rel (kenv_of ds) adm [] g t c"
+  have has_ctx: "\<exists>c. activation_context_rel (kenv_of ds) adm [] g t c"
     if "t \<in> \<T>\<^bsub>kenv_of ds,g,S\<^esub>" for t
     unfolding adm_def
-    by (rule exI, subst vimp.activation_context_rel_of_fun_iff[OF that]) (rule refl)
+    by (rule exI, subst activation_context_rel_of_fun_iff[OF that]) (rule refl)
   have buckets: "(\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,[],g,S\<^esub> v c') = reaching ds p v"
     for v
-    unfolding adm_def g_def S_def node_collect_def activation_collect_def
+    unfolding adm_def g_def S_def
     by (rule mcp_cs.fun_route_node_collect_eq_Union[where ctx_fun = "cs_context k", symmetric])
   show ?thesis
     unfolding g_def S_def
@@ -515,8 +514,8 @@ theorem run_voblint_entry_state_chain:
     and exec:
       "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
-           \<and> vimp.gactivation_context_rel (kenv_of ds) adm mcp_root_ctx g t c
+           \<and> activation_trace_repr (kenv_of ds) g S (v, s, stk) t
+           \<and> activation_context_rel (kenv_of ds) adm mcp_root_ctx g t c
            \<and> s \<in> \<A>\<^bsub>kenv_of ds,adm,mcp_root_ctx,g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,mcp_root_ctx,g,S\<^esub> v c')
                = reaching ds p v
@@ -529,7 +528,7 @@ proof -
     and rep: "report_run conf ds p = Some res"
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
   have chain: "(\<forall>t. t \<in> \<T>\<^bsub>kenv_of ds,g,S\<^esub>
-                  \<longrightarrow> (\<exists>c. vimp.gactivation_context_rel (kenv_of ds) adm mcp_root_ctx g t c))
+                  \<longrightarrow> (\<exists>c. activation_context_rel (kenv_of ds) adm mcp_root_ctx g t c))
     \<and> (\<forall>v. (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,mcp_root_ctx,g,S\<^esub> v c')
              = reaching ds p v)"
   proof (cases "conf_program_globals conf")
@@ -541,12 +540,11 @@ proof -
       by (auto simp: report_run_def es_run_def Let_def dg_pipeline.root_query_def)
     note solves = mcp_es.solve_c_run(1)[OF this]
     show ?thesis
-      using mcp_es.gentry_state_has_context_of_terminates
+      using mcp_es.entry_state_has_context_of_terminates
           [OF elab_cfg_def elab_wf_compile_input[OF wf] solves]
-        mcp_es.gentry_state_node_collect_eq_Union_of_terminates
+        mcp_es.entry_state_node_collect_eq_Union_of_terminates
           [OF elab_cfg_def elab_wf_compile_input[OF wf] solves]
-      unfolding adm_def g_def S_def node_collect_def activation_collect_def
-        valid_activation_trace_def Program_Globals_Flow_Sensitive by simp
+      unfolding adm_def g_def S_def Program_Globals_Flow_Sensitive by simp
   next
     case Program_Globals_Flow_Insensitive
     from rep cx Program_Globals_Flow_Insensitive obtain sol where
@@ -557,12 +555,11 @@ proof -
       by (auto simp: report_run_def es_run_def Let_def dg_pipeline.root_query_def)
     note solves = mcp_split_es.solve_c_run(1)[OF this]
     show ?thesis
-      using mcp_split_es.gentry_state_has_context_of_terminates
+      using mcp_split_es.entry_state_has_context_of_terminates
           [OF elab_cfg_def elab_wf_compile_input[OF wf] solves]
-        mcp_split_es.gentry_state_node_collect_eq_Union_of_terminates
+        mcp_split_es.entry_state_node_collect_eq_Union_of_terminates
           [OF elab_cfg_def elab_wf_compile_input[OF wf] solves]
-      unfolding adm_def g_def S_def node_collect_def activation_collect_def
-        valid_activation_trace_def Program_Globals_Flow_Insensitive by simp
+      unfolding adm_def g_def S_def Program_Globals_Flow_Insensitive by simp
   qed
   show ?thesis
     unfolding g_def S_def

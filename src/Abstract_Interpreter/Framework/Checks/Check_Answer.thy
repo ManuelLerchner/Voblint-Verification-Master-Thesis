@@ -41,22 +41,22 @@ text \<open>
 \<close>
 
 definition answer_check ::
-    "('e \<Rightarrow> 'e) \<Rightarrow> ('v \<Rightarrow> 'e gquery \<Rightarrow> answer) \<Rightarrow> 'e \<Rightarrow> 'v \<Rightarrow> check_result" where
+    "(exp \<Rightarrow> exp) \<Rightarrow> ('v \<Rightarrow> query \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'v \<Rightarrow> check_result" where
   "answer_check tx q c v =
      (case classify_answer (q v (EvalInt (tx c))) of Decided r \<Rightarrow> r | _ \<Rightarrow> Check_Unknown)"
 
-lemma answer_check_gsound:
-  assumes truth: "ev (tx c) s = (if truthy (ev c s) then 1 else 0)"
-    and holds: "geval_holds ev (EvalInt (tx c)) (q v (EvalInt (tx c))) s"
-  shows answer_check_gproved: "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
-    and answer_check_grefuted: "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
+lemma answer_check_sound:
+  assumes truth: "eval (tx c) s = (if truthy (eval c s) then 1 else 0)"
+    and holds: "eval_holds (EvalInt (tx c)) (q v (EvalInt (tx c))) s"
+  shows answer_check_proved: "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (eval c s)"
+    and answer_check_refuted: "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
 proof -
   let ?a = "q v (EvalInt (tx c))"
-  have val: "(if truthy (ev c s) then 1 else 0) \<in> gamma_answer ?a"
+  have val: "(if truthy (eval c s) then 1 else 0) \<in> gamma_answer ?a"
     using holds truth by simp
   then have "?a \<noteq> QBot" by auto
-  then show "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
-    and "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
+  then show "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (eval c s)"
+    and "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
     using val by (auto simp: answer_check_def classify_answer_gamma split: if_splits)
 qed
 

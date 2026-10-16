@@ -39,7 +39,7 @@ text \<open>
   \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close>, which no analysis writes: a specification
   supplies manager-native transfers, and \<open>DG_Spec\<close> compiles those. They
   survive because the keyed-solver update-rule regression
-  needs a step it can vary directly, without a \<open>gdg_spec\<close> in the way, and that
+  needs a step it can vary directly, without a \<open>dg_spec\<close> in the way, and that
   regression is their only consumer. Read them as the minimal thing a
   right-hand side can be, not as the shape production equations take.
 

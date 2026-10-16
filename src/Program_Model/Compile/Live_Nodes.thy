@@ -55,7 +55,6 @@ proof -
   qed
 qed
 
-
 subsection \<open>Call targets are declared\<close>
 
 text \<open>
@@ -435,7 +434,7 @@ proof -
     and un: "u \<in> proc_nodes Ep Kp"
     unfolding prog_node_def by auto
   have "(u, a, v) \<in> Ep"
-    using trace_sem.compile_prog_entry_frag[OF wf decl cp ent] proc_nodes_pfn[OF cp un] e by blast
+    using compile_prog_entry_frag[OF wf decl cp ent] proc_nodes_pfn[OF cp un] e by blast
   then have "v \<in> proc_nodes Ep Kp" unfolding proc_nodes_def by blast
   then show ?thesis unfolding prog_node_def using decl cp ent sub by blast
 qed
@@ -452,7 +451,7 @@ proof -
     and un: "u \<in> proc_nodes Ep Kp"
     unfolding prog_node_def by auto
   have "(u, ca, ce, k) \<in> Kp"
-    using trace_sem.compile_prog_entry_frag[OF wf decl cp ent] proc_nodes_pfn[OF cp un] e by blast
+    using compile_prog_entry_frag[OF wf decl cp ent] proc_nodes_pfn[OF cp un] e by blast
   then have "k \<in> proc_nodes Ep Kp" unfolding proc_nodes_def by blast
   then show ?thesis unfolding prog_node_def using decl cp ent sub by blast
 qed

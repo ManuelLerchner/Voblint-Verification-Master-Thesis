@@ -1,0 +1,13 @@
+fun u16 f(u8 n) {
+  return n + 1;
+}
+
+fun main() {
+  u8 x = 200;
+  u8 z = x + 100;
+  i32 s = -1;
+  u32 u = 1;
+  i32 b = s < u;
+  u16 r = f(x);
+  __voblint_check(b == 0);
+}

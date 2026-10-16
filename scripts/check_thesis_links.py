@@ -368,7 +368,7 @@ def cited() -> list[tuple[Path, int, str, str]]:
             refs.append((path, line, "any", m.group(1)))
         for m in OBLIG.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
-            locale = m.group(2) or "gactivation_coverage"
+            locale = m.group(2) or "activation_coverage"
             refs.append((path, line, "thm", f"{locale}.{m.group(1)}"))
         for m in CTOR.finditer(text):
             line = text.count("\n", 0, m.start()) + 1

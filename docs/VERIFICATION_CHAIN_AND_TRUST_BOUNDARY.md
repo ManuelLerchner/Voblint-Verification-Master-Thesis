@@ -48,8 +48,8 @@ list by giving any other identity `I32`. Elaboration (`elaborate` in
 conversion and the kind of every operation explicit, producing core VIMP (`exp`,
 `com`). `eval` (`Core_Exp.thy`) evaluates a core expression, and `kind_conv`
 converts a value written to a variable to that variable's kind. The canonical
-small-step relation is `pstep` (`VIMP_Semantics.thy`), the instance of the
-generic `vimp_sem.gpstep` at `eval` and `kind_conv`; runs start from
+small-step relation is `pstep` (`VIMP_Semantics.thy`), which evaluates with
+`eval` and converts every write with `kind_conv`; runs start from
 `init_stores`, where globals are zero at their kinds.
 
 Surface VIMP has no step relation of its own. A surface program means the core
@@ -66,9 +66,10 @@ subset is a definitional-adequacy question, argued and not proved. Everything in
 
 ## 1. Abstract transfer soundness
 
-What a component owes is `mcp_sem.gsound_local_spec` (`MCP_Spec.thy`): every
-transfer of a `glocal_spec` over-approximates the corresponding concrete step
-of `cfg_transfer_sem` under the component's concretization. The non-relational
+What a component owes is `sound_local_spec` (`MCP_Spec.thy`): every
+transfer of a `local_spec` over-approximates the corresponding concrete step
+(`edge_collect`, `call_enter`, `combine_collect`) under the component's
+concretization. The non-relational
 component is generic in its value domain, any instance of the class
 `kind_int_domain` (`Nonrelational_Domain.thy`). `nonrel_spec_sound`
 (`Nonrelational_Transfer.thy`) proves `nonrel_spec` sound over the function
@@ -84,12 +85,12 @@ The analyses a caller activates run as one component through the registry
 `mcp_registry` (`MCP_Registry.thy`), interpreted as `mcp` in
 `MCP_Carrier.thy`: each analysis owns one field of `mcp_st`, `field_sound`
 lifts each field's soundness, and `mcp_comp_sound` composes them.
-`gdg_analysis_whole_stateI` and, for flow-insensitive program globals,
-`gdg_analysis_keyedI` (`DG_Analysis.thy`) turn a sound component and its side
-conditions into a `gdg_analysis` registration; `mcp_cs_routed` (`MCP.thy`) and
+`dg_analysis_whole_stateI` and, for flow-insensitive program globals,
+`dg_analysis_keyedI` (`DG_Analysis.thy`) turn a sound component and its side
+conditions into a `dg_analysis` registration; `mcp_cs_routed` (`MCP.thy`) and
 `mcp_cs_keyed` (`MCP_Split.thy`) are the CLI's. Under flow-insensitive program
-globals the state is wrapped in the keyed lifter `gkeyed_split_spec`, one
-global unknown per declared global, whose contract is `gkeyed_split_contract`
+globals the state is wrapped in the keyed lifter `keyed_split_spec`, one
+global unknown per declared global, whose contract is `keyed_split_contract`
 (`DG_Keyed_Split_Spec.thy`).
 
 Guards go through `nonrel_branch` (`Nonrelational_Transfer.thy`): a forward
@@ -143,7 +144,7 @@ agree on `solve`'s domain, and `solve_code_equation [code]` (`:2387`) installs
 successful `solve_c` into `solve_dom`. The locale `certified_solver`
 (`TD_Solver_Bridge.thy`) states the four facts the pipeline uses (partial
 post-solution, finite solved key set, domain of a `solve_c` answer, and that
-answer being the solve) as one solver contract; `gdg_analysis` extends it, and
+answer being the solve) as one solver contract; `dg_analysis` extends it, and
 every registration discharges it with `td_certified_solver` (`Globals_Rule.thy`),
 proved once for every `globals_rule`. The certificate is solver-independent:
 `activation_collect_dg_sound` (`Routed_Context.thy`) proves collecting
@@ -190,12 +191,11 @@ are `reaching ds p v`, the stores `node_collect` collects at node `v` of
   whose union over contexts is `reaching ds p v`.
 
 The bridge from source runs to the graph is `source_reaches_node_collect`
-(`Source_To_Trace.thy`), the canonical instance of the generic forward
-simulation. The caller owes nothing about termination: `run_voblint` solves
+(`Source_To_Trace.thy`), the forward simulation at the elaborated program. The caller owes nothing about termination: `run_voblint` solves
 with the executable `solve_c`, and an analysed answer exists only where it
 returned (`solve_c_run`, `DG_Analysis.thy`). Nothing proves the solve returns
 in general. That the run solved enough keys is no premise either:
-`glive_unknowns_cover` (`DG_Live_Unknowns.thy`) proves it from termination.
+`live_unknowns_cover` (`DG_Live_Unknowns.thy`) proves it from termination.
 
 ### Arithmetic obligations compared with C
 

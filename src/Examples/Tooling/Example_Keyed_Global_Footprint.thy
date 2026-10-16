@@ -10,7 +10,7 @@ text \<open>
   procedure-scoped local \<open>x\<close>. Under the keyed lifter an edge's program depends on its
   source point and on the unknowns of the globals its expressions mention, and it
   publishes exactly at the unknowns of the globals it may assign. The footprints are the
-  generic \<^const>\<open>gedge_global_reads\<close> and \<^const>\<open>gedge_global_writes\<close> at the parameters
+  generic \<^const>\<open>edge_global_reads\<close> and \<^const>\<open>edge_global_writes\<close> at the parameters
   the analyzer uses: \<^const>\<open>exp_vars\<close>, the return slot \<^const>\<open>ReturnVar\<close> and
   \<^const>\<open>is_global\<close>. Updating \<open>h\<close> therefore cannot destabilize a point that reads only
   \<open>g\<close>: no equation reading \<open>g\<close> names \<open>h\<close>'s unknown.
@@ -29,23 +29,23 @@ abbreviation write_h :: "(var_id, exp) gedge_action" where
   "write_h \<equiv> EA_Assign h_id (TN I32 1)"
 
 lemma read_g_footprint:
-  "gedge_global_reads exp_vars is_global read_g = [g_id]"
-  "gedge_global_writes ReturnVar is_global read_g = []"
-  by (simp_all add: gedge_global_reads_def gedge_global_writes_def gedge_reads_def
-      cfg_transfer_sem.gedge_writes.simps global_names_in_def)
+  "edge_global_reads is_global read_g = [g_id]"
+  "edge_global_writes is_global read_g = []"
+  by (simp_all add: edge_global_reads_def edge_global_writes_def edge_reads_def
+      edge_writes.simps global_names_in_def)
 
 lemma write_h_footprint:
-  "gedge_global_reads exp_vars is_global write_h = []"
-  "gedge_global_writes ReturnVar is_global write_h = [h_id]"
-  by (simp_all add: gedge_global_reads_def gedge_global_writes_def gedge_reads_def
-      cfg_transfer_sem.gedge_writes.simps global_names_in_def)
+  "edge_global_reads is_global write_h = []"
+  "edge_global_writes is_global write_h = [h_id]"
+  by (simp_all add: edge_global_reads_def edge_global_writes_def edge_reads_def
+      edge_writes.simps global_names_in_def)
 
 text \<open>The keyed program for \<open>x := g + 1\<close> depends on \<open>g\<close>'s unknown and nothing else global.\<close>
 
 lemma read_g_depends_on_g_only:
   "dep_program \<tau> (transfer_program (keyed_transfer cmb rl rg free
-      (gedge_global_reads exp_vars is_global read_g)
-      (gedge_global_writes ReturnVar is_global read_g) f) src key)
+      (edge_global_reads is_global read_g)
+      (edge_global_writes is_global read_g) f) src key)
      = {src, Inr (key g_id)}"
   by (simp add: dep_transfer_program keyed_transfer_def read_g_footprint
       sp_compile_with_def sp_bind_def sp_return_def)
@@ -54,8 +54,8 @@ text \<open>The keyed program for \<open>h := 1\<close> publishes at \<open>h\<c
 
 lemma write_h_publishes_h_only:
   "side_path \<tau> (sp_compile (transfer_program (keyed_transfer cmb rl rg free
-      (gedge_global_reads exp_vars is_global write_h)
-      (gedge_global_writes ReturnVar is_global write_h) f) src key))
+      (edge_global_reads is_global write_h)
+      (edge_global_writes is_global write_h) f) src key))
      = [key h_id]"
   by (cases src)
      (simp_all add: write_h_footprint transfer_program_def transfer_program_at_def

@@ -1,5 +1,5 @@
 theory Analysis_Query
-  imports "Voblint_Domain.Query_Lift" "Voblint_Domain.Int_Lattice"
+  imports "Voblint_Domain.Query_Lift" "Voblint_Domain.Int_Lattice" "Voblint_VIMP.Core_Exp"
 begin
 
 unbundle lattice_syntax
@@ -57,7 +57,7 @@ text \<open>
   rather than a bare expression so that a later kind extends the datatype.
 \<close>
 
-datatype 'e gquery = EvalInt 'e
+datatype query = EvalInt exp
 
 type_synonym answer = "int_dom query_lift"
 
@@ -73,22 +73,22 @@ text \<open>
   two sound analyses whose answers do not overlap describe no store in common.
 \<close>
 
-text \<open>An answer about an expression holds when the expression's value, under the
-  language's evaluator, lies in the answer's concretization.\<close>
+text \<open>An answer about an expression holds when the expression's value lies in the
+  answer's concretization.\<close>
 
-fun geval_holds :: "('e \<Rightarrow> 's \<Rightarrow> int) \<Rightarrow> 'e gquery \<Rightarrow> answer \<Rightarrow> 's \<Rightarrow> bool" where
-  "geval_holds ev (EvalInt e) a s \<longleftrightarrow> ev e s \<in> gamma_answer a"
+fun eval_holds :: "query \<Rightarrow> answer \<Rightarrow> store \<Rightarrow> bool" where
+  "eval_holds (EvalInt e) a s \<longleftrightarrow> eval e s \<in> gamma_answer a"
 
-interpretation geval_query: query_algebra "geval_holds ev" for ev
+interpretation eval_query: query_algebra eval_holds
 proof
   fix q and a b :: answer and s
-  show "geval_holds ev q \<top> s"
+  show "eval_holds q \<top> s"
     by (cases q) simp
-  show "geval_holds ev q a s \<Longrightarrow> geval_holds ev q b s \<Longrightarrow> geval_holds ev q (a \<sqinter> b) s"
+  show "eval_holds q a s \<Longrightarrow> eval_holds q b s \<Longrightarrow> eval_holds q (a \<sqinter> b) s"
     by (cases q) (simp add: gamma_query_lift_inf[OF gamma_inf_int_dom])
 qed
 
-declare geval_query.top_sound [simp]
+declare eval_query.top_sound [simp]
 
 text \<open>
   The exact answer for a known integer, and a known integer read back from

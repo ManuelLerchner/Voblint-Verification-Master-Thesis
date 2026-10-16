@@ -11,8 +11,8 @@ text \<open>
   have between those unknowns: a step within a context, a call entering the contexts
   the report routes it to, the callee's result resuming the caller, the call's
   continuation, and the reads and writes of each global, by the same footprints the
-  keyed lifter reads and publishes (\<^const>\<open>gedge_global_reads\<close>,
-  \<^const>\<open>gedge_global_writes\<close>, \<^const>\<open>gcall_global_reads\<close>). It is a projection of the
+  keyed lifter reads and publishes (\<^const>\<open>edge_global_reads\<close>,
+  \<^const>\<open>edge_global_writes\<close>, \<^const>\<open>call_global_reads\<close>). It is a projection of the
   report, as the rendering below is, and no soundness theorem reads it.
 \<close>
 

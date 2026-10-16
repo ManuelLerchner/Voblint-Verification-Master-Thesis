@@ -119,7 +119,7 @@ text \<open>A literal operand is its own exact interval, a truth value lies in \
   \<^const>\<open>U8\<close> argument of \<open>min\<close> promoted to \<^const>\<open>I32\<close> stays within
   \<open>[0, 255]\<close>.\<close>
 
-fun operand_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
+fun operand_ivl :: "kenv \<Rightarrow> channel \<Rightarrow> exp \<Rightarrow> ivl" where
   "operand_ivl \<kappa> ch (TN k n) = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
 | "operand_ivl \<kappa> ch (TCmp c a b) =
      of_answer_ik None (ch (EvalInt (TCmp c a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
@@ -135,7 +135,7 @@ fun operand_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarr
       in if i \<le> ik_ivl k then i \<sqinter> j else j)"
 | "operand_ivl \<kappa> ch e = of_answer_ik (src_kind \<kappa> e) (ch (EvalInt e))"
 
-fun unwrapped_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
+fun unwrapped_ivl :: "kenv \<Rightarrow> channel \<Rightarrow> exp \<Rightarrow> ivl" where
   "unwrapped_ivl \<kappa> ch (TN k n) = Ivl (Fin n) (Fin n)"
 | "unwrapped_ivl \<kappa> ch (TArith k op a b) =
      ivl_aop op (operand_ivl \<kappa> ch a) (operand_ivl \<kappa> ch b)"
@@ -143,13 +143,13 @@ fun unwrapped_ivl :: "kenv \<Rightarrow> exp gchannel \<Rightarrow> exp \<Righta
 | "unwrapped_ivl \<kappa> ch e = operand_ivl \<kappa> ch e"
 
 lemma unwrapped_ivl_sound:
-  assumes "geval_query.channel_holds eval ch t" and kinds: "in_kinds \<kappa> t"
+  assumes "eval_query.channel_holds ch t" and kinds: "in_kinds \<kappa> t"
   shows "unwrapped e t \<in> gamma_ivl (unwrapped_ivl \<kappa> ch e)"
     and "eval e t \<in> gamma_ivl (operand_ivl \<kappa> ch e)"
 proof -
   have answer: "eval a t \<in> gamma_ivl (of_answer_ik sk (ch (EvalInt a)))"
     if "\<And>k. sk = Some k \<Longrightarrow> eval a t \<in> ik_range k" for a sk
-    using geval_query.channel_holdsD[OF assms(1), of "EvalInt a"]
+    using eval_query.channel_holdsD[OF assms(1), of "EvalInt a"]
       of_answer_ik_sound[where 'a = ivl, of sk "eval a t" "ch (EvalInt a)"] that
     by simp
   have truth: "eval a t \<in> gamma_ivl (Ivl (Fin 0) (Fin 1))"
@@ -220,7 +220,7 @@ lemma obligation_classify_sound:
   shows "obligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> t \<Turnstile> ob"
     and "obligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> t \<Turnstile> ob"
 proof -
-  have ch: "geval_query.channel_holds eval (mcp_ask sem ds as v) t"
+  have ch: "eval_query.channel_holds (mcp_ask sem ds as v) t"
     by (rule mcp.mcp_ask_sound[OF t])
   note ivl = unwrapped_ivl_sound[OF ch kinds]
   note fits = fits_verdict_sound[OF ivl(1)]
@@ -336,7 +336,7 @@ text \<open>One builder for every context policy and placement: the policy contr
 
 definition prog_report_of ::
     "voblint_conf \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> var_id list \<Rightarrow> ('c \<Rightarrow> order_key)
-       \<Rightarrow> ('c \<Rightarrow> mcp_ctx report_context) \<Rightarrow> (var_id, exp, 'c, var_id, mcp_val) gsolved_run
+       \<Rightarrow> ('c \<Rightarrow> mcp_ctx report_context) \<Rightarrow> ('c, var_id, mcp_val) solved_run
        \<Rightarrow> report" where
   "prog_report_of conf ds p gs ctx_key ctx_tag sr =
      report_of conf (cfg_vars (elab_cfg p ds)) (elab_cfg p ds) gs
@@ -573,7 +573,7 @@ text \<open>
 \<close>
 
 lemma prog_report_of_sound:
-  fixes sr :: "(var_id, exp, 'c, var_id, mcp_val) gsolved_run"
+  fixes sr :: "('c, var_id, mcp_val) solved_run"
   assumes wf: "wf_program_compile_input p"
     and fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
     and node: "\<And>v. reaching ds p v \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of (conf_analyses conf))
@@ -981,8 +981,8 @@ text \<open>The globals an edge or a call reads and writes, among those kept at 
 
 definition footprints :: "(var_id, exp, var_id) footprints" where
   "footprints =
-     \<lparr> fp_edge_reads = gedge_global_reads exp_vars, fp_edge_writes = gedge_global_writes ReturnVar,
-       fp_call_reads = gcall_global_reads exp_vars,
+     \<lparr> fp_edge_reads = edge_global_reads, fp_edge_writes = edge_global_writes,
+       fp_call_reads = call_global_reads,
        fp_call_writes = (\<lambda>G ca. case ca of CallEdge dst pars args \<Rightarrow>
          global_names_in G (case_option [] (\<lambda>x. [x]) dst @ pars)) \<rparr>"
 

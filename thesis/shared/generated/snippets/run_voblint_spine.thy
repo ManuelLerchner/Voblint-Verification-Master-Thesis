@@ -7,12 +7,12 @@ theorem run_voblint_spine:
     and exec:
       "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>kenv_of ds,g,S\<^esub>
-                   \<Longrightarrow> \<exists>c. vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
+                   \<Longrightarrow> \<exists>c. activation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
     and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c')
                    = reaching ds p v"
   shows "\<exists>v stk t c. elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
-           \<and> vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c
+           \<and> activation_trace_repr (kenv_of ds) g S (v, s, stk) t
+           \<and> activation_context_rel (kenv_of ds) adm c\<^sub>0 g t c
            \<and> s \<in> \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c') = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v

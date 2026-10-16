@@ -100,7 +100,7 @@ name = "csim_star"
 chapter = "ch:traces"
 concept = "Activation trace"
 kind = "type"
-name = "gactivation_trace"
+name = "activation_trace"
 
 [[anchor]]
 chapter = "ch:traces"
@@ -124,7 +124,7 @@ name = "activation_collect"
 chapter = "ch:traces"
 concept = "Soundness contract"
 kind = "locale"
-name = "gactivation_coverage"
+name = "activation_coverage"
 
 [[anchor]]
 chapter = "ch:traces"
@@ -166,7 +166,7 @@ name = "nonrel_spec_sound"
 chapter = "ch:analysis-interface"
 concept = "D/G analysis specification"
 kind = "type"
-name = "gdg_spec"
+name = "dg_spec"
 
 [[anchor]]
 chapter = "ch:analysis-interface"
@@ -178,7 +178,7 @@ name = "dg_state"
 chapter = "ch:analysis-interface"
 concept = "Specification soundness obligations"
 kind = "locale"
-name = "ganalysis_contract"
+name = "analysis_contract"
 
 [[anchor]]
 chapter = "ch:equations"
@@ -202,7 +202,7 @@ name = "routed_call_program"
 chapter = "ch:equations"
 concept = "Routed context proof locale"
 kind = "locale"
-name = "grouted_context"
+name = "routed_context"
 
 [[anchor]]
 chapter = "ch:solving"
@@ -234,7 +234,7 @@ name = "gdefault_st"
 chapter = "ch:results"
 concept = "Coverage from the local obligations"
 kind = "thm"
-name = "gactivation_collect_sound"
+name = "activation_collect_sound"
 
 [[anchor]]
 chapter = "ch:results"

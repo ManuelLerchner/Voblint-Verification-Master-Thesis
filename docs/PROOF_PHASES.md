@@ -20,7 +20,7 @@ stable gates for assessing a change.
 - `valid_activation_trace` is an inductive set, and `node_collect` projects it to stores
   (`node_collect_I`/`node_collect_E`);
 - `activation_collect` groups the same stores by the context
-  `vimp.gactivation_context_rel` admits;
+  `activation_context_rel` admits;
 - abstract closure obligations imply collector coverage.
 
 ## Equation systems
@@ -39,9 +39,9 @@ stable gates for assessing a change.
 
 ## D/G instances
 
-- the component satisfies `gsound_local_spec`, and the registration discharges
-  `gdg_analysis` (through `gdg_analysis_whole_stateI` or
-  `gdg_analysis_keyedI`);
+- the component satisfies `sound_local_spec`, and the registration discharges
+  `dg_analysis` (through `dg_analysis_whole_stateI` or
+  `dg_analysis_keyedI`);
 - executable transfers commute with abstract transfers;
 - entry and combine routing use the same context discipline;
 - the computed post-solution covers plain or activation-indexed collecting

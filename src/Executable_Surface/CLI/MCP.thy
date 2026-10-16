@@ -49,8 +49,8 @@ text \<open>What the combination owes the pipeline does not depend on the contex
   it is proved once, for any route and root context.\<close>
 
 lemma mcp_cs_routed:
-  "gdg_analysis
-    eval ReturnVar (\<lambda>_. kind_conv (kenv_of ds)) (\<lambda>_. is_global) (\<lambda>_. init_stores (kenv_of ds))
+  "dg_analysis
+    (kenv_of ds) (\<lambda>_. init_stores (kenv_of ds))
     (mcp_comp sem ds (activation_of as)) (mcp_emp (activation_of as)) mcp_rd
     (mcp_init ds (activation_of as))
     Analysis_Buffer Analysis_Global Activation_Seed
@@ -62,7 +62,7 @@ lemma mcp_cs_routed:
     (TD_side_rule_Interp_solve_c r)
     (\<lambda>_ c. dg_spec_of c) (\<lambda>p d e. d) (\<lambda>_ d. d) (\<lambda>_ d. Bot) (\<lambda>_ p. []) (\<lambda>p ci d e. d)
     (\<lambda>p. elab_cfg p ds) (\<lambda>_. FunctionEntry prog_main_name)"
-proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
+proof (rule dg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
     EmptyRd EmptyV SeedNe ClProved ClRefuted BotState InitSound SeedNeGlobal PEntry FinIntra
     FinCalls CallsUnique)
   case (CompSound p)
@@ -112,8 +112,8 @@ subsection \<open>At call-string contexts\<close>
 text \<open>The combination run with \<open>k\<close>-bounded call strings as contexts, rooted at the
   empty call string.\<close>
 
-global_interpretation mcp_cs: gdg_analysis
-    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
+global_interpretation mcp_cs: dg_analysis
+    "kenv_of ds" "\<lambda>_. init_stores (kenv_of ds)"
     "mcp_comp sem ds (activation_of as)" "mcp_emp (activation_of as)" mcp_rd
     "mcp_init ds (activation_of as)"
     Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
@@ -159,8 +159,8 @@ definition mcp_root_ctx :: mcp_ctx where
   "mcp_root_ctx = Product [] (Product [] (Product (Product [] (Product [] []))
      (Product [] (Product [] []))))"
 
-global_interpretation mcp_es: gdg_analysis
-    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
+global_interpretation mcp_es: dg_analysis
+    "kenv_of ds" "\<lambda>_. init_stores (kenv_of ds)"
     "mcp_comp sem ds (activation_of as)" "mcp_emp (activation_of as)" mcp_rd
     "mcp_init ds (activation_of as)"
     Analysis_Buffer Analysis_Global Activation_Seed "mcp_route (activation_of as)" mcp_root_ctx
@@ -190,18 +190,18 @@ lemma mcp_cs_node_sound:
     and solves: "mcp_cs.terminates sem ds as k r is_global p"
   shows "(reaching ds p v)
            \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of as) (mcp_cs.state_at sem ds as k r is_global p ctx v))"
-  using mcp_cs.gfun_route_result_node_sound
+  using mcp_cs.fun_route_result_node_sound
       [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "cs_context k" v]
-  by (simp add: node_collect_def cs_route_def cs_context_def)
+  by (simp add: cs_route_def cs_context_def)
 
 lemma mcp_es_node_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "mcp_es.terminates sem ds as r is_global p"
   shows "(reaching ds p v)
            \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of as) (mcp_es.state_at sem ds as r is_global p ctx v))"
-  using mcp_es.gentry_state_result_node_sound
+  using mcp_es.entry_state_result_node_sound
       [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v]
-  by (simp add: node_collect_def)
+  by simp
 
 end
 

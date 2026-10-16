@@ -24,8 +24,7 @@ The parser builds surface VIMP: `src_exp`, `src_com`, `imp_prog`. Elaboration
 (`elaborate`, `elab_com`, `elab_ptable`) resolves every name to a variable
 identity `var_id`, gives each expression its machine kind `ikind`, and makes
 implicit conversions explicit. The result is core VIMP (`exp`, `com`), evaluated
-by `eval` and executed by `pstep`, the canonical instance of the generic step
-relation `vimp_sem.gpstep`; a call result is converted to its destination by
+by `eval` and executed by `pstep`; a call result is converted to its destination by
 `kind_conv`. Surface VIMP has no semantics of its own: a surface program means
 the core semantics of its elaboration. Every theorem below is about core runs;
 that elaboration gives the intended meaning is part of the adequacy argument.
@@ -65,7 +64,7 @@ and its immediate caller.
 
 `node_collect` projects valid activation traces to stores at each node.
 `activation_collect` groups those same stores by the context a context policy
-admits for the activation (`vimp.gactivation_context_rel`), as context-sensitive
+admits for the activation (`activation_context_rel`), as context-sensitive
 analyses require. Along valid activation traces of the elaborated graph every
 store stays within its kinds (`node_collect_in_kinds`).
 
@@ -102,10 +101,10 @@ callee-entry, return-combine, publication, and read obligations.
 By default the shipped domains use the whole-state specification: the local
 unknown carries the entire abstract state, VIMP globals included, and the global
 channel stays inert. Under flow-insensitive program globals the keyed lifter
-(`gkeyed_split_spec`) keeps each declared global at its own global unknown; the
+(`keyed_split_spec`) keeps each declared global at its own global unknown; the
 contract is stated over an environment of global values, so an edge reads only
 the globals it mentions and publishes only those it may assign
-(`gkeyed_split_contract`). `Order_Analysis` (session `Voblint_Analysis_Order`)
+(`keyed_split_contract`). `Order_Analysis` (session `Voblint_Analysis_Order`)
 instantiates the same interface at a relational carrier. Context-sensitive
 instances index local facts by activation keys while routing shared information
 through the analysis-defined global interface.
