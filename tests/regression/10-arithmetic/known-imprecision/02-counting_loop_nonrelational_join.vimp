@@ -5,7 +5,7 @@
 // 0 up to N and stops exactly at X = N, so X == N and X - N == 0 hold in every
 // execution; the else arm of if (X == N) is never taken and N == 8 holds too.
 // The loop head joins X = [0,0] with the widened body state and keeps X and N
-// as independent intervals [0,+inf]: the fact X = N is a relation between two
+// as independent intervals [0,2147483647]: the fact X = N is a relation between two
 // variables and no non-relational domain retains it, so the loop exit's
 // (X >= N) only bounds each side. Both equality arms then look live, N becomes
 // [8,42], and N == 8 is UNKNOWN for the same reason. An octagon or a

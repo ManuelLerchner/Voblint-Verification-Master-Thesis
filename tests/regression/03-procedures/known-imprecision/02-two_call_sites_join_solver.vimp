@@ -5,7 +5,7 @@
 // widening, so the one analyzed body returns [6,20] to both callers. The
 // bounds survive (contrast the warrow default in
 // 19-paper-examples/known-imprecision/04-context_insensitive_calls.vimp,
-// which widens to [6,+inf]); the per-call values do not.
+// which loses both bounds); the per-call values do not.
 //
 // Ported from Example_Interval_DG_IP_Flagship.thy: twice_p_at_entry,
 // twice_ret_at_exit, twice_x_computed, twice_y_computed.

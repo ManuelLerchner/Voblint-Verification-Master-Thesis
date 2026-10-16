@@ -1,20 +1,16 @@
 // PARAM: --analysis interval
 // The concrete value of total here is fixed at 7, so total < 100 genuinely
-// holds -- but the analysis cannot establish it. Mechanism: the loss is on
-// total, not on the entered formal. inc's body writes total := total + n,
-// so total's own value re-enters its next contribution and the chain
-// 0, [0,3], [0,7], ... ascends without bound; Apinis warrowing must cut the
-// upper bound to +inf to terminate. The following narrowing phase recovers
-// the lower bound (total is [3,+inf], not [-inf,+inf]) but not the upper
-// one, so a bound like < 100 stays undecided. n itself is exact at [3,4].
+// holds -- but the analysis cannot establish it. Mechanism: inc is entered
+// from two call sites, with n = 3 and n = 4, in one context, and widening
+// at the entry of inc takes n to [3,2147483647]. total + n may then
+// overflow, so under the default assume_top the analysis sets total to the
+// full i32 range and the bound < 100 stays undecided. The warrow-per-origin
+// rule keeps the same result: the loss is on the entered formal, which the
+// global's update rule does not touch. --context entry-state separates the
+// two calls and proves the check.
 //
-// The chain has a single write origin, so the per-origin update rules do
-// not recover it either: they separate contributions from distinct origins
-// before widening, and there is only one origin here to separate.
-//
-// 04-globals/precision/02-global_var.vimp is the same program's decidable
-// half (0 < total, PROVED from the recovered lower bound); only the check
-// that the widening actually costs lives here.
+// 04-globals/known-imprecision/04-global_var.vimp is the same program with
+// the check 0 < total, lost the same way.
 
 global total;
 fun inc(n) {

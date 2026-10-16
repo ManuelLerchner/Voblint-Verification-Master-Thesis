@@ -1,8 +1,10 @@
 // PARAM: --analysis int
 // Backs the site figure "A bound that looks wrong". Over i32, 6 * n + 5
 // wraps to every odd value, so x % 6 ranges over the odd values in [-5,5].
-// The guard splits a into [-5,-1] and [1,5], and every check is
-// undetermined, so UNKNOWN is the only sound answer.
+// Concretely the guard splits a into the odd values of [-5,-1] and of
+// [1,5], and every check is undetermined, so UNKNOWN is the only sound
+// answer. The analysis keeps a in [-5,-1] on the true arm and [0,5] on the
+// else arm (measured).
 
 fun main() {
   n = __voblint_nondet_int();

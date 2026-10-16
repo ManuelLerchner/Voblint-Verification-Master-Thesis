@@ -14,7 +14,7 @@
 //   tell how often f's first line runs, so h widens to its kind's maximum.
 //   At the machine kind i32 the next h + 1 may overflow, which Goblint's
 //   default assume_top reads as any i32 value: 0 <= h is lost along with
-//   h == 1, and the overflow is reported at line 21. The paper's [0,+inf]
+//   h == 1, and the overflow is reported at line 25. The paper's [0,+inf]
 //   is the mathematical-integer reading.
 //
 // With --globals join or per-origin, [h] grows by one per round and the

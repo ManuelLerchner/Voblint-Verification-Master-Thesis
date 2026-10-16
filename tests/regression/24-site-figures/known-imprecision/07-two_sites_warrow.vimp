@@ -1,6 +1,8 @@
 // PARAM: --analysis interval --context none --globals warrow
-// Backs the warrow cell of the site's Globals guide table. Concretely p(1); p(2) enter p with [1,2],
-// but warrow widens the entry as soon as the second call site's contribution outgrows the first: [1,+inf], so the check is UNKNOWN.
+// Backs the warrow cell of the site's Globals guide table. Concretely p(1);
+// p(2) enter p with [1,2], but warrow widens the entry as soon as the second
+// call site's contribution outgrows the first: [1,2147483647], so the check
+// is UNKNOWN.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: p / unit

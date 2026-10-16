@@ -1,10 +1,10 @@
 // PARAM: --analysis int
 // Adapted from Goblint tests/regression/37-congruence/01-simple.c
 // (Granger, "Static analysis of arithmetical congruences", 1989) with the
-// post-loop division and modulo lines and their checks dropped (VIMP has
-// neither operator). Goblint runs it with the congruence domain alone
-// and expects d != 1, 2, 3 and annotates c == 4, d == 12 and e == -8
-// UNKNOWN, since a congruence knows d = 0 (mod 4) but not its value.
+// post-loop division and modulo lines and their checks dropped. Goblint
+// runs it with the congruence domain alone and expects d != 1, 2, 3 and
+// annotates c == 4, d == 12 and e == -8 UNKNOWN, since a congruence knows
+// d = 0 (mod 4) but not its value.
 //
 // The composite proves d == 12 as well: the interval narrows d to [9,12]
 // against d < 9 stepping by 4 and the congruence-to-interval reduction
@@ -14,9 +14,10 @@
 //
 // c == 4 and e == -8 stay UNKNOWN by design of a non-relational domain:
 // e := e - 4 * a decreases every iteration, the head widens its lower
-// bound to -inf, and no guard mentions e, so e = [-inf,0] survives
-// narrowing; c := e + d inherits that as c = [-inf,8]. Recovering them
-// needs the relation c = e + d = 4 the product does not track.
+// bound to the i32 limit, and no guard mentions e. e - 4 * a and e + d may
+// then overflow, so under the default assume_top e and c are the full i32
+// range with congruence top (measured). Recovering them needs the relation
+// c = e + d = 4 the product does not track.
 fun main() {
   a = 1;
   b = 2;

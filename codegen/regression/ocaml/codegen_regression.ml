@@ -69,8 +69,8 @@ let expected_interval =
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
    Exercises `mk_program`'s procedure list, a procedure's formals, and `Call`
    together -- not just straight-line assignment/check.
-   Same program as tests/regression/04-globals/precision/02-global_var.vimp and its
-   known-imprecision sibling 01-repeated_call_site_widening.vimp; the CFG-shape
+   Same program as tests/regression/04-globals/known-imprecision/04-global_var.vimp
+   and 01-repeated_call_site_widening.vimp, one check each; the CFG-shape
    expectations below have no fixture counterpart and live only here.
    The verdicts are below with the expectations. *)
 let proc_demo_prog =

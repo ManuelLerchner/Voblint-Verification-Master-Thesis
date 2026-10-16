@@ -1,8 +1,7 @@
 // PARAM: --analysis interval
 // Gx = 4; inc(); sqr(); with inc adding 1 to the declared global and sqr
-// squaring it. The global is analyzed flow-sensitively through both calls
-// (see 02-global_var.vimp), so (4 + 1) * (4 + 1) = 25 reaches the check
-// exactly. The EXPECT-GRAPH block pins the compiled interprocedural CFG:
+// squaring it. The global is analyzed flow-sensitively through both calls,
+// so (4 + 1) * (4 + 1) = 25 reaches the check exactly. The EXPECT-GRAPH block pins the compiled interprocedural CFG:
 // inc at pp0-pp1, sqr at pp2-pp3, main from pp4, calls at pp5 and pp6.
 //
 // Ported from Example_Proc_Call.thy: main_prog_result (the concrete run,

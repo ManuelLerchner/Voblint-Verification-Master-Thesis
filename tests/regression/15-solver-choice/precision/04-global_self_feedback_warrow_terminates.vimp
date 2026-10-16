@@ -5,7 +5,7 @@
 //
 // Termination here is not the whole claim: an imprecise UNKNOWN would also
 // be sound (the flow-insensitive global
-// summary could only prove total=[0,+inf) even though total is exactly 3
+// summary could not bound total above even though total is exactly 3
 // here) -- widening bought termination, not precision. With the whole
 // abstract state lifted into the local unknown, there is no separate
 // global summary left for the write to fold back into, so the exact

@@ -4,11 +4,12 @@
 // under solvers.td3.widen_gas 5: the gas lets the head grow [0,0], [0,1],
 // ..., [0,3] step by step until the interval stabilizes on its own.
 //
-// Voblint has no widening gas. The head widens a from [0,1] straight to
-// [0,+inf], and the loop guard (a != 3) refines nothing in intervals --
-// a disequality cannot cut a hole out of [0,+inf] -- so narrowing has no
-// upper bound to recover and a stays [0,+inf] (measured) at the check.
-// Same for b. Solver-invariant across join, per-origin, warrow,
+// Voblint has no widening gas. The head widens a from [0,1] to the i32
+// limit, and the loop guard (a != 3) refines nothing in intervals -- a
+// disequality cannot cut a hole out of an interval -- so narrowing has no
+// upper bound to recover. a + 1 may then overflow, so under the default
+// assume_top a is the full i32 range [-2147483648,2147483647] at the check
+// (measured). Same for b. Solver-invariant across join, per-origin, warrow,
 // warrow-per-origin.
 fun main() {
   a = 0;

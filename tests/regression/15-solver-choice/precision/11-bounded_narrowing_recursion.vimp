@@ -1,7 +1,7 @@
 // PARAM: --analysis interval --globals bounded-narrowing
 // A recursive call is one origin whose contribution to up's FunctionEntry
 // seed grows with every activation, so bounded-narrowing widens it to
-// [1,+inf]. Once the guard n < 5 caps the recursive argument, the
+// [1,2147483647]. Once the guard n < 5 caps the recursive argument, the
 // contribution shrinks and the rule narrows the origin back to [1,5]; with
 // main's [0,0] the seed reads [0,5].
 fun up(n) {

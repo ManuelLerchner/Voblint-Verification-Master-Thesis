@@ -22,6 +22,7 @@ from pathlib import Path
 from vimp_fixture import (
     ARITHMETIC_HEADER,
     GRAPH_BEGIN,
+    OPTION_PATHS,
     analysis_settings,
     param_args,
     shown_source,
@@ -95,7 +96,7 @@ PLAYGROUND_KEYS = {
     "program_globals": "placement",
     # An option of the analyzer's option table goes by its Goblint path, which
     # is also the playground control's data-option and the link parameter.
-    "signed_overflow": "sem.int.signed_overflow",
+    **OPTION_PATHS,
 }
 
 

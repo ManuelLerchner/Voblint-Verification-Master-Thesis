@@ -234,8 +234,8 @@
     }
   },
   "dom-crt-congruence": {
-    "fixture": "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    if (x == 13) {\n      __voblint_check(false);\n    } else {\n      __voblint_check(true);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
+    "fixture": "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    __voblint_check(y != 3);\n    if (y == 13) {\n      __voblint_check(false);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
     "settings": {
       "analysis": "congruence",
       "context": "none",
@@ -244,8 +244,8 @@
     }
   },
   "dom-crt-parity": {
-    "fixture": "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    if (x == 13) {\n      __voblint_check(false);\n    } else {\n      __voblint_check(true);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
+    "fixture": "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    __voblint_check(y != 3);\n    if (y == 13) {\n      __voblint_check(false);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
     "settings": {
       "analysis": "parity",
       "context": "none",

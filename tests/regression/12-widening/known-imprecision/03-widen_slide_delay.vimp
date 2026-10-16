@@ -7,8 +7,9 @@
 // delayed widening leaves it alone and widens x only.
 //
 // Voblint has no widening delay. The head's first revisit widens x to
-// [0,+inf]; the second revisit is the first time y grows ([0,0] to
-// [0,1]) and it is widened at once to [0,+inf] (measured at every check).
+// [0,2147483647]; the second revisit is the first time y grows ([0,0] to
+// [0,1]) and it is widened at once to [0,2147483647] (measured at every
+// check).
 // No guard in the loop or after it mentions y, so narrowing recovers the
 // bound of x but has nothing to descend y through; 0 <= y survives only
 // because the lower bound never moved. Solver-invariant across join,

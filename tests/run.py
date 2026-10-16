@@ -13,14 +13,14 @@ sits under one of two subdirectories that answer "what kind of guarantee":
                                    UNKNOWN here generally means a regression,
                                    not a feature.
   <NN-group>/soundness/           the concrete program's result is genuinely
-                                   undetermined (e.g. an unconstrained
-                                   __voblint_nondet_int() feeds the checked
-                                   condition):
-                                   both a satisfying and a violating
-                                   execution exist, so UNKNOWN is the only
-                                   sound answer -- not a limitation to name,
-                                   since there is no mechanism losing
-                                   information here.
+                                   undetermined: the condition holds at some
+                                   store reaching the check and fails at
+                                   another (from an unconstrained
+                                   __voblint_nondet_int(), or from one run
+                                   that reaches the check several times), so
+                                   UNKNOWN is the only sound answer -- not a
+                                   limitation to name, since there is no
+                                   mechanism losing information here.
   <NN-group>/known-imprecision/   the concrete result IS fixed, but the
                                    abstraction can't establish it. Every
                                    case's header comment must name the
@@ -163,8 +163,8 @@ is recursive, nothing else to wire up. Pick the subdirectory by what the
 CONCRETE program does, not by what the analyzer currently reports:
 precision/ only if the concrete result is fixed and PROVED/REFUTED is
 actually what the analysis should produce; soundness/ if the concrete
-result is genuinely undetermined (unconstrained input reaches the checked
-condition), where UNKNOWN is the only sound answer and not a limitation;
+result is genuinely undetermined (the condition holds at some reaching store
+and fails at another), where UNKNOWN is the only sound answer and not a limitation;
 known-imprecision/ if the concrete result IS fixed but the domain can't
 express it, with a comment naming why.
 """

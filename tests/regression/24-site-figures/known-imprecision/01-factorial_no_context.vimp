@@ -3,7 +3,7 @@
 // but with one context for f the recursive call f(n - 1) shares f's single exit, and
 // the recursive combine feeds that exit back into itself, so the return value is lost
 // and a == 2 is UNKNOWN under every --globals rule. Under the default warrow rule the
-// entry is additionally widened to n = [-inf,2]; under join it stays n = [1,2].
+// entry is additionally widened to n = [-2147483648,2]; under join it stays n = [1,2].
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: f / unit

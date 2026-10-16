@@ -8,16 +8,16 @@
 //
 // Mechanism: f has one context-insensitive FunctionEntry unknown, fed by
 // side effect from the call site inside the loop. The head's widening
-// makes the call site deliver i = [0,9] on its second visit, the entry
-// unknown widens [0,0] against that to [0,+inf], and side-effected
-// unknowns only ever grow -- narrowing at the loop head later cuts the
-// call site back to i = [0,8], but f's entry keeps j = [0,+inf] (measured
-// with --dot: call site i = [0,8], entry_f j = [0,+inf]). f then
-// returns [1,+inf], the back-edge carries [2,+inf], and the head cannot
-// narrow below +inf, leaving i = [10,+inf] with parity Even after the
-// loop: parity alone cannot single out 10. Distinct from 03-procedures/
-// known-imprecision/01-two_call_sites_same_procedure.vimp, which merges
-// two call sites; here a single call site loses to widening on the entry
+// makes the call site deliver a growing i, and the entry unknown widens
+// against it to the i32 limit. j + 1 may then overflow, so under the
+// default assume_top f returns the full i32 range, and 1 + t may overflow
+// as well. Side-effected unknowns only ever grow, so the caller's narrowing
+// never reaches f's entry (measured with --graph-snapshot: entry_f j and
+// the call site's t are the full i32 range, the loop body's i is
+// [-2147483648,9]). After the loop the exit guard leaves i =
+// [10,2147483647] with congruence top: nothing singles out 10. Distinct
+// from 03-procedures/known-imprecision/01-two_call_sites_same_procedure.vimp,
+// which merges two call sites; here a single call site loses to widening on the entry
 // unknown that the caller's own narrowing never reaches.
 fun f(j) {
   return j + 1;

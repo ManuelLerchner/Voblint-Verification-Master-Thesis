@@ -335,17 +335,21 @@ why = "x = 2n, y = 2n + 1: Parity proves x != y."
 argv = [
   "--analysis",
   "parity",
-  "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
+  "--signed-overflow",
+  "assume_wraparound",
+  "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
 ]
-why = "x = 4n+1, y = 6m+3 under x == y, then x == 13: Parity leaves the inner check UNKNOWN."
+why = "x = 4n+1, y = 6m+3 at i32 under x == y: Parity keeps only odd for y and leaves y != 3 UNKNOWN."
 
 [claims.dom-crt-congruence]
 argv = [
   "--analysis",
   "congruence",
-  "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
+  "--signed-overflow",
+  "assume_wraparound",
+  "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
 ]
-why = "x = 4n+1, y = 6m+3 under x == y, then x == 13: Congruence intersects to 9 (mod 12) and reports the inner check DEAD."
+why = "x = 4n+1, y = 6m+3 at i32 under x == y: 1 (mod 4) survives wraparound and 3 (mod 6) does not, so the meet narrows y to 1 (mod 4) and proves y != 3."
 
 [claims.goblint-1161-int]
 argv = [

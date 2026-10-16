@@ -24,16 +24,17 @@ blocks.
 | From a graph to equations to values; widening stepper; solver step-through; zoom lens; compiler morph | counting loop | `precision/03-counting_loop` |
 | A real bug, replayed (Voblint side) | goblint/analyzer #1161 regression test `37-congruence/14` | `precision/04-goblint_1161_congruence_mod` |
 | The flagship theorems (explorer program) | `theorems` example | `precision/05-theorems_program` |
-| Many runs in, one region per node out | `multiples-of-three` | `known-imprecision/06-multiples_of_three_interval`, `precision/06-multiples_of_three_int` |
+| Concrete runs and one interval per node | `multiples-of-three` | `known-imprecision/06-multiples_of_three_interval`, `precision/06-multiples_of_three_int` |
 | Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`12`, `precision/15`–`17`, `precision/49`–`50`, `precision/52`–`53`, `soundness/13`–`14`, `soundness/51`, `known-imprecision/07`–`08`, `01`–`02-recursion_grows_*_timeout` |
 | A call that never stops calling | `recursion-bounded`, `recursion-grows` | `precision/18`–`27`, `soundness/28`–`30`, `03-recursion_grows_entry_state_timeout` |
-| The price of precision | fan-out, `down(5)` | `precision/31`–`42`, `known-imprecision/10-down_call_string_4` |
+| The price of precision | fan-out, `down(5)` | `precision/34`, `precision/36`–`42`, `precision/43-down_entry_state`, `known-imprecision/10-down_call_string_99`, `known-imprecision/13`–`18-fan_out_*` |
 | Context sensitivity: how many copies of a procedure; Reading a result | playground demo | `precision/43`–`44-demo_*`, `known-imprecision/11`–`12-demo_*` |
 | One copy of each procedure (compiled graph) | `sum(2)` via `dec` | `precision/46-sum_dec_cfgmap` |
 | What the analyzer will answer (collecting semantics) | `sum(2)` via `dec`, no contexts | `known-imprecision/19-sum_dec_no_context` |
 | Combining two analyses through queries | equality from two guards; order asks Interval | `25-cooperation/precision/03`, `25-cooperation/precision/06`, `25-cooperation/known-imprecision/01`, `03`, `05`, `06` |
 | What does it tell you? | `100 / k`, `100 / d` and two checks | `precision/47-answers_every_kind` |
 | Thesis Figure 1.2 (every answer) | a clamp function, one check per verdict and two divisions | `precision/48-clamp_every_answer` |
+| A bound that looks wrong | `x = 6 * n + 5`, `a = x % 6` | `soundness/45-remainder_sign_split` |
 
 ## What is not pinned
 

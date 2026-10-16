@@ -4,8 +4,10 @@
 // source location regardless of which f activation reaches it. The two
 // activations of g -- one from f(3), one from f(10) -- therefore collapse
 // onto the same routed context and widen together, so g's result, and
-// everything downstream that reads it, loses precision: both x and y come
-// back as [6,+inf) instead of their exact values 6 and 20. The K1/K2
+// everything downstream that reads it, loses precision: g's entry widens to
+// p = [3,2147483647], p + p may then overflow, and under the default
+// assume_top both x and y come back as the full i32 range instead of their
+// exact values 6 and 20. The K1/K2
 // Isabelle witnesses pin the same separation on their solved states.
 // EXPECT-GRAPH-BEGIN
 // clusters:

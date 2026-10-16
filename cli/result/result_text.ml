@@ -27,20 +27,6 @@ let contextual_verdict_name = function
   | C.Bot -> "DEAD"
   | C.Lifted v -> verdict_name v
 
-(* What a diagnostic reports, worded after Goblint's messages: a division or
-   remainder whose divisor is, or may be, zero; a signed operation whose
-   mathematical result lies, or may lie, outside its kind, which for a remainder means
-   its quotient, as for INT_MIN % -1; a conversion whose value the target kind does,
-   or may, not represent, including a library min or max result written to its
-   destination. A REFUTED verdict holds for every execution that
-   evaluates the operation; an UNKNOWN one is only possible. *)
-let operator_name = function
-  | C.AAdd -> "+"
-  | C.ASub -> "-"
-  | C.AMul -> "*"
-  | C.ADiv -> "/"
-  | C.AMod -> "%"
-
 (* A library result's obligation holds the conversion of its first argument and, as
    operand, its second; it prints as the converted call. *)
 let obligation_text obligation =
@@ -62,6 +48,13 @@ let obligation_text obligation =
   | C.Max_Conversion_Overflow -> call "max"
   | _ -> Typed_printer.string_of_texp operation
 
+(* What a diagnostic reports, worded after Goblint's messages: a division or
+   remainder whose divisor is, or may be, zero; a signed operation whose
+   mathematical result lies, or may lie, outside its kind, which for a remainder means
+   its quotient, as for INT_MIN % -1; a conversion whose value the target kind does,
+   or may, not represent, including a library min or max result written to its
+   destination. A REFUTED verdict holds for every execution that
+   evaluates the operation; an UNKNOWN one is only possible. *)
 let obligation_message verdict obligation =
   let operation = C.arithmetic_operation obligation in
   let text = obligation_text obligation in
@@ -70,7 +63,8 @@ let obligation_message verdict obligation =
     | C.Division_By_Zero, C.TArith (_, C.AMod, _, _) -> "remainder by zero"
     | C.Division_By_Zero, _ -> "division by zero"
     | (C.Signed_Overflow | C.Remainder_Overflow), C.TArith (_, op, _, _) ->
-        "signed integer overflow in " ^ operator_name op
+        "signed integer overflow in "
+        ^ (Typed_printer.aop_op op).Vimp_printer.infix
     | (C.Signed_Overflow | C.Remainder_Overflow), _ -> "signed integer overflow"
     | ( ( C.Conversion_Overflow | C.Min_Conversion_Overflow
         | C.Max_Conversion_Overflow ),

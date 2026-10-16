@@ -566,16 +566,6 @@ let int_json (C.Int_of_integer z) =
   let exact = Z.shift_left Z.one 53 in
   if Z.lt (Z.abs z) exact then Z.to_string z else json_string (Z.to_string z)
 
-let kind_name = function
-  | C.I8 -> "i8"
-  | C.U8 -> "u8"
-  | C.I16 -> "i16"
-  | C.U16 -> "u16"
-  | C.I32 -> "i32"
-  | C.U32 -> "u32"
-  | C.I64 -> "i64"
-  | C.U64 -> "u64"
-
 let rec exp_json e =
   let bin tag a b = tagged tag [ exp_json a; exp_json b ] in
   match e with
@@ -595,7 +585,8 @@ let rec exp_json e =
   | C.And (a, b) -> bin "And" a b
   | C.Or (a, b) -> bin "Or" a b
   | C.Not a -> tagged "Not" [ exp_json a ]
-  | C.Cast (k, a) -> tagged "Cast" [ json_string (kind_name k); exp_json a ]
+  | C.Cast (k, a) ->
+      tagged "Cast" [ json_string (Vimp_printer.string_of_kind k); exp_json a ]
 
 let var_json = function
   | C.GlobalId x -> tagged "GlobalId" [ json_string x ]
@@ -619,17 +610,21 @@ let cop_name = function
   | C.CNe -> "CNe"
 
 let rec texp_json = function
-  | C.TN (k, i) -> tagged "TN" [ json_string (kind_name k); int_json i ]
-  | C.TVar (k, x) -> tagged "TVar" [ json_string (kind_name k); var_json x ]
+  | C.TN (k, i) ->
+      tagged "TN" [ json_string (Vimp_printer.string_of_kind k); int_json i ]
+  | C.TVar (k, x) ->
+      tagged "TVar" [ json_string (Vimp_printer.string_of_kind k); var_json x ]
   | C.TArith (k, op, a, b) ->
       tagged "TArith"
         [
-          json_string (kind_name k);
+          json_string (Vimp_printer.string_of_kind k);
           json_string (aop_name op);
           texp_json a;
           texp_json b;
         ]
-  | C.TCast (k, a) -> tagged "TCast" [ json_string (kind_name k); texp_json a ]
+  | C.TCast (k, a) ->
+      tagged "TCast"
+        [ json_string (Vimp_printer.string_of_kind k); texp_json a ]
   | C.TCmp (op, a, b) ->
       tagged "TCmp" [ json_string (cop_name op); texp_json a; texp_json b ]
   | C.TNot a -> tagged "TNot" [ texp_json a ]
@@ -837,7 +832,8 @@ let context_json_of_policy = function
   | C.Call_String k -> tagged "Typed_Call_String" [ nat_json k ]
   | C.Entry_State -> tagged "Typed_Entry_State" []
 
-let decl_json (x, k) = json_pair var_json json_string (x, kind_name k)
+let decl_json (x, k) =
+  json_pair var_json json_string (x, Vimp_printer.string_of_kind k)
 
 (* A program is read through the export's accessors: main's body, then every other
    procedure's declaration, in the order the program lists them. *)

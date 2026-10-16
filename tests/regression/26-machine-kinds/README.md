@@ -3,8 +3,9 @@
 Programs that declare machine kinds in C style: on a `global` line
 (`global u8 g;`), on a formal (`fun f(u8 n)`), as a return kind
 (`fun u16 f(...)`), or as a local declared anywhere in a body (`u8 x;`). A
-program that writes any kind must write one on every global and
-formal, and must declare every local. A declared local starts at an arbitrary
+program that writes a kind on any declaration must write one on every global
+and formal, and must declare every local; a cast `(u8) e` alone does not make a
+program typed. A declared local starts at an arbitrary
 value of its kind unless it has an initializer (`i8 x = 2;`), which assigns the
 value converted to the local's kind, as any assignment does; a global starts at
 zero. `11` checks initializers, `12` their left-to-right order, `13` and `14`

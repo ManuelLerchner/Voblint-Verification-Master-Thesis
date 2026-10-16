@@ -1,6 +1,7 @@
 // PARAM: --analysis interval
 // Adapted from Goblint tests/regression/00-sanity/26-strict-loop-enter.c.
-// The counted loop's head widens to [0,+inf] before narrowing brings it back
+// The counted loop's head widens to the i32 limit before narrowing brings it
+// back
 // to [0,50], so the branch 50 < x is live at the widened value and dead after
 // narrowing. Goblint's note is that the node after Pos(x>50) ends up dead
 // while the diverging inner loop keeps its widened x = [51,2147483647]; here

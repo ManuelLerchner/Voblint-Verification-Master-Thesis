@@ -2,7 +2,8 @@
 // Source: Example_Int_Backward (bfilter_int_dom_never_congruence_unused).
 //
 // 24-site-figures/precision/02-int_reduction_int.vimp under never. x is
-// 1 (mod 4) and the guards bound the interval to [-2,10]. Only a
+// 1 (mod 4), also after wraparound since 4 divides 2^32, and the guards
+// bound it to [-2,10], so concretely x is 1, 5 or 9 and the check holds. Only a
 // refinement round moves the interval's bounds onto the class ([1,9]);
 // without it no single component decides the check: the interval still
 // contains -2, 0 and 10, and the class is not a singleton. Both runs use

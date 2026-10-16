@@ -4,6 +4,14 @@
 // Congruence: a constant result wraps to the constant the semantics computes
 // (handle_overflow), so every check is proved. The assume_top twin is
 // ../known-imprecision/02-congruence_assume_top.vimp.
+//
+// Each operation overflows at every store reaching it, and Interval and Int
+// report ERROR there (01-interval_wraparound.vimp). Congruence reports only
+// WARN: an overflow obligation is decided on the interval component of the
+// operands' answers (Run_Report.thy), and Congruence, like Sign, bounds no
+// magnitude, so even its singleton a leaves that interval unbounded. A
+// literal operand is still its own exact interval, but every operation here
+// has a variable operand.
 fun main() {
   a = 2147483647;
   b = a + 1; // ARITH: WARN signed-overflow

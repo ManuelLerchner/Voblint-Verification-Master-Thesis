@@ -2,8 +2,10 @@
 // Backs the site figure "What the analyzer will answer" (scene-collect) and the
 // thesis's collecting-semantics figure. The concrete result is fixed: sum(2) = 3.
 // With one context per procedure, the entries of sum(2), sum(1) and sum(0) join
-// at one unknown, which the solver widens to n = [-inf,2]. The shared exit then
-// loses the return value, so x == 3 is UNKNOWN at x = [0,+inf].
+// at one unknown, which the solver widens. x - 1 and r + n may then overflow,
+// so under the default assume_top the entry's n and the shared exit's return
+// value are the full i32 range, and x == 3 is UNKNOWN at x =
+// [-2147483648,2147483647].
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: dec / unit

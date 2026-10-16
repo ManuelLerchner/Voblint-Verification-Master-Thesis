@@ -8,8 +8,9 @@
 // This is the same source under no context at all, so there is one unknown
 // per program point of f shared by both call sites. Mechanism: f's
 // FunctionEntry seed receives 3 from one site and 10 from the other, and
-// the single copy of f's body is analyzed under their join -- so f returns
-// [6,+inf] to both callers and neither x == 6 nor y == 20 survives, though
+// the single copy of f's body is analyzed under their join, widened to
+// p = [3,2147483647]. p + p may then overflow, so f returns the full i32
+// range to both callers and neither x == 6 nor y == 20 survives, though
 // each is concretely exact.
 //
 // precision/05- and precision/06- are this program under the paper's two

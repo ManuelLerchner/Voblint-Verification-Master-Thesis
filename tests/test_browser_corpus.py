@@ -25,7 +25,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from vimp_fixture import analysis_settings, param_args  # noqa: E402
+from vimp_fixture import OPTION_PATHS, analysis_settings, param_args  # noqa: E402
 
 BUNDLE = Path(
     os.environ.get(
@@ -43,11 +43,6 @@ CHUNK = 40
 FIXTURES = sorted(
     p for p in CORPUS.rglob("*.vimp") if "--timeout" not in (param_args(p) or [])
 )
-
-
-# A PARAM setting from the analyzer's option table, by its Goblint path: the
-# page's settings argument, the browser form of --set PATH VALUE.
-OPTION_PATHS = {"signed_overflow": "sem.int.signed_overflow"}
 
 
 def web_call(path):

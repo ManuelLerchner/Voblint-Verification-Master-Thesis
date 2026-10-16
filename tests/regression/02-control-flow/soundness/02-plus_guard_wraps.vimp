@@ -1,0 +1,16 @@
+// PARAM: --analysis interval
+// x + 1 < 5 does not bound x above at i32: x + 1 wraps, so x = 2147483647
+// gives x + 1 = -2147483648 < 5 and enters the true arm with x < 4 false,
+// while x = 0 enters it with x < 4 true. UNKNOWN is the only sound verdict.
+// Interval inverts a possibly overflowing sum at its kind, not over
+// mathematical integers (refine_var in Nonrelational_Transfer.thy, after
+// Goblint's inv_bin_int), and that inverse covers the whole i32 range, so x
+// keeps its full range. An inverse over
+// mathematical integers, x := x meet (r - 1), would claim x <= 3 here
+// unsoundly.
+fun main() {
+  x = __voblint_nondet_int();
+  if (x + 1 < 5) {
+    __voblint_check(x < 4); // UNKNOWN
+  }
+}

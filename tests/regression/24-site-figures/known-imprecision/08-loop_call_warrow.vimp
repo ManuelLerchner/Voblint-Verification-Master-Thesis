@@ -1,6 +1,7 @@
 // PARAM: --analysis interval --context none --globals warrow
-// Backs the warrow cell of the site's Globals guide table. Concretely g receives [0,9] from the loop,
-// but warrow widens g's entry while the loop's contribution grows: [0,+inf], so the check is UNKNOWN.
+// Backs the warrow cell of the site's Globals guide table. Concretely g
+// receives [0,9] from the loop, but warrow widens g's entry while the loop's
+// contribution grows: [0,2147483647], so the check is UNKNOWN.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: g / unit

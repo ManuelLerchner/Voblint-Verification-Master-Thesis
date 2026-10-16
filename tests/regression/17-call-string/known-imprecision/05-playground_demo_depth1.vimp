@@ -3,7 +3,7 @@
 // The browser playground's example, at its default configuration. At depth 1,
 // scale's call string remembers only its call site inside wrap, so wrap(1)
 // and wrap(4) share one scale context and widen together: v enters as
-// [1,+inf] and the returned r, and so a and b, lose both bounds. a == 2 is
+// [1,2147483647] and the returned r, and so a and b, lose both bounds. a == 2 is
 // concretely true but UNKNOWN, and 10 / (a - 2) -- concretely 10 / 0 -- is
 // only a possible division by zero. record keeps one context per call site
 // in main, so hits stays exact and hits == 8 is still proved. The widened v

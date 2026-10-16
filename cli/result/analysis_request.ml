@@ -113,9 +113,12 @@ let setting settings spec =
     (fun v (p, x) -> if p = spec.path then x else v)
     spec.default settings
 
+(* Request validation admits only a row's [values]; a value without a case here
+   is a row this mapping has not caught up with. *)
 let signed_overflow_of_name = function
+  | "assume_top" -> C.Assume_Top
   | "assume_wraparound" -> C.Assume_Wraparound
-  | _ -> C.Assume_Top
+  | v -> invalid_arg ("Analysis_request.signed_overflow_of_name: " ^ v)
 
 let sem_of_settings settings =
   let get path =

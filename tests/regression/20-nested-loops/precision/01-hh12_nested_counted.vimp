@@ -6,7 +6,7 @@
 // to hold; 35-hh-ex1b.c additionally feeds a YAML unassume witness.
 //
 // Voblint proves all four with plain widening and narrowing: the inner
-// head widens j to [0,+inf] and narrows it back to [0,10] against j < 10,
+// head widens j to the i32 limit and narrows it back to [0,10] against j < 10,
 // so the outer body sees j == 10 exactly; the outer head does the same for
 // i. Solver-invariant: join, per-origin, warrow and warrow-per-origin all
 // answer PROVED x4, and the same program with bound 100 (35-hh-ex1b.c's

@@ -1,0 +1,28 @@
+// PARAM: --analysis congruence --signed-overflow assume_wraparound
+// The guard x == y meets two classes. x = 4 * n + 1 is 1 (mod 4); 4 divides
+// 2^32, so the class survives i32 wraparound. y = 6 * m + 3 does not keep
+// 3 (mod 6): 6 * m wraps to every even value, so y is only odd. The meet of
+// 1 (mod 4) and 1 (mod 2) narrows y to 1 (mod 4), which excludes y == 3;
+// Parity, which keeps only "odd" for both, leaves that check UNKNOWN.
+// y == 13 is concretely reachable (n = 3, and 6 * m == 10 has an i32
+// solution because 2 divides 10 and 3 is invertible mod 2^31), so
+// check(false) there is REFUTED.
+//
+// Run under --signed-overflow assume_wraparound: the case tests congruence
+// arithmetic modulo 2^32 on signed i32. Under Goblint's default assume_top
+// both products may overflow, x and y become top, and the meet has nothing
+// to narrow.
+fun main() {
+  n = __voblint_nondet_int();
+  m = __voblint_nondet_int();
+  x = 4 * n + 1;
+  y = 6 * m + 3;
+  if (x == y) {
+    __voblint_check(y != 3); // PROVED
+    if (y == 13) {
+      __voblint_check(false); // REFUTED
+    }
+  } else {
+    __voblint_check(true); // PROVED
+  }
+}
