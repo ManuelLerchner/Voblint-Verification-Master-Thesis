@@ -402,7 +402,7 @@
             <div class="ans-row ans-row-shown">
               <p class="ans-row-verdict">At the proved check, the whole state:
                 <code>k = [10, 10]</code> &middot; <code>q = [10, 10]</code> &middot;
-                <code>d = &#8868;</code> &middot; <code>y = &#8868;</code></p>
+                <code>d = [−2³¹, 2³¹−1]</code> &middot; <code>y = [−100, 100]</code></p>
               <span class="ans-who ans-who-free">for free</span>
             </div>
           </div>
@@ -3670,8 +3670,9 @@ fun main() {
         <p>
           Every key here takes several contributions, so all five settings have something to do, and
           they do not agree. Warrow widens <code>p</code>'s and <code>g</code>'s entry away and
-          loses both checks. Warrow per origin keeps those two and loses <code>s</code>, and so does
-          Bounded narrowing. Join and Join per origin keep all three, and neither of them finishes
+          loses both checks. Warrow per origin keeps those two and still proves <code>s</code>'s check, over the
+          wider range <code>[−9, 9]</code> and with a warning that <code>9 / (a + 2)</code> may
+          divide by zero. Bounded narrowing gives the same answer. Join and Join per origin keep all three, and neither of them finishes
           on a recursion whose argument climbs, which is why neither is the default. The four-program table further down is
           those runs.
         </p>
@@ -3900,7 +3901,7 @@ fun main() {
       </figure>
 
       <h3 class="setting-title">Both settings at once</h3>
-      <p class="setting-copy">Run every combination of the two settings on the program above, and their effects separate. Cost changes only between rows: the solved graph has 24 nodes with no contexts, 34 at either call-string depth and 38 under entry states, and within a row the count stays the same, because this setting adds and removes no unknowns. Precision changes along both axes, and the coarser the context, the more a widening loses. Warrow proves one of the three checks with no contexts and all three once entry states keep the writers apart. Warrow per origin and Bounded narrowing lose only <code>s</code>'s check, and only with no contexts. Both joining rules prove all three everywhere. The cheapest fully precise cells are <code>None</code> with either joining rule. <code>Join</code> is also the rule that gives no answer within the time limit on a recursion whose argument keeps growing.</p>
+      <p class="setting-copy">Run every combination of the two settings on the program above, and their effects separate. Cost changes only between rows: the solved graph has 24 nodes with no contexts, 34 at either call-string depth and 38 under entry states, and within a row the count stays the same, because this setting adds and removes no unknowns. Precision changes along both axes, and the coarser the context, the more a widening loses. Warrow proves one of the three checks with no contexts and all three once entry states keep the writers apart. Warrow per origin and Bounded narrowing prove all three everywhere; only with no contexts does <code>s</code>'s check hold over the wider range <code>[−9, 9]</code>, beside a warning that <code>9 / (a + 2)</code> may divide by zero. Both joining rules prove all three everywhere. The cheapest fully precise cells are <code>None</code> with either joining rule. <code>Join</code> is also the rule that gives no answer within the time limit on a recursion whose argument keeps growing.</p>
 
       <h3 class="setting-title">Recursion with a growing argument</h3>
       <p class="setting-copy">
@@ -5477,7 +5478,7 @@ qed</code></pre>
 
       <figure class="scene scene-island">
         <svg viewBox="0 0 900 400" role="img"
-          aria-label="A large region labeled C contains regions for pointers and heap, arrays and structs, threads, machine integers, floating point, indirect calls, other control flow, and library calls. A small island inside, labeled VIMP, contains integers, globals, procedures and recursion, while and if, checks, and nondeterministic input.">
+          aria-label="A large region labeled C contains regions for pointers and heap, arrays and structs, threads, floating point, indirect calls, other control flow, and library calls. A small island inside, labeled VIMP, contains machine integers, globals, procedures and recursion, while and if, checks, and nondeterministic input.">
           <path class="sea" d="M40 70 C 120 10, 380 20, 520 30 S 860 40, 870 170 S 820 380, 560 385 S 150 390, 70 320 S -20 130, 40 70 Z"/>
           <text class="sea-label" x="84" y="72">C, as Goblint sees it</text>
 
@@ -5490,11 +5491,8 @@ qed</code></pre>
           <g class="region" tabindex="0" data-note="Threads and data races. VIMP is single-threaded, so there is no interleaving and no need for Goblint&#x27;s `sync`.">
             <ellipse cx="640" cy="110" rx="78" ry="40"/><text x="640" y="115">threads</text>
           </g>
-          <g class="region" tabindex="0" data-note="Machine integers wrap around. VIMP has eight machine kinds, i32 by default, with C's usual arithmetic conversions made explicit; a signed overflow wraps, which C leaves undefined, and is reported as a diagnostic.">
-            <ellipse cx="770" cy="220" rx="80" ry="44"/><text x="770" y="216">machine</text><text x="770" y="234">integers</text>
-          </g>
           <g class="region" tabindex="0" data-note="Floating point is absent: every VIMP value is an integer.">
-            <ellipse cx="660" cy="325" rx="72" ry="36"/><text x="660" y="330">floats</text>
+            <ellipse cx="730" cy="270" rx="72" ry="36"/><text x="730" y="275">floats</text>
           </g>
           <g class="region" tabindex="0" data-note="Calls through function pointers. VIMP calls name their procedure directly.">
             <ellipse cx="170" cy="300" rx="96" ry="40"/><text x="170" y="305">indirect calls</text>
@@ -5506,10 +5504,10 @@ qed</code></pre>
             <ellipse cx="110" cy="220" rx="62" ry="32"/><text x="110" y="218">library</text><text x="110" y="234">&amp; I/O</text>
           </g>
 
-          <g class="island" tabindex="0" data-note="Inside VIMP: integer variables, `global` declarations, procedures with parameters, recursion and return values, `if` and `while`, `__voblint_check` assertions, and `__voblint_nondet_int()` for unknown input. A call is a statement, `f(x)` or `y = f(x)`, never part of an expression, and `main` does not return a value. Division is total: `a / 0` is `0` and `a % 0` is `a`, and a possible zero divisor is reported as a diagnostic.">
+          <g class="island" tabindex="0" data-note="Inside VIMP: machine-integer variables of eight kinds, i32 by default, with C's usual arithmetic conversions made explicit; a signed overflow wraps, which C leaves undefined, and is reported as a diagnostic. Also `global` declarations, procedures with parameters, recursion and return values, `if` and `while`, `__voblint_check` assertions, and `__voblint_nondet_int()` for unknown input. A call is a statement, `f(x)` or `y = f(x)`, never part of an expression, and `main` does not return a value. Division is total: `a / 0` is `0` and `a % 0` is `a`, and a possible zero divisor is reported as a diagnostic.">
             <path d="M300 180 C 340 140, 520 145, 560 190 S 560 290, 470 295 S 290 280, 300 180 Z"/>
             <text class="island-title" x="430" y="196">VIMP</text>
-            <text x="430" y="222">integers · globals</text>
+            <text x="430" y="222">machine integers · globals</text>
             <text x="430" y="242">procedures · recursion</text>
             <text x="430" y="262">if · while · checks</text>
             <text x="430" y="282">nondet input</text>

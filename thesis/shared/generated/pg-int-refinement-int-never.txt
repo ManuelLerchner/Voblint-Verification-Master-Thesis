@@ -1,0 +1,9 @@
+docs/readme-figures/int-refinement.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ------------------------------------------
+9:5       pp5    x == 5     UNKNOWN  int: x=intervals:[3,5]; congruences:1+4ℤ

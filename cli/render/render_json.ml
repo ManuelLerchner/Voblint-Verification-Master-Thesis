@@ -728,12 +728,12 @@ let refine_mode_json = function
   | C.Refine_Never -> tagged "Refine_Never" []
 
 let domain_json = function
-  | C.Sign -> tagged "Typed_Sign" []
-  | C.Interval -> tagged "Typed_Interval" []
-  | C.Ana_Int mode -> tagged "Typed_Int" [ refine_mode_json mode ]
-  | C.Parity -> tagged "Typed_Parity" []
-  | C.Congruence -> tagged "Typed_Congruence" []
-  | C.Order -> tagged "Typed_Order" []
+  | C.Sign -> tagged "Sign" []
+  | C.Interval -> tagged "Interval" []
+  | C.Ana_Int mode -> tagged "Ana_Int" [ refine_mode_json mode ]
+  | C.Parity -> tagged "Parity" []
+  | C.Congruence -> tagged "Congruence" []
+  | C.Order -> tagged "Order" []
 
 let field_state_json = function
   | C.Field_Store bs ->
@@ -829,8 +829,8 @@ let globals_rule_json = function
       tagged "Globals_Bounded_Narrowing" [ nat_json n ]
 
 let context_json_of_policy = function
-  | C.Call_String k -> tagged "Typed_Call_String" [ nat_json k ]
-  | C.Entry_State -> tagged "Typed_Entry_State" []
+  | C.Call_String k -> tagged "Call_String" [ nat_json k ]
+  | C.Entry_State -> tagged "Entry_State" []
 
 let decl_json (x, k) =
   json_pair var_json json_string (x, Vimp_printer.string_of_kind k)

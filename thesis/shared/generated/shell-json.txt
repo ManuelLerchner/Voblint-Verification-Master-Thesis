@@ -2,10 +2,10 @@
  "input": {
   "conf": {
    "conf_analyses": [
-    "Typed_Interval"
+    "Interval"
    ],
    "conf_context": {
-    "Typed_Call_String": 0
+    "Call_String": 0
    },
    "conf_globals": "Globals_Warrow",
    "conf_program_globals": "Program_Globals_Flow_Sensitive",
@@ -348,7 +348,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -479,7 +479,7 @@
        {
         "Lifted": [
          [
-          "Typed_Interval",
+          "Interval",
           {
            "Field_Store": [
             [
@@ -514,7 +514,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -548,7 +548,7 @@
        {
         "Lifted": [
          [
-          "Typed_Interval",
+          "Interval",
           {
            "Field_Store": [
             [
@@ -583,7 +583,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -714,7 +714,7 @@
        {
         "Lifted": [
          [
-          "Typed_Interval",
+          "Interval",
           {
            "Field_Store": [
             [
@@ -749,7 +749,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -811,7 +811,7 @@
        {
         "Lifted": [
          [
-          "Typed_Interval",
+          "Interval",
           {
            "Field_Store": [
             [
@@ -846,7 +846,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -880,7 +880,7 @@
        {
         "Lifted": [
          [
-          "Typed_Interval",
+          "Interval",
           {
            "Field_Store": [
             [
@@ -915,7 +915,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -951,7 +951,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -985,7 +985,7 @@
        {
         "Lifted": [
          [
-          "Typed_Interval",
+          "Interval",
           {
            "Field_Store": [
             [
@@ -1020,7 +1020,7 @@
      "state_value": {
       "Lifted": [
        [
-        "Typed_Interval",
+        "Interval",
         {
          "Field_Store": [
           [
@@ -1054,7 +1054,7 @@
        {
         "Lifted": [
          [
-          "Typed_Interval",
+          "Interval",
           {
            "Field_Store": [
             [

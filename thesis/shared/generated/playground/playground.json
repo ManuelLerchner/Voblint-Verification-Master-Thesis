@@ -41,8 +41,8 @@
     "globals": "warrow",
     "image": "int-refinement.png",
     "program": "int-refinement.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=int&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQyExT0KhU0FYwVLC1VTCGiCkoVCjYKhhag5nx8WX5STmZeSXxyRmpydlAxUCFRpogyVqF1JziVCQtBmBRrlouAA",
-    "why": "The product domain proving y == 2 where sign, interval and parity each answer UNKNOWN."
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=int&globals=warrow&context=none#code=TYxBDkAwFET3PcUs2x0SK5yloSoafAslTcTdfUrYTWbem24lTLUjqbALwKCC1tvcjI68ppla6zVHqQpeXQdpUCKJMBAYT6_lgB0X-2vzu32cjJ3wOt-96a0ZJNOMq8gf4gQ",
+    "why": "The product Int proving x == 5 where Interval alone, Congruence alone and Int without refinement each answer UNKNOWN."
   },
   "overview": {
     "analysis": "interval,order",

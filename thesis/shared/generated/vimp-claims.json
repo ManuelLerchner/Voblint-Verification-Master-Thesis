@@ -616,7 +616,7 @@
   },
   "pg-int-refinement-congruence": {
     "fixture": "docs/readme-figures/int-refinement.vimp",
-    "program": "fun main() {\n  if (y + 1 == 3) {\n    x = 1;\n    __voblint_check(y == 2);\n  } else {\n    x = 0;\n  }\n}",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (c < 0) {\n    x = 1;\n  } else {\n    x = 5;\n  }\n  if (2 < x) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "congruence",
       "context": "none",
@@ -626,7 +626,7 @@
   },
   "pg-int-refinement-int": {
     "fixture": "docs/readme-figures/int-refinement.vimp",
-    "program": "fun main() {\n  if (y + 1 == 3) {\n    x = 1;\n    __voblint_check(y == 2);\n  } else {\n    x = 0;\n  }\n}",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (c < 0) {\n    x = 1;\n  } else {\n    x = 5;\n  }\n  if (2 < x) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "int",
       "context": "none",
@@ -634,9 +634,20 @@
       "placement": "flow-sensitive"
     }
   },
+  "pg-int-refinement-int-never": {
+    "fixture": "docs/readme-figures/int-refinement.vimp",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (c < 0) {\n    x = 1;\n  } else {\n    x = 5;\n  }\n  if (2 < x) {\n    __voblint_check(x == 5);\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive",
+      "refinement": "never"
+    }
+  },
   "pg-int-refinement-interval": {
     "fixture": "docs/readme-figures/int-refinement.vimp",
-    "program": "fun main() {\n  if (y + 1 == 3) {\n    x = 1;\n    __voblint_check(y == 2);\n  } else {\n    x = 0;\n  }\n}",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (c < 0) {\n    x = 1;\n  } else {\n    x = 5;\n  }\n  if (2 < x) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
@@ -646,7 +657,7 @@
   },
   "pg-int-refinement-parity": {
     "fixture": "docs/readme-figures/int-refinement.vimp",
-    "program": "fun main() {\n  if (y + 1 == 3) {\n    x = 1;\n    __voblint_check(y == 2);\n  } else {\n    x = 0;\n  }\n}",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (c < 0) {\n    x = 1;\n  } else {\n    x = 5;\n  }\n  if (2 < x) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "parity",
       "context": "none",
@@ -656,7 +667,7 @@
   },
   "pg-int-refinement-sign": {
     "fixture": "docs/readme-figures/int-refinement.vimp",
-    "program": "fun main() {\n  if (y + 1 == 3) {\n    x = 1;\n    __voblint_check(y == 2);\n  } else {\n    x = 0;\n  }\n}",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (c < 0) {\n    x = 1;\n  } else {\n    x = 5;\n  }\n  if (2 < x) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "sign",
       "context": "none",

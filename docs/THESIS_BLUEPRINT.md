@@ -1693,7 +1693,7 @@ Where each chapter uses it:
 
 | Program | Shows | Where |
 | --- | --- | --- |
-| `int-refinement.vimp` (`if (y+1==3) check(y==2)`) | the reduced product proving what three components cannot | 10.6 |
+| `int-refinement.vimp` (`x` in `{1, 5}`, `if (2 < x) check(x == 5)`) | the reduced product proving what Interval and Congruence alone cannot | 10.6 |
 | `division-possible.vimp` (nondeterministic divisor) | arithmetic diagnostics and the soundness category | 9.4, 12.2 |
 | `nv_prog` (`Example_Non_Vacuity`, two calls of `bump`) | every premise discharged by evaluation | 12.x |
 | the Sign k=1/k=2 nesting program | the strict precision inequality | 12.3 |

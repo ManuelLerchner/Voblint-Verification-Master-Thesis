@@ -819,7 +819,16 @@ function buildAnalysisModel(result, doc) {
 }
 
 /* The compiler's return slot: assigned by `return e`, read back by the caller. */
-const RETURN_SLOT = "#ret";
+const RETURN_SLOT = "return";
+
+/*
+ * A step names what it writes as run_voblint labels it, a local qualified by its
+ * procedure (`main::x`), and its published state binds those labels. A node's own
+ * sections are its procedure's scope and bind each name as the source spells it.
+ */
+function ownName(label) {
+  return label.slice(label.lastIndexOf(":") + 1);
+}
 
 /*
  * What the active analyses give a name in a list of state sections: one analysis's
@@ -869,8 +878,8 @@ function slotValue(node, name) {
  */
 function valueAfterSteps(node, name) {
   const values = node.next
-    .filter((step) => step.writes === name && "state" in step)
-    .map((step) => (step.state ? (sectionValue(step.state, name) ?? null) : null));
+    .filter((step) => step.writes && ownName(step.writes) === name && "state" in step)
+    .map((step) => (step.state ? (sectionValue(step.state, step.writes) ?? null) : null));
 
   return values.length > 0 ? values : undefined;
 }
@@ -935,7 +944,7 @@ function valueHints(model) {
       written.set(label, entry);
     };
 
-    const writeLabel = (name) => (name === RETURN_SLOT ? "\u21a9 " : `${name}: `);
+    const writeLabel = (name) => (name === RETURN_SLOT ? "\u21a9 " : `${ownName(name)}: `);
 
     const nodes =
       joined && model.joinedByPoint.has(statement.point)
@@ -1010,7 +1019,7 @@ function valueHints(model) {
         }
 
         const after = nodeById(step.id);
-        const value = after && isLive(after) ? slotValue(after, step.writes) : undefined;
+        const value = after && isLive(after) ? slotValue(after, ownName(step.writes)) : undefined;
 
         if (value !== undefined) {
           sample(writeLabel(step.writes), node.context_key, value, step.join);

@@ -144,7 +144,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: the product Int proves y == 2."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: the product Int narrows x = [3,5] by x = 1+4Z to 5 and proves x == 5."
 
 [claims.pg-int-refinement-congruence]
 argv = [
@@ -156,7 +156,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Congruence alone proves y == 2."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Congruence alone keeps x = 1+4Z and leaves x == 5 UNKNOWN."
 
 [claims.pg-int-refinement-sign]
 argv = [
@@ -168,7 +168,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Sign leaves y == 2 UNKNOWN."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Sign leaves x == 5 UNKNOWN."
 
 [claims.pg-int-refinement-interval]
 argv = [
@@ -180,7 +180,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Interval leaves y == 2 UNKNOWN."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Interval alone keeps x = [3,5] and leaves x == 5 UNKNOWN."
 
 [claims.pg-int-refinement-parity]
 argv = [
@@ -192,7 +192,21 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Parity leaves y == 2 UNKNOWN."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Parity leaves x == 5 UNKNOWN."
+
+[claims.pg-int-refinement-int-never]
+argv = [
+  "--analysis",
+  "int",
+  "--int-refinement",
+  "never",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/int-refinement.vimp",
+]
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Int without refinement keeps both components and leaves x == 5 UNKNOWN."
 
 [claims.cfg-contexts-dot]
 argv = [
