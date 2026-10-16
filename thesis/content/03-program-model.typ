@@ -369,8 +369,9 @@ check holds. The analyzer agrees. The first check is
 #verdict(check-row("kinds-promotion", cond: "(i32) x + (i32) y < 250").verdict)
 and the second
 #verdict(check-row("kinds-promotion", cond: "(i32) z < 250").verdict). It
-also reports the conversion to `u8` as an error, because it changes the value,
-although C defines it (@sec:vimp-vs-c). A program that declares no types makes every variable 32 bits wide, so `z` holds
+also reports the conversion of $300$ to `u8` as an error, because the
+conversion changes the value in every run, although C defines its result
+(@sec:vimp-vs-c). A program that declares no types makes every variable 32 bits wide, so `z` holds
 $300$ and the second check is
 #verdict(check-row("kinds-untyped", cond: "z < 250").verdict) (claim
 #claim-ref("kinds-untyped")). A verdict is therefore only meaningful
@@ -433,7 +434,6 @@ at, every variable read names an identity, and every conversion is an explicit
 node #ctor("TCast", thy: "Core_Exp"). _Elaboration_ (#isaconst("elaborate"))
 translates a surface expression of procedure $q$, at the kind $k$ its context
 expects, into core VIMP. It follows C's rules
-// TODO: new C11 locators, checked against the N1570 copy the #c11 helper links to; confirm before keeping.
 (#c11("6.3.1.1p2"), #c11("6.3.1.8p1")). An arithmetic operator computes at the
 common kind of its operands, which the integer promotions and the usual
 arithmetic conversions determine (#isaconst("usual_kind")). Promotion turns
@@ -458,7 +458,6 @@ stores $44$. Its own kind matters only where it chooses the kind of the
 operation it is an operand of. An unsuffixed literal is an `i32` if it fits
 and an `i64` otherwise, which is C's rule for a decimal constant when `long`
 has 64 bits (#isaconst("ik_of_lit"),
-// TODO: new C11 locator, checked against N1570; confirm.
 #c11("6.4.4.1p5")). The parser folds a leading minus sign into the literal and
 the kind is chosen by magnitude, so `-2147483648` is an `i64`, as the C
 expression `-2147483648`, the negation of a `long` constant, is under that
@@ -660,11 +659,18 @@ runs of #isaconst("pstep").
 == Scope and adequacy of the source semantics <sec:vimp-vs-c>
 
 Every source-level guarantee in this thesis is interpreted against the
-executions of #isaconst("pstep"), the reference semantics of VIMP, so no
-guarantee can show that #isaconst("pstep") describes the intended language.
-This can only be argued, and this section collects the argument.
-@tab:vimp-vs-c compares VIMP with C11 @iso-c11 (committee draft N1570)
-wherever both languages have a construct but model it differently.
+executions of #isaconst("pstep") on the elaborated program, from a store in
+#isaconst("init_stores") (@sec:elaboration, @sec:pstep). No guarantee can show
+that these are the executions the programmer intended. This can only be
+argued, and this section collects the argument. A surface program has no
+semantics of its own, so the argument covers every definition that gives it a
+meaning: elaboration, the evaluation of core expressions, wraparound, the
+conversions on writes, the kinds of undeclared variables, the initial stores
+and #isaconst("pstep") itself. The one proved consistency check,
+#isathm("eval_elaborate"), relates two of these definitions to each other
+(@sec:elaboration) and shows neither of them to be C. @tab:vimp-vs-c compares
+VIMP with C11 @iso-c11 (committee draft N1570) wherever both languages have a
+construct but model it differently.
 
 #figure(
   {
@@ -676,17 +682,25 @@ wherever both languages have a construct but model it differently.
       inset: (x: 3.5pt, y: 2.2pt),
       table.hline(),
       [], [*VIMP*], [*C11*],
-      table.hline(stroke: 0.5pt), [integers], [unbounded; wraps at a kind],
+      table.hline(stroke: 0.5pt),
+      [integers], [every result wraps at its kind],
       [signed overflow undefined (#c11("6.5p5"))],
       [], [], [unsigned arithmetic wraps (#c11("6.2.5p9"))],
+      [conversions], [wrap into the target kind], [to unsigned: modulo $2^w$ (#c11("6.3.1.3p2"))],
+      [], [], [to signed: implementation-defined (#c11("6.3.1.3p3"))],
+      [literals], [a leading `-` belongs to the literal],
+      [`-` is unary minus (#c11("6.4.4.1p2"), #c11("6.5.3.3p3"))],
+      [], [`i32` if it fits, else `i64`], [first type of its list that fits (#c11("6.4.4.1p5"))],
+      [], [$-2^63$ is an `i64`], [$2^63$ has no standard type (#c11("6.4.4.1p6"))],
       [`a / 0`, `a % 0`], [$0$ and $a$], [undefined (#c11("6.5.5p5"))],
       [`/`, `%`, $b != 0$], [truncated; $(a "/" b) dot b + a % b = a$],
       [the same where $a "/" b$ is representable (#c11("6.5.5p6"))],
       [`&&`, `||`], [both operands evaluated],
       [second operand only if needed (#c11("6.5.13p4"), #c11("6.5.14p4"))],
-      [initial values], [globals $0$, `main`'s locals arbitrary],
+      [initial values], [globals $0$, others arbitrary],
       [static $0$, automatic indeterminate (#c11("6.7.9p10"))],
-      [callee locals], [$0$ on every entry], [indeterminate (#c11("6.7.9p10"))],
+      [`u8 x;`], [any value of its kind, each time], [indeterminate (#c11("6.7.9p10"))],
+      [callee locals], [undeclared ones $0$ on entry], [indeterminate (#c11("6.7.9p10"))],
       [checks], [never stop the run, never refine],
       [`assert` aborts on $0$ unless `NDEBUG` (#c11("7.2p1"), #c11("7.2.1.1"))],
       [`min`, `max`], [library calls (#isaconst("special_table"))], [no counterpart],
@@ -696,47 +710,80 @@ wherever both languages have a construct but model it differently.
   },
   placement: none,
   caption: [Constructs that both languages have but model differently. The VIMP
-    rows restate #isaconst("c_div"), #isaconst("c_mod"), #isaconst("eval", thy: "Core_Exp"),
-    #isaconst("init_stores"), #isaconst("enter_state") and #isaconst("pstep").],
+    rows restate #isaconst("ik_norm"), #isaconst("kind_conv"),
+    #isaconst("ik_of_lit"), #isaconst("lits_fit"), #isaconst("c_div"),
+    #isaconst("c_mod"), #isaconst("eval", thy: "Core_Exp"),
+    #isaconst("init_stores"), #isathm("pstep_declare"),
+    #isaconst("enter_state") and #isaconst("pstep").],
 ) <tab:vimp-vs-c>
 
-Each row is a place where a statement true of a VIMP program does not necessarily hold for
-the corresponding C program. Unbounded integers, wrapping signed overflow and
-defined division by zero can flip a verdict. After `z = 5 / 0;` the check `z == 0` holds in VIMP, so a
-#verdict("PROVED") verdict on a program that divides by zero says nothing about C. The
-analyzer therefore reports a possible zero divisor as a separate diagnostic,
-and its absence at a reached node proves the divisor nonzero there
-(#isathm("run_voblint_arithmetic_safe"), @sec:verdict-meaning). Division and
-remainder truncate toward zero as in C11. Goblint once got the remainder wrong,
-and issue #link("https://github.com/goblint/analyzer/issues/1156")[1156]
-@goblint1156 reports that it claimed `c % 2 == 1` for $c in {-5, -7}$
-(@sec:eval-1161). Evaluating both
-operands of `&&` is harmless, because expressions are total and have no
-effects. It gives the short-circuit value. Only the division diagnostic differs. It warns about the divisor in `x != 0 && 10 / x > 1`.
+Each row is a place where a statement true of a VIMP program does not
+necessarily hold for the corresponding C program. Wrapping signed overflow,
+wrapping conversions and defined division by zero can flip a verdict. After
+`z = 5 / 0;` the check `z == 0` holds in VIMP, so a #verdict("PROVED") verdict
+on a program that divides by zero says nothing about C. The analyzer therefore
+reports possible hazards as separate diagnostics. It reports every possible
+zero divisor of `/` and `%`, every signed `+`, `-`, `*` and `/` whose
+mathematical result may leave its kind, and every signed `%` whose quotient
+may leave its kind, as for `INT_MIN % -1`. It also reports every conversion
+that may change its value, whether implicit or explicit inside an expression,
+of a returned value, or of a `min` or `max` result. At a point without a
+diagnostic, none of these hazards occurs at any store that reaches the point
+(#isathm("run_voblint_arithmetic_safe"),
+#isathm("run_voblint_no_signed_overflow"),
+#isathm("run_voblint_no_remainder_overflow"),
+#isathm("run_voblint_no_conversion_overflow"), @sec:verdict-meaning). A
+diagnostic is an error when its condition fails at every store that reaches its
+point (#isathm("run_voblint_arithmetic_refuted")), and a warning otherwise.
+How a domain bounds a signed operation that may overflow, by any value of the
+kind or by following the wraparound, is a run option, after Goblint's
+`sem.int.signed_overflow` (@sec:domain-kinds). The semantics wraps under both
+settings, and the theorems hold for both. A point without diagnostics is still
+not shown free of undefined behavior in C. The diagnostics concern arithmetic
+only, and VIMP does not model C's indeterminate values, some reads of which are
+undefined (#c11("6.3.2.1p2")).
 
-A program can declare machine kinds. Declarations give a C integer type such as
-`u8` to a global, to a formal or local of one procedure, or to a procedure's
-return value, and `(k) e` converts explicitly. An undeclared variable is an
-`i32` (#isaconst("kenv_of")). Elaboration (@sec:elaboration) resolves every name to a
-static identity, computes every operation at its C type under integer
-promotion and the usual arithmetic conversions, and makes every conversion an
-explicit node that wraps a value into the range of its kind. On every store
-whose values lie in their kinds, an elaborated expression computes the value
-that #isaconst("src_eval"), a reading of the surface expression in the shape
-of the C standard's conversions, gives it (#isathm("eval_elaborate")). The
-analyzer and its theorem are stated over the elaborated program. Signed
-overflow then wraps, which C leaves undefined (#c11("6.5p5")).
+The conversion diagnostic also covers conversions that C defines. C reduces a
+value converted to an unsigned type modulo $2^w$ (#c11("6.3.1.3p2")), as VIMP
+does, so the conversion of $300$ to `u8` in the listing of @sec:elaboration
+stores $44$ in both languages. The analyzer reports it as an error all the
+same, because its obligation is that a conversion keeps its value, and this
+conversion changes the value in every run. For a conversion to a signed kind
+that cannot represent the value, C leaves the result implementation-defined
+(#c11("6.3.1.3p3")), and VIMP wraps. A declaration without an initializer
+raises no diagnostic, because `__voblint_nondet_int` yields a value of the
+destination's kind.
+
+Literals differ at one value. VIMP reads a leading minus sign as part of the
+literal (@sec:elaboration), so `-9223372036854775808` is an `i64`. In C it is
+unary minus applied to `9223372036854775808`, which no standard type
+represents when `long long` has 64 bits (#c11("6.4.4.1p6")). Division and
+remainder truncate toward zero as in C11. Goblint once got the remainder
+wrong, and issue
+#link("https://github.com/goblint/analyzer/issues/1156")[1156] @goblint1156
+reports that it claimed `c % 2 == 1` for $c in {-5, -7}$ (@sec:eval-1161).
+Evaluating both operands of `&&` is harmless, because expressions are total
+and have no effects. It gives the short-circuit value. Only the arithmetic
+diagnostics differ, because they cover both operands. The analyzer warns about
+the divisor in `x != 0 && 10 / x > 1` (claim
+#claim-ref("and-divisor-warning")), and it reports an overflow or a conversion
+in an operand that C would skip in the same way.
 
 The initial values that VIMP fixes are ones C leaves open. Every source-level
 theorem assumes an initial store from #isaconst("init_stores"), with globals
-$0$ as for C's static objects and every other variable, the locals of `main`
-among them, holding some value of its kind. VIMP does not
-model C's indeterminate values, some reads of which are undefined
-(#c11("6.3.2.1p2")). Callee locals start at $0$ (#isaconst("enter_state")), but
-no shipped analysis relies on this, because every abstract entry describes
-callee locals by $top$ (#isaconst("enter_binding") for the non-relational
-analyses). A check `y == 0` on an unassigned
-callee local `y` is therefore
+$0$ as for C's static objects and every other identity, the locals of `main`
+among them, holding some value of its kind. A declared local starts at some
+value of its kind each time its declaration executes
+(#isathm("pstep_declare_forgets"), @sec:elaboration), and that the parser
+rewrites every declaration this way is trusted (@sec:trust-boundary). A call
+also resets the callee's locals to $0$ (#isaconst("enter_state")). The reset is
+observable only for an undeclared local of an untyped program, because in a
+typed program every local is declared and its declaration forgets the $0$. No
+shipped analysis relies on the reset, because every abstract entry assumes
+nothing about callee locals beyond their kinds
+(#isaconst("nonrel_enter_frame") for the non-relational analyses,
+#isaconst("ord_enter") for the order analysis). A check `y == 0` on an
+unassigned local `y` of an untyped callee is therefore
 #raw(check-row("callee-uninit-local", cond: "y == 0").verdict). Checks never
 prune executions, so the verdict for one check does not depend on an earlier
 one. Goblint's `__goblint_check` behaves the same way, and its library table

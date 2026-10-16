@@ -131,10 +131,12 @@
 A static analyzer answers questions about every execution of a program without
 running it. In classical program analysis, typical questions are which values
 a variable can hold at a given point, whether a division by zero can occur, or
-whether an assertion can fail. No algorithm can answer such questions exactly
-for every program. Rice's theorem is the classical form of this limit: every
-nontrivial property of the function a program computes is undecidable
-@rice53. An analysis based on abstract
+whether an assertion can fail. For a Turing-complete language, no algorithm
+can answer such questions exactly for every program. Rice's theorem is the
+classical form of this limit: every nontrivial property of the function a
+program computes is undecidable @rice53. Even where an exact answer is
+computable, as for languages whose state space is finite, it is usually far
+too costly. An analysis based on abstract
 interpretation therefore does not attempt the exact answer and computes an
 _over-approximation_ directly: a
 description that includes every state an execution can reach at a point, and

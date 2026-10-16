@@ -98,7 +98,8 @@ because of a relation to another variable that an interval cannot express.
     them.],
 ) <fig:intro-runs>
 
-This incompleteness cannot be avoided. By Rice's theorem, no algorithm decides
+For a general-purpose language this incompleteness cannot be avoided. By
+Rice's theorem, no algorithm decides
 a nontrivial semantic property for every program of a Turing-complete language
 @rice53 @rival20[§1.3.3]. A sound over-approximating analysis therefore permits false alarms or
 undecided checks, but no false claims. It remains useful as long as it decides
@@ -107,11 +108,13 @@ analysis over-approximates the same executions, analyses can also specialize:
 one tracks intervals, another parities, another relations between variables.
 A check that any one of them proves holds in every run. Precision has a price,
 however. A richer domain or more calling contexts decide more checks, but they
-enlarge the equations the analyzer solves, and with unboundedly many contexts the solver may not terminate.
+enlarge the equations the analyzer solves, and with very many contexts the
+solve may not finish in practice.
 
 Voblint answers every check that the user writes into the source program as a
-`check` statement. It also warns at every division and remainder operation where
-it cannot exclude a zero divisor. @fig:intro-answers shows the analyzer as it
+statement `__voblint_check(e);`. It also warns at every arithmetic operation
+where it cannot exclude a hazard: a zero divisor, a signed overflow, or a
+conversion that changes a value. @fig:intro-answers shows the analyzer as it
 runs in the
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
   playground], together with what each answer guarantees. Only #verdict("DEAD") makes a
@@ -268,8 +271,8 @@ soundness obligation excludes inside the proof boundary.
 The table also shows the price of the proof. The unverified analyzers accept
 C, C++, or Python, and Astrée and IKOS have been applied to safety-critical
 control software @blanchet03 @brat14[§3]. Voblint's theorem covers VIMP
-(@sec:vimp), which has no pointers or heap and wraps signed overflow at declared
-machine kinds, and the proof
+(@sec:vimp), which has no pointers or heap and whose integers have fixed
+widths and wrap at their kind, signed ones included, and the proof
 covers only the definitions it is about. Whether they model the intended
 language is the adequacy question of @sec:vimp-vs-c.
 
@@ -584,18 +587,25 @@ Schwarz et al. @schwarz21 to procedure activations. Isabelle's code generator
 
 The theorem has the following limits. @sec:limitations discusses each of them.
 
-- _Language._ VIMP has no pointers, heap, or threads. Its integers are unbounded
-  or wrap at declared kinds, and division by zero is defined, so a verdict does
-  not necessarily transfer to
-  a C program with the same text (@sec:vimp-vs-c).
-- _Properties._ Voblint checks assertions and division by zero.
-  Goblint also checks overflows, data races, memory safety, memory leaks, and program termination @saan26phd[§3.3].
-- _Adequacy._ That #isaconst("pstep") models the intended language is argued,
-  not proved (@sec:vimp-vs-c).
+- _Language._ VIMP has no pointers, heap, or threads. Its integers have fixed
+  widths and wrap, every operation is defined, division by zero included, and a
+  local declared without an initializer holds some value of its kind. A verdict
+  therefore does not necessarily transfer to a C program with the same text.
+  The arithmetic diagnostics cover the operations whose result C leaves
+  undefined or implementation-defined (@sec:vimp-vs-c).
+- _Properties._ Voblint checks assertions and arithmetic hazards: division and
+  remainder by zero, signed overflow, and conversions that may change a value.
+  Goblint also checks data races, memory safety, memory leaks, and program
+  termination @saan26phd[§3.3].
+- _Adequacy._ That elaboration and the core semantics, #isaconst("pstep")
+  among them, model the intended language is argued, not proved
+  (@sec:vimp-vs-c).
 - _Partial correctness._ The theorem covers every answer the analyzer returns.
   Termination of the solve is not proved for every program
   (@sec:termination).
-- _Trusted components._ The parser, the code generator, and the target toolchains lie outside the proof (@sec:trust-boundary).
+- _Trusted components._ The parser, including its scoping and the kind
+  declarations it builds, the code generator, and the target toolchains lie
+  outside the proof (@sec:trust-boundary).
 - _Precision._ No completeness or general precision ordering between
   analysis settings is proved. Each precision result concerns one program
   (@sec:eval-precision).

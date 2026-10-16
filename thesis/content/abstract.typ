@@ -15,16 +15,19 @@ Goblint's top-down solver, only the third step had been verified @stade24
 @tilscher26.
 
 We present Voblint, an Isabelle/HOL formalization of a context-sensitive
-interprocedural analyzer for VIMP, a small C-like language with global and
-local integer variables and recursive procedures with parameters and return
-values. A proved forward simulation maps source executions to runs of the
-control-flow graph. The main theorem states that whenever the analyzer returns
-a report, the report covers every store reached by a finite execution from an
-initial store with zeroed globals, and every definite verdict at the
-corresponding program point holds for that store, without claiming that the
-point itself is reached. Further theorems show that a check reported #verdict("DEAD") is
-unreachable and that a reached divisor is nonzero wherever no warning is issued
-and zero wherever an error is reported. To our knowledge, Voblint is the first mechanized analyzer whose
+interprocedural analyzer for VIMP, a small C-like language with fixed-width
+global and local integer variables and recursive procedures with parameters
+and return values. Isabelle elaborates a parsed program into core VIMP, where
+every conversion and operation width is explicit, and a proved forward
+simulation maps core executions to runs of the control-flow graph. The main theorem states that whenever the analyzer returns
+a report, the report covers every store reached by a finite execution of the
+elaborated program from an initial store whose globals are zero, and every
+definite verdict at the corresponding program point holds for that store,
+without claiming that the point itself is reached. Further theorems show that
+a check reported #verdict("DEAD") is unreachable, that at a point without an
+arithmetic diagnostic no divisor is zero, no signed operation overflows and no
+conversion changes its value, and that a refuted diagnostic fails wherever its
+point is reached. To our knowledge, Voblint is the first mechanized analyzer whose
 soundness proof connects a source semantics to a side-effecting constraint
 system and its verified solver.
 
@@ -43,18 +46,19 @@ obligations, which are composed by a single soundness theorem. A numeric domain
 proves only the soundness of its abstract value operations, and the framework
 derives its transfer functions and their soundness once, as in the generic
 abstract interpreter of Nipkow and Klein @nipkow14[§13.5]. The framework offers
-several numeric domains, their reduced product, a relational order analysis,
-cooperating analyses, several context policies, and two placements of program
-globals; the main theorem covers every combination.
+several numeric domains, the reduced product of intervals and congruences, a
+relational order analysis, cooperating analyses, several context policies, two
+placements of program globals, and two treatments of signed overflow, and the
+main theorem covers every combination.
 
-The analysis function is exported to OCaml and exposed through both a
-command-line interface and a #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser playground]. The executable implementation is tested on
+The analysis function is exported to OCaml, runs in a command-line interface
+and a #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser playground], and is tested on
 #stat("corpus.cases") regression programs. Proofs by evaluation show that the
 main theorem is non-vacuous on concrete programs
 (#isathm("nv_source_certified")).
 
 The main result is partial correctness: termination of the solver is not
-proved. The parser, code generator, OCaml and WebAssembly toolchains, and
-rendering code remain trusted. The executable surface is additionally covered
-by regression and unit tests, and we document how VIMP differs from C11
-@iso-c11.
+proved. The parser with its scope resolution and kind declarations, the code
+generator, the OCaml and WebAssembly
+toolchains, and the rendering code remain trusted. We document how VIMP
+differs from C11 @iso-c11.

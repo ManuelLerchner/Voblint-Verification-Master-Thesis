@@ -39,7 +39,7 @@ dispatcher makes the constant of the theorem the one the tools run
 (@sec:codegen).
 
 How far the results carry beyond VIMP depends on the layer. Goblint analyzes C
-after CIL normalization, with pointers, a heap, threads, machine integers, and further update rules. The certificate is stated over right-hand sides and
+after CIL normalization, with pointers, a heap, threads, and further update rules. The certificate is stated over right-hand sides and
 unknowns and mentions no VIMP construct. The coverage contract has one
 obligation per rule of #isaconst("valid_activation_trace"). It refers to VIMP
 only through the graph, its stores, and three step functions,
@@ -51,7 +51,7 @@ composition of @sec:eq-discharge. The step functions and every proof that
 unfolds them would have to be redone.
 
 Machine integers did not need this redo. Elaboration makes every conversion
-and the kind of every operation explicit in core VIMP (@sec:vimp), so the step
+and the kind of every operation explicit in core VIMP (@sec:elaboration), so the step
 functions are instantiated at the core evaluator and the kind conversion, and
 the routing and the certificate stay unchanged. Signed overflow wraps in the
 semantics and division by zero yields a value, where C leaves both undefined.
@@ -79,12 +79,22 @@ as CIL would join the parser in the trust boundary unless it is verified.
 == Limitations <sec:limitations>
 
 The first limits concern what the theorem covers. It is a partial-correctness
-result and covers every answer the analyzer returns. Termination is not proved for the solve or for the reduction of Int, and regression programs
-exist whose solves do not finish (@sec:termination, @sec:reduced-product). The
-theorem concerns VIMP, a scalar language without pointers, heap, or memory model. VIMP has unbounded integers unless kinds are declared, wrapping signed
-overflow at declared kinds, defined division by zero, and zero-initialized
-callee locals, so a verdict about a VIMP program does not
-transfer to a C program with the same text (@sec:vimp-vs-c). We argue, but do not prove, that #isaconst("pstep") models the intended language. The
+result and covers every answer the analyzer returns. Termination is not
+proved for the solve or for the reduction of Int, and the regression corpus
+contains programs whose solve gives no answer within its time limit
+(@sec:termination, @sec:reduced-product). The theorem concerns VIMP, a scalar
+language without pointers, heap, or memory model. VIMP integers have fixed
+widths and wrap, division by zero is defined, and a local declared without an
+initializer holds some value of its kind. A call additionally resets the
+callee's locals to $0$, which only an undeclared local of an untyped program
+can observe. A verdict about a VIMP program therefore does not transfer to a C
+program with the same text. The arithmetic diagnostics cover the operations
+whose result C leaves undefined or implementation-defined, and a point without
+diagnostics is still not shown free of every undefined behavior of C
+(@sec:vimp-vs-c). We argue, but do not prove, that elaboration and the core
+semantics, #isaconst("pstep") among them, model the intended language, and the
+parser's resolution of block scopes and the kind declarations it builds are
+trusted. The
 simulation from source runs to graph runs and the representation of graph runs
 by valid traces are proved in the forward direction only (@sec:csim,
 @sec:valid). Within the analyzer, only the combined state as a whole publishes
@@ -123,12 +133,12 @@ also needs a semantics and a preservation argument per construct at every
 layer.
 
 Such a language would extend the elaboration of surface VIMP into core VIMP
-(@sec:vimp). For VIMP, elaboration resolves names to variable identities, fixes
+(@sec:elaboration). For VIMP, elaboration resolves names to variable identities, fixes
 the kind of every operation and makes every implicit conversion explicit. A
 front end for C would do the same for C's types and expressions, and the
 meaning of the result would be argued as for VIMP.
 
-The adequacy of #isaconst("pstep") is argued and checked against example
+The adequacy of elaboration and #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
 #isaconst("pstep") runs would make this check systematic. A run that violates a check
 reported as #verdict("PROVED") would then point to a fault in the trusted base. Comparing the evaluator's runs with a C
@@ -163,8 +173,8 @@ side effects. It assumes finitely many unknowns, a precise widening, and
 monotonic right-hand sides with monotonic dependencies
 @tilscher26jar[Cor. 1]. Their widening stabilizes every widening sequence by
 definition @tilscher26jar[Def. 2]. The vendored class #isalocale("warrowing")
-states no stabilization law (@sec:widening), so even finitely many unknowns may
-take values that increase forever (@sec:termination).
+states no stabilization law (@sec:widening), so it does not bound how long the
+values of even finitely many unknowns keep increasing (@sec:termination).
 
 === Agent-assisted development <sec:outlook-agents>
 

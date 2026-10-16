@@ -208,7 +208,9 @@ extension that would make seeds and buffering unnecessary.
 == A demand-driven solve <sec:eq-example>
 
 The generator defines a right-hand side for every pair of a node and a context
-(#isaconst("compiled_routed_eqs_for")). Under entry-state contexts over intervals there are infinitely many such pairs, and a solve never enumerates them all. It starts from one
+(#isaconst("compiled_routed_eqs_for")). Under entry-state contexts over intervals the contexts range over an infinite
+type, and even the intervals of one 32-bit variable number about $2^63$, so a
+solve never enumerates them all. It starts from one
 query, the result of `main` in the initial context $c_0$
 (#isaconst("dg_pipeline.root_query", thy: "DG_Analysis", display: "root_query"),
 as in @apinis12[§3]), and evaluates an unknown only when a right-hand side it
@@ -641,7 +643,8 @@ solver under every update rule.
 A global unknown such as a seed receives contributions from several places.
 The solver merges each new contribution into the value it holds, and this
 merge, the _update rule_, decides both precision and termination. Joining
-keeps every contribution exactly but may grow forever. Widening stops the growth but loses precision. Stemmler et
+keeps every contribution exactly, but a value may grow by one element per
+round through a chain of billions of steps. Widening stops the growth but loses precision. Stemmler et
 al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
 generic interface for them and prove five rules sound against it
 @tilscher26. Voblint exposes all five.
@@ -841,25 +844,45 @@ have no termination premise.
 Under the unit context the unknowns of a compiled program form a finite set
 (#isathm("compiled_unit_vars_finite")), and bounded call strings over a
 compiled program form a finite space (#isathm("compiled_call_strings_finite")).
-Under entry-state contexts we expect termination to fail for some programs.
-With Interval, a recursion that changes its argument at every level demands a
-fresh context at every level, and widening bounds the values of existing
-unknowns but not their number (#fixture(
+Under entry-state contexts no theorem bounds the number of contexts. With Interval, a recursion that changes its argument at every level
+demands a fresh context at every level, and widening bounds the values of
+existing unknowns but not their number. The recursion of #fixture(
   "21-context-sensitivity/01-entry_state_context_chain_timeout.vimp",
   label: "01-entry_state_context_chain_timeout",
-)). Goblint's configuration for the SV-COMP
+) enters with about $2^32$ distinct values of its 32-bit argument. Goblint's configuration for the SV-COMP
 competition avoids this explosion by omitting intervals from the contexts of
-recursive functions @saan26phd[§3.4.3]. Finitely many unknowns do not suffice either: without contexts, the
+recursive functions @saan26phd[§3.4.3]. Few unknowns do not suffice either: without contexts, the
 interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ makes the one seed of `f`
 grow through $[0, 0], [0, 1], [0, 2], dots$, and the joining update rules never
-widen this chain (#fixture(
+widen this chain, which has about $2^31$ steps before `x + 1` wraps (#fixture(
   "24-site-figures/01-recursion_grows_join_timeout.vimp",
   label: "01-recursion_grows_join_timeout",
-), @fig:rules-programs). Both programs exceed their time limits, and we expect, without proof, that
-they diverge (@sec:trust-boundary). Both are recursive. For partial
+), @fig:rules-programs). Both programs give no answer within their time
+limits, which shows neither divergence nor termination of their solves
+(@sec:trust-boundary). Both are recursive. For partial
 tabulation over abstract calling contexts, Schulze Frielinghaus et al. give a
 local solver that terminates on every non-recursive program, even over lattices
 with infinite ascending or descending chains @schulzefrielinghaus18.
+
+The fixed widths have a further consequence, which we argue here and the
+development does not state as a theorem. A compiled program has finitely many
+nodes, and its variables have fixed widths, so its graph runs meet only
+finitely many stores restricted to the identities the program uses. A run keeps one
+stack of frames, each recording a return node, a destination and the caller's
+store (@sec:cstep). The graph runs of a program are therefore those of a
+pushdown system with finitely many control states and stack symbols, and
+reachability in pushdown systems is decidable.
+// TODO: cite a primary source for decidable pushdown reachability (e.g.
+// Bouajjani, Esparza and Maler, CONCUR 1997, not yet in literature.bib), and
+// check with a locator whether @reps95 or @sharir81 gives an exact
+// interprocedural algorithm for finite state sets that restores caller locals.
+Whether some graph run reaches a check with a store that violates it is thus
+decidable, and by the forward simulation (@sec:csim) a negative answer, no
+violating graph run, carries over to every source execution. The exact procedure explores a state space
+exponential in the number of variable bits, since three 32-bit variables
+already give $2^96$ stores. Voblint does not use it. For VIMP, abstraction is
+therefore needed because of the size of the state space, not because of Rice's
+theorem (@ch:intro).
 
 The vendored termination theorems cover top-down solvers without side effects
 over a finite type of unknowns. The solver with separate widening and narrowing
@@ -867,7 +890,11 @@ phases terminates under this condition, given widening and narrowing operators
 whose iterations are ultimately stable @tilscher26jar[Thm. 2], and the
 warrowing solver additionally needs a precise widening and monotonic
 right-hand sides and dependencies @tilscher26jar[Cor. 1]. Voblint's unknowns
-pair nodes of an infinite type with contexts, so these theorems do not apply to any of its configurations. Seidl and Vogler prove on paper that
+pair nodes of an infinite type with contexts, so these theorems do not apply to any of its configurations.
+Fixed widths leave only finitely many intervals at each kind, but this gives
+no termination argument either. The theorems need a finite type of unknowns
+and, for warrowing, a precise widening and monotonic right-hand sides, which
+Voblint's configurations do not provide. Seidl and Vogler prove on paper that
 their side-effecting solver terminates on every system in which side effects
 target only unknowns without a right-hand side, as long as only finitely many
 unknowns are encountered @seidl21[§9, Thm. 5], for widening and narrowing
