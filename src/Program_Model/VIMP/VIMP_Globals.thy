@@ -64,7 +64,8 @@ text \<open>
   \<open>enter_state\<close> resets them to 0 on every entry, which defines what C leaves
   indeterminate, as \<open>c_div\<close> defines division by zero. Every local of a parsed
   program is declared, and a declaration forgets the value it finds, so no run of a
-  parsed program observes this 0. Neither convention is a
+  parsed program observes this 0; a core program built inside Isabelle without
+  declarations can. Neither convention is a
   model of C's indeterminate-value or undefined-behaviour rules, and VIMP has no
   global initializer syntax for a declaration such as \<open>int x = 42;\<close> to diverge
   from.

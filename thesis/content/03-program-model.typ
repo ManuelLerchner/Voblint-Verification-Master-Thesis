@@ -782,7 +782,7 @@ value of its kind each time its declaration executes
 (#isathm("pstep_declare_forgets"), @sec:elaboration), and that the parser
 rewrites every declaration this way is trusted (@sec:trust-boundary). A call
 also resets the callee's locals to $0$ (#isaconst("enter_state")), but no
-program observes the reset. Every local is declared, the parser rejects a use
+program the parser accepts observes the reset. Every local is declared, the parser rejects a use
 before the declaration, and the declaration writes the local before any read,
 so it forgets the $0$. No shipped analysis relies on the reset either, because
 every abstract entry assumes nothing about callee locals beyond their kinds
