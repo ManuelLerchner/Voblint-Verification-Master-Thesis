@@ -331,7 +331,7 @@ argv = [
 ]
 why = "x = 2n, y = 2n + 1: Parity proves x != y."
 
-[claims.dom-crt-parity]
+[claims.dom-meet-parity]
 argv = [
   "--analysis",
   "parity",
@@ -341,7 +341,7 @@ argv = [
 ]
 why = "x = 4n+1, y = 6m+3 at i32 under x == y: Parity keeps only odd for y and leaves y != 3 UNKNOWN."
 
-[claims.dom-crt-congruence]
+[claims.dom-meet-congruence]
 argv = [
   "--analysis",
   "congruence",

@@ -233,26 +233,6 @@
       "placement": "flow-sensitive"
     }
   },
-  "dom-crt-congruence": {
-    "fixture": "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    __voblint_check(y != 3);\n    if (y == 13) {\n      __voblint_check(false);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
-    "settings": {
-      "analysis": "congruence",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "dom-crt-parity": {
-    "fixture": "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    __voblint_check(y != 3);\n    if (y == 13) {\n      __voblint_check(false);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
-    "settings": {
-      "analysis": "parity",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
   "dom-disjunct-parity": {
     "fixture": "tests/regression/18-parity/precision/04-contradictory_equalities_dead.vimp",
     "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {\n    __voblint_check(x == 5);\n  }\n}",
@@ -338,6 +318,26 @@
     "program": "fun main() {\n  i32 x;\n  u32 n;\n  if (x >= 0) {\n    i32 y = x + 1;\n    __voblint_check(y > 0);\n  }\n  u32 a = 4 * n;\n  u32 b = 3 * n;\n  __voblint_check(a != 1);\n  __voblint_check(b != 1);\n}",
     "settings": {
       "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "dom-meet-congruence": {
+    "fixture": "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    __voblint_check(y != 3);\n    if (y == 13) {\n      __voblint_check(false);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
+    "settings": {
+      "analysis": "congruence",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "dom-meet-parity": {
+    "fixture": "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  m = __voblint_nondet_int();\n  x = 4 * n + 1;\n  y = 6 * m + 3;\n  if (x == y) {\n    __voblint_check(y != 3);\n    if (y == 13) {\n      __voblint_check(false);\n    }\n  } else {\n    __voblint_check(true);\n  }\n}",
+    "settings": {
+      "analysis": "parity",
       "context": "none",
       "globals": "warrow",
       "placement": "flow-sensitive"
