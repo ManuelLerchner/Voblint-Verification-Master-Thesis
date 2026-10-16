@@ -35,8 +35,10 @@ let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
-   N] [--int-refinement never|once|fixpoint] [--set PATH VALUE] [--dot] \
-   [--timeout SECONDS]\n\
+   N] [--program-globals flow-sensitive|flow-insensitive]\n\
+  \  [--int-refinement never|once|fixpoint] [--signed-overflow \
+   assume_top|assume_wraparound] [--set PATH VALUE]\n\
+  \  [--dot|--graph-snapshot|--html|--html-out DIR|--json] [--timeout SECONDS]\n\
   \  [--trace] [--verbose|--compact] [--trace-sys SYS[,...]] [--format \
    text|jsonl]\n\
   \  [--output FILE]\n\
@@ -95,8 +97,9 @@ let usage =
   \                             Where a program's globals live (default:\n\
   \                             flow-sensitive). flow-sensitive keeps them\n\
   \                             in every point's own state; flow-insensitive\n\
-  \                             puts them on one shared value every point\n\
-  \                             reads, for the analyses whose state splits\n\
+  \                             keeps each global at its own global unknown,\n\
+  \                             read only by the points whose expressions\n\
+  \                             mention it, for the analyses whose state splits\n\
   \                             by variable; order relates variables across\n\
   \                             that split and keeps its whole state per\n\
   \                             point. Both are proved sound. Under\n\
@@ -175,8 +178,9 @@ let usage =
   ^ "  --help                     Show this message.\n\n\
      Trust boundary: results are sound for the program this file's unverified\n\
     \  parser actually built, not a guarantee that the parser read your source\n\
-    \  correctly. The analyzer core (parsing excluded) is generated from a\n\
-    \  machine-checked Isabelle/HOL proof."
+    \  correctly. The analyzer core is OCaml generated from Isabelle/HOL\n\
+    \  definitions whose soundness is machine-checked; code generation, the\n\
+    \  OCaml toolchain and the rendering are trusted."
 
 module C = Voblint
 module A = Result_text

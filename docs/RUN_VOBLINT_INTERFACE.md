@@ -2,7 +2,10 @@
 
 Status: partly historical. The principle stands; the generator
 (`scripts/gen_analysis_assembly.py`, `manifests/analyses.yaml`) is gone, and the
-combined carrier is the hand-written `MCP_Carrier.thy` in `Voblint_CLI`.
+combined carrier is the hand-written `MCP_Carrier.thy` in `Voblint_CLI`. The
+theorem tables under "Public contract" name pre-Stage-7 entities
+(`analysis_report_*`, `Analysis_Certified.thy`); [`THEOREM_MAP.md`](THEOREM_MAP.md)
+lists the current ones. "One dispatcher" and "Enumerating contexts" are current.
 
 ## Principle
 
@@ -204,15 +207,16 @@ cover:
 
 ## One dispatcher
 
-`analysis_report_of` is the one function that reads the context policy.
-`scripts/gen_analysis_assembly.py` emits one combined state from
-`manifests/analyses.yaml` (`generated/MCP_Carrier.thy`): a nested product with one
-lifted field per listed analysis. `MCP_Analyses.thy` registers this state once per
-context policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for
-`as k r`. Each branch solves its registration's equations with `solve_c` and builds
-the report from the `solved_run` that answer gives (`DG_Analysis.thy`). The
-activation list, the rule and the call-string bound are parameters, so no
-combination has an instance of its own.
+`report_run` (`Run_Report.thy`) is the one function that reads the context policy:
+`Call_String k` goes to `cs_run`, `Entry_State` to `es_run`. Each of these reads the
+program-globals placement and picks one of four registrations of the combined
+state `mcp_st` (`MCP_Carrier.thy`): `mcp_cs` and `mcp_es` (`MCP.thy`) for
+flow-sensitive program globals, `mcp_split` and `mcp_split_es` (`MCP_Split.thy`)
+for flow-insensitive ones. Each branch solves its registration's equations with
+`TD_side_rule_Interp_solve_c` and builds the report with `prog_report_of` from the
+`solved_run_of` that answer gives. The activation list, the update rule and the
+call-string bound are parameters, so no combination has an instance of its own.
+`report_run_sound` is the one proof that splits on context policy and placement.
 
 A transfer asks the combined state through the query channel. Every active
 analysis answers from its own field, and the answers are met. A handler may ask
@@ -229,9 +233,7 @@ one answer (`Check_Answer.thy`).
 instance on the abstraction order. The abstraction order and the listing order are
 unrelated structures; `order_key` exists only to enumerate finite context sets
 deterministically. `Dispatch_Carrier.thy` supplies `order_key`
-(`Key_Int | Key_Node | Key_List`) with a derived `linorder`, and every abstract value
-has an injective key (`inj_abstract_value_key`). `report_of` lists contexts with
-`ordered_by_key`: unit contexts by `Key_List []`, call strings by
-`Key_List (map Key_Node ...)`, entry-state contexts by `entry_ctx_key`, whose first
-component is the active analyses' formal values (the display order) and whose
-second, `mcp_ctx_key`, separates contexts those values do not.
+(`Key_Int | Key_Node | Key_List`). `report_of` lists contexts with `ordered_by_key`:
+call strings by `Key_List (map Key_Node ...)` (unit contexts are call strings of
+bound `0`), entry-state contexts by `mcp_ctx_key` (`Run_Report.thy`), which lists
+each active field's formal values and is injective (`inj_mcp_ctx_key`).

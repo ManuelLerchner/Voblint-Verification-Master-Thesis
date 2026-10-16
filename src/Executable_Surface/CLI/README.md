@@ -21,7 +21,7 @@ shared D/G pipeline, the report, and the public theorems about `run_voblint`.
 | combined state | `mcp_st`: one field per analysis, as in Goblint's MCP; Int has one field per refinement mode |
 | report | what `run_voblint` answers (`report`, an instance of `analysis_report`): the configuration, the variables, the elaborated graph, the contexts, one state per covered (point, context), the routes calls take, the check column, the program globals' states and the arithmetic diagnostics |
 | check label | the `check_label` a source `Check l e` carries onto its `EA_Check l e` edge and its report row. The parser sets it to the line and column of the check's keyword, so a renderer prints a row at its own label. |
-| arithmetic diagnostic | an obligation of an evaluated expression (division by zero, signed overflow, a conversion that may not fit) that the report does not decide safe, with its point |
+| arithmetic diagnostic | an obligation of an evaluated expression (division or remainder by zero, signed overflow, a signed `%` whose quotient may leave its kind, a conversion that may not fit) that the report does not decide safe, with its point |
 
 ## What is here
 
@@ -70,9 +70,12 @@ its elaboration, a definition rather than a proved transformation.
 ## Arithmetic diagnostics
 
 `Run_Report` decides the obligations `arith_obligations` lists for every expression
-an edge or call evaluates: division by zero, signed overflow of `+ - * /`, and
-conversions to a narrower kind, including a returned value converted to its
-destination's kind. `run_voblint_obligations_cover` shows `obligations_at` covers
+an edge or call evaluates: division and remainder by zero, signed overflow of
+`+ - * /`, a signed `%` whose quotient leaves its kind (`INT_MIN % -1`), and
+conversions to a narrower kind. `return_sites` and `special_sites` add the
+conversions no expression carries: a returned value converted to its destination's
+kind, and a `min`/`max` result whose destination kind does not hold both arguments'
+kinds. `run_voblint_obligations_cover` shows `obligations_at` covers
 them all. Obligations under `&&` and `||` are not guarded by short-circuit
 evaluation. The concrete semantics wraps every result. On a possible signed overflow
 the domains answer the kind's top under `Assume_Top` (the default) and wrap under

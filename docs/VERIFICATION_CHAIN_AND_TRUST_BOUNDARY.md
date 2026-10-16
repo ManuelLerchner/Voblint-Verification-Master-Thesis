@@ -310,9 +310,10 @@ if `run_voblint conf ds p = Analysed res`, every `pstep` execution of the
 elaborated program from `init_stores` is simulated at a CFG node whose store the
 report over-approximates there; every `PROVED` or `REFUTED` verdict at that node
 is correct for the execution; a `DEAD` point is reached by no such execution;
-and at a point no arithmetic diagnostic names, no division by zero, signed
-overflow or value-changing narrowing conversion occurs in the expressions
-evaluated there. None of these says that a point is reached.
+and at a point no arithmetic diagnostic names, no division or remainder by
+zero, signed overflow, signed remainder with an out-of-range quotient, or
+value-changing narrowing conversion (including a returned value or a `min`/`max`
+result written to its destination) occurs in the expressions evaluated there. None of these says that a point is reached.
 
 Argued, not proved (definitional adequacy): that `Voblint_VIMP` (elaboration,
 `eval`, kind normalization and implicit conversions, `kind_conv`, declarations,

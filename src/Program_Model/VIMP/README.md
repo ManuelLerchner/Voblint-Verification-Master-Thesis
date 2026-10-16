@@ -88,7 +88,8 @@ zero; a nonzero remainder has the dividend's sign. VIMP keeps expressions total 
 semantics. A well-formed program writes no literal outside `I64` (`lits_fit`).
 
 The CLI separately reports arithmetic diagnostics from the solved abstract states:
-division by zero, signed overflow, and conversions that may not fit. This layer
+division or remainder by zero, signed overflow (including a signed `%` whose
+quotient leaves its kind), and conversions that may not fit. This layer
 leaves expression values and procedural execution unchanged. It visits both operands
 of `&&` and `||`; there is no short-circuit suppression. Thus `0 && 1 / 0` has value
 `0` and still receives a division-by-zero diagnostic. The obligations live in

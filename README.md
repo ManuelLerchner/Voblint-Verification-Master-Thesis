@@ -137,11 +137,12 @@ pixi run voblint --analysis interval --context entry-state my_program.vimp --pla
 travel with each point's state or each live at its own global unknown, read only by
 the points that mention it;
 both placements carry the same soundness theorem. `pixi run voblint --help`
-lists every flag. `--graph-snapshot` prints the solved graph as deterministic
-text and `--parse-only` checks syntax.
-[`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md) describes the CLI trust boundary and
-[`docs/CHECK_ARCHITECTURE.md`](docs/CHECK_ARCHITECTURE.md) how a result becomes
-a report.
+lists every analyzer flag; `--playground` is an option of the `pixi run voblint`
+wrapper. `--graph-snapshot` prints the solved graph as deterministic text and
+`--parse-only` checks syntax. [`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md)
+describes the CLI trust boundary and
+[`src/Executable_Surface/CLI/README.md`](src/Executable_Surface/CLI/README.md)
+how a run becomes a report.
 
 `--trace` also writes the solver's steps to stderr: per call, the context it is
 routed to, what the callee's entry reads from its seed, and which publications
@@ -186,10 +187,10 @@ animation below from the playground.
 Every analysis also checks the arithmetic of each evaluated expression against the
 solved state before the statement: division and remainder by zero, signed `+`, `-`,
 `*` and `/` whose result may leave its kind, signed `%` whose quotient may leave it
-(`INT_MIN % -1`), and conversions to a narrower kind that
-may not fit, including a returned value converted to the caller's destination. An
-obligation that may fail is a `warning`; one that fails in every reaching store is
-an `error`. Safe operations and unreachable points report nothing, and diagnostics
+(`INT_MIN % -1`), and conversions to a narrower kind that may not fit, including a
+returned value converted to the caller's destination and a `min`/`max` result
+converted to its destination. An obligation that may fail is a `warning`; one that
+fails in every reaching store is an `error`. Safe operations and unreachable points report nothing, and diagnostics
 never change the exit code.
 
 <table>
@@ -223,9 +224,11 @@ findings.
 
 Every VIMP value is a machine integer of some kind (`i8` to `u64`). Kinds are written
 C-style: on a `global` line, on a formal, as a procedure's return kind, and on
-locals, declared anywhere in a body with C's block scoping. A variable that names no
-kind is an `i32`. A declared local without an initializer starts at an arbitrary
-value of its kind, and `(k) e` converts explicitly:
+locals, declared anywhere in a body with C's block scoping. In a program that writes
+no kind, every variable is an `i32`; once a program writes a kind, every global and
+formal needs one and every local a declaration. A declared local without an
+initializer starts at an arbitrary value of its kind, and `(k) e` converts
+explicitly:
 
 ```c
 global u8 g;
