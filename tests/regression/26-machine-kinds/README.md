@@ -17,14 +17,15 @@ fresh on every activation: `21` calls the same procedure twice, `22` recurses
 with locals of three kinds, and `23` checks that an initializer replaces the
 arbitrary value each time. `24` checks the conversion of a library `min` or
 `max` result: an error, a warning or silence by whether the result itself fits
-the destination's kind. `27` checks that `min` and `max` compare their
+the destination's kind, and `25` a call that initializes a declaration,
+`u8 b = inc(255);`. `27` checks that `min` and `max` compare their
 arguments at the usual arithmetic conversion of the two, as C's
 `(a) < (b) ? (a) : (b)` macro does: `min` of a `u32` 4294967295 and an `i32`
 -1 is 4294967295, and `u8`/`i8` arguments are promoted to `i32`. `28` checks
 that the promotion costs no precision: under Sign, `min` of two `u8` values
 still fits a `u8` destination. Every fixture
 that converts or computes outside a kind (`01` to `05`, `07` to `09`, `11`,
-`19`, `20`, `24`, `27`) pins its diagnostics with `// EXPECT-ARITHMETIC`.
+`19`, `20`, `24`, `25`, `27`) pins its diagnostics with `// EXPECT-ARITHMETIC`.
 
 Isabelle elaborates the parsed program (`elab_ptable`, an Isabelle definition):
 every operation computes at its C kind, every conversion becomes an explicit

@@ -265,7 +265,8 @@ tformals:
 (* A local declaration starts its variable at an arbitrary value of its kind,
    written out as a library call so the semantics, not the parser, says what
    that value may be. An initializer, as in C's `i8 x = 2;`, is an assignment
-   instead, converted to the variable's kind as any assignment is. Each
+   instead, converted to the variable's kind as any assignment is; a call
+   initializer, `i8 x = f(n);`, is the call with x as its destination. Each
    declarator is one statement at its own position, executed where it is
    written, so a declaration in a loop body starts its variable afresh on
    every iteration. The declarator's name is in scope from the declarator on,
@@ -286,6 +287,11 @@ init_decl:
         if List.mem id (Vimp_typing.exp_vars [] e) then
           failwith (Printf.sprintf "the initializer of '%s' reads '%s' itself" x x);
         (id, record_stmt_pos $startpos $endpos (Voblint.Assign ((), id, e))) }
+  | d = decl_name ASSIGN f = IDENT LPAREN es = actuals RPAREN
+      { let x, id = d in
+        if List.exists (fun e -> List.mem id (Vimp_typing.exp_vars [] e)) es then
+          failwith (Printf.sprintf "the initializer of '%s' reads '%s' itself" x x);
+        (id, record_stmt_pos $startpos $endpos (Voblint.Call ((), Some id, f, es))) }
 
 init_decls:
   | d = init_decl
