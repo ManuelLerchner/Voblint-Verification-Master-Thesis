@@ -100,7 +100,7 @@ definition trace_printers ::
      (let raw = (\<lambda>vs d. map_lift (trace_view_of analysis_name string_of_report_value
                                     \<circ> render (activation_of as) vs)
                          (map_lift (mcp_rd is_global) d));
-          vars = cfg_vars (elab_cfg p ds) @ [ReturnVar];
+          vars = remdups (cfg_vars (elab_cfg p ds) @ [ReturnVar]);
           gs = declared_globals p;
           local = (case pg of
                      Program_Globals_Flow_Sensitive \<Rightarrow> raw vars

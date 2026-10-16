@@ -180,21 +180,21 @@ Location  Point  Condition  Verdict  State
 {"step":169,"event":"update_local","line":233,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5], return=⊤"}
 {"step":170,"event":"destabilize","line":237,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}}}
 {"step":171,"event":"iterate","line":239,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
-{"event":"result","unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5]"}
-{"event":"result","unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5]"}
-{"event":"result","unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5]"}
-{"event":"result","unknown":{"kind":"local","node":"pp2","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=⊤, main::b=⊤"}
-{"event":"result","unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=⊤"}
-{"event":"result","unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5]"}
-{"event":"result","unknown":{"kind":"local","node":"entry_main","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=⊤, main::b=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5], return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5], return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5], return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"pp2","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=⊤, return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=[6,6], main::b=[5,5], return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"entry_main","context":{"kind":"entry_state","values":[]}},"value":"interval: bump::n=⊤, main::a=⊤, main::b=⊤, return=⊤"}
 {"event":"result","unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"⊥"}
-{"event":"result","unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: bump::n=[4,4], main::a=⊤, main::b=⊤"}
-{"event":"result","unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: bump::n=[4,4], main::a=⊤, main::b=⊤"}
-{"event":"result","unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: bump::n=[4,4], main::a=⊤, main::b=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=[5,5]"}
+{"event":"result","unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: bump::n=[4,4], main::a=⊤, main::b=⊤, return=⊤"}
 {"event":"result","unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"⊥"}
-{"event":"result","unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: bump::n=[5,5], main::a=⊤, main::b=⊤"}
-{"event":"result","unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: bump::n=[5,5], main::a=⊤, main::b=⊤"}
-{"event":"result","unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: bump::n=[5,5], main::a=⊤, main::b=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=[6,6]"}
+{"event":"result","unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: bump::n=[5,5], main::a=⊤, main::b=⊤, return=⊤"}
 {"event":"check","point":"pp4","condition":"a == 6","verdict":"PROVED"}
 {"event":"check","point":"pp5","condition":"b == 5","verdict":"PROVED"}
 {"event":"end","local_unknowns":15,"global_unknowns":3}
