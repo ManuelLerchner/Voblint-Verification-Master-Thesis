@@ -760,7 +760,7 @@ paired with a finite list of overrides. We write the state with local
 dictionary $(d_l, "ls")$ and global dictionary $(d_g, "gs")$ as
 $⟪(d_l, "ls"), (d_g, "gs")⟫$. The initial state
 (#isaconst("nonrel_init_st")) is $⟪(ltop, []), (0^sharp, "gs")⟫$, where the
-global default is the zero of kind `I32`, the kind of an undeclared identity,
+global default is the zero of kind `I32`, the kind #isaconst("kenv_of") gives an identity without a declaration,
 and $"gs"$ overrides it with the zero of its kind for every declared identity.
 The least element is $⟪(lbot, []), (lbot, [])⟫$.
 

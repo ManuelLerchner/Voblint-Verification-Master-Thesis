@@ -86,8 +86,8 @@ contains programs whose solve gives no answer within its time limit
 language without pointers, heap, or memory model. VIMP integers have fixed
 widths and wrap, division by zero is defined, and a local declared without an
 initializer holds some value of its kind. A call additionally resets the
-callee's locals to $0$, which only an undeclared local of an untyped program
-can observe. A verdict about a VIMP program therefore does not transfer to a C
+callee's locals to $0$, which no program observes, because every local is
+declared and written before it is read. A verdict about a VIMP program therefore does not transfer to a C
 program with the same text. The arithmetic diagnostics cover the operations
 whose result C leaves undefined or implementation-defined, and a point without
 diagnostics is still not shown free of every undefined behavior of C

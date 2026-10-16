@@ -2577,14 +2577,14 @@ Verified against `Core_Exp.thy`, `VIMP_Semantics.thy` and `VIMP_Proc.thy`
 | | VIMP | C |
 | --- | --- | --- |
 | integers | `ikind`-sized; every arithmetic result and conversion is normalized to its kind (`ik_norm`), so signed overflow wraps | `ikind`-sized; signed overflow is undefined |
-| undeclared kind | `I32` (`kenv_of`) | not applicable |
+| undeclared variable | rejected by the parser; `kenv_of` totalizes with `I32` | not applicable |
 | literals | must fit `i64` (`lits_fit`, checked by `wf_program_compile_input_exec`) | an unsuffixed decimal constant has no type beyond `long long` |
 | `a / 0` | **defined as `0`** (`c_div`) | undefined behaviour |
 | `a % 0` | **defined as `a`** (`c_mod`) | undefined behaviour |
 | `/` rounding | truncates toward zero | the same, since C99 |
 | `&&`, `\|\|` | both operands evaluated | short-circuits |
 | locals of `main` at entry | any value of their kind (`init_stores`) | indeterminate |
-| implicit locals of a callee | **reset to `0`** (`enter_state`) | not applicable |
+| callee locals at entry | reset to `0` (`enter_state`), never read: every local is declared before use | indeterminate |
 | a declaration without initializer | the parser writes `x = __voblint_nondet_int()` there: any value of `x`'s kind | indeterminate |
 | globals at entry | zero (`init_stores`) | zero |
 | `main` | may not `return` explicitly | may |
@@ -2614,18 +2614,13 @@ globals at zero, so `main` starts with every other identity at any value of its
 kind. The analyzer must therefore handle a superset of the initial states C
 permits, which can only cost precision.
 
-**A callee's implicit locals are a definition of undefined behaviour.**
+**A callee's entry zero is unobservable.**
 `enter_state` keeps the globals and sets every other identity to `0` before the
-formals are bound, in `pstep` and in `cstep` alike. A program that writes no kind
-may use a local without declaring it, and reading it before assigning it then
-sees that zero, where C has no such program. A declared local never shows the
-zero: the parser's rewrite of its declaration draws a fresh value of its kind,
-and the parser rejects a use before the declaration. That rewrite is trusted,
-not proved (`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`). The shipped
-analyses do not use the zero: the abstract entry resets locals to `KTop`
-(`nonrel_enter_frame`). The soundness theorem is stated over `pstep` and would equally accept
-an analysis that proved it, which would be a true statement about VIMP and not
-about C.
+formals are bound, in `pstep` and in `cstep` alike. Every variable is declared,
+so a local never shows the zero: its declaration writes it, with its
+initializer or with a fresh value of its kind, and the parser rejects a use
+before the declaration. That guarantee is the parser's and is trusted, not
+proved (`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`).
 
 ### 15.3 What a reviewer must check, in order of what a mistake would cost
 

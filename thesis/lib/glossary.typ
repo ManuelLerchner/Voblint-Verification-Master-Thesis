@@ -179,7 +179,7 @@
     see: <sec:pstep>,
   )[
     The machine kind of every variable identity. A program supplies it from its
-    kind declarations, an undeclared identity being a C `int`; the semantics
+    kind declarations, which the parser requires for every variable; the semantics
     and the theorems take it as a parameter.
   ],
   term(

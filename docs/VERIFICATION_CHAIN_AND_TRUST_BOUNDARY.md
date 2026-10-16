@@ -39,8 +39,10 @@ one sits in the chain.
 
 The parser builds a surface VIMP program (`imp_prog`, expressions `src_exp`,
 commands `src_com`) together with kind declarations `ds :: kind_decls`, which give
-each variable identity (`var_id`) a machine-integer kind (`ikind`; `kenv_of ds`
-defaults an undeclared identity to `I32`). Elaboration (`elaborate` in
+each variable identity (`var_id`) a machine-integer kind (`ikind`). The parser
+rejects a program that leaves a global, formal or local undeclared, so every
+identity the program names has a declaration; `kenv_of ds` still totalizes the
+list by giving any other identity `I32`. Elaboration (`elaborate` in
 `Core_Exp.thy`, `elab_com` in `Core_Com.thy`, `elab_ptable` in
 `VIMP_Semantics.thy`) resolves names to identities and makes every implicit
 conversion and the kind of every operation explicit, producing core VIMP (`exp`,
@@ -256,8 +258,9 @@ The lexer and parser (`cli/frontend/vimp_lexer.mll`,
 `cli/frontend/vimp_parser.mly`, generated from `manifests/vimp-grammar.yaml`)
 carry no soundness theorem; the proved chain starts at an already-constructed
 `imp_prog` and its `kind_decls`. `cli/frontend/vimp_typing.ml` turns the kinds
-written in the source into those declarations; that they are the kinds the
-source declares is trusted. `cli/entry/voblint_main.ml` calls
+written in the source into those declarations and rejects a program with an
+undeclared variable or a value-returning procedure without a return kind; that
+the declarations are the kinds the source declares is trusted. `cli/entry/voblint_main.ml` calls
 `Voblint.run_voblint` and reads its answer through the exported selectors. A
 malformed program answers `Malformed_Program`, which the CLI reports with exit
 code 4.
@@ -290,7 +293,9 @@ performs this rewriting (`cli/frontend/vimp_parser.mly`), and it is trusted.
 `pstep_declare` (`VIMP_Semantics.thy`) proves that this call may leave any value
 of `x`'s kind in `x` and changes nothing else, and `pstep_declare_forgets` that
 its outcomes do not depend on what `x` held before: the `0` a call entry
-writes, or an earlier iteration's or activation's value. Block scoping is
+writes, or an earlier iteration's or activation's value. Since every local is
+declared and every path to a use passes its declaration, the value a local
+holds on entry is never read. Block scoping is
 resolved in the parser (`cli/frontend/vimp_scope.ml`): a declaration that
 shadows a name gets a fresh identity `x#2`, `x#3`, ..., and every use names the
 innermost declaration in scope. That this resolution follows C's scoping, and

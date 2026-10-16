@@ -222,13 +222,12 @@ findings.
 
 ### Machine integers
 
-Every VIMP value is a machine integer of some kind (`i8` to `u64`). Kinds are written
-C-style: on a `global` line, on a formal, as a procedure's return kind, and on
-locals, declared anywhere in a body with C's block scoping. In a program that writes
-no kind, every variable is an `i32`; once a program writes a kind, every global and
-formal needs one and every local a declaration. A declared local without an
-initializer starts at an arbitrary value of its kind, and `(k) e` converts
-explicitly:
+Every VIMP value is a machine integer of some kind (`i8` to `u64`). Every variable
+declares its kind C-style: on a `global` line, on a formal, and on locals, declared
+anywhere in a body with C's block scoping; a procedure that returns a value declares
+its return kind. The parser rejects a name that no declaration in scope introduces.
+A local's initializer is an expression or a call (`u8 r = f(n);`); a local declared
+without one starts at an arbitrary value of its kind. `(k) e` converts explicitly:
 
 ```c
 global u8 g;
@@ -253,7 +252,8 @@ outside `i64` is rejected. The
 examples.
 
 Three steps before Isabelle are trusted: the parser's block-scope resolution (a
-declaration that shadows a name gets a fresh name), the rewriting of a declaration
+declaration that shadows a name gets a fresh name, and a name without a
+declaration in scope is rejected), the rewriting of a declaration
 without initializer into `x = __voblint_nondet_int()`, and the source positions it
 records.
 

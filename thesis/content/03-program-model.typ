@@ -258,7 +258,7 @@ global variables (#isaconst("declared_global_vars")). Its procedure table
 #isaconst("declared_global") tests membership in the globals. The entry
 procedure is the declaration named `main`, and #isaconst("main_body") is its
 body. @fig:vimp-ast shows the running example in this form. The running
-example declares no kinds, so it computes at `i32` (@sec:elaboration).
+example declares every variable `i32` (@sec:elaboration).
 
 // The tree is read from the parser's own output (claim ast-contexts), the JSON
 // the playground hands to the analyzer, so it cannot drift from the frontend.
@@ -371,8 +371,8 @@ and the second
 #verdict(check-row("kinds-promotion", cond: "(i32) z < 250").verdict). It
 also reports the conversion of $300$ to `u8` as an error, because the
 conversion changes the value in every run, although C defines its result
-(@sec:vimp-vs-c). A program that declares no types makes every variable 32 bits wide, so `z` holds
-$300$ and the second check is
+(@sec:vimp-vs-c). Had the program declared all three variables `i32`, `z`
+would hold $300$ and the second check would be
 #verdict(check-row("kinds-i32", cond: "z < 250").verdict) (claim
 #claim-ref("kinds-i32")). A verdict is therefore only meaningful
 together with the width at which each operation computes. This section fixes
@@ -399,10 +399,11 @@ Wraparound applies to signed kinds too. C leaves signed overflow undefined
 A program declares kinds in C's style: `global u8 g;` for a global,
 `fun u16 f(u8 n)` for a formal and a return value, and `i32 x;` or
 `i32 x = 0;` for a local, which may appear anywhere in a body and whose scope
-ends with its enclosing block. VIMP has no keyword `int`. A program that
-declares no kind at all is _untyped_, and each of its variables is `i32`, the
-role of C's `int`. A program that declares one kind must declare every global,
-formal and local, and a return kind for every procedure that returns a value.
+ends with its enclosing block. A local's initializer may also be a call,
+`u8 r = f(n);`. VIMP has no keyword `int`, and `i32` takes its role. Every
+global, formal and local declares its kind, and every procedure that returns a
+value declares a return kind. The parser rejects a name that no declaration in
+scope introduces.
 
 *Identities and stores.* A kind belongs to a variable, but a name does not
 determine the variable. Two procedures may both have a formal `n`, one of kind
@@ -424,8 +425,9 @@ declaration in scope (#fixture("26-machine-kinds/15-block_scopes.vimp")).
 A store $s$ (#isatype("store")) is a total function from identities to
 integers. The parser hands the kinds over as a list of declarations
 (#isatype("kind_decls")), and #isaconst("kenv_of") turns it into a kind
-environment $kappa$ (#isatype("kenv")) that gives an undeclared identity the
-kind `i32`. For an untyped program the list is empty.
+environment $kappa$ (#isatype("kenv")). Since the parser rejects undeclared
+variables, the kind `i32` that $kappa$ gives an identity missing from the list
+only makes the function total.
 
 *Elaboration.* What the parser builds is _surface_ VIMP, the expressions of
 @sec:vimp over names, with implicit conversions. What executes is _core_ VIMP
@@ -668,7 +670,7 @@ that these are the executions the programmer intended. This can only be
 argued, and this section collects the argument. A surface program has no
 semantics of its own, so the argument covers every definition that gives it a
 meaning: elaboration, the evaluation of core expressions, wraparound, the
-conversions on writes, the kinds of undeclared variables, the initial stores
+conversions on writes, the initial stores
 and #isaconst("pstep") itself. The one proved consistency check,
 #isathm("eval_elaborate"), relates two of these definitions to each other
 (@sec:elaboration) and shows neither of them to be C. @tab:vimp-vs-c compares
@@ -703,7 +705,7 @@ construct but model it differently.
       [initial values], [globals $0$, others arbitrary],
       [static $0$, automatic indeterminate (#c11("6.7.9p10"))],
       [`u8 x;`], [any value of its kind, each time], [indeterminate (#c11("6.7.9p10"))],
-      [callee locals], [undeclared ones $0$ on entry], [indeterminate (#c11("6.7.9p10"))],
+      [callee locals], [$0$ on entry, never read], [indeterminate (#c11("6.7.9p10"))],
       [checks], [never stop the run, never refine],
       [`assert` aborts on $0$ unless `NDEBUG` (#c11("7.2p1"), #c11("7.2.1.1"))],
       [`min`, `max`], [library calls (#isaconst("special_table"))], [no counterpart],
