@@ -307,16 +307,11 @@ lemma run_succ_run: "run_succ (run \<G> p) = live_succ \<G> p"
       Let_def fun_eq_iff)
 
 text \<open>
-  The contextual publication surface: one verdict per context at a check, and
-  the aggregate a caller prints. Both are \<^const>\<open>classify_checks_ctx\<close> and
-  \<^const>\<open>classify_checks_verdicts\<close> unchanged -- they are generic in the context
-  type already -- so nothing here is policy-specific beyond supplying this
+  The contextual publication surface: the verdict a caller prints at a check, joined
+  over its contexts. It is \<^const>\<open>classify_checks_verdicts\<close> unchanged -- generic in
+  the context type already -- so nothing here is policy-specific beyond supplying this
   pipeline's own result table.
 \<close>
-
-definition check_projection :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
-    \<Rightarrow> (pp \<times> 'e \<times> ('c \<times> contextual_verdict) set) list" where
-  "check_projection \<G> p = classify_checks_ctx (pcfg p) (result \<G> p) classify"
 
 definition verdict_report :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> (pp \<times> 'e \<times> contextual_verdict) list" where
@@ -367,7 +362,6 @@ declare
   dg_pipeline.live_succ_def [code]
   dg_pipeline.solved_run_of_def [code]
   dg_pipeline.run_def [code]
-  dg_pipeline.check_projection_def [code]
   dg_pipeline.verdict_report_def [code]
   dg_pipeline.state_at_def [code]
   dg_pipeline.report_def [code]

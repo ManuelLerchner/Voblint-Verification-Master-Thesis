@@ -505,10 +505,9 @@ proof -
   with cb e i show ?thesis unfolding r_def by (auto intro: that)
 qed
 
-section \<open>The typed graph\<close>
+section \<open>The elaborated graph\<close>
 
-text \<open>The typed graph compiles the elaborated procedures directly; no expression on it is
-  lowered back to source names.\<close>
+text \<open>The graph the analyses run on is compiled from the elaborated procedures.\<close>
 
 definition elab_cfg :: "imp_prog \<Rightarrow> kind_decls \<Rightarrow> (var_id, exp) gcfg" where
   "elab_cfg p ds = compile_prog (elab_ptable p ds) (prog_procs p)"

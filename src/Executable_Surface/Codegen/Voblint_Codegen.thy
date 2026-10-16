@@ -135,8 +135,8 @@ text \<open>
 
 text \<open>
   The CFG enumerations are generic in the variable and expression types and need their
-  orders, which generated code would take as dictionary arguments. The CLI reads typed
-  graphs only, so it gets the enumerations at that instance.
+  orders, which generated code would take as dictionary arguments. The CLI reads graphs
+  of core VIMP only, so it gets the enumerations at that instance.
 \<close>
 
 definition cfg_intra_edges ::

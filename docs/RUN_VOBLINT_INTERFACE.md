@@ -50,8 +50,8 @@ decoding).
 
 The report is an opaque token to OCaml. Its selectors are not exported; the only
 reader is `render_report`, so no OCaml code depends on the report's representation.
-`run_voblint_config` and `run_voblint_cfg` state that an analysed report carries the
-configuration it was asked for and the compiled graph of the program.
+`run_voblint_report_contract` states that an analysed report carries the
+configuration it was asked for and the elaborated graph of the program.
 
 ## The report
 

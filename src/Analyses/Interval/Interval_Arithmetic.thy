@@ -36,17 +36,39 @@ instance ..
 end
 
 text \<open>
-  \<open>ivl_min\<close>/\<open>ivl_max\<close> abstract the two-argument \<open>Min\<close>/\<open>Max\<close> special calls:
-  componentwise \<open>min\<close>/\<open>max\<close> of the bounds, exact whenever both operands are
-  non-empty (\<open>min\<close>/\<open>max\<close> of two non-empty ranges is again non-empty, unlike
-  multiplication's corner case), normalized like \<open>plus_ivl\<close>/\<open>minus_ivl\<close> so an
-  empty operand still collapses to the canonical @{const bot}.
+  \<open>ivl_min\<close>/\<open>ivl_max\<close> bound the result of a \<open>min\<close>/\<open>max\<close> library call, whose
+  conversion to its destination's kind raises an obligation: componentwise
+  \<open>min\<close>/\<open>max\<close> of the bounds, exact whenever both operands are non-empty, normalized
+  like \<open>plus_ivl\<close>/\<open>minus_ivl\<close> so an empty operand still collapses to the canonical
+  @{const bot}.
 \<close>
 fun ivl_min :: "ivl => ivl => ivl" where
     "ivl_min (Ivl l1 u1) (Ivl l2 u2) = normalize_ivl (Ivl (min l1 l2) (min u1 u2))"
 
 fun ivl_max :: "ivl => ivl => ivl" where
     "ivl_max (Ivl l1 u1) (Ivl l2 u2) = normalize_ivl (Ivl (max l1 l2) (max u1 u2))"
+
+lemma ivl_min_sound:
+  assumes "m \<in> gamma_ivl a" and "n \<in> gamma_ivl b"
+  shows "min m n \<in> gamma_ivl (ivl_min a b)"
+proof -
+  obtain l1 u1 l2 u2 where ab: "a = Ivl l1 u1" "b = Ivl l2 u2" by (cases a; cases b) blast
+  have "Fin (min m n) = min (Fin m) (Fin n)" by (simp add: min_def)
+  with assms show ?thesis
+    by (simp add: ab normalize_ivl_gamma del: less_eq_eint_def)
+       (meson min.coboundedI1 min.coboundedI2 order.trans)
+qed
+
+lemma ivl_max_sound:
+  assumes "m \<in> gamma_ivl a" and "n \<in> gamma_ivl b"
+  shows "max m n \<in> gamma_ivl (ivl_max a b)"
+proof -
+  obtain l1 u1 l2 u2 where ab: "a = Ivl l1 u1" "b = Ivl l2 u2" by (cases a; cases b) blast
+  have "Fin (max m n) = max (Fin m) (Fin n)" by (simp add: max_def)
+  with assms show ?thesis
+    by (simp add: ab normalize_ivl_gamma del: less_eq_eint_def)
+       (meson max.coboundedI1 max.coboundedI2 order.trans)
+qed
 
 lemma int_mult_in_corners_lo:
   fixes l1 u1 l2 u2 i j :: int

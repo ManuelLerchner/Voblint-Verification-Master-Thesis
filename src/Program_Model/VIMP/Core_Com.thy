@@ -127,10 +127,7 @@ qed (auto simp: exp_erase_elaborate [OF var_name_resolve_var] elaborate_syn_def
 text \<open>
   Elaboration keeps a command's skeleton: the constructors, the annotations and the
   number of arguments of every call. Only the variables and expressions at its leaves
-  change. Location elaboration (\<open>elab\<close>) reads nothing but that skeleton, so
-  the order of the two elaborations cannot change which node a statement is assigned.
-  Stating that as an equation needs location elaboration generalized to the typed
-  command type, which belongs with the typed compilation.
+  change.
 \<close>
 
 lemma length_elab_args [simp]: "length (elab_args \<rho> \<kappa> fs es) = length es"

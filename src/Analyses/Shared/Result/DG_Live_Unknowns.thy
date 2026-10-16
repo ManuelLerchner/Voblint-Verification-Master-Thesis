@@ -769,6 +769,20 @@ theorem gentry_state_node_collect_eq_Union_of_terminates:
   by (rule collect_sem.node_collect_eq_Union_activation_of_has_context)
      (rule gentry_state_has_context_of_terminates[OF wf solves])
 
+theorem gentry_state_result_node_sound:
+  assumes wf: "gwf_compile_input vars rv (pglob p) (ptab p) (pprocs p)" and solves:
+    "terminates (pglob p) p"
+  shows "collect_sem.gnode_collect ev rv (pconv p) (pglob p) (pcfg p) (pinit p) v
+           \<subseteq> (\<Union>ctx. \<gamma>\<^sub>V (state_at (pglob p) p ctx v))"
+proof -
+  have "ctx_sem.gactivation_collect ev rv (pconv p) (pglob p) (admitted_contexts (pglob p) p)
+          root_ctx (pcfg p) (pinit p) v ctx \<subseteq> \<gamma>\<^sub>V (state_at (pglob p) p ctx v)" for ctx
+    using gentry_state_lookup_sound_of_terminates[OF wf solves, of v ctx]
+    by (auto simp: state_at_unfold gbot_state_empty split: lifted.splits)
+  then show ?thesis
+    unfolding gentry_state_node_collect_eq_Union_of_terminates[OF wf solves] by blast
+qed
+
 end
 
 end

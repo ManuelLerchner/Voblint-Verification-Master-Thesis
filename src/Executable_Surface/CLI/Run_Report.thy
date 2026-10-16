@@ -2,13 +2,12 @@ theory Run_Report
   imports Analysis_Report
 begin
 
-section \<open>The report of a typed run\<close>
+section \<open>The report of a run\<close>
 
 text \<open>
-  A typed run is reported by the builder a VIMP run uses (\<^const>\<open>report_of\<close>): the typed
-  graph, the declared variables, the globals the placement keeps at unknowns of their
-  own, the arithmetic obligations of the typed expressions, and the program's
-  procedures.
+  A run is reported by \<^const>\<open>report_of\<close>: the elaborated graph, the declared variables,
+  the globals the placement keeps at unknowns of their own, the arithmetic obligations of
+  the graph's expressions, and the program's procedures.
 \<close>
 
 subsection \<open>Arithmetic obligations of typed expressions\<close>
@@ -110,14 +109,6 @@ text \<open>
   read as unknown, as \<^const>\<open>answer_check\<close> reads one.
 \<close>
 
-fun answer_ivl :: "answer \<Rightarrow> ivl" where
-  "answer_ivl (QLifted d) = int_ivl d"
-| "answer_ivl QBot = \<bottom>"
-| "answer_ivl QTop = \<top>"
-
-lemma answer_ivl_sound: "n \<in> gamma_answer a \<Longrightarrow> n \<in> gamma_ivl (answer_ivl a)"
-  by (cases a) (auto simp: gamma_int_dom_def top_ivl_def ivl_top_def)
-
 text \<open>A literal operand is its own exact interval, and a truth value lies in
   \<open>[0, 1]\<close>, whatever the active analyses answer for them: a domain without
   magnitudes, such as Parity, would otherwise leave even \<open>10 / 3\<close> a possible
@@ -125,11 +116,15 @@ text \<open>A literal operand is its own exact interval, and a truth value lies 
 
 fun operand_ivl :: "exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
   "operand_ivl ch (TN k n) = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
-| "operand_ivl ch (TCmp c a b) = answer_ivl (ch (EvalInt (TCmp c a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch (TNot a) = answer_ivl (ch (EvalInt (TNot a))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch (TAnd a b) = answer_ivl (ch (EvalInt (TAnd a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch (TOr a b) = answer_ivl (ch (EvalInt (TOr a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
-| "operand_ivl ch e = answer_ivl (ch (EvalInt e))"
+| "operand_ivl ch (TCmp c a b) =
+     of_answer_ik None (ch (EvalInt (TCmp c a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl ch (TNot a) =
+     of_answer_ik None (ch (EvalInt (TNot a))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl ch (TAnd a b) =
+     of_answer_ik None (ch (EvalInt (TAnd a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl ch (TOr a b) =
+     of_answer_ik None (ch (EvalInt (TOr a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl ch e = of_answer_ik None (ch (EvalInt e))"
 
 fun unwrapped_ivl :: "exp gchannel \<Rightarrow> exp \<Rightarrow> ivl" where
   "unwrapped_ivl ch (TN k n) = Ivl (Fin n) (Fin n)"
@@ -142,8 +137,10 @@ lemma unwrapped_ivl_sound:
   shows "unwrapped e t \<in> gamma_ivl (unwrapped_ivl ch e)"
     and "eval e t \<in> gamma_ivl (operand_ivl ch e)"
 proof -
-  have answer: "eval a t \<in> gamma_ivl (answer_ivl (ch (EvalInt a)))" for a
-    using geval_query.channel_holdsD[OF assms, of "EvalInt a"] by (auto intro: answer_ivl_sound)
+  have answer: "eval a t \<in> gamma_ivl (of_answer_ik None (ch (EvalInt a)))" for a
+    using geval_query.channel_holdsD[OF assms, of "EvalInt a"]
+      of_answer_ik_sound[where 'a = ivl, of None "eval a t" "ch (EvalInt a)"]
+    by simp
   have truth: "eval a t \<in> gamma_ivl (Ivl (Fin 0) (Fin 1))"
     if
       "a \<in> {TCmp c x y | c x y. True} \<union> range TNot \<union> {TAnd x y | x y. True} \<union> {TOr x y | x y. True}"
@@ -157,31 +154,6 @@ proof -
     case (TN k n) then show ?thesis by (simp add: less_eq_eint_def)
   qed (simp_all only: unwrapped.simps unwrapped_ivl.simps ans ivl_aop_sound)
   show "eval e t \<in> gamma_ivl (operand_ivl ch e)" by (rule ans)
-qed
-
-text \<open>The minimum and the maximum of two intervals' members lie in their
-  \<^const>\<open>ivl_min\<close> and \<^const>\<open>ivl_max\<close>.\<close>
-
-lemma ivl_min_max_sound:
-  assumes "m \<in> gamma_ivl i" and "n \<in> gamma_ivl j"
-  shows "min m n \<in> gamma_ivl (ivl_min i j)" and "max m n \<in> gamma_ivl (ivl_max i j)"
-proof -
-  obtain l1 u1 l2 u2 where ij: "i = Ivl l1 u1" "j = Ivl l2 u2" by (cases i; cases j) blast
-  have m: "l1 \<le> Fin m" "Fin m \<le> u1" and n: "l2 \<le> Fin n" "Fin n \<le> u2"
-    using assms by (simp_all add: ij del: less_eq_eint_def)
-  have mono: "x \<le> y \<Longrightarrow> Fin x \<le> Fin y" for x y :: int by simp
-  have "min l1 l2 \<le> Fin (min m n) \<and> Fin (min m n) \<le> min u1 u2"
-    using m n mono[of m n] mono[of n m]
-    by (cases "m \<le> n") (auto simp: min_def[of m n] min_le_iff_disj min.bounded_iff
-        simp del: less_eq_eint_def dest: order_trans)
-  then show "min m n \<in> gamma_ivl (ivl_min i j)"
-    by (simp add: ij normalize_ivl_gamma del: less_eq_eint_def)
-  have "max l1 l2 \<le> Fin (max m n) \<and> Fin (max m n) \<le> max u1 u2"
-    using m n mono[of m n] mono[of n m]
-    by (cases "m \<le> n") (auto simp: max_def[of m n] le_max_iff_disj max.bounded_iff
-        simp del: less_eq_eint_def dest: order_trans)
-  then show "max m n \<in> gamma_ivl (ivl_max i j)"
-    by (simp add: ij normalize_ivl_gamma del: less_eq_eint_def)
 qed
 
 definition fits_verdict :: "ikind \<Rightarrow> ivl \<Rightarrow> check_result" where
@@ -229,8 +201,8 @@ proof -
   have ch: "geval_query.channel_holds eval (mcp_ask sem ds as v) t"
     by (rule mcp.mcp_ask_sound[OF t])
   note fits = fits_verdict_sound[OF unwrapped_ivl_sound(1)[OF ch]]
-    and fits_min = fits_verdict_sound[OF ivl_min_max_sound(1)[OF unwrapped_ivl_sound[OF ch]]]
-    and fits_max = fits_verdict_sound[OF ivl_min_max_sound(2)[OF unwrapped_ivl_sound[OF ch]]]
+    and fits_min = fits_verdict_sound[OF ivl_min_sound[OF unwrapped_ivl_sound[OF ch]]]
+    and fits_max = fits_verdict_sound[OF ivl_max_sound[OF unwrapped_ivl_sound[OF ch]]]
     and fits_rem =
       fits_verdict_sound[OF unwrapped_ivl_sound(1)[OF ch, of "arithmetic_operand ob"]]
   have ne: "truthy (eval (arith_condition ob) t) \<longleftrightarrow> eval (arithmetic_operand ob) t \<noteq> 0"
@@ -296,7 +268,7 @@ definition prog_obligation_sites ::
   "prog_obligation_sites ds p =
      obligation_sites arith_obligations (elab_cfg p ds) @ return_sites ds p @ special_sites ds p"
 
-text \<open>The obligations a typed report decides at a point, and what it means for a store
+text \<open>The obligations a report decides at a point, and what it means for a store
   to meet one: \<open>s \<Turnstile> ob\<close>.\<close>
 
 definition obligations_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> exp arithmetic_obligation set" where
@@ -306,8 +278,8 @@ lemma mem_obligations_at:
   "ob \<in> obligations_at ds p v \<longleftrightarrow> (\<exists>obs. (v, obs) \<in> set (prog_obligation_sites ds p) \<and> ob \<in> set obs)"
   by (force simp: obligations_at_def split: if_splits)
 
-text \<open>The variables a report lists: every variable an edge or a call of the typed graph
-  mentions.\<close>
+text \<open>The variables a report lists: every variable an edge or a call of the elaborated
+  graph mentions.\<close>
 
 fun special_vars :: "exp gspecial_call \<Rightarrow> var_id list" where
   "special_vars Nondet_Int = []"
@@ -435,7 +407,7 @@ qed
 subsection \<open>The run\<close>
 
 text \<open>
-  A typed run solves the equations of the chosen context policy and placement and
+  A run solves the equations of the chosen context policy and placement and
   reports the answer; the logical \<open>None\<close> branch of the executable solve has no report.
   Under flow-insensitive placement each declared global lives at its own unknown.
 \<close>
@@ -500,12 +472,8 @@ qed
 subsection \<open>Soundness\<close>
 
 text \<open>
-  A typed report is sound for every typed store that reaches a node from a store whose
-  globals are zero at their kinds.
-\<close>
-
-text \<open>
-  The diagnostics of a typed report are sound for the same stores. A point no
+  A report is sound for every store that reaches a node from a store whose globals are
+  zero at their kinds. Its diagnostics are sound for the same stores. A point no
   diagnostic names meets every obligation of the expressions evaluated there at every
   store that reaches it; a refuted obligation fails at every such store. Both read the
   diagnostics off the solved table through \<^const>\<open>obligation_classify\<close>, whichever
@@ -553,7 +521,7 @@ proof -
 qed
 
 text \<open>
-  Everything a typed report guarantees, in one predicate: it lists a row for every check
+  Everything a report guarantees, in one predicate: it lists a row for every check
   edge, and at every store that reaches a node the store lies in a state the report
   lists there, no check there is dead, a proved check holds and a refuted one fails, a
   point no diagnostic names meets every obligation decided there, and a refuted
@@ -765,7 +733,7 @@ theorem report_point_sound:
       "chk \<in> set (report_checks res) \<Longrightarrow> check_point chk = v \<Longrightarrow> check_verdict chk \<noteq> Dead"
   using report_run_sound[OF wf run] s unfolding report_sound_def by blast+
 
-text \<open>A report lists a check row for every check edge of the typed graph, at the edge's
+text \<open>A report lists a check row for every check edge of the elaborated graph, at the edge's
   source and with its label and condition.\<close>
 
 lemma report_check_row:
@@ -891,13 +859,15 @@ lemma arith_obligations_conversion:
      \<Longrightarrow> Arithmetic_Obligation Conversion_Overflow (TCast k a) a \<in> set (arith_obligations e)"
   by (induction e) auto
 
-subsection \<open>Rendering a typed report\<close>
+subsection \<open>Rendering a report\<close>
 
 text \<open>
-  A typed report is rendered by \<^const>\<open>render_report\<close> with a renderer of its own: each
-  active analysis shows a kind-tagged value per variable, the order analysis its facts,
-  and an entry-state context the formal values of its active fields. Typed analyses keep
-  every variable in a point's own state, so no edge reads or writes a global unknown.
+  A report is rendered by \<^const>\<open>render_report\<close> with a renderer of its own: each active
+  analysis shows a kind-tagged value per variable, the order analysis its facts, and an
+  entry-state context the formal values of its active fields. An edge's footprint names
+  the globals it reads and writes among those kept at their own unknowns: none under
+  \<^const>\<open>Program_Globals_Flow_Sensitive\<close>, the declared globals it touches under
+  \<^const>\<open>Program_Globals_Flow_Insensitive\<close>.
 \<close>
 
 instantiation order_rel :: (type) join_val

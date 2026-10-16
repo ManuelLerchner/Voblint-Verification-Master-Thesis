@@ -78,7 +78,7 @@ fun analysis_name :: "analysis \<Rightarrow> String.literal" where
 | "analysis_name Order = STR ''order''"
 
 
-text \<open>A typed run names a global's unknown by the global's label.\<close>
+text \<open>A run names a global's unknown by the global's label.\<close>
 
 fun key_of_global_unknown :: "(var_id, 'c) global_unknown \<Rightarrow> 'c trace_key" where
   "key_of_global_unknown Analysis_Buffer = Trace_Buffer"
@@ -86,7 +86,7 @@ fun key_of_global_unknown :: "(var_id, 'c) global_unknown \<Rightarrow> 'c trace
 | "key_of_global_unknown (Activation_Seed n c) = Trace_Seed n c"
 
 
-text \<open>A typed run's values are read as its report renders them, each variable by its
+text \<open>A run's values are read as its report renders them, each variable by its
   label. The trace also shows the return slot, which carries a callee's result to its
   caller. With the declared globals at their own unknowns, a point's value is shown
   without them and a global's unknown shows that global alone.\<close>
@@ -111,9 +111,8 @@ definition trace_printers ::
 
 
 text \<open>
-  A typed run is traced the same way: its printers are announced before the solve,
-  and the solve reports its steps. A call-string context of length zero is shown as no
-  context, as the report shows it.
+  A run announces its printers before the solve, and the solve reports its steps. A
+  call-string context of length zero is shown as no context, as the report shows it.
 \<close>
 
 declare cs_run_def [code del] es_run_def [code del]

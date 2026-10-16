@@ -4089,3 +4089,21 @@ RelC
 relc_pairs
 string_of_pairs
 to_string_relc_regression
+
+# --- Duplicates and unused source-level names (2026-10-16) ---
+# See docs/theorem-migration.toml for what replaces each.
+sub_kind
+congruence_cast
+special_desc_result
+combine_assign_conv
+answer_ivl
+ivl_min_max_sound
+check_projection
+globals_in_exp
+edge_global_reads
+edge_global_writes
+call_global_reads
+combine_env_ret_var_irrelevant
+bind_formals_map2_ident
+run_voblint_config
+run_voblint_cfg

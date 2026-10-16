@@ -522,8 +522,9 @@ kind = "constant"
 
 [[rename]]
 old = "tcombine_assign"
-new = "combine_assign_conv"
+new = ""
 kind = "constant"
+note = "combine_assign_conv was deleted: it restated combine_assign dst (kind_conv κ dst n), which gpstep uses."
 
 [[rename]]
 old = "tcombine_assign"
@@ -832,8 +833,9 @@ kind = "constant"
 
 [[rename]]
 old = "tspecial"
-new = "special_desc_result"
+new = ""
 kind = "constant"
+note = "special_desc_result was deleted: it restated special_result eval composed with classify_special."
 
 [[rename]]
 old = "tspecial_st"
@@ -2347,3 +2349,65 @@ kind = "constant"
 old = "to_string_relc_regression"
 new = "to_string_order_rel_regression"
 kind = "fact"
+
+# --- Duplicates and unused source-level names removed (2026-10-16) ---
+
+[[rename]]
+old = "sub_kind"
+new = "ik_widens"
+kind = "constant"
+note = "Same equation; cast_ik_congruence and cast_ik_sign test ik_widens."
+
+[[rename]]
+old = "congruence_cast"
+new = ""
+kind = "constant"
+note = "Deleted as unused; cast_cong_ik is the same conversion."
+
+[[rename]]
+old = "ivl_min_max_sound"
+new = "ivl_min_sound"
+kind = "fact"
+note = "Split into ivl_min_sound and ivl_max_sound in Interval_Arithmetic."
+
+[[rename]]
+old = "answer_ivl"
+new = "of_answer_ik"
+kind = "constant"
+note = "operand_ivl reads an answer with of_answer_ik at ivl."
+
+[[rename]]
+old = "run_voblint_config"
+new = "run_voblint_report_contract"
+kind = "fact"
+note = "Its third conclusion."
+
+[[rename]]
+old = "run_voblint_cfg"
+new = "run_voblint_report_contract"
+kind = "fact"
+note = "Its fourth conclusion."
+
+[[rename]]
+old = "edge_global_reads"
+new = "gedge_global_reads"
+kind = "constant"
+note = "The source-level abbreviation was deleted; the generic constant takes the expression's variables as a parameter."
+
+[[rename]]
+old = "edge_global_writes"
+new = "gedge_global_writes"
+kind = "constant"
+note = "As edge_global_reads; the generic constant takes the return slot as a parameter."
+
+[[rename]]
+old = "call_global_reads"
+new = "gcall_global_reads"
+kind = "constant"
+note = "As edge_global_reads."
+
+[[rename]]
+old = "check_projection"
+new = ""
+kind = "constant"
+note = "Deleted as unused; verdict_report is the contextual surface a caller reads."

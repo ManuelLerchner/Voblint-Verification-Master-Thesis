@@ -156,8 +156,8 @@ qed
 text \<open>\<^const>\<open>compile_prog\<close> takes a \<^typ>\<open>proc_table\<close> and a \<^typ>\<open>pname list\<close>, so a
   domain holding only an \<^typ>\<open>imp_prog\<close> needs the two-projection wrapper below.  The entry
   name is \<^const>\<open>prog_main_name\<close> and its body is looked up, so neither is threaded through
-  as a parameter.  This is also the name the OCaml export publishes: a second wrapper for
-  the export alone would put the same function in the generated module twice.\<close>
+  as a parameter. This is the graph of the surface program; the analyses and the OCaml
+  export use the graph of the elaborated program, \<open>elab_cfg\<close>.\<close>
 
 definition prog_cfg :: "imp_prog => cfg" where
   "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"

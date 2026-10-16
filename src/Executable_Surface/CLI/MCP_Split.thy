@@ -711,22 +711,8 @@ lemma mcp_split_es_node_sound:
     and solves: "mcp_split_es.terminates sem ds as r gs is_global p"
   shows "reaching ds p v \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of as)
            (mcp_split_es.state_at sem ds as r gs is_global p ctx v))"
-proof
-  fix s assume "s \<in> reaching ds p v"
-  then obtain ctx :: mcp_ctx where "s \<in> ctx_sem.gactivation_collect eval ReturnVar (kind_conv (kenv_of ds))
-      is_global (mcp_split_es.admitted_contexts sem ds as r gs is_global p) mcp_root_ctx
-      (elab_cfg p ds) (init_stores (kenv_of ds)) v ctx"
-    using mcp_split_es.gentry_state_node_collect_eq_Union_of_terminates
-        [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v]
-    by (auto simp: node_collect_def)
-  then have "s \<in> gamma_lift (mcp.act_gamma ds (activation_of as))
-      (lookup_table (mcp_split_es.result sem ds as r gs is_global p) v ctx)"
-    using mcp_split_es.gentry_state_lookup_sound_of_terminates
-        [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v ctx]
-    by blast
-  then show "s \<in> (\<Union>ctx. mcp.act_gamma ds (activation_of as)
-      (mcp_split_es.state_at sem ds as r gs is_global p ctx v))"
-    by (intro UN_I[of ctx]) (auto simp: mcp_split_es.state_at_unfold split: lifted.splits)
-qed
+  using mcp_split_es.gentry_state_result_node_sound
+      [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v]
+  by (simp add: node_collect_def)
 
 end

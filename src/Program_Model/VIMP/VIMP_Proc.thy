@@ -105,16 +105,6 @@ next
   then show ?case by (cases vs) simp_all
 qed
 
-text \<open>A semantics without conversion binds each value unchanged.\<close>
-lemma bind_formals_map2_ident [simp]:
-  "bind_formals xs (map2 (\<lambda>_ v. v) xs vs) s = bind_formals xs vs s"
-proof (induction xs arbitrary: vs s)
-  case Nil then show ?case by simp
-next
-  case (Cons y ys)
-  then show ?case by (cases vs) simp_all
-qed
-
 text \<open>Whole procedure entry, for the same reason: reset every local to a chosen
   value, keep the globals, then bind the formals to the actuals evaluated in the
   caller's own state. Which state and which evaluator is all that separates the
@@ -256,10 +246,6 @@ subsection \<open>Call completion\<close>
 text \<open>Running a whole call in one step of reasoning: a body that finishes under its own
   frame lets the caller resume with the frame popped and the return slot written.  Callers
   use these instead of replaying the \<open>Restore\<close> bookkeeping at every call site.\<close>
-lemma combine_env_ret_var_irrelevant [simp]:
-  "\<not> \<G> ret_var \<Longrightarrow> combine_env \<G> fr (t(ret_var := v)) = combine_env \<G> fr t"
-  by (rule ext) simp
-
 context vimp_sem
 begin
 

@@ -184,9 +184,6 @@ lemma cong_refine_sound:
        \<and> n \<in> gamma_congruence (snd (cong_refine c a b))"
   by (cases c) simp_all
 
-definition sub_kind :: "ikind \<Rightarrow> ikind \<Rightarrow> bool" where
-  "sub_kind s k \<longleftrightarrow> ik_min k \<le> ik_min s \<and> ik_max s \<le> ik_max k"
-
 definition cong_fits :: "ikind \<Rightarrow> congruence \<Rightarrow> bool" where
   "cong_fits k a =
      (case Rep_congruence a of
@@ -278,7 +275,7 @@ definition of_int_ik_congruence :: "ikind \<Rightarrow> int \<Rightarrow> congru
 definition cast_ik_congruence ::
     "signed_overflow_policy \<Rightarrow> ikind option \<Rightarrow> ikind \<Rightarrow> congruence \<Rightarrow> congruence" where
   "cast_ik_congruence ovp sk k a =
-     (case sk of Some s \<Rightarrow> if sub_kind s k then a else cast_cong_ik k a | None \<Rightarrow> cast_cong_ik k a)"
+     (case sk of Some s \<Rightarrow> if ik_widens s k then a else cast_cong_ik k a | None \<Rightarrow> cast_cong_ik k a)"
 
 definition arith_ik_congruence ::
     "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> aop \<Rightarrow> bool \<Rightarrow> congruence \<Rightarrow> congruence \<Rightarrow> congruence" where
@@ -314,7 +311,7 @@ instance proof
   show "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> numeric_domain_class.gamma a
       \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik ovp sk k a)" for ovp sk
     by (cases sk)
-       (auto simp: cast_ik_congruence_def sub_kind_def cast_cong_ik_sound simp del: ik_range_iff,
+       (auto simp: cast_ik_congruence_def ik_widens_def cast_cong_ik_sound simp del: ik_range_iff,
         auto)
   show "(fits \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k) \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b

@@ -436,17 +436,4 @@ lemma congruence_mod_sound:
   unfolding congruence_mod_def
   by (rule congruence_exact_binop_sound) (auto intro: congruence_mod_fallback_sound)
 
-subsection \<open>Abstract expression evaluation\<close>
-
-text \<open>A conversion to a machine kind maps a singleton class to the converted constant.
-  Wraparound shifts a value by a multiple of \<open>2 ^ bits\<close>, which keeps a class only when
-  its modulus divides that power, so any other nonempty class becomes top.\<close>
-
-definition congruence_cast :: "ikind \<Rightarrow> congruence \<Rightarrow> congruence" where
-  "congruence_cast ik a =
-     (if is_empty a then bot
-      else case congruence_singleton a of
-             Some c \<Rightarrow> congruence_of_int (ik_norm ik c)
-           | None \<Rightarrow> top)"
-
 end

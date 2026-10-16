@@ -9,8 +9,8 @@ text \<open>
   written value has the kind of the identity it is written to: elaboration already
   converts an assigned value, an actual argument and a returned value, and the semantics
   converts the two values it writes itself, a call result and a library result, to the
-  destination's kind. This theory fixes the globals, the result write, the library
-  results and the initial stores of that semantics.
+  destination's kind. This theory fixes the globals and the initial stores of that
+  semantics and instantiates the generic semantic core with them.
 \<close>
 
 text \<open>The globals are the \<^const>\<open>GlobalId\<close> identities. A call keeps them and resets
@@ -21,23 +21,8 @@ fun is_global :: "var_id \<Rightarrow> bool" where
   "is_global (GlobalId _) = True"
 | "is_global _ = False"
 
-text \<open>Writing a call or library result converts it to the destination's kind.\<close>
-
-fun combine_assign_conv :: "kenv \<Rightarrow> var_id option \<Rightarrow> int \<Rightarrow> store \<Rightarrow> store" where
-  "combine_assign_conv \<kappa> None _ t = t"
-| "combine_assign_conv \<kappa> (Some v) n t = t(v := ik_norm (\<kappa> v) n)"
-
-text \<open>A library call yields what \<^const>\<open>special_result\<close> allows, with its arguments
-  evaluated by the typed evaluator.\<close>
-
-fun special_desc_result :: "special_desc \<Rightarrow> exp list \<Rightarrow> store \<Rightarrow> int \<Rightarrow> bool" where
-  "special_desc_result SD_Nondet_Int [] t n \<longleftrightarrow> True"
-| "special_desc_result SD_Min [a, b] t n \<longleftrightarrow> n = min (eval a t) (eval b t)"
-| "special_desc_result SD_Max [a, b] t n \<longleftrightarrow> n = max (eval a t) (eval b t)"
-| "special_desc_result _ _ _ _ \<longleftrightarrow> False"
-
-text \<open>A typed program starts with its globals at zero, like \<^const>\<open>cinit_stores\<close>, and
-  every other identity holding some value of its kind.\<close>
+text \<open>A program starts with its globals at zero and every other identity holding some
+  value of its kind.\<close>
 
 definition init_stores :: "kenv \<Rightarrow> store set" where
   "init_stores \<kappa> = {t. all_in_kinds \<kappa> t \<and> (\<forall>x. t (GlobalId x) = 0)}"

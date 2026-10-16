@@ -1,8 +1,8 @@
 chapter Voblint
 
 session Voblint_Analysis_Interval in "." = "Voblint_Nonrelational" +
-  description "The Interval domain: bounds, lattice, widening, executable bridge, end-to-end
-    soundness, and kind-indexed widening and narrowing with Goblint's normalization"
+  description "The Interval domain: widening and narrowing, arithmetic, numeric queries,
+    kind-indexed operations with Goblint's normalization, and an executed regression"
   sessions
     "Voblint_VIMP"
     "Voblint_CFG"

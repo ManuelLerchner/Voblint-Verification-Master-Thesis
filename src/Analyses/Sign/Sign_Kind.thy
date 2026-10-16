@@ -79,7 +79,7 @@ definition of_int_ik_sign :: "ikind \<Rightarrow> int \<Rightarrow> sign" where
 definition cast_ik_sign :: "signed_overflow_policy \<Rightarrow> ikind option \<Rightarrow> ikind \<Rightarrow> sign \<Rightarrow> sign" where
   "cast_ik_sign ovp sk k a =
      (case sk of
-        Some s \<Rightarrow> if ik_min k \<le> ik_min s \<and> ik_max s \<le> ik_max k then a else sign_cast k a
+        Some s \<Rightarrow> if ik_widens s k then a else sign_cast k a
       | None \<Rightarrow> sign_cast k a)"
 
 text \<open>Some operations on in-range operands cannot leave a signed kind's range, whatever
@@ -195,7 +195,7 @@ instance proof
     by (simp add: of_int_ik_sign_def sign_of_int_gamma)
   show "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> numeric_domain_class.gamma a
       \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik ovp sk k a)" for ovp sk
-    by (cases sk) (auto simp: cast_ik_sign_def sign_cast_sound split: if_splits)
+    by (cases sk) (auto simp: cast_ik_sign_def ik_widens_def sign_cast_sound split: if_splits)
   show "(fits \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k) \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b
       \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik ovp k op fits a b)" for ovp fits

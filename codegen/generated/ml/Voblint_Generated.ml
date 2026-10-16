@@ -2934,13 +2934,14 @@ let rec ik_max
   ik = (if ik_signed ik then minus_inta (ik_half ik) one_inta
          else minus_inta (ik_mod ik) one_inta);;
 
+let rec ik_widens
+  k ik =
+    less_eq_int (ik_min ik) (ik_min k) && less_eq_int (ik_max k) (ik_max ik);;
+
 let rec cast_ik_sign
   ovp sk k a =
     (match sk with None -> sign_cast k a
-      | Some s ->
-        (if less_eq_int (ik_min k) (ik_min s) &&
-              less_eq_int (ik_max s) (ik_max k)
-          then a else sign_cast k a));;
+      | Some s -> (if ik_widens s k then a else sign_cast k a));;
 
 let rec top_ik_sign k = (if ik_signed k then STop else SNonNeg);;
 
@@ -5038,13 +5039,10 @@ let rec cast_cong_ik
             (if equal_inta m zero_inta then congruence_of_int (ik_norm k c)
               else top_congruencea));;
 
-let rec sub_kind
-  s k = less_eq_int (ik_min k) (ik_min s) && less_eq_int (ik_max s) (ik_max k);;
-
 let rec cast_ik_congruence
   ovp sk k a =
     (match sk with None -> cast_cong_ik k a
-      | Some s -> (if sub_kind s k then a else cast_cong_ik k a));;
+      | Some s -> (if ik_widens s k then a else cast_cong_ik k a));;
 
 let rec cast_ik_int_tuple _A
   ovp sk k a =
@@ -10200,10 +10198,6 @@ let rec obligation_sites (_A1, _A2) (_B1, _B2)
     map (fun (v, es) -> (v, maps obls es))
       (arithmetic_expression_sites (_B1, _B2) (_A1, _A2) g);;
 
-let rec ik_widens
-  k ik =
-    less_eq_int (ik_min ik) (ik_min k) && less_eq_int (ik_max k) (ik_max ik);;
-
 let rec arith_obligations
   = function
     TN (k, n) ->
@@ -10317,29 +10311,26 @@ let rec arith_condition
   ob = TCmp (CNe, arithmetic_operand ob,
               TN (exp_kind (arithmetic_operand ob), zero_inta));;
 
-let rec answer_ivl = function QLifted d -> int_ivl d
-                     | QBot -> bot_ivla
-                     | QTop -> top_ivla;;
-
 let rec operand_ivl
   ch x1 = match ch, x1 with
     ch, TN (k, n) -> Ivl (Fin (ik_norm k n), Fin (ik_norm k n))
     | ch, TCmp (c, a, b) ->
-        inf_ivl (answer_ivl (ch (EvalInt (TCmp (c, a, b)))))
+        inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TCmp (c, a, b)))))
           (Ivl (Fin zero_inta, Fin one_inta))
     | ch, TNot a ->
-        inf_ivl (answer_ivl (ch (EvalInt (TNot a))))
+        inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TNot a))))
           (Ivl (Fin zero_inta, Fin one_inta))
     | ch, TAnd (a, b) ->
-        inf_ivl (answer_ivl (ch (EvalInt (TAnd (a, b)))))
+        inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TAnd (a, b)))))
           (Ivl (Fin zero_inta, Fin one_inta))
     | ch, TOr (a, b) ->
-        inf_ivl (answer_ivl (ch (EvalInt (TOr (a, b)))))
+        inf_ivl (of_answer_ik_ivl None (ch (EvalInt (TOr (a, b)))))
           (Ivl (Fin zero_inta, Fin one_inta))
-    | ch, TVar (v, va) -> answer_ivl (ch (EvalInt (TVar (v, va))))
+    | ch, TVar (v, va) -> of_answer_ik_ivl None (ch (EvalInt (TVar (v, va))))
     | ch, TArith (v, va, vb, vc) ->
-        answer_ivl (ch (EvalInt (TArith (v, va, vb, vc))))
-    | ch, TCast (v, va) -> answer_ivl (ch (EvalInt (TCast (v, va))));;
+        of_answer_ik_ivl None (ch (EvalInt (TArith (v, va, vb, vc))))
+    | ch, TCast (v, va) ->
+        of_answer_ik_ivl None (ch (EvalInt (TCast (v, va))));;
 
 let rec unwrapped_ivl
   ch x1 = match ch, x1 with ch, TN (k, n) -> Ivl (Fin n, Fin n)

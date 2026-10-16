@@ -86,9 +86,9 @@ definition DEAD :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \
 
 text \<open>
   \<open>SAFE\<close> says the report names no arithmetic diagnostic at a point. What that
-  guarantees depends on which obligations the report was built to decide: a
-  language's soundness theorem states it for the obligations of its own
-  expressions, and says nothing about a hazard the report does not check.
+  guarantees depends on which obligations the report was built to decide:
+  \<open>run_voblint_SAFE\<close> states it for the obligations of core VIMP's expressions, and
+  says nothing about a hazard the report does not check.
 \<close>
 
 abbreviation SAFE :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> bool" where

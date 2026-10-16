@@ -6,7 +6,7 @@ section \<open>The public analysis operation\<close>
 
 text \<open>
   \<open>run_voblint\<close> analyzes a program under its kind declarations with the options of a
-  \<^typ>\<open>voblint_conf\<close>: the activated typed analyses, a context policy, a global update
+  \<^typ>\<open>voblint_conf\<close>: the activated analyses, a context policy, a global update
   rule, where program globals live, and the options the domains read, as Goblint's
   configuration tree selects them (\<^verbatim>\<open>ana.activated\<close>, \<^verbatim>\<open>sem.int.signed_overflow\<close>). It
   answers the report \<^const>\<open>report_of\<close> builds from the solve. An activation is valid
@@ -82,28 +82,18 @@ lemma report_run_shape:
   by (auto simp: report_run_def cs_run_def es_run_def prog_report_of_def
       report_of_def Let_def split: context_policy.splits program_globals.splits)
 
-lemma run_voblint_config:
-  assumes "run_voblint conf ds p = Analysed res"
-  shows "report_config res = conf"
-  using assms by (auto elim!: run_voblint_AnalysedE dest: report_run_shape)
-
-lemma run_voblint_cfg:
-  assumes "run_voblint conf ds p = Analysed res"
-  shows "report_cfg res = elab_cfg p ds"
-  using assms by (auto elim!: run_voblint_AnalysedE dest: report_run_shape)
-
 
 text \<open>
   The report contract in one statement: an analysed answer was given for a valid
   activation and a well-formed program, and is a report of exactly that
-  configuration and the program's typed graph. The theorems that follow read it.
+  configuration and the program's elaborated graph. The theorems that follow read it.
 \<close>
 
 theorem run_voblint_report_contract:
   assumes "run_voblint conf ds p = Analysed res"
   shows "valid_activation (conf_analyses conf)" and "wf_program_compile_input_exec p"
     and "report_config res = conf" and "report_cfg res = elab_cfg p ds"
-  using assms run_voblint_config run_voblint_cfg by (auto elim: run_voblint_AnalysedE)
+  using assms by (auto elim!: run_voblint_AnalysedE dest: report_run_shape)
 
 subsection \<open>What the arithmetic diagnostics guarantee\<close>
 
@@ -115,9 +105,11 @@ text \<open>
   signed operation computes a result outside its kind, no signed remainder has a quotient
   outside its kind, and no conversion narrower than its source kind converts a value
   outside its target. A diagnostic says nothing on its own unless it is refuted: then its
-  obligation fails at every store that reaches its point, which is a definite violation
-  only if the point is reached. Both hold under either overflow policy, which changes only how precisely the
-  analyses bound a wrapped value.
+  obligation fails at every store that reaches its point, so a run that reaches the point
+  violates it. The run is one of core VIMP, which evaluates both operands of \<open>&&\<close> and
+  \<open>||\<close>: a C program that short-circuits need not evaluate the operand whose obligation
+  is refuted. Both hold under either overflow policy, which changes only how precisely
+  the analyses bound a wrapped value.
 \<close>
 
 theorem run_voblint_arithmetic_safe:
@@ -304,7 +296,7 @@ text \<open>
   The same guarantees, read at a run of the typed program itself rather than at a
   node of its graph. Run the program from a store whose globals are zero at their
   kinds and stop anywhere: the configuration reached is simulated at a node \<open>v\<close> of
-  the typed graph, the store reaches \<open>v\<close>, the report holds a state at \<open>v\<close> describing
+  the elaborated graph, the store reaches \<open>v\<close>, the report holds a state at \<open>v\<close> describing
   it, \<open>v\<close> is not dead, every check the report decides at \<open>v\<close> has its verdict at the
   store, and if \<open>v\<close> is safe every obligation decided there holds of the store.
 \<close>
@@ -416,7 +408,7 @@ qed
 
 text \<open>
   The whole chain for any context policy, given what the policy owes: every valid
-  activation trace of the typed graph carries some context, and the stores filed
+  activation trace of the elaborated graph carries some context, and the stores filed
   under the policy's contexts at a node are exactly the stores that reach it. A run
   of the typed program is then simulated at a node, by a valid activation trace with
   a context, whose store lies in that context's bucket; the buckets make up the
