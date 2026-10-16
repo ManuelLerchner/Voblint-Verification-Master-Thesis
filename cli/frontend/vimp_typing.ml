@@ -107,7 +107,10 @@ let check_literal n =
   let i64_min = Z.neg (Z.shift_left Z.one 63)
   and i64_max = Z.pred (Z.shift_left Z.one 63) in
   if Z.lt n i64_min || Z.gt n i64_max then
-    fail "literal %s does not fit i64, the widest kind" (Z.to_string n)
+    let msg = Printf.sprintf "literal %s does not fit i64, the widest kind" in
+    match Vimp_scope.literal_position n with
+    | Some p -> Vimp_scope.fail_at p "%s" (msg (Z.to_string n))
+    | None -> fail "%s" (msg (Z.to_string n))
 
 let check_distinct what names =
   let rec go seen = function
@@ -117,6 +120,18 @@ let check_distinct what names =
         else go (x :: seen) xs
   in
   go [] names
+
+(* A procedure's header against its body, reported at the header's start. *)
+let check_header p name formals ret body =
+  match ret with
+  | None when returns_value body ->
+      Vimp_scope.fail_at p "'%s' returns a value but declares no return kind"
+        name
+  | Some _ when name = "main" ->
+      Vimp_scope.fail_at p "'main' cannot declare a return kind"
+  | _ ->
+      if name = "main" && formals <> [] then
+        Vimp_scope.fail_at p "'main' must have no formals"
 
 (* The program's declarations, checked so that every variable resolves to
    exactly one declared identity. *)

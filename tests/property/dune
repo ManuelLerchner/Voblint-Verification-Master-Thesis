@@ -64,7 +64,8 @@
 (library
  (name ast_driver_positions)
  (wrapped false)
- (modules vimp_positions vimp_scope))
+ (modules vimp_positions vimp_scope)
+ (libraries zarith))
 
 (library
  (name ast_driver_grammar)

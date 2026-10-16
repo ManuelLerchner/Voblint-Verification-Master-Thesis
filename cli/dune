@@ -20,7 +20,8 @@
 (library
  (name voblint_positions)
  (wrapped false)
- (modules vimp_positions vimp_scope))
+ (modules vimp_positions vimp_scope)
+ (libraries zarith))
 
 ; The Isabelle export and the Menhir/ocamllex output warn on constructs their
 ; generators emit by design (partial matches, unused semantic values). Every

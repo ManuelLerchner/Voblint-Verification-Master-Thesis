@@ -120,12 +120,32 @@ def test_multiplicative_grouping_roundtrips(expr, source):
             "fun main() { { i32 x = 1; } x = 2; }",
             "1:29: parse error: 'x' is used outside the scope of its declaration",
         ),
-        ("global g; fun main() {}", "parse error: global 'g' needs a kind"),
-        ("fun f(n) {} fun main() {}", "parse error: formal 'n' needs a kind"),
+        ("global g; fun main() {}", "1:8: parse error: global 'g' needs a kind"),
+        ("fun f(n) {} fun main() {}", "1:7: parse error: formal 'n' needs a kind"),
         (
             "fun f(i32 n) { return n; } fun main() {}",
-            "parse error: 'f' returns a value but declares no return kind",
+            "1:1: parse error: 'f' returns a value but declares no return kind",
         ),
+        # Checks that need the whole procedure or program still point at the
+        # offending token, not at the end of the file.
+        (
+            "fun main() {\n  i64 x = 99999999999999999999;\n}\n",
+            "2:11: parse error: literal 99999999999999999999 does not fit i64",
+        ),
+        (
+            "fun main() { i64 y = -9223372036854775809; }",
+            "1:22: parse error: literal -9223372036854775809 does not fit i64",
+        ),
+        (
+            "global i32 g; fun f(i32 a, i32 g) {} fun main() {}",
+            "1:32: parse error: formal 'g' of 'f' shadows a global",
+        ),
+        (
+            "fun f(i32 a, i8 a) {} fun main() {}",
+            "1:17: parse error: duplicate formal 'a' of 'f'",
+        ),
+        ("fun main(i32 x) {}", "1:1: parse error: 'main' must have no formals"),
+        ("fun u8 main() {}", "1:1: parse error: 'main' cannot declare a return kind"),
         (
             "fun i32 f(i32 n) { return n; } fun main() { i32 x = f(x); }",
             "parse error: the initializer of 'x' reads 'x' itself",

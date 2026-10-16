@@ -111,11 +111,11 @@ exp:
   | v0 = IDENT
       { let v0 = Vimp_scope.resolve $startpos(v0) v0 in Voblint.V v0 }
   | v0 = INT
-      { Voblint.N (Voblint.Int_of_integer v0) }
+      { Voblint.N (Voblint.Int_of_integer (Vimp_scope.literal $startpos v0)) }
   | v0 = MINUS v1 = exp %prec UMINUS
       { match v1 with
       | Voblint.N (Voblint.Int_of_integer z) ->
-        Voblint.N (Voblint.Int_of_integer (Z.neg z))
+        Voblint.N (Voblint.Int_of_integer (Vimp_scope.literal $startpos (Z.neg z)))
       | _ ->
         Voblint.Minus
           (Voblint.N (Voblint.Int_of_integer Z.zero), v1) }
@@ -246,16 +246,16 @@ global_line_star:
    say so. *)
 global_line:
   | GLOBAL xs = ids SEMI
-      { failwith (Printf.sprintf "global '%s' needs a kind, as in 'global i32 %s;'"
-                    (List.hd xs) (List.hd xs)) }
+      { Vimp_scope.fail_at $startpos(xs)
+          "global '%s' needs a kind, as in 'global i32 %s;'" (List.hd xs) (List.hd xs) }
   | GLOBAL k = kind xs = ids SEMI
-      { Vimp_scope.add_globals xs; (xs, k) }
+      { Vimp_scope.add_globals $startpos(xs) xs; (xs, k) }
 
 tformal:
   | x = IDENT
-      { failwith (Printf.sprintf "formal '%s' needs a kind, as in 'i32 %s'" x x) }
+      { Vimp_scope.fail_at $startpos(x) "formal '%s' needs a kind, as in 'i32 %s'" x x }
   | k = kind x = IDENT
-      { (x, k) }
+      { Vimp_scope.add_formal $startpos(x) x; (x, k) }
 
 tformals:
   | (* empty *)
@@ -277,7 +277,7 @@ tformals:
    is rejected rather than given a value C leaves indeterminate. *)
 decl_name:
   | x = IDENT
-      { (x, Vimp_scope.declare x) }
+      { (x, Vimp_scope.declare $startpos(x) x) }
 
 init_decl:
   | d = decl_name
@@ -288,12 +288,12 @@ init_decl:
   | d = decl_name ASSIGN e = exp
       { let x, id = d in
         if List.mem id (Vimp_typing.exp_vars [] e) then
-          failwith (Printf.sprintf "the initializer of '%s' reads '%s' itself" x x);
+          Vimp_scope.fail_at $startpos(e) "the initializer of '%s' reads '%s' itself" x x;
         (id, record_stmt_pos $startpos $endpos (Voblint.Assign ((), id, e))) }
   | d = decl_name ASSIGN f = IDENT LPAREN es = actuals RPAREN
       { let x, id = d in
         if List.exists (fun e -> List.mem id (Vimp_typing.exp_vars [] e)) es then
-          failwith (Printf.sprintf "the initializer of '%s' reads '%s' itself" x x);
+          Vimp_scope.fail_at $startpos(es) "the initializer of '%s' reads '%s' itself" x x;
         (id, record_stmt_pos $startpos $endpos (Voblint.Call ((), Some id, f, es))) }
 
 init_decls:
@@ -314,7 +314,7 @@ block_close:
    fundec.slocals collects them, under the name Vimp_scope gave it. *)
 fun_head:
   | FUN rk = option(kind) name = IDENT LPAREN fs = tformals rp = RPAREN LBRACE
-      { Vimp_scope.enter_proc (List.map fst fs);
+      { Vimp_scope.enter_proc name;
         local_kinds := [];
         (name, fs, rk, $startpos, $endpos(rp)) }
 
@@ -322,6 +322,7 @@ function_decl:
   | h = fun_head b = stmts_opt RBRACE
       { let name, fs, rk, p, q = h in
         Vimp_scope.close_proc ();
+        Vimp_typing.check_header p name fs rk b;
         close_definition p q (name, fs, rk, !local_kinds, b) }
 
 function_decl_star:

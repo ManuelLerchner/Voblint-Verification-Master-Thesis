@@ -34,12 +34,22 @@ let taken : (string, int) Hashtbl.t = Hashtbl.create 16
    undeclared. *)
 let unresolved : (string * Lexing.position) list ref = ref []
 
+(* The formals of the procedure being parsed, with their positions, collected
+   before its header is complete. *)
+let pending_formals : (string * Lexing.position) list ref = ref []
+
+(* Where each integer literal was written, so a check after parsing can point
+   at it. *)
+let literals : (Z.t * Lexing.position) list ref = ref []
+
 let reset () =
   scopes := [];
   globals := [];
   formals := [];
   Hashtbl.reset taken;
-  unresolved := []
+  unresolved := [];
+  pending_formals := [];
+  literals := []
 
 let fail fmt = Printf.ksprintf failwith fmt
 
@@ -49,11 +59,40 @@ let fail_at (p : Lexing.position) fmt =
       raise (Error { line = p.pos_lnum; col = p.pos_cnum - p.pos_bol + 1; msg }))
     fmt
 
-let add_globals xs = globals := !globals @ xs
+let add_globals p xs =
+  List.iter
+    (fun x ->
+      if List.mem x !globals then fail_at p "duplicate global '%s'" x;
+      globals := !globals @ [ x ])
+    xs
+
+let add_formal p x = pending_formals := !pending_formals @ [ (x, p) ]
+
+let literal p n =
+  literals := (n, p) :: !literals;
+  n
+
+let literal_position n =
+  List.find_map
+    (fun (m, p) -> if Z.equal m n then Some p else None)
+    (List.rev !literals)
+
 let outer_name x = List.mem x !globals || List.mem x !formals
 
-let enter_proc fs =
-  formals := fs;
+(* The formals are distinct and none of them is a global, as C requires. *)
+let enter_proc name =
+  let fs = !pending_formals in
+  pending_formals := [];
+  ignore
+    (List.fold_left
+       (fun seen (x, p) ->
+         if List.mem x seen then
+           fail_at p "duplicate formal '%s' of '%s'" x name;
+         if List.mem x !globals then
+           fail_at p "formal '%s' of '%s' shadows a global" x name;
+         x :: seen)
+       [] fs);
+  formals := List.map fst fs;
   Hashtbl.reset taken;
   unresolved := [];
   scopes := [ [] ]
@@ -67,12 +106,12 @@ let pop () =
 
 (* A formal shares the body's outermost scope, as in C, so a local there may not
    redeclare it; an inner block may. *)
-let declare x =
+let declare p x =
   match !scopes with
-  | [] -> fail "declaration of '%s' outside a procedure" x
+  | [] -> fail_at p "declaration of '%s' outside a procedure" x
   | inner :: outer ->
       if List.mem_assoc x inner || (outer = [] && List.mem x !formals) then
-        fail "redeclaration of '%s'" x;
+        fail_at p "redeclaration of '%s'" x;
       (match List.assoc_opt x !unresolved with
       | Some p -> fail_at p "'%s' is used before its declaration" x
       | None -> ());
