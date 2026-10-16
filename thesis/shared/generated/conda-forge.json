@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-14",
+  "date": "2026-10-17",
   "platforms": [
     "osx-arm64",
     "osx-64",
@@ -76,11 +76,9 @@
       ],
       "via": "conda-forge/ocaml-findlib-feedstock#15",
       "available": false,
-      "newest": null,
+      "newest": "1.9.8",
       "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
+        "osx-arm64"
       ]
     },
     "ocaml-menhir": {
