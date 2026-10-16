@@ -1,0 +1,15 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// The parser folds a leading minus into a literal and types it by magnitude, so
+// -9223372036854775808 is one i64 literal holding -2^63. C reads the same text as
+// unary minus applied to 9223372036854775808, a constant no standard signed type
+// can hold (C11 6.4.4.1p5-6); VIMP deliberately accepts it. Its value is exact at
+// i64, and converting it to i32 wraps to 0 (-2^63 is a multiple of 2^32), which the
+// analyzer reports as a definite conversion error.
+fun main() {
+  i64 x = -9223372036854775808;
+  __voblint_check(x < 0);  // PROVED
+  __voblint_check(x == -9223372036854775807 - 1);  // PROVED
+  i32 y = -9223372036854775808;  // ARITH: ERROR conversion-overflow
+  __voblint_check(y == 0);  // PROVED
+}

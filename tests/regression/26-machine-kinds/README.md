@@ -31,4 +31,7 @@ name the operations that may overflow in C.
 A program that writes no kind gives every variable the default kind i32;
 `08` checks that.
 
+`26` pins the literal boundary: `-9223372036854775808` is one i64 literal, which
+C would read as unary minus applied to an unrepresentable constant.
+
 Run with `pixi run python3 tests/run.py 26-machine-kinds`.
