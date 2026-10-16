@@ -1237,6 +1237,14 @@ manifest that other chapters refer to. "Watching the solve" (`sec:tracing`)
 moved to the executable chapter, after the browser artifact. The solver
 section now lists the four upstream pull requests (td-verification 13-16).
 
+**Precision boundary (2026-10-16, author decision).** The evaluation gains
+"Where precision ends" (`sec:eval-flavors`) between the precision section and
+the tests. It reverses the 2026-10-08 cut of known imprecision for one reason:
+its programs come from an external suite (Monniaux, ETAPS 2024), pinned in
+`tests/regression/28-flavors`, not from cases picked after the fact. Voblint's
+verdicts come from claims, Goblint's from `thesis/shared/code/goblint-flavors`
+(run at the linked revision; Goblint is not in CI). The outlook points there.
+
 **Evaluation cut (2026-10-08, author decision).** The evaluation chapter
 repeated earlier chapters, so it now runs: non-vacuity (`sec:nonvacuity`); "Do
 the obligations exclude real errors?" (`sec:eval-1161`), which absorbs the

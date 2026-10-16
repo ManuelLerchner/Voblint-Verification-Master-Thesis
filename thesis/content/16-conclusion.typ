@@ -1,4 +1,4 @@
-#import "../lib/code.typ": isaconst, isalocale, isathm, isatype, oblig
+#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, oblig
 #import "../lib/figures.typ": verdict
 
 = Conclusion <ch:conclusion>
@@ -166,6 +166,19 @@ writes of one evaluation per target. A version of the vendored solver that does
 the same would let callers publish into callee entries directly and make
 activation seeds and buffering unnecessary. Its partial-correctness proof would
 have to be redone for local side effects.
+
+The flavors programs of @sec:eval-flavors mark two further extensions. An
+analysis whose local state is partitioned by the path taken would keep the
+disjunction the absolute-value example needs, and its soundness obligation is
+that every run belongs to some part. The other losses come from how the
+solver iterates. Goblint delays widening per widening point
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/config/options.schema.json#L2545")[`solvers.td3.widen_gas`])
+and can widen to thresholds
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/config/options.schema.json#L453")[`ana.int.interval_threshold_widening`]).
+A delay needs a counter per widening point in the vendored solver. Thresholds
+need the widening to know the constants of the program, which a parameterless
+#isalocale("warrowing") operation cannot. Either change touches the solver's
+partial-correctness proof and its traced executable form (@sec:tracing).
 
 A termination theorem would guarantee an answer for every program. The
 total-correctness result of Tilscher et al. covers the top-down solver without

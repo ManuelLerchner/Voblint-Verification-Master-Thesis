@@ -1,0 +1,11 @@
+tests/regression/28-flavors/known-imprecision/04-blackcurrant_narrowing_foiled.vimp [interval]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+13:7      pp5    WARNING   possible signed integer overflow in +: i + 1
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ------------------------------------
+18:5      pp10   i <= 9     UNKNOWN  interval: i=[-2147483648,2147483647]

@@ -393,6 +393,116 @@
       "placement": "flow-sensitive"
     }
   },
+  "flavors-blackcurrant": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/04-blackcurrant_narrowing_foiled.vimp",
+    "program": "fun main() {\n  i32 i = 0;\n  i32 c;\n  while (1) {\n    c = __voblint_nondet_int();\n    if (c) {\n      i = i + 1;\n      if (i >= 10) {\n        i = 0;\n      }\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-coffee": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value.vimp",
+    "program": "fun main() {\n  i32 x;\n  i32 y = 0;\n  if (x >= 0) {\n    y = x;\n  } else {\n    y = -x;\n  }\n  if (y >= 1) {\n    __voblint_check(x != 0);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-coffee-bounded": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/03-coffee_absolute_value_bounded.vimp",
+    "program": "fun main() {\n  i32 x;\n  i32 y = 0;\n  if (-1000 <= x && x <= 2000) {\n    if (x < 0) {\n      y = -x;\n    } else {\n      y = x;\n    }\n    if (y >= 1) {\n      __voblint_check(x != 0);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-coffee-bounded-order": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/03-coffee_absolute_value_bounded.vimp",
+    "program": "fun main() {\n  i32 x;\n  i32 y = 0;\n  if (-1000 <= x && x <= 2000) {\n    if (x < 0) {\n      y = -x;\n    } else {\n      y = x;\n    }\n    if (y >= 1) {\n      __voblint_check(x != 0);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-fudge": {
+    "fixture": "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+    "program": "fun main() {\n  i32 i = 0;\n  while (i < 10) {\n    i = i + 1;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-narrowing-reset": {
+    "fixture": "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+    "program": "fun main() {\n  i32 i = 0;\n  while (1) {\n    i = i + 1;\n    if (i >= 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-eq": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/05-reset_at_equality.vimp",
+    "program": "fun main() {\n  i32 i = 0;\n  while (1) {\n    i = i + 1;\n    if (i == 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-sign-not-inductive": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp",
+    "program": "fun main() {\n  i32 i = 6;\n  i = i - 2;\n  while (i != 0) {\n    __voblint_check(i > 0);\n    i = i - 2;\n  }\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-sign-not-inductive-int": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp",
+    "program": "fun main() {\n  i32 i = 6;\n  i = i - 2;\n  while (i != 0) {\n    __voblint_check(i > 0);\n    i = i - 2;\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-vanilla-interval": {
+    "fixture": "tests/regression/28-flavors/precision/01-vanilla_interval.vimp",
+    "program": "fun main() {\n  i32 x = -5;\n  i32 y = -10;\n  i32 z = x + y;\n  __voblint_check(z < 0);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-vanilla-sign": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/01-vanilla_sign_sum_may_wrap.vimp",
+    "program": "fun main() {\n  i32 x = -5;\n  i32 y = -10;\n  i32 z = x + y;\n  __voblint_check(z < 0);\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "goblint-1161-congruence": {
     "fixture": "tests/regression/24-site-figures/precision/04-goblint_1161_congruence_mod.vimp",
     "program": "fun main() {\n  i32 top = __voblint_nondet_int();\n  i32 c = -5;\n  if (top) {\n    c = -7;\n  }\n  __voblint_check(c % 2 == 1);\n  __voblint_check(c % 2 == -1);\n}",

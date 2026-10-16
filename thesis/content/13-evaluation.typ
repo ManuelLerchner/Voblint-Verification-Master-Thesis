@@ -16,8 +16,8 @@ no real analyzer makes. Following
 #cite(<kim26regulatory>, form: "prose", supplement: [§6]), this chapter first asks two
 questions about the theorem: whether its premises can hold together, and
 whether its obligations exclude real errors. It then shows on concrete programs what precision the
-analyzer reaches under the theorem, and how the code outside the theorem is
-tested.
+analyzer reaches under the theorem and where it ends, and how the code outside
+the theorem is tested.
 
 The evidence differs in strength. A _machine-checked_ result is an Isabelle
 theorem and holds for every input its statement ranges over, under its
@@ -317,6 +317,293 @@ assignments to `y`.
 For one program, evaluation shows that a check needs both analyses: Interval
 and Order together prove it, and each alone leaves it unknown
 (#isathm("coop_verdicts")).
+
+== Where precision ends <sec:eval-flavors>
+
+The examples above were chosen to show what a mechanism gains, so they say
+little about what Voblint cannot prove. For that we use programs chosen by
+someone else. Monniaux's tutorial on the flavors of abstract interpretation
+walks through finite lattices, relational domains, widening, and exact
+solving, and gives for each a small program that defeats it @monniaux24. We
+pinned each of its programs that VIMP can express as a fixture of
+#link(repo-blob + "tests/regression/28-flavors")[`28-flavors`], at `i32`.
+Every check in them holds in every run, so each #verdict("UNKNOWN") below is
+lost precision. No combination of Voblint's analyses, signed-overflow
+policies (@sec:domain-kinds), and refinement modes proves the absolute-value,
+foiled-narrowing, reset, and non-inductive checks below. For comparison we ran Goblint, at the
+revision this thesis links, on C versions of the same programs with the
+options that target each loss
+(#link(repo-blob + "thesis/shared/code/goblint-flavors")[`goblint-flavors`],
+@tab:flavors). Two differences matter. In C, signed
+overflow is undefined, and Goblint by default assumes it does not happen,
+whereas VIMP wraps. Goblint's relational domains come from the Apron library,
+which our build of Goblint does not include, so @tab:flavors shows only its
+non-relational domains.
+
+#let _gob = {
+  let rows = (:)
+  for line in read("../shared/code/goblint-flavors/results.tsv").split("\n") {
+    let cells = line.split("\t")
+    if cells.len() == 3 { rows.insert(cells.at(0) + "/" + cells.at(1), cells.at(2)) }
+  }
+  rows
+}
+// The verdict of the first check of one Goblint run, in the thesis's words.
+#let _gv(prog, config) = {
+  let out = _gob.at(prog + "/" + config)
+  verdict(if out.split(";").first().ends-with("will succeed") { "PROVED" } else { "UNKNOWN" })
+}
+#let _vv(name, cond) = verdict(claim-check(name, cond).at(3))
+
+#figure(
+  {
+    set text(size: 8pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let configs = (
+      "interval",
+      "interval+gas10",
+      "int+gas3",
+      "interval+thresholds",
+      "interval+thresholds-comparisons",
+    )
+    let progs = (
+      ([vanilla, Sign], "flavors-vanilla-sign", "z < 0", "vanilla"),
+      ([not inductive, Int], "flavors-sign-not-inductive-int", "i > 0", "sign_not_inductive"),
+      ([absolute value], "flavors-coffee-bounded-order", "x != 0", "coffee_bounded"),
+      ([widening, narrowing], "flavors-fudge", "i == 10", "fudge"),
+      ([narrowing works], "flavors-narrowing-reset", "i <= 9", "narrow_works"),
+      ([narrowing foiled], "flavors-blackcurrant", "i <= 9", "blackcurrant"),
+      ([reset at equality], "flavors-reset-eq", "i <= 9", "reset_eq"),
+    )
+    table(
+      columns: 7,
+      align: (left + horizon,) + (center + horizon,) * 6,
+      stroke: none,
+      inset: (x: 3pt, y: 2.5pt),
+      table.hline(stroke: 0.5pt),
+      [*program*], [*Voblint*], table.cell(colspan: 5)[*Goblint*],
+      [], [], [interval], [delay 10], [Int, delay 3], [thresholds], [comparisons],
+      table.hline(stroke: 0.4pt),
+      ..progs
+        .map(((what, claim, cond, gprog)) => (
+          what,
+          _vv(claim, cond),
+          ..configs.map(c => _gv(gprog, c)),
+        ))
+        .flatten(),
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: table,
+  caption: [The flavors programs @monniaux24 in Voblint, with the analysis
+    their claim names, and in Goblint at `i32` (`int`), where "will succeed"
+    is shown as #verdict("PROVED"). Goblint columns: Interval;
+    widening delayed 10 times (`solvers.td3.widen_gas`); Interval with
+    Congruence and their refinement, delayed 3 times; threshold widening on
+    every constant of the program; on the constants of comparisons only. The
+    absolute-value row runs Voblint with Int and the order analysis. Goblint's
+    outputs are recorded in `results.tsv` beside its programs.],
+) <tab:flavors>
+
+*Finite lattices.* _Evidence: executable._ The rule of signs says that the
+sum of two negative numbers is negative @monniaux24[slide 8]. At a machine
+kind it fails, since the sum of two negative `i32` values may wrap to a
+nonnegative one. A sign bounds no magnitude, so Sign cannot exclude the wrap
+even for constants:
+
+#listing(lang: "c", claim: "flavors-vanilla-sign", ```
+fun main() {
+  i32 x = -5;
+  i32 y = -10;
+  i32 z = x + y;
+  __voblint_check(z < 0);
+}
+```)
+
+Sign reports #_vv("flavors-vanilla-sign", "z < 0"), and Interval keeps
+$z = -15$ and proves the check (claims #claim-ref("flavors-vanilla-*")).
+Nothing is missing here. Sign alone could prove the check only by assuming
+that the sum does not overflow, which VIMP's wrapping semantics does not
+justify.
+
+*Invariants that are not inductive.* _Evidence: executable._ An abstract
+fixpoint is at best the least _inductive_ invariant the domain can express,
+and a property may hold without being inductive @monniaux24[slide 27]. In the
+following loop `i` takes the values $4$ and $2$ at the check, so `i > 0`
+holds there. Sign describes these values as positive, but `i - 2` of a
+positive value may have any sign, so positivity is not preserved by the loop
+and Sign reaches every sign at the loop head:
+
+#listing(lang: "c", claim: "flavors-sign-not-inductive", ```
+fun main() {
+  i32 i = 6;
+  i = i - 2;
+  while (i != 0) {
+    __voblint_check(i > 0);
+    i = i - 2;
+  }
+}
+```)
+
+The domain itself is at fault only for Sign. Interval and Congruence together
+can express an inductive invariant, $i in [0, 4]$ and $i$ even, from which the
+guard `i != 0` leaves $[2, 4]$. Voblint's Int still reports
+#_vv("flavors-sign-not-inductive-int", "i > 0"), because widening at the loop
+head sends the lower bound to the `i32` limit, where `i - 2` may overflow,
+and the value becomes the kind's top (claims
+#claim-ref("flavors-sign-not-inductive*")). Goblint proves the check with
+Interval and Congruence once their refinement runs and widening is either
+delayed three times (@tab:flavors) or stopped at the threshold $0$ of the
+guard.
+
+*Paths and convexity.* _Evidence: executable._ The tutorial's coffee example
+computes an absolute value and checks that it is positive only for a nonzero
+argument @monniaux24[slide 38]:
+
+#listing(lang: "c", claim: "flavors-coffee-bounded-order", ```
+fun main() {
+  i32 x;
+  i32 y = 0;
+  if (-1000 <= x && x <= 2000) {
+    if (x < 0) {
+      y = -x;
+    } else {
+      y = x;
+    }
+    if (y >= 1) {
+      __voblint_check(x != 0);
+    }
+  }
+}
+```)
+
+After the branch, the strongest statement true on both paths is that $y$ is
+at least $|x|$. The check needs the converse, $y lt.eq |x|$, which holds only
+as the disjunction of $y = x$ on one path and $y = -x$ on the other. A
+non-relational domain loses both relations. A convex relational domain joins
+the two branches into their convex hull @cousot78[§4.4], which keeps
+$y gt.eq |x|$ and loses $y lt.eq |x|$, so polyhedra fail as well
+@monniaux24[slides 42--43]. Voblint's order analysis ends with $x lt.eq y$, and
+the check is #_vv("flavors-coffee-bounded-order", "x != 0") (claims
+#claim-ref("flavors-coffee*"); the fixture
+#fixture(
+  "28-flavors/known-imprecision/02-coffee_absolute_value.vimp",
+  label: "02-coffee_absolute_value.vimp",
+)
+is the same program without the bounds on `x`). Goblint reports the check
+unknown in every configuration we ran. What is needed is a disjunction kept
+until the check: trace partitioning keeps the states of the two branches
+apart @rival07[§1.1] @blanchet03[§7.1.5], and path partitioning does so for
+the last outcome of each conditional @mine17[§6.3.4]. In Voblint, either
+would be a local state indexed by the path taken, with its own soundness
+obligation that every run belongs to some part. No shipped analysis keeps
+such a state (@sec:outlook-extending).
+
+*Widening and narrowing.* _Evidence: executable._ The tutorial's two
+widening examples that narrowing repairs are both
+#verdict(claim-check("flavors-fudge", "i == 10").at(3)) in Voblint (claims
+#claim-ref("flavors-fudge") and #claim-ref("flavors-narrowing-reset")). The
+second is a counter that resets once it reaches $10$:
+
+#listing(lang: "c", claim: "flavors-narrowing-reset", ```
+fun main() {
+  i32 i = 0;
+  while (1) {
+    i = i + 1;
+    if (i >= 10) {
+      i = 0;
+    }
+    __voblint_check(i <= 9);
+  }
+}
+```)
+
+Narrowing recovers the upper bound $9$ @monniaux24[slide 59], but the check is proved over
+#raw(claim-check("flavors-narrowing-reset", "i <= 9").at(4).split("i=").at(1)).
+Widening reaches the `i32` limit, where `i + 1` may overflow, so the lower
+bound is lost and narrowing cannot bring it back. Goblint loses the same lower
+bound, although it assumes that signed overflow does not happen: it leaves
+#link(repo-blob + "thesis/shared/code/goblint-flavors/narrow_works_lb.c")[a check of `i >= 0`]
+at the same point unknown.
+
+*Narrowing foiled.* _Evidence: executable._ The same counter breaks
+narrowing in two ways. In the first, a nondeterministic branch may skip the
+increment @monniaux24[slide 60]:
+
+#listing(lang: "c", claim: "flavors-blackcurrant", ```
+fun main() {
+  i32 i = 0;
+  i32 c;
+  while (1) {
+    c = __voblint_nondet_int();
+    if (c) {
+      i = i + 1;
+      if (i >= 10) {
+        i = 0;
+      }
+    }
+    __voblint_check(i <= 9);
+  }
+}
+```)
+
+The skipping path carries the loop-head value back unchanged. Every interval
+$[0, c]$ with $c gt.eq 9$ is then a fixpoint, the widened value included, and
+a decreasing iteration cannot descend below a fixpoint
+@mine17[§4.7.3, Ex. 4.7] @halbwachs12. In the second, the counter resets on
+`i == 10` instead of `i >= 10` @monniaux24[slide 77]:
+
+#listing(lang: "c", claim: "flavors-reset-eq", ```
+fun main() {
+  i32 i = 0;
+  while (1) {
+    i = i + 1;
+    if (i == 10) {
+      i = 0;
+    }
+    __voblint_check(i <= 9);
+  }
+}
+```)
+
+The equality test removes no bound from an interval, so nothing stops the
+widened bound at $9$. Both checks are
+#_vv("flavors-blackcurrant", "i <= 9") in Voblint (claims
+#claim-ref("flavors-blackcurrant") and #claim-ref("flavors-reset-eq")).
+
+The literature offers three repairs. A delayed widening joins for a fixed
+number of rounds before it widens @blanchet03[§7.1.3] @mine17[§4.7.4].
+Goblint's top-down solver can delay widening at each widening point, and with
+a delay of $10$ it proves both checks, while a delay of $9$ does not suffice
+(@tab:flavors). The delay must exceed the loop bound, so it repairs these
+loops and not loops with large or unknown bounds. Threshold widening stops at
+constants of the program before it jumps to the limit @blanchet03[§7.1.2].
+Goblint proves both checks with thresholds only when they include every
+constant of the program, which here includes the $9$ of the check itself.
+With the constants of comparisons, or with the check written as `i < 10`, it
+does not. Finally, methods that avoid the decreasing iteration compute the
+fixpoint directly. Policy iteration descends through the fixpoints of simpler
+systems @costan05 but need not reach the least one @monniaux24[slide 73], and
+max-strategy iteration reaches the least solution in its domain
+@gawlitza12lmcs[Lemma 6.5]. Restarting the iteration from a fixpoint
+projected onto chosen seed points recovers the bound lost to a self-loop
+@henry14[§4.1.2]. Guided static analysis applies a standard analysis to a sequence
+of restricted versions of the program @gopan07, and on the reset example it
+yields $[0, 9]$ @monniaux24[slide 78]. Each repair changes how the solver iterates, so in
+Voblint each would be a change to the vendored solver and its
+partial-correctness proof (@sec:outlook-extending).
+
+The tutorial's last flavor, completeness relative to a domain, concerns
+arrays and maps @monniaux24[slide 81]. VIMP has no arrays, so this flavor has no
+VIMP version.
+
+Voblint thus proves the checks that non-relational domains with a standard
+widening and narrowing prove, and it loses the ones these techniques are
+known to lose. Goblint recovers three of them only through options that
+Voblint lacks, and neither analyzer proves the absolute-value example with
+the domains we ran. Each missing technique is a separate soundness
+obligation, on a domain for partitioning and on the solver for the iteration
+strategies.
 
 == Tests of the unverified parts <sec:eval-corpus>
 

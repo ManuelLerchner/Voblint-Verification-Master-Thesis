@@ -970,3 +970,93 @@ why = "Section 3.2: x + y is promoted to i32, so x + y < 250 compares 300 and is
 [claims.kinds-i32]
 argv = ["--analysis", "interval", "thesis/shared/programs/kinds-i32.vimp"]
 why = "Section 3.2: kinds-promotion with every variable declared i32, so z holds 300 and z < 250 is REFUTED."
+
+# The flavors suite (Monniaux, ETAPS 2024), Chapter 13 "Where precision ends".
+
+[claims.flavors-vanilla-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/known-imprecision/01-vanilla_sign_sum_may_wrap.vimp",
+]
+why = "At i32 the sum of two negatives may wrap, and a sign bounds no magnitude, so z is the kind top and z < 0 is UNKNOWN."
+
+[claims.flavors-vanilla-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/01-vanilla_interval.vimp",
+]
+why = "Interval keeps z = -15 and proves z < 0."
+
+[claims.flavors-coffee]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value.vimp",
+]
+why = "Interval keeps x unconstrained at the check, so x != 0 is UNKNOWN."
+
+[claims.flavors-coffee-bounded]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/03-coffee_absolute_value_bounded.vimp",
+]
+why = "Interval keeps x at [-1000,2000] after y >= 1, so x != 0 is UNKNOWN."
+
+[claims.flavors-coffee-bounded-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/known-imprecision/03-coffee_absolute_value_bounded.vimp",
+]
+why = "Int and the order analysis keep only x <= y after the join, which does not exclude x = 0, so x != 0 is UNKNOWN."
+
+[claims.flavors-fudge]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+]
+why = "Narrowing through i < 10 recovers i = 10, so i == 10 is PROVED."
+
+[claims.flavors-narrowing-reset]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+]
+why = "Narrowing recovers the upper bound 9 but not the lower bound lost to a possible overflow, so i <= 9 is PROVED with i in [-2147483646,9]."
+
+[claims.flavors-blackcurrant]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/04-blackcurrant_narrowing_foiled.vimp",
+]
+why = "The self-loop keeps the widened head value, so i is the i32 range and i <= 9 is UNKNOWN."
+
+[claims.flavors-reset-eq]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/05-reset_at_equality.vimp",
+]
+why = "i == 10 cuts no interval bound, so i is the i32 range and i <= 9 is UNKNOWN."
+
+[claims.flavors-sign-not-inductive]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp",
+]
+why = "i > 0 is not inductive under i - 2, so Sign reaches every sign and i > 0 is UNKNOWN."
+
+[claims.flavors-sign-not-inductive-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp",
+]
+why = "Int widens the lower bound to the i32 limit, where i - 2 may overflow, so i becomes the kind top and i > 0 is UNKNOWN."

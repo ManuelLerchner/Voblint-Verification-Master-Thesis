@@ -1,0 +1,12 @@
+tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp [sign]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+8:3       pp1    WARNING   possible signed integer overflow in -: i - 2
+11:5      pp4    WARNING   possible signed integer overflow in -: i - 2
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----------
+10:5      pp3    i > 0      UNKNOWN  sign: i=⊤
