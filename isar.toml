@@ -84,8 +84,6 @@ allow = [
   # rule 2: monotonicity of the generic transfer combinator under the bot_mono side condition
   "transfer_lift_mono",
   # the layer's instance of the shared exact_emptiness notion
-  "exact_emptiness_relc",
-  # the layer's instance of the shared exact_emptiness notion
   "exact_emptiness_is_empty_state_lift",
   # the layer's instance of the shared exact_emptiness notion
   "exact_emptiness_is_empty_state",
@@ -373,7 +371,7 @@ allow = [
   # named in 07-cooperation.typ
   "sound_conservative_local_spec",
   # named in GOBLINT_ALIGNMENT_REGISTER.md
-  "to_string_relc_regression",
+  "to_string_order_rel_regression",
 
   # Executed regression cases: each pins analyzer output by evaluation.
   "arith_refined",

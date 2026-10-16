@@ -4080,3 +4080,12 @@ routed_entry_total
 pp_entry_s0d_bound
 pp_entry_s0g_bound
 entry_s0e_le
+
+# --- The relc order carrier, which only printed order facts (2026-10-16) ---
+# order_rel prints itself; see docs/theorem-migration.toml.
+relc
+RelBot
+RelC
+relc_pairs
+string_of_pairs
+to_string_relc_regression

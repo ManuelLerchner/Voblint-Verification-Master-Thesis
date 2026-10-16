@@ -5,5 +5,4 @@ session Voblint_Analysis_Order in "." = "Voblint_Nonrelational" +
     D/G pipeline over the elaborated CFG"
   theories
     Order_Analysis
-    Relational_Regression
     Order_Regression

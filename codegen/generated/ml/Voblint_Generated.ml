@@ -1994,6 +1994,16 @@ let rec bounded_semilattice_sup_bot_kd _A =
      order_bot_bounded_semilattice_sup_bot = (order_bot_kd _A)}
     : 'a kd bounded_semilattice_sup_bot);;
 
+let rec order_name_literala x = x;;
+
+type 'a order_name =
+  {linorder_order_name : 'a linorder; order_name : 'a -> string};;
+let order_name _A = _A.order_name;;
+
+let order_name_literal =
+  ({linorder_order_name = linorder_literal; order_name = order_name_literala} :
+    string order_name);;
+
 type cfg_node = Statement of nat | FunctionEntry of string |
   FunctionResult of string;;
 
@@ -6069,8 +6079,6 @@ type ('b, 'a) rbt = RBT of ('b, 'a) rbta;;
 type 'a fset = Abs_fset of 'a set;;
 
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
-
-type relc = RelBot | RelC of (string * string) set;;
 
 type phase = Widening | Narrowing;;
 
@@ -10773,28 +10781,30 @@ let rec to_string_kd _A
         to_string _A.numeric_domain_ik_domain.executable_domain_numeric_domain a
     | KTop -> "<top>";;
 
-let rec string_of_pairs
+let rec string_of_facts _A
   = function [] -> ""
-    | [(x, y)] -> (x ^ "<le>") ^ y
+    | [(x, y)] -> (order_name _A x ^ "<le>") ^ order_name _A y
     | (x, y) :: p :: ps ->
-        (((((x ^ "<le>") ^ y) ^ " ") ^ "<and>") ^ " ") ^
-          string_of_pairs (p :: ps);;
+        (((((order_name _A x ^ "<le>") ^ order_name _A y) ^ " ") ^ "<and>") ^
+          " ") ^
+          string_of_facts _A (p :: ps);;
 
-let rec to_string_relc
-  d = (match d with RelBot -> "<bottom>"
-        | RelC ps ->
-          (if equal_set (equal_prod equal_literal equal_literal) ps bot_set
-            then "<top>"
+let rec to_string_order_rel (_A1, _A2)
+  d = (match d with OBot -> "<bottom>"
+        | OFacts (_, ps) ->
+          (if equal_set (equal_prod _A1 _A1) ps bot_set then "<top>"
             else ("{" ^
-                   string_of_pairs
+                   string_of_facts _A2
                      (sorted_list_of_set
-                       ((equal_prod equal_literal equal_literal),
-                         (linorder_prod linorder_literal linorder_literal))
+                       ((equal_prod _A1 _A1),
+                         (linorder_prod _A2.linorder_order_name
+                           _A2.linorder_order_name))
                        ps)) ^
                    "}"));;
 
 let rec order_view_string
-  v = to_string_relc (match v with None -> RelBot | Some ps -> RelC (Set ps));;
+  v = to_string_order_rel (equal_literal, order_name_literal)
+        (match v with None -> OBot | Some ps -> OFacts (false, Set ps));;
 
 let rec string_of_report_value
   = function Interval_Value v -> to_string_kd ik_domain_ivl v

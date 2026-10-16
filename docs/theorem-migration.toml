@@ -2307,3 +2307,43 @@ kind = "fact"
 old = "wt_texp_elaborate"
 new = "wt_exp_elaborate"
 kind = "fact"
+
+[[rename]]
+old = "relc"
+new = ""
+kind = "type"
+note = "Deleted: an order carrier over vname with no concretization that only printed the order analysis's facts. order_rel (Order_Analysis) is the order domain and now prints itself."
+
+[[rename]]
+old = "Order_Lattice"
+new = ""
+kind = "theory"
+note = "Deleted with relc; the printer moved to Order_Analysis."
+
+[[rename]]
+old = "Relational_Regression"
+new = "Order_Regression"
+kind = "theory"
+note = "Its rendering regression now runs on order_rel."
+
+[[rename]]
+old = "string_of_pairs"
+new = "string_of_facts"
+kind = "constant"
+note = "Same text, generic over a variable type of sort order_name."
+
+[[rename]]
+old = "to_string_relc"
+new = "to_string_order_rel"
+kind = "constant"
+note = "Same text: RelBot and RelC ps print as OBot and OFacts t ps do, whatever the flag t."
+
+[[rename]]
+old = "is_empty_relc"
+new = "is_empty_order_rel"
+kind = "constant"
+
+[[rename]]
+old = "to_string_relc_regression"
+new = "to_string_order_rel_regression"
+kind = "fact"

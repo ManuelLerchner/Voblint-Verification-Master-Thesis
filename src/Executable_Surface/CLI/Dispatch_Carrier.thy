@@ -1,8 +1,5 @@
 theory Dispatch_Carrier
-  imports
-    "Voblint_Domain.Int_Lattice"
-    "Voblint_Domain.Order_Lattice"
-    "Voblint_CFG.CFG_Def"
+  imports "Voblint_Analysis_Order.Order_Analysis"
 begin
 
 section \<open>What each domain's value needs to be shown and listed\<close>
@@ -13,8 +10,12 @@ text \<open>
   how an order value is shown, and an injective key for every domain's value.
 \<close>
 
+text \<open>A report names an order fact's variables by their labels, so it prints the facts
+  as an order value over names.\<close>
+
 definition order_view_string :: "(vname \<times> vname) list option \<Rightarrow> String.literal" where
-  "order_view_string v = to_string (case v of None \<Rightarrow> RelBot | Some ps \<Rightarrow> RelC (set ps))"
+  "order_view_string v =
+     to_string (case v of None \<Rightarrow> (OBot :: vname order_rel) | Some ps \<Rightarrow> OFacts False (set ps))"
 
 text \<open>
   What one analysis shows of a state, as Goblint's report shows each component of its

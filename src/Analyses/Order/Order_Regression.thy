@@ -48,4 +48,16 @@ lemma mixed_facts:
   "ord_result [(f_var (STR ''x''), U8)] mixed_prog = OFacts True {}"
   by eval
 
+subsection \<open>Rendering\<close>
+
+text \<open>\<open>to_string\<close> renders bottom and top by their symbols and a set of facts as a sorted
+  conjunction of \<open>\<le>\<close> facts, whatever the flag.\<close>
+
+lemma to_string_order_rel_regression:
+  "to_string (OBot :: vname order_rel) = sym_bottom"
+  "to_string (OFacts True {} :: vname order_rel) = sym_top"
+  "to_string (OFacts False {(STR ''y'', STR ''z''), (STR ''x'', STR ''y'')}) =
+     STR ''{x<le>y <and> y<le>z}''"
+  by eval+
+
 end

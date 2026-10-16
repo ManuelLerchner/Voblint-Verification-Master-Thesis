@@ -1,5 +1,5 @@
 theory Order_Analysis
-  imports "Voblint_Nonrelational.Nonrelational_Analysis"
+  imports "Voblint_Nonrelational.Nonrelational_Analysis" "HOL-Library.Product_Lexorder"
 begin
 
 section \<open>The order domain at typed variables\<close>
@@ -65,6 +65,53 @@ instance proof
   show "y \<le> x \<Longrightarrow> y \<le> x \<Delta> y" "y \<le> x \<Longrightarrow> x \<Delta> y \<le> x"
     by (simp_all add: narrow_order_rel_def)
 qed
+
+end
+
+text \<open>
+  An order value prints in the notation of Goblint's two-variable equality domain,
+  which prints a conjunction \<open>{x=y \<and> z=y}\<close> and its extremes as \<open>\<bottom>\<close> and \<open>\<top>\<close>;
+  here each conjunct is an ordering \<open>x\<le>y\<close>. Printing needs a name for each variable
+  and a linear order on them, so that \<^const>\<open>sorted_list_of_set\<close> enumerates the
+  facts deterministically (pairs are ordered lexicographically). The flag is not
+  printed.
+\<close>
+
+class order_name = linorder +
+  fixes order_name :: "'a \<Rightarrow> String.literal"
+
+instantiation String.literal :: order_name
+begin
+
+definition order_name_literal :: "String.literal \<Rightarrow> String.literal" where
+  "order_name_literal x = x"
+
+instance ..
+
+end
+
+fun string_of_facts :: "('v::order_name \<times> 'v) list \<Rightarrow> String.literal" where
+  "string_of_facts [] = STR ''''"
+| "string_of_facts [(x, y)] = order_name x + sym_le + order_name y"
+| "string_of_facts ((x, y) # p # ps) =
+     order_name x + sym_le + order_name y + STR '' '' + sym_and + STR '' ''
+     + string_of_facts (p # ps)"
+
+instantiation order_rel :: (order_name) executable_domain
+begin
+
+definition is_empty_order_rel :: "'v::order_name order_rel \<Rightarrow> bool" where
+  "is_empty_order_rel d \<longleftrightarrow> d = OBot"
+
+definition to_string_order_rel :: "'v::order_name order_rel \<Rightarrow> String.literal" where
+  "to_string_order_rel d =
+     (case d of
+        OBot \<Rightarrow> sym_bottom
+      | OFacts _ ps \<Rightarrow>
+          (if ps = {} then sym_top
+           else STR ''{'' + string_of_facts (sorted_list_of_set ps) + STR ''}''))"
+
+instance ..
 
 end
 
