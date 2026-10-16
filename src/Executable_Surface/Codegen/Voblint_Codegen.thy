@@ -178,8 +178,8 @@ export_code
   global_unknown global_state Global_Named Global_Seed
   diagnostic_point diagnostic_occurrence diagnostic_obligation diagnostic_verdict
   arithmetic_hazard arithmetic_operation arithmetic_operand
-  Division_By_Zero Signed_Overflow Conversion_Overflow Min_Conversion_Overflow
-  Max_Conversion_Overflow ik_signed
+  Division_By_Zero Signed_Overflow Remainder_Overflow Conversion_Overflow
+  Min_Conversion_Overflow Max_Conversion_Overflow ik_signed
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
   cfg_entry elab_cfg cfg_intra_edges cfg_call_edges cfg_points

@@ -185,7 +185,8 @@ animation below from the playground.
 
 Every analysis also checks the arithmetic of each evaluated expression against the
 solved state before the statement: division and remainder by zero, signed `+`, `-`,
-`*` and `/` whose result may leave its kind, and conversions to a narrower kind that
+`*` and `/` whose result may leave its kind, signed `%` whose quotient may leave it
+(`INT_MIN % -1`), and conversions to a narrower kind that
 may not fit, including a returned value converted to the caller's destination. An
 obligation that may fail is a `warning`; one that fails in every reaching store is
 an `error`. Safe operations and unreachable points report nothing, and diagnostics
@@ -333,8 +334,9 @@ Results in the same theory specialise the guarantee to what the report shows:
   point with no arithmetic diagnostic, every obligation of every expression an edge
   or call there evaluates holds in every store that reaches it, and every value
   returned there fits the kind a caller converts it to.
-  `run_voblint_no_signed_overflow` and `run_voblint_no_conversion_overflow` read it
-  for signed operations and conversions.
+  `run_voblint_no_signed_overflow`, `run_voblint_no_remainder_overflow` and
+  `run_voblint_no_conversion_overflow` read it for signed operations, signed
+  remainders and conversions.
 - [`run_voblint_arithmetic_refuted`](src/Executable_Surface/CLI/Run_Voblint.thy): the
   obligation of an `error` fails in every store that reaches its point.
 

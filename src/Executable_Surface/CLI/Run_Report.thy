@@ -19,9 +19,10 @@ text \<open>
   behavior undefined otherwise (ISO/IEC 9899 6.5p5), and Goblint checks the same four
   operators (\<^verbatim>\<open>SignedIntegerOverflowInArithmetic\<close>). A unary minus reaches the
   typed language as a subtraction from zero, and a signed division overflows only on
-  the kind's minimum divided by \<open>-1\<close>. An unsigned operation wraps by definition and
-  raises no obligation. A remainder raises none either: its mathematical result always
-  fits, although C also leaves \<open>INT_MIN % -1\<close> undefined because the quotient does not.
+  the kind's minimum divided by \<open>-1\<close>. A signed remainder's mathematical result
+  always fits, but C leaves it undefined when the quotient does not fit (6.5.5p6), as for
+  \<open>INT_MIN % -1\<close>: its obligation is that the truncated quotient fits. An unsigned
+  operation wraps by definition and raises no obligation.
 
   A conversion must convert a value its target kind represents. Elaboration makes
   every conversion a \<open>TCast\<close> node: an explicit cast, and the implicit conversions of an
@@ -50,8 +51,10 @@ fun arith_obligations :: "exp \<Rightarrow> exp arithmetic_obligation list" wher
      arith_obligations a @ arith_obligations b
      @ (if op = ADiv \<or> op = AMod
         then [Arithmetic_Obligation Division_By_Zero (TArith k op a b) b] else [])
-     @ (if ik_signed k \<and> op \<noteq> AMod
-        then [Arithmetic_Obligation Signed_Overflow (TArith k op a b) (TArith k op a b)] else [])"
+     @ (if \<not> ik_signed k then []
+        else if op = AMod
+        then [Arithmetic_Obligation Remainder_Overflow (TArith k op a b) (TArith k ADiv a b)]
+        else [Arithmetic_Obligation Signed_Overflow (TArith k op a b) (TArith k op a b)])"
 | "arith_obligations (TCast k a) =
      arith_obligations a
      @ (if ik_widens (exp_kind a) k then []
@@ -71,8 +74,9 @@ definition arith_condition :: "exp arithmetic_obligation \<Rightarrow> exp" wher
 text \<open>
   An overflow obligation is about the value an operation computes before its kind
   wraps it: the mathematical result of an arithmetic node, the converted value of a
-  conversion, and the minimum or maximum of a library result's two arguments. It is safe
-  when that value lies in the kind converted to. The statement does
+  conversion, the quotient a remainder's operand names, and the minimum or maximum of a
+  library result's two arguments. It is safe when that value lies in the operation's
+  kind. The statement does
   not depend on the overflow policy: the policy decides how an analysis abstracts a
   wrapped result, never what the program computes.
 \<close>
@@ -91,6 +95,7 @@ definition obligation_holds :: "exp arithmetic_obligation \<Rightarrow> store \<
            Division_By_Zero \<Rightarrow> n \<noteq> 0
          | Min_Conversion_Overflow \<Rightarrow> min m n \<in> ik_range k
          | Max_Conversion_Overflow \<Rightarrow> max m n \<in> ik_range k
+         | Remainder_Overflow \<Rightarrow> unwrapped (arithmetic_operand ob) t \<in> ik_range k
          | _ \<Rightarrow> m \<in> ik_range k)"
 
 abbreviation satisfies :: "store \<Rightarrow> exp arithmetic_obligation \<Rightarrow> bool" (infix "\<Turnstile>" 50) where
@@ -200,7 +205,7 @@ proof -
 qed
 
 text \<open>A library result's obligation is decided from the minimum or maximum of its
-  arguments' intervals.\<close>
+  arguments' intervals, a remainder's from the interval of its quotient.\<close>
 
 definition obligation_classify ::
     "sem_conf \<Rightarrow> kind_decls \<Rightarrow> analysis list \<Rightarrow> exp arithmetic_obligation \<Rightarrow> mcp_val
@@ -212,6 +217,8 @@ definition obligation_classify ::
            Division_By_Zero \<Rightarrow> mcp_classify sem ds as (arith_condition ob) v
          | Min_Conversion_Overflow \<Rightarrow> fits_verdict (exp_kind e) (ivl_min i j)
          | Max_Conversion_Overflow \<Rightarrow> fits_verdict (exp_kind e) (ivl_max i j)
+         | Remainder_Overflow \<Rightarrow>
+             fits_verdict (exp_kind e) (unwrapped_ivl ch (arithmetic_operand ob))
          | _ \<Rightarrow> fits_verdict (exp_kind e) i)"
 
 lemma obligation_classify_sound:
@@ -224,14 +231,18 @@ proof -
   note fits = fits_verdict_sound[OF unwrapped_ivl_sound(1)[OF ch]]
     and fits_min = fits_verdict_sound[OF ivl_min_max_sound(1)[OF unwrapped_ivl_sound[OF ch]]]
     and fits_max = fits_verdict_sound[OF ivl_min_max_sound(2)[OF unwrapped_ivl_sound[OF ch]]]
+    and fits_rem =
+      fits_verdict_sound[OF unwrapped_ivl_sound(1)[OF ch, of "arithmetic_operand ob"]]
   have ne: "truthy (eval (arith_condition ob) t) \<longleftrightarrow> eval (arithmetic_operand ob) t \<noteq> 0"
     by (simp add: arith_condition_def)
   show "obligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> t \<Turnstile> ob"
-    using fits(1) fits_min(1) fits_max(1) mcp.mcp_classify_proved[OF t] ne
+    using fits(1) fits_min(1) fits_max(1) fits_rem(1)
+      mcp.mcp_classify_proved[OF t] ne
     by (auto simp: obligation_classify_def obligation_holds_def Let_def
         split: arithmetic_hazard.splits)
   show "obligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> t \<Turnstile> ob"
-    using fits(2) fits_min(2) fits_max(2) mcp.mcp_classify_refuted[OF t] ne
+    using fits(2) fits_min(2) fits_max(2) fits_rem(2)
+      mcp.mcp_classify_refuted[OF t] ne
     by (auto simp: obligation_classify_def obligation_holds_def Let_def
         split: arithmetic_hazard.splits)
 qed
@@ -835,6 +846,11 @@ lemma obligation_holds_conversion [simp]:
   "t \<Turnstile> Arithmetic_Obligation Conversion_Overflow (TN k n) x \<longleftrightarrow> n \<in> ik_range k"
   by (simp_all add: obligation_holds_def Let_def)
 
+lemma obligation_holds_remainder [simp]:
+  "t \<Turnstile> Arithmetic_Obligation Remainder_Overflow (TArith k AMod a b) (TArith k ADiv a b)
+     \<longleftrightarrow> c_div (eval a t) (eval b t) \<in> ik_range k"
+  by (simp add: obligation_holds_def Let_def)
+
 lemma obligation_holds_min_max [simp]:
   "t \<Turnstile> Arithmetic_Obligation Min_Conversion_Overflow (TCast k a) b
      \<longleftrightarrow> min (eval a t) (eval b t) \<in> ik_range k"
@@ -861,6 +877,12 @@ fun subexps :: "exp \<Rightarrow> exp set" where
 lemma arith_obligations_overflow:
   "TArith k op a b \<in> subexps e \<Longrightarrow> ik_signed k \<Longrightarrow> op \<noteq> AMod
      \<Longrightarrow> Arithmetic_Obligation Signed_Overflow (TArith k op a b) (TArith k op a b)
+           \<in> set (arith_obligations e)"
+  by (induction e) auto
+
+lemma arith_obligations_remainder:
+  "TArith k AMod a b \<in> subexps e \<Longrightarrow> ik_signed k
+     \<Longrightarrow> Arithmetic_Obligation Remainder_Overflow (TArith k AMod a b) (TArith k ADiv a b)
            \<in> set (arith_obligations e)"
   by (induction e) auto
 

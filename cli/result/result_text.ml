@@ -29,9 +29,10 @@ let contextual_verdict_name = function
 
 (* What a diagnostic reports, worded after Goblint's messages: a division or
    remainder whose divisor is, or may be, zero; a signed operation whose
-   mathematical result lies, or may lie, outside its kind; a conversion whose value
-   the target kind does, or may, not represent, including a library min or max result
-   written to its destination. A REFUTED verdict holds for every execution that
+   mathematical result lies, or may lie, outside its kind, which for a remainder means
+   its quotient, as for INT_MIN % -1; a conversion whose value the target kind does,
+   or may, not represent, including a library min or max result written to its
+   destination. A REFUTED verdict holds for every execution that
    evaluates the operation; an UNKNOWN one is only possible. *)
 let operator_name = function
   | C.AAdd -> "+"
@@ -68,9 +69,9 @@ let obligation_message verdict obligation =
     match (C.arithmetic_hazard obligation, operation) with
     | C.Division_By_Zero, C.TArith (_, C.AMod, _, _) -> "remainder by zero"
     | C.Division_By_Zero, _ -> "division by zero"
-    | C.Signed_Overflow, C.TArith (_, op, _, _) ->
+    | (C.Signed_Overflow | C.Remainder_Overflow), C.TArith (_, op, _, _) ->
         "signed integer overflow in " ^ operator_name op
-    | C.Signed_Overflow, _ -> "signed integer overflow"
+    | (C.Signed_Overflow | C.Remainder_Overflow), _ -> "signed integer overflow"
     | ( ( C.Conversion_Overflow | C.Min_Conversion_Overflow
         | C.Max_Conversion_Overflow ),
         (C.TCast (k, _) | C.TN (k, _)) ) ->

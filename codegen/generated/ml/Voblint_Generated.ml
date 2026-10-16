@@ -131,7 +131,8 @@ module Generated : sig
   type ('a, 'b, 'c, 'd) gproc_decl_ext =
     Gproc_decl_ext of 'b list * ('a, 'b, 'c) gcom * 'd
   type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
-    Conversion_Overflow | Min_Conversion_Overflow | Max_Conversion_Overflow
+    Remainder_Overflow | Conversion_Overflow | Min_Conversion_Overflow |
+    Max_Conversion_Overflow
   type 'a arithmetic_obligation
   type 'a trace_key = Trace_Buffer | Trace_Global of string |
     Trace_Seed of cfg_node * 'a
@@ -6006,8 +6007,8 @@ let rec equal_gproc_decl_ext _A _B _C _D =
   ({equal = equal_gproc_decl_exta _A _B _C _D} :
     ('a, 'b, 'c, 'd) gproc_decl_ext equal);;
 
-type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
-  Conversion_Overflow | Min_Conversion_Overflow | Max_Conversion_Overflow;;
+type arithmetic_hazard = Division_By_Zero | Signed_Overflow | Remainder_Overflow
+  | Conversion_Overflow | Min_Conversion_Overflow | Max_Conversion_Overflow;;
 
 let rec equal_arithmetic_hazard
   x0 x1 = match x0, x1 with
@@ -6017,23 +6018,34 @@ let rec equal_arithmetic_hazard
     | Max_Conversion_Overflow, Conversion_Overflow -> false
     | Conversion_Overflow, Min_Conversion_Overflow -> false
     | Min_Conversion_Overflow, Conversion_Overflow -> false
+    | Remainder_Overflow, Max_Conversion_Overflow -> false
+    | Max_Conversion_Overflow, Remainder_Overflow -> false
+    | Remainder_Overflow, Min_Conversion_Overflow -> false
+    | Min_Conversion_Overflow, Remainder_Overflow -> false
+    | Remainder_Overflow, Conversion_Overflow -> false
+    | Conversion_Overflow, Remainder_Overflow -> false
     | Signed_Overflow, Max_Conversion_Overflow -> false
     | Max_Conversion_Overflow, Signed_Overflow -> false
     | Signed_Overflow, Min_Conversion_Overflow -> false
     | Min_Conversion_Overflow, Signed_Overflow -> false
     | Signed_Overflow, Conversion_Overflow -> false
     | Conversion_Overflow, Signed_Overflow -> false
+    | Signed_Overflow, Remainder_Overflow -> false
+    | Remainder_Overflow, Signed_Overflow -> false
     | Division_By_Zero, Max_Conversion_Overflow -> false
     | Max_Conversion_Overflow, Division_By_Zero -> false
     | Division_By_Zero, Min_Conversion_Overflow -> false
     | Min_Conversion_Overflow, Division_By_Zero -> false
     | Division_By_Zero, Conversion_Overflow -> false
     | Conversion_Overflow, Division_By_Zero -> false
+    | Division_By_Zero, Remainder_Overflow -> false
+    | Remainder_Overflow, Division_By_Zero -> false
     | Division_By_Zero, Signed_Overflow -> false
     | Signed_Overflow, Division_By_Zero -> false
     | Max_Conversion_Overflow, Max_Conversion_Overflow -> true
     | Min_Conversion_Overflow, Min_Conversion_Overflow -> true
     | Conversion_Overflow, Conversion_Overflow -> true
+    | Remainder_Overflow, Remainder_Overflow -> true
     | Signed_Overflow, Signed_Overflow -> true
     | Division_By_Zero, Division_By_Zero -> true;;
 
@@ -10198,11 +10210,14 @@ let rec arith_obligations
               then [Arithmetic_Obligation
                       (Division_By_Zero, TArith (k, op, a, b), b)]
               else []) @
-              (if ik_signed k && not (equal_aopa op AMod)
-                then [Arithmetic_Obligation
-                        (Signed_Overflow, TArith (k, op, a, b),
-                          TArith (k, op, a, b))]
-                else [])
+              (if not (ik_signed k) then []
+                else (if equal_aopa op AMod
+                       then [Arithmetic_Obligation
+                               (Remainder_Overflow, TArith (k, op, a, b),
+                                 TArith (k, ADiv, a, b))]
+                       else [Arithmetic_Obligation
+                               (Signed_Overflow, TArith (k, op, a, b),
+                                 TArith (k, op, a, b))]))
     | TCast (k, a) ->
         arith_obligations a @
           (if ik_widens (exp_kind a) k then []
@@ -10493,6 +10508,8 @@ let rec obligation_classify
       (match arithmetic_hazard ob
         with Division_By_Zero -> mcp_classify sem ds asa (arith_condition ob) v
         | Signed_Overflow -> fits_verdict (exp_kind e) i
+        | Remainder_Overflow ->
+          fits_verdict (exp_kind e) (unwrapped_ivl ch (arithmetic_operand ob))
         | Conversion_Overflow -> fits_verdict (exp_kind e) i
         | Min_Conversion_Overflow -> fits_verdict (exp_kind e) (ivl_min i j)
         | Max_Conversion_Overflow -> fits_verdict (exp_kind e) (ivl_max i j)));;

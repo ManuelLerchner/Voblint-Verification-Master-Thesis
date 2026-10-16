@@ -362,6 +362,8 @@ allow = [
   "run_voblint_dead_unreached",
   # named in THEOREM_MAP.md, VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md
   "run_voblint_no_conversion_overflow",
+  # named in THEOREM_MAP.md, VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md
+  "run_voblint_no_remainder_overflow",
   # named in VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md, THESIS_BLUEPRINT.md
   "run_voblint_no_signed_overflow",
   # named in THEOREM_MAP.md

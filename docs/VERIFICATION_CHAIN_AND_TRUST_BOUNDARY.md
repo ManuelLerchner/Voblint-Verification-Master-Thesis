@@ -171,10 +171,11 @@ are `reaching ds p v`, the stores `node_collect` collects at node `v` of
   and `SAFE`; `run_voblint_dead_unreached` concludes `reaching ds p v = {}` for a
   dead point.
 - `run_voblint_arithmetic_safe` (with `_intra`, `_call` and `_return` parts),
-  `run_voblint_no_signed_overflow` and `run_voblint_no_conversion_overflow`: at
-  a point no diagnostic names, no divisor is zero, no signed operation leaves
-  its kind and no narrowing conversion changes its value, at every reaching
-  store. `run_voblint_arithmetic_refuted`: a refuted diagnostic's obligation
+  `run_voblint_no_signed_overflow`, `run_voblint_no_remainder_overflow` and
+  `run_voblint_no_conversion_overflow`: at a point no diagnostic names, no
+  divisor is zero, no signed operation leaves its kind, no signed remainder has
+  a quotient outside its kind and no narrowing conversion changes its value, at
+  every reaching store. `run_voblint_arithmetic_refuted`: a refuted diagnostic's obligation
   fails at every reaching store.
 - `run_voblint_source_sound`: a `pstep` run of `elab_ptable p ds` from
   `init_stores` is simulated at some node `v` of `elab_cfg p ds`, its store
@@ -205,7 +206,7 @@ not a model of C's undefined behaviour:
 | --- | --- | --- |
 | `/`, `%` with divisor 0 | raised | undefined (6.5.5p5) |
 | signed `+`, `-`, `*`, `/` outside the kind | raised (`-x` is `0 - x`; `/` only for minimum / -1) | undefined (6.5p5) |
-| signed `INT_MIN % -1` | not raised: the remainder 0 fits | undefined, because the quotient does not fit |
+| signed `%` whose truncated quotient does not fit (`INT_MIN % -1`) | raised, although the remainder 0 fits | undefined, because the quotient does not fit (6.5.5p6) |
 | unsigned arithmetic | not raised: wraps by definition | defined wraparound (6.2.5p9) |
 | conversion to an unsigned kind that does not fit | raised | defined wraparound (6.3.1.3p2) |
 | conversion to a signed kind that does not fit | raised | implementation-defined (6.3.1.3p3) |
@@ -215,7 +216,7 @@ not a model of C's undefined behaviour:
 | operands under `&&`, `\|\|` | raised for both operands | second operand evaluated only if needed (6.5.13p4, 6.5.14p4) |
 
 So a warning is not a proof of undefined behaviour, and `SAFE` is stronger than C requires
-for conversions and short-circuit operands but misses `INT_MIN % -1`. The concrete
+for conversions and short-circuit operands. The concrete
 semantics wraps signed overflow under both `signed_overflow_policy` settings; the policy only
 changes how the analysis abstracts a result that may overflow.
 

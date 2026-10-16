@@ -12,7 +12,9 @@ text \<open>
   An obligation names an operation, the hazard it may run into and the operand the
   hazard concerns. A division or remainder must not divide by zero; its operand is the
   divisor. A signed arithmetic operation must compute a result its kind represents,
-  as C requires (ISO/IEC 9899 6.5p5); its operand is the operation itself. A conversion
+  as C requires (ISO/IEC 9899 6.5p5); its operand is the operation itself. A signed
+  remainder must have a quotient its kind represents, since C leaves the remainder
+  undefined when the quotient is (6.5.5p6); its operand is that quotient. A conversion
   must convert a value the target kind represents, the categories Goblint separates as
   arithmetic and cast overflow (\<^verbatim>\<open>Checks.Category\<close> at \<open>0dc12d355\<close>); its operand is
   the converted expression. The result of a library \<open>min\<close> or \<open>max\<close> is converted as
@@ -21,8 +23,8 @@ text \<open>
   one is safe, is the language's; the report treats them alike.
 \<close>
 
-datatype arithmetic_hazard = Division_By_Zero | Signed_Overflow | Conversion_Overflow
-  | Min_Conversion_Overflow | Max_Conversion_Overflow
+datatype arithmetic_hazard = Division_By_Zero | Signed_Overflow | Remainder_Overflow
+  | Conversion_Overflow | Min_Conversion_Overflow | Max_Conversion_Overflow
 
 datatype 'e arithmetic_obligation = Arithmetic_Obligation
   (arithmetic_hazard: arithmetic_hazard)

@@ -58,7 +58,7 @@ when it has terminated.
 | `run_voblint_dead_unreached` | a `DEAD` point has no reaching store |
 | `run_voblint_arithmetic_safe` | at a point no diagnostic names, every obligation of every expression an edge or call there evaluates holds, and every returned value fits the kind a caller converts it to |
 | `run_voblint_arithmetic_refuted` | a refuted diagnostic's obligation fails at every store reaching its point |
-| `run_voblint_no_signed_overflow`, `run_voblint_no_conversion_overflow` | the two arithmetic corollaries for signed operations and narrowing conversions |
+| `run_voblint_no_signed_overflow`, `run_voblint_no_remainder_overflow`, `run_voblint_no_conversion_overflow` | the arithmetic corollaries for signed operations, signed remainders and narrowing conversions |
 | `run_voblint_source_sound` | a `pstep` run of `elab_ptable p ds` from `init_stores` is simulated at a node `v` of `elab_cfg p ds`; its store reaches `v`, lies in a reported state, and satisfies every verdict at `v` |
 | `run_voblint_check_sound`, `run_voblint_labelled_check_sound` | a run about to execute `Check l e` finds a row for it whose verdict holds of the store; with distinct labels, the row labelled `l` is that row |
 | `run_voblint_spine`, `run_voblint_call_string_chain`, `run_voblint_entry_state_chain` | the whole chain through activation traces and `activation_collect`, for any context policy that owes the spine's two facts, and for each shipped policy |

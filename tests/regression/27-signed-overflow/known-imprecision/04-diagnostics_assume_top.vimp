@@ -24,7 +24,7 @@ fun main() {
   m = -2147483648;
   e = -m; // ARITH: ERROR signed-overflow
   f = m / -1; // ARITH: ERROR signed-overflow
-  g = m % -1;
+  g = m % -1; // ARITH: ERROR signed-overflow
   x = __voblint_nondet_int();
   if (x < 1000 + x * 2) { // ARITH: WARN signed-overflow; WARN signed-overflow
     y = 1;

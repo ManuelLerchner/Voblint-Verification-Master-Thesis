@@ -111,12 +111,12 @@ text \<open>
   A point the report's diagnostics do not name is safe: at every store that reaches it,
   every obligation of every expression an edge or a call there evaluates holds, every
   value returned there fits the kind each caller converts it to, and every \<open>min\<close> or
-  \<open>max\<close> computed there fits the kind of its destination. No divisor is
-  zero, no signed operation computes a result outside its kind, and no conversion
-  narrower than its source kind converts a value outside its target. A
-  diagnostic says nothing on its own unless it is refuted: then its obligation fails at
-  every store that reaches its point, which is a definite violation only if the point is
-  reached. Both hold under either overflow policy, which changes only how precisely the
+  \<open>max\<close> computed there fits the kind of its destination. No divisor is zero, no
+  signed operation computes a result outside its kind, no signed remainder has a quotient
+  outside its kind, and no conversion narrower than its source kind converts a value
+  outside its target. A diagnostic says nothing on its own unless it is refuted: then its
+  obligation fails at every store that reaches its point, which is a definite violation
+  only if the point is reached. Both hold under either overflow policy, which changes only how precisely the
   analyses bound a wrapped value.
 \<close>
 
@@ -214,6 +214,24 @@ corollary run_voblint_no_signed_overflow:
   using evaluated arith_obligations_overflow[OF sub signed op]
     run_voblint_arithmetic_safe[OF run absent s]
   by (metis obligation_holds_overflow)
+
+text \<open>
+  For signed remainders: at a point no diagnostic names, every signed remainder nested
+  in an expression evaluated there divides, at any reaching store, with a truncated
+  quotient its kind represents, so none is \<open>INT_MIN % -1\<close>.
+\<close>
+
+corollary run_voblint_no_remainder_overflow:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and absent: "SAFE res v"
+    and s: "s \<in> reaching ds p v"
+    and evaluated: "((v, a, w) \<in> intra (elab_cfg p ds) \<and> e \<in> set (edge_expressions a))
+                    \<or> ((v, ca, ce, k) \<in> calls (elab_cfg p ds) \<and> e \<in> set (ce_args ca))"
+    and sub: "TArith ik AMod x y \<in> subexps e" and signed: "ik_signed ik"
+  shows "c_div (eval x s) (eval y s) \<in> ik_range ik"
+  using evaluated arith_obligations_remainder[OF sub signed]
+    run_voblint_arithmetic_safe[OF run absent s]
+  by (metis obligation_holds_remainder)
 
 text \<open>
   For conversions: at a point no diagnostic names, every conversion nested in an

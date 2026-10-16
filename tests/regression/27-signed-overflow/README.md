@@ -22,10 +22,11 @@ the report names every operation it cannot prove safe. An ERROR holds at every
 store reaching the operation; a WARNING is a possible overflow. The policy
 changes only how precisely the domain bounds a wrapped result, and with it how
 many nested operations are decided: `precision/05` and
-`known-imprecision/04` run one program under each. A remainder raises no
-overflow obligation; C also leaves `INT_MIN % -1` undefined, which Voblint does
-not report. Unsigned arithmetic wraps by definition and raises none; Goblint
-warns about it as unsigned overflow.
+`known-imprecision/04` run one program under each. A signed `%` raises the
+obligation that its truncated quotient fits the kind, since C leaves
+`INT_MIN % -1` undefined although its remainder 0 fits; `precision/07` checks
+that case and remainders that stay silent. Unsigned arithmetic wraps by
+definition and raises none; Goblint warns about it as unsigned overflow.
 
 Conversions raise the obligation that the converted value fits the target kind,
 whenever the source kind does not widen into it: explicit casts, assigned values
