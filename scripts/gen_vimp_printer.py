@@ -153,41 +153,46 @@ let indent depth = String.make (2 * depth) ' '
    so every command -- including [Seq (SKIP, SKIP)] -- prints to source that parses
    back to itself. The parser builds left-nested sequences, the only shape a
    sequence of statements has. *)
-let rec com_lines depth c =
+let rec com_lines ?(declare = fun _ -> None) depth c =
   let pad = indent depth in
+  let lines = com_lines ~declare in
+  let call f args = f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ")" in
   match c with
-  | {G}.Seq (a, b) -> com_lines depth a @ com_lines depth b
+  | {G}.Seq (a, b) ->
+    (* [declare] marks a local declared, so the parts print in source order. *)
+    let first = lines depth a in
+    first @ lines depth b
   | {G}.SKIP _ -> [pad ^ "skip;"]
-  | {G}.Assign (_, x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
+  | {G}.Assign (_, x, e) -> (
+      match declare x with
+      | Some k -> [pad ^ k ^ " " ^ x ^ " = " ^ string_of_exp e ^ ";"]
+      | None -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"])
   | {G}.Return (_, None) -> [pad ^ "return;"]
   | {G}.Return (_, Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
   | {G}.Check (_, _, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
-  | {G}.Call (_, None, f, args) ->
-    [pad ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | {G}.Call (_, Some x, f, args) ->
-    [pad ^ x ^ " = " ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
+  | {G}.Call (_, None, f, args) -> [pad ^ call f args ^ ";"]
+  | {G}.Call (_, Some x, f, args) -> (
+      match declare x, f, args with
+      | Some k, "__voblint_nondet_int", [] -> [pad ^ k ^ " " ^ x ^ ";"]
+      | Some k, _, _ -> [pad ^ k ^ " " ^ x ^ " = " ^ call f args ^ ";"]
+      | None, _, _ -> [pad ^ x ^ " = " ^ call f args ^ ";"])
   | {G}.While (_, b, body) ->
-    [pad ^ "while (" ^ string_of_exp b ^ ") {{"] @ com_lines (depth + 1) body @ [pad ^ "}}"]
+    [pad ^ "while (" ^ string_of_exp b ^ ") {{"] @ lines (depth + 1) body @ [pad ^ "}}"]
   | {G}.If (_, b, t, e) ->
-    [pad ^ "if (" ^ string_of_exp b ^ ") {{"] @ com_lines (depth + 1) t
+    let then_lines = lines (depth + 1) t in
+    [pad ^ "if (" ^ string_of_exp b ^ ") {{"] @ then_lines
     @ (match e with
        | {G}.SKIP _ -> [pad ^ "}}"]
-       | _ -> [pad ^ "}} else {{"] @ com_lines (depth + 1) e @ [pad ^ "}}"])
+       | _ -> [pad ^ "}} else {{"] @ lines (depth + 1) e @ [pad ^ "}}"])
   | _ -> [pad ^ "(* runtime-only command *)"]
 
 (* Every variable declares its kind: [decls] are the kind declarations the parser
-   returns beside the program. A local is declared at the first top-level statement
-   that writes it, the way the parser lowers a declaration: [k x = e;] is the
-   assignment, [k x = f(a);] the call, and [k x;] the library call that yields an
-   arbitrary value. A local that no top-level statement writes has no source form. *)
+   returns beside the program. A local is declared at the first statement, in source
+   order and at any depth, that writes it, the way the parser lowers a declaration:
+   [k x = e;] is the assignment, [k x = f(a);] the call, and [k x;] the library call
+   that yields an arbitrary value. A local that no statement writes has no source
+   form. *)
 let kind_of decls id = List.assoc_opt id decls
-
-let seq_list c =
-  let rec go acc = function
-    | {G}.Seq (a, b) -> go (go acc b) a
-    | c -> c :: acc
-  in
-  go [] c
 
 let body_lines decls name formals body =
   let declared = ref formals in
@@ -198,30 +203,12 @@ let body_lines decls name formals body =
       | Some k -> declared := x :: !declared; Some (string_of_kind k)
       | None -> None
   in
-  let pad = indent 1 in
-  let statement c =
-    match c with
-    | {G}.Assign (_, x, e) -> (
-        match declare x with
-        | Some k -> [pad ^ k ^ " " ^ x ^ " = " ^ string_of_exp e ^ ";"]
-        | None -> com_lines 1 c)
-    | {G}.Call (_, Some x, "__voblint_nondet_int", []) -> (
-        match declare x with
-        | Some k -> [pad ^ k ^ " " ^ x ^ ";"]
-        | None -> com_lines 1 c)
-    | {G}.Call (_, Some x, f, args) -> (
-        match declare x with
-        | Some k ->
-          [pad ^ k ^ " " ^ x ^ " = " ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-        | None -> com_lines 1 c)
-    | _ -> com_lines 1 c
-  in
-  let lines = List.concat_map statement (seq_list body) in
+  let lines = com_lines ~declare 1 body in
   List.iter
     (fun (id, _) ->
       match id with
       | {G}.ScopedId (q, x) when q = name && not (List.mem x !declared) ->
-        failwith ("local '" ^ x ^ "' of '" ^ name ^ "' has no top-level statement writing it")
+        failwith ("local '" ^ x ^ "' of '" ^ name ^ "' has no statement writing it")
       | _ -> ())
     decls;
   lines

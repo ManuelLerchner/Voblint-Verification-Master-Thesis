@@ -20,6 +20,42 @@ import pytest
 from oracle import run_ast_driver
 from strategies import main_program
 
+# Declarations below the top level of a body: the printer declares a local at the
+# first statement that writes it, at any depth, so these print and parse back.
+NESTED_DECLARATION_PROGRAMS = [
+    # if (1) { i32 x = 1; }
+    (
+        "declaration-in-if",
+        (
+            [],
+            ([("x", "i32")], ("If", ("N", "1"), ("Assign", "x", ("N", "1")), "Skip")),
+            [],
+        ),
+    ),
+    # while (0) { u8 y; }
+    (
+        "declaration-in-while",
+        ([], ([("y", "u8")], ("While", ("N", "0"), ("Random", "y"))), []),
+    ),
+    # if (1) { skip; } else { i64 z = min(1, 2); }
+    (
+        "call-declaration-in-else",
+        (
+            [],
+            (
+                [("z", "i64")],
+                (
+                    "If",
+                    ("N", "1"),
+                    "Skip",
+                    ("Call", ("Some", "z"), "min", [("N", "1"), ("N", "2")]),
+                ),
+            ),
+            [],
+        ),
+    ),
+]
+
 PAREN_REQUIRED_PROGRAMS = [
     # Times(Plus(a, b), c): a Plus demoted under Times.
     (
@@ -87,5 +123,18 @@ def test_paren_required_shape_roundtrips(prog):
     result = run_ast_driver(prog)
     assert result.stdout.strip() == "OK", (
         f"expected {prog!r} to round-trip via printer-inserted parens, "
+        f"but ast_driver said:\n{result.stdout}"
+    )
+
+
+@pytest.mark.parametrize(
+    "prog",
+    [p for _, p in NESTED_DECLARATION_PROGRAMS],
+    ids=[n for n, _ in NESTED_DECLARATION_PROGRAMS],
+)
+def test_nested_declaration_roundtrips(prog):
+    result = run_ast_driver(prog)
+    assert result.stdout.strip() == "OK", (
+        f"expected {prog!r} to round-trip with its declaration nested, "
         f"but ast_driver said:\n{result.stdout}"
     )
