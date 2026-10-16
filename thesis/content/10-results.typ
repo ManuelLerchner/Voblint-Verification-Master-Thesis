@@ -309,7 +309,7 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
             circle((X(m), y), radius: 0.09, fill: col, stroke: none)
           }
         } else {
-          // Every m from `vals` up to the kind's maximum; the arrow marks the undrawn rest.
+          // Every integer m from `vals` upwards; the arrow marks the unbounded rest.
           line((X(vals), y), (X(hi), y), stroke: 3.2pt + col.lighten(60%), mark: (
             end: ">",
             fill: col.lighten(60%),
@@ -336,8 +336,8 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
     contexts. Each row is a set of stores. Both per-context rows lie inside the
     union row, and each later row lies inside the rows below it. The report
     admits $3$ and $5$, which no run reaches, and the stores verdict
-    #verdict(_vge) admits extend past the drawn range to the largest `i32`
-    value $2^31 - 1$. The check `m == 2` (line 4) sees the same
+    #verdict(_vge) admits are unbounded, since a store is not restricted to a
+    kind's range. The check `m == 2` (line 4) sees the same
     stores. Report and verdict are analyzer output (claim #claim-ref("chain-split-entry"));
     the first three rows are derived by hand.],
   kind: image,
@@ -374,30 +374,33 @@ the tools run, up to the trusted code generator and target toolchains
   #proved("run_voblint_source_sound")
 ]
 
-Here $cal(G)$ and $g$ are as in @sec:chain, and #isai("\<Pi>") is the procedure
-table #isaconst("prog_table") $p$. The theorem assumes three premises:
+The theorem is stated about the elaborated program: #isaconst("elab_ptable")
+$p$ $italic("ds")$ is the core procedure table of @sec:elaboration, built from
+the parsed program $p$ and its kind declarations $italic("ds")$, and
+#isaconst("elab_cfg") $p$ $italic("ds")$ is its graph. It assumes three
+premises:
 
 #[
   #set enum(numbering: n => "(P" + str(n) + ")")
-  + #isai("s0 \<in> cinit_stores \<G>"): the run starts from a store in
-    #isaconst("cinit_stores"), the initial stores $S$ of @ch:traces, which zero
-    every global, as C does for objects with static storage duration, and leave
-    the locals unconstrained.
-  + #isai("\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"):
-    a finite #isaconst("pstep") execution of $p$ runs from the body of `main`
-    to a configuration with store $s$. Any stopping point is allowed, so
-    nonterminating programs are covered through their prefixes.
-  + #isaconst("run_voblint") $"config"$ $p$ $=$ #ctor("Analysed") $"res"$: the
-    analyzer returned a report. Input validity and solver termination are
-    therefore not separate premises (@sec:report), and the theorem is a
-    partial-correctness result: termination is not proved for every program
-    (@sec:termination).
+  + #isaconst("run_voblint") $"conf"$ $italic("ds")$ $p$ $=$ #ctor("Analysed")
+    $"res"$: the analyzer returned a report. Input validity and solver
+    termination are therefore not separate premises (@sec:report), and the
+    theorem is a partial-correctness result: termination is not proved for
+    every program (@sec:termination).
+  + #isai("s0 \<in> init_stores (kenv_of ds)"): the run starts from an initial
+    store of @sec:elaboration, which sets every global to $0$, as C does for
+    objects with static storage duration, and every other variable to some
+    value of its kind.
+  + a finite #isaconst("pstep") execution of the elaborated program runs from
+    the body of `main` to a configuration $("residual", s, "frs")$ with store
+    $s$. Any stopping point is allowed, so nonterminating programs are covered
+    through their prefixes.
 ]
 
 The conclusions are stated at graph nodes, but a source configuration names
 none. Its residual command can occur at several places of the program, so the
 node has to come from the run. The simulation relation #isaconst("csim") of
-@sec:csim supplies it: #isai("\<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)")
+@sec:csim supplies it: #isai("elab_ptable p ds, elab_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)")
 relates the source configuration to a graph configuration at node $v$ with
 the same store. The relation does not determine the node, since a
 configuration reachable along two paths can be related to two nodes, and the
@@ -432,8 +435,8 @@ assumptions.
 == What a verdict says about executions #thy-badge("Voblint_CLI", "Run_Voblint") <sec:verdict-meaning>
 
 *What the four verdicts mean.* By the theorem of @sec:headline, each verdict of a report that #isaconst("run_voblint") returned becomes a claim
-about _covered executions_: finite runs of `main` from an initial store in
-#isaconst("cinit_stores"), stopped at any point. Because the report's states
+about _covered executions_: finite runs of the elaborated `main` from an initial
+store in #isaconst("init_stores"), stopped at any point. Because the report's states
 may also describe stores that no execution reaches, a verdict can only claim
 what holds whenever an execution reaches its check.
 - #verdict("PROVED"): whenever a covered execution reaches the check, the condition

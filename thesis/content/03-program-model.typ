@@ -729,8 +729,9 @@ analyzer and its theorem are stated over the elaborated program. Signed
 overflow then wraps, which C leaves undefined (#c11("6.5p5")).
 
 The initial values that VIMP fixes are ones C leaves open. Every source-level
-theorem assumes an initial store from #isaconst("cinit_stores"), with globals
-$0$ as for C's static objects and the locals of `main` arbitrary. VIMP does not
+theorem assumes an initial store from #isaconst("init_stores"), with globals
+$0$ as for C's static objects and every other variable, the locals of `main`
+among them, holding some value of its kind. VIMP does not
 model C's indeterminate values, some reads of which are undefined
 (#c11("6.3.2.1p2")). Callee locals start at $0$ (#isaconst("enter_state")), but
 no shipped analysis relies on this, because every abstract entry describes

@@ -448,7 +448,7 @@ each.
 
 - _End-to-end soundness._ The definite verdicts returned by the analysis
   function #isaconst("run_voblint") are correct for every source execution
-  from an initial store with zeroed globals (#isaconst("cinit_stores")) that
+  from an initial store with zeroed globals (#isaconst("init_stores")) that
   reaches the corresponding program point, for all analysis settings it offers,
   whenever it returns a report (#isathm("run_voblint_source_sound"),
   @sec:headline). Companion theorems justify #verdict("DEAD")
