@@ -313,7 +313,6 @@
     "theory:Voblint_Nonrelational.Nonrelational_Transfer": "Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html",
     "theory:Voblint_Solver.Solver_Trace": "Voblint/Voblint_Solver/Solver_Trace.html",
     "theory:Voblint_Solver.Strategy_Tree_Side_Buffering": "Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html",
-    "theory:Voblint_Solver.TD_Solver_Bridge": "Voblint/Voblint_Solver/TD_Solver_Bridge.html",
     "theory:Voblint_VIMP.VIMP_Proc": "Voblint/Voblint_VIMP/VIMP_Proc.html",
     "thm:DEAD_not_exact": "Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.DEAD_not_exact%7Cfact",
     "thm:DG_Live_Unknowns.dg_analysis.live_unknowns_cover": "Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.live_unknowns_cover%7Cfact",

@@ -4,6 +4,7 @@
 #import "../lib/code.typ": *
 #import "../lib/claims.typ": claim-ref
 #import "../lib/stats.typ": stat
+#import "../lib/sources.typ": thy
 
 // The call run_voblint received and the answer it returned (claim shell-json),
 // folded for print: `rule(path)` keeps a value "open" (one key per line),
@@ -51,10 +52,102 @@ sound. A user, however, does not evaluate a HOL function. The user writes
 source text and reads a report in a terminal or a browser tab. This chapter
 shows how the proved function becomes the analyzer that runs, and where the proof stops between the source text and the displayed report.
 
+== Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
+
+The pointwise analyses of @ch:domains are specified over abstract states
+$"Var" -> A$, total functions on variable names (the relational order
+analysis has its own state type, #isatype("relc")). This suits proofs, where
+lookup is function application and the lattice operations are pointwise. The solver, however, cannot compute with it: after every
+evaluation it decides whether an unknown changed, and deciding $f lle g$ for two such
+functions means checking $f(x) lle g(x)$ for infinitely many names $x$. Nipkow and Klein address the same
+problem in the abstract interpreter of Concrete Semantics by refining total
+function states to a finite representation with a default @nipkow14[§13.6]:
+a state is a finite list of variables with their values, every unlisted name
+reads as #ltop, and two states are compared on the listed names. Such a
+representation works like a default dictionary, a finite dictionary that
+answers every missing key with a default. Voblint follows the same idea but
+needs two defaults. It
+represents a total function exactly and therefore loses no precision. We call such a representation an _executable state carrier_ (_carrier_ for
+short, distinct from the carrier of a domain, @ch:background).
+
+VIMP initializes globals to zero, as
+C does for objects with static storage (#c11("6.7.9p10")), and leaves the
+locals of `main` arbitrary (@sec:vimp-vs-c). The initial state must give every local
+the value #ltop and every global the value $0^sharp$, the abstract value of the
+constant $0$, without listing the declared globals. Voblint's carrier
+therefore keeps two default dictionaries, one for the names the program
+treats as local and one for the globals, each a default paired with a finite
+list of overrides. We write the state with local dictionary $(d_l, "ls")$ and
+global dictionary $(d_g, "gs")$ as $⟪(d_l, "ls"), (d_g, "gs")⟫$. The initial
+state is $⟪(ltop, []), (0^sharp, [])⟫$, and the least element is
+$⟪(lbot, []), (lbot, [])⟫$.
+
+Different representations can describe the same state: overrides of distinct
+names may appear in any order, and an override equal to its default changes
+nothing. A _quotient type_ (@sec:isabelle) identifies the representations
+that answer every lookup alike:
+
+#thy("default_st")
+
+Two carrier states are therefore equal exactly when every lookup agrees
+(#isathm("default_st_eq_iff")). Comparing the two defaults and the finitely
+many listed names decides the order (#isathm("le_default_st_rep_code_iff")),
+and equality tests it in both directions.
+
+The program's global-variable classifier $cal(G)$ (@sec:pstep) assigns each
+name $x$ its _location_ $ell(x)$, local or global. A lookup reads the
+dictionary of the variable's location: the override if there is one, the
+default otherwise. We write
+$d⟨l⟩$ for the lookup at location $l$ and $d⟨l := a⟩$ for the update. Looking
+up every variable at its location gives the total function $rho_(cal(G))(d)$
+that a carrier state represents (#isaconst("default_st_to_fun")). A carrier
+state means what its function means under the concretization
+#isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
+(#isaconst("default_st_gamma")) is
+$ conc(d) = conc(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
+The solver never computes $conc(d)$. It uses only the executable lattice operations. Function states get order, join, and bottom pointwise from HOL, but
+no widening or narrowing. The carrier instantiates all of these classes on
+#isatype("default_st") whenever the values do, so the generic solver runs on
+it unchanged.
+
+Distinct carrier states can still denote the same stores: every state whose
+local default is #lbot denotes $emptyset$, yet the quotient keeps such states
+apart because they represent distinct functions.
+
+Each lattice operation is computed with the value domain's operation on the
+two defaults and on each listed name, so under lookup it agrees with the
+pointwise operation on functions. For the join,
+#isathm("default_st_get_sup") states
+$(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and analogous lemmas cover
+bottom, order, widening, and narrowing. The transfer functions must commute
+with the represented function in the same way,
+$ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
+and since $conc(d) = conc(rho_(cal(G))(d))$, the soundness facts of
+@ch:analysis-interface then transport from the abstract to the executable
+operation. The locale #isalocale("dg_analysis_exec") states this commutation
+for the transfer on nonempty states and for procedure entry. For primitives
+proved sound it holds without a per-domain proof, because the abstract and
+executable steps are derived from the same operations
+(#isathm("sound_nonrelational_ops.tf_st_for_commute"), @sec:instances-supply).
+
+Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
+listed overrides do not decide: an unlisted variable can make the state empty
+through its default. The carrier's test inspects the local default, the
+overrides that the represented function reads, and each declared global. The globals are listed explicitly because a program has finitely many of them, so
+the global default may describe no variable at all.
+#isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
+$ #isaconst("default_st_is_bot_for") space "globals" space d <==> conc(d) = emptyset, $
+provided the list enumerates exactly the globals of $cal(G)$. Because the test
+is exact, collapsing the states it finds empty to #lbot commutes with the
+represented function, as the specification's collapse requires, and a state
+it keeps is nonempty, which is where the numeric transfer commutes
+(#isaconst("live_default_st")).
+
 == From theorem to code #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
-@ch:solving replaced the two objects of the argument that cannot run with executable versions
-(@sec:represented-function, @sec:termination). Every function that
+The previous section replaced function states with carriers, and
+@sec:termination replaced the solver's domain predicate with the executable
+#isaconst("solve_c", thy: "TD_side_upd_rule"). Every function that
 #isaconst("run_voblint") uses therefore has code equations, and Isabelle's
 code generator @haftmann10 can export it. One #isacmd("export_code")
 declaration emits #isaconst("run_voblint"), #isaconst("render_report"), and the

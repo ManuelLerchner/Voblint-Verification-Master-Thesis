@@ -10,10 +10,11 @@ that authors transparently disclose the automated tools they use, including
 large language models @leiden26. This section follows that recommendation.
 
 Substantial parts of this work were carried out with generative AI tools,
-primarily Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor, under the
-author's direction and review. These tools contributed a large share of the
-implementation-level material. The author chose the research direction, selected
-and revised the designs, and approved the definitions and theorem statements.
+primarily Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor. Under the
+author's supervision, these tools contributed a large share of the
+implementation-level material. The author chose the research direction,
+selected and revised the designs, and approved the definitions and theorem
+statements.
 
 In the Isabelle development, the tools generated many proofs, carried out
 refactorings across theories, and transformed tactic-style proofs and
@@ -23,29 +24,25 @@ literature searches, checked citations and claims against cited sources, and
 drafted and revised the chapter structure, text, and figures.
 
 Separately, Grammarly was used to check spelling and grammar in the thesis text.
-The Isabelle interfaces of AutoCorrode @autocorrode, used following the
-human-guided workflow of Kappelmann et al. @kappelmann26, served as
-proof-development infrastructure.
+The Isabelle interfaces of AutoCorrode @autocorrode served as proof-development
+infrastructure, and the proof work followed the human-guided workflow proposed
+by Kappelmann et al. @kappelmann26.
 
 The assistance also extended to design. To formalize calling contexts, the
 concrete semantics is based on traces instead of states, inspired by the local
-traces of Schwarz et al. @schwarz21. The state-based collecting semantics of the
-prototype records the stores that reach a node, but not which procedure
-activation contains each store (@sec:why-traces). Language models helped adapt
-the thread-local setting of that work to procedure activations. The requirements
-for the activation traces of @sec:activation-trace were refined interactively
-with them: how traces are generated, that a callee trace begins only at a call,
-that a trace retains its call history, and that calling contexts are derived
-from traces.
+traces of Schwarz et al. @schwarz21. Language models helped adapt the
+thread-local setting of that work to procedure activations. The requirements for
+the activation traces of @sec:activation-trace were evaluated and refined in
+collaboration with agents: how traces are generated, that a callee trace begins
+only at a call, that a trace retains its call history, and that calling contexts
+are derived from traces.
 
-For the analysis framework, agents inspected Goblint's OCaml sources to identify
-interfaces the formalization could approximate, such as local and global
+For the Isabelle development of the analysis framework, agents inspected
+Goblint's OCaml sources to identify interfaces the formalization could approximate, such as local and global
 unknowns, unknowns indexed by node and context, and the enter/combine protocol
 at calls (@sec:rel-goblint). The source language and its compilation, the
 activation traces, the coverage contract, and the corresponding proofs have no
-direct counterpart in Goblint and were developed for this work. The
-formalization reuses the Isabelle/HOL formalization of Goblint's top-down solver
-and its partial-correctness proof by Tilscher et al. @tilscher26.
+direct counterpart in Goblint and were developed for this work.
 
 A major part of the development effort concerned finding suitable definitions,
 interfaces, invariants, and locale boundaries rather than discharging individual

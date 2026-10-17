@@ -334,7 +334,7 @@ Voblint vendors the top-down solver formalization of Tilscher et al.
   returned run of the executable solver lies in the solver's domain
   (#isathm("solve_dom_of_solve_c")) and that a terminating solve returns a
   finite set of stable unknowns (#isathm("finite_stabl_solve")), both used by
-  #isathm("td_certified_solver") (@sec:cert-param).
+  #isathm("td_certified_solver") (@sec:certificate).
 
 At the time of writing, all four pull requests await review. The vendored copy
 carries the second to fourth on an older upstream revision; the first repairs a

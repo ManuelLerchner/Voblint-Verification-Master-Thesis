@@ -1,12 +1,9 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "@preview/cetz:0.5.2"
-#import "../lib/code.typ": (
-  c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing, thy-badge,
-)
+#import "../lib/code.typ": fixture, isaconst, isai, isalocale, isathm, isatype, listing, thy-badge
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
-#import "../lib/figures.typ": verdict
 #import "../lib/claims.typ": claim-ref, claim-snapshot, claim-text, claim-trace
 
 // A verdict or state of a registered CLI claim (shared/claims.toml), read from
@@ -36,8 +33,9 @@ program that reads one unknown at a time and makes every read
 and every publication explicit, so that the solver can record dependencies
 while it evaluates. The equations first have to be brought into this form.
 Then the solver's correctness
-theorem has to be connected to the premises of the soundness theorem. Both
-steps assume that the solver returns. Whether it does is the last question of this chapter.
+theorem has to be connected to the premises of the soundness theorem. Neither
+step needs the solver to terminate on every program, and we do not prove that it
+does. The certificate holds for every solve that returns.
 
 == Adapting the equations to the solver <sec:eq-encoding>
 
@@ -204,6 +202,98 @@ same join of the four parts as the direct generator of @sec:eq-call. Under
 widening update rules the timing can change the computed result, though not
 the equations it solves. @sec:outlook-extending discusses a solver
 extension that would make seeds and buffering unnecessary.
+
+== Merging contributions to global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
+
+A global unknown such as a seed receives contributions from several places.
+The solver merges each new contribution into the value it holds, and this
+merge, the _update rule_, decides both precision and termination. Joining
+keeps every contribution exactly but may grow forever. Widening stops the growth but loses precision. Stemmler et
+al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
+generic interface for them and prove five rules sound against it
+@tilscher26. Voblint exposes all five.
+
+Every rule keeps one record per origin, the right-hand side that sent the
+contribution (@sec:td). In the analyzer, each right-hand side's contributions
+to one target arrive already joined (@sec:eq-buffer). The rules differ in what
+they record and whether they widen:
+- _join_ joins each contribution into the value;
+- _join per origin_ records each origin's latest contribution and reports the
+  join of the records;
+- _warrow_ records the same, and warrows the value toward the join of the
+  records;
+- _warrow per origin_ warrows the origin's old record with the new
+  contribution, then joins the records;
+- _bounded narrowing_ does the same, but also counts how often an origin has
+  switched from widening to narrowing. Once the count reaches a bound, every
+  later switch to narrowing takes only its first narrowing step.
+@fig:update-rules runs all five on one sequence of contributions, and the
+#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site]
+runs them on a program with several shared callee entries. In
+#isaconst("run_voblint") the rule decides how a callee's entry state
+accumulates across call sites and, with flow-insensitive program globals
+(@sec:mixed-flow), how a global accumulates its writes.
+
+No rule is more precise on every program, and the rules also differ in
+termination. @sec:eval-precision compares them on the programs of
+@fig:rules-programs.
+
+#let _rule-steps = update-rule-steps()
+
+#figure(
+  {
+    set text(size: 8.5pt)
+    show raw: set text(size: 8pt)
+    // Bold and a nabla as well as colour, so the mark survives greyscale. An
+    // infinite bound can only come from widening here.
+    let cell((lo, hi)) = {
+      let v = "[" + lo + "," + hi + "]"
+      if "∞" in lo or "∞" in hi {
+        text(fill: vb.unstable, weight: "bold", [#raw(v)#super[$nabla$]])
+      } else { raw(v) }
+    }
+    let r(v) = raw(v)
+    let rule(name, c) = [#name \ #text(size: 8pt, c)]
+    let names = (
+      rule([join], isaconst("update_global_always_join")),
+      rule([join per origin], isaconst("update_global_per_origin")),
+      rule([warrow], isaconst("update_global_warrowing_apinis")),
+      rule([warrow per origin], isaconst("update_global_warrowing_per_origin")),
+      rule([bounded narrowing, bound 5], isaconst("update_global_bounded_narrowing")),
+    )
+    table(
+      columns: (auto, 1fr, 1fr, 1fr, 1fr),
+      align: (
+        left + horizon,
+        center + horizon,
+        center + horizon,
+        center + horizon,
+        center + horizon,
+      ),
+      stroke: none,
+      inset: (x: 4pt, y: 2.6pt),
+      table.hline(stroke: 0.5pt),
+      [*rule*, vendored update], [*1:* A sends #r("[0,3]")], [*2:* B sends #r("[4,4]")],
+      [*3:* A sends #r("[1,1]")], [*4:* A sends #r("[0,8]")],
+      table.hline(stroke: 0.4pt),
+      ..names.zip(_rule-steps).map(((n, row)) => (n, ..row.map(cell))).flatten(),
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: table,
+  placement: auto,
+  caption: [One global unknown under each update rule, from #raw("⊥"), after
+    four interval contributions from origins A and B. Join per origin reports
+    the join of each origin's latest contribution, so at step 3 A's
+    #raw("[1,1]") replaces #raw("[0,3]"). Warrow widens at step 2, because
+    #raw("[0,4]") is not below #raw("[0,3]"), and narrows at step 3. Warrow per origin widens only when A's own contribution grows. Bounded narrowing
+    agrees with warrow per origin here, since A switches to narrowing once, and
+    the bound 5 is never reached. A widened bound is set
+    bold and marked $nabla$. The cells are read from
+    #isathm("update_rules_example"), which evaluates the vendored rules with
+    Voblint's interval operators; the contributions separate the rules and come
+    from no program.],
+) <fig:update-rules>
 
 == A demand-driven solve <sec:eq-example>
 
@@ -478,6 +568,57 @@ once for both (@sec:eq-seed-global).
 A terminating solve thus reaches finitely many unknowns, in the contexts it
 discovers.
 
+== Why termination is not proved <sec:termination>
+
+The previous sections describe how the solver operates, but do not establish
+that it terminates on every input. HOL admits only terminating recursion, so
+Isabelle defines the solver with a domain predicate
+(#isaconst("solve_dom", thy: "TD_side_upd_rule"), @sec:isabelle), the
+arguments on which its recursion terminates, and proves its correctness on that
+domain. The analyzer runs the executable form
+#isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when the
+recursion finishes, and #isathm("solve_dom_of_solve_c") turns a returned
+run into domain membership, so the theorems about #isaconst("run_voblint")
+have no termination premise.
+
+Under the unit context the unknowns of a compiled program form a finite set
+(#isathm("compiled_unit_vars_finite")), and bounded call strings over a
+compiled program form a finite space (#isathm("compiled_call_strings_finite")).
+Under entry-state contexts we expect termination to fail for some programs.
+With Interval, a recursion that changes its argument at every level demands a
+fresh context at every level, and widening bounds the values of existing
+unknowns but not their number (#fixture(
+  "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
+  label: "01-unbounded_context_chain_diverges",
+)). Goblint's configuration for the SV-COMP
+competition avoids this explosion by omitting intervals from the contexts of
+recursive functions @saan26phd[§3.4.3]. Finitely many unknowns do not suffice either: without contexts, the
+interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ makes the one seed of `f`
+grow through $[0, 0], [0, 1], [0, 2], dots$, and the joining update rules never
+widen this chain (#fixture(
+  "24-site-figures/01-recursion_grows_join_diverges.vimp",
+  label: "01-recursion_grows_join_diverges",
+), @fig:rules-programs). Both programs exceed their time limits, and we expect, without proof, that
+they diverge (@sec:trust-boundary). Both are recursive. For partial
+tabulation over abstract calling contexts, Schulze Frielinghaus et al. give a
+local solver that terminates on every non-recursive program, even over lattices
+with infinite ascending or descending chains @schulzefrielinghaus18.
+
+The vendored termination theorems cover top-down solvers without side effects
+over a finite type of unknowns. The solver with separate widening and narrowing
+phases terminates under this condition, given widening and narrowing operators
+whose iterations are ultimately stable @tilscher26jar[Thm. 2], and the
+warrowing solver additionally needs a precise widening and monotonic
+right-hand sides and dependencies @tilscher26jar[Cor. 1]. Voblint's unknowns
+pair nodes of an infinite type with contexts, so these theorems do not apply to any of its configurations. Seidl and Vogler prove on paper that
+their side-effecting solver terminates on every system in which side effects
+target only unknowns without a right-hand side, as long as only finitely many
+unknowns are encountered @seidl21[§9, Thm. 5], for widening and narrowing
+operators whose iteration sequences are ultimately stable @seidl21[§3]. The joining update rules never widen, so this result does not carry over to
+them. Mechanizing such a result for the vendored solver is future work, so the
+end-to-end theorem (@sec:headline) is a partial-correctness result about every
+report the analyzer returns.
+
 == What a terminating solve guarantees <sec:certificate>
 
 A solve that returns gives a valuation #sol and the set $V$ of local unknowns
@@ -488,6 +629,20 @@ $V$ is closed under the reads of its
 right-hand sides, starting from the query: everything the result of `main`
 depends on is solved. @sec:cert-def states this certificate, and
 @sec:cert-forward derives from it the set the theorem needs.
+
+The soundness argument uses only four facts about a solve that returns, and
+none of them depends on how the solver works. They are: the result is a post-solution on the solved set
+(the certificate), the solved set is finite, the run lies in the domain on
+which the first two facts hold (@sec:termination), and the executable run
+returns that same result. Finiteness lets
+@ch:results combine the finitely many contexts solved at a node into one
+verdict. Since the proof uses nothing else, the solver is a parameter of the
+analysis, and another solver, for instance one with local side effects
+(@sec:outlook-extending), attaches to Voblint by proving the same four facts.
+In Isabelle, the analysis locale #isalocale("dg_analysis") takes the solver
+as a parameter and extends #isalocale("certified_solver"), which states the
+four facts. #isathm("td_certified_solver") proves them for the vendored
+solver under every update rule.
 
 === The certificate #thy-badge("TD", "Basics_side") <sec:cert-def>
 
@@ -615,253 +770,3 @@ and
 proves from a well-formed program and a terminating solve alone that it
 contains the entry and is closed under execution steps. The final theorem
 therefore needs no premise about which unknowns the solve visited.
-
-=== The solver as a parameter #thy-badge("Voblint_Solver", "TD_Solver_Bridge") <sec:cert-param>
-
-The soundness argument uses only four facts about a solve that returns, and
-none of them depends on how the solver works. They are: the result is a post-solution on the solved set
-(the certificate), the solved set is finite, the run lies in the domain on
-which the first two facts hold (@sec:termination), and the executable run
-returns that same result. Finiteness lets
-@ch:results combine the finitely many contexts solved at a node into one
-verdict. Since the proof uses nothing else, the solver is a parameter of the
-analysis, and another solver, for instance one with local side effects
-(@sec:outlook-extending), attaches to Voblint by proving the same four facts.
-In Isabelle, the analysis locale #isalocale("dg_analysis") takes the solver
-as a parameter and extends #isalocale("certified_solver"), which states the
-four facts. #isathm("td_certified_solver") proves them for the vendored
-solver under every update rule.
-
-== Merging contributions to global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
-
-A global unknown such as a seed receives contributions from several places.
-The solver merges each new contribution into the value it holds, and this
-merge, the _update rule_, decides both precision and termination. Joining
-keeps every contribution exactly but may grow forever. Widening stops the growth but loses precision. Stemmler et
-al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
-generic interface for them and prove five rules sound against it
-@tilscher26. Voblint exposes all five.
-
-Every rule keeps one record per origin, the right-hand side that sent the
-contribution (@sec:td). In the analyzer, each right-hand side's contributions
-to one target arrive already joined (@sec:eq-buffer). The rules differ in what
-they record and whether they widen:
-- _join_ joins each contribution into the value;
-- _join per origin_ records each origin's latest contribution and reports the
-  join of the records;
-- _warrow_ records the same, and warrows the value toward the join of the
-  records;
-- _warrow per origin_ warrows the origin's old record with the new
-  contribution, then joins the records;
-- _bounded narrowing_ does the same, but also counts how often an origin has
-  switched from widening to narrowing. Once the count reaches a bound, every
-  later switch to narrowing takes only its first narrowing step.
-@fig:update-rules runs all five on one sequence of contributions, and the
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site]
-runs them on a program with several shared callee entries. In
-#isaconst("run_voblint") the rule decides how a callee's entry state
-accumulates across call sites and, with flow-insensitive program globals
-(@sec:mixed-flow), how a global accumulates its writes.
-
-No rule is more precise on every program, and the rules also differ in
-termination. @sec:eval-precision compares them on the programs of
-@fig:rules-programs.
-
-#let _rule-steps = update-rule-steps()
-
-#figure(
-  {
-    set text(size: 8.5pt)
-    show raw: set text(size: 8pt)
-    // Bold and a nabla as well as colour, so the mark survives greyscale. An
-    // infinite bound can only come from widening here.
-    let cell((lo, hi)) = {
-      let v = "[" + lo + "," + hi + "]"
-      if "∞" in lo or "∞" in hi {
-        text(fill: vb.unstable, weight: "bold", [#raw(v)#super[$nabla$]])
-      } else { raw(v) }
-    }
-    let r(v) = raw(v)
-    let rule(name, c) = [#name \ #text(size: 8pt, c)]
-    let names = (
-      rule([join], isaconst("update_global_always_join")),
-      rule([join per origin], isaconst("update_global_per_origin")),
-      rule([warrow], isaconst("update_global_warrowing_apinis")),
-      rule([warrow per origin], isaconst("update_global_warrowing_per_origin")),
-      rule([bounded narrowing, bound 5], isaconst("update_global_bounded_narrowing")),
-    )
-    table(
-      columns: (auto, 1fr, 1fr, 1fr, 1fr),
-      align: (
-        left + horizon,
-        center + horizon,
-        center + horizon,
-        center + horizon,
-        center + horizon,
-      ),
-      stroke: none,
-      inset: (x: 4pt, y: 2.6pt),
-      table.hline(stroke: 0.5pt),
-      [*rule*, vendored update], [*1:* A sends #r("[0,3]")], [*2:* B sends #r("[4,4]")],
-      [*3:* A sends #r("[1,1]")], [*4:* A sends #r("[0,8]")],
-      table.hline(stroke: 0.4pt),
-      ..names.zip(_rule-steps).map(((n, row)) => (n, ..row.map(cell))).flatten(),
-      table.hline(stroke: 0.5pt),
-    )
-  },
-  kind: table,
-  placement: auto,
-  caption: [One global unknown under each update rule, from #raw("⊥"), after
-    four interval contributions from origins A and B. Join per origin reports
-    the join of each origin's latest contribution, so at step 3 A's
-    #raw("[1,1]") replaces #raw("[0,3]"). Warrow widens at step 2, because
-    #raw("[0,4]") is not below #raw("[0,3]"), and narrows at step 3. Warrow per origin widens only when A's own contribution grows. Bounded narrowing
-    agrees with warrow per origin here, since A switches to narrowing once, and
-    the bound 5 is never reached. A widened bound is set
-    bold and marked $nabla$. The cells are read from
-    #isathm("update_rules_example"), which evaluates the vendored rules with
-    Voblint's interval operators; the contributions separate the rules and come
-    from no program.],
-) <fig:update-rules>
-
-== Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
-
-The pointwise analyses of @ch:domains are specified over abstract states
-$"Var" -> A$, total functions on variable names (the relational order
-analysis has its own state type, #isatype("relc")). This suits proofs, where
-lookup is function application and the lattice operations are pointwise. The solver, however, cannot compute with it: after every
-evaluation it decides whether an unknown changed, and deciding $f lle g$ for two such
-functions means checking $f(x) lle g(x)$ for infinitely many names $x$. Nipkow and Klein address the same
-problem in the abstract interpreter of Concrete Semantics by refining total
-function states to a finite representation with a default @nipkow14[§13.6]:
-a state is a finite list of variables with their values, every unlisted name
-reads as #ltop, and two states are compared on the listed names. Such a
-representation works like a default dictionary, a finite dictionary that
-answers every missing key with a default. Voblint follows the same idea but
-needs two defaults. It
-represents a total function exactly and therefore loses no precision. We call such a representation an _executable state carrier_ (_carrier_ for
-short, distinct from the carrier of a domain, @ch:background).
-
-VIMP initializes globals to zero, as
-C does for objects with static storage (#c11("6.7.9p10")), and leaves the
-locals of `main` arbitrary (@sec:vimp-vs-c). The initial state must give every local
-the value #ltop and every global the value $0^sharp$, the abstract value of the
-constant $0$, without listing the declared globals. Voblint's carrier
-therefore keeps two default dictionaries, one for the names the program
-treats as local and one for the globals, each a default paired with a finite
-list of overrides. We write the state with local dictionary $(d_l, "ls")$ and
-global dictionary $(d_g, "gs")$ as $⟪(d_l, "ls"), (d_g, "gs")⟫$. The initial
-state is $⟪(ltop, []), (0^sharp, [])⟫$, and the least element is
-$⟪(lbot, []), (lbot, [])⟫$.
-
-Different representations can describe the same state: overrides of distinct
-names may appear in any order, and an override equal to its default changes
-nothing. A _quotient type_ (@sec:isabelle) identifies the representations
-that answer every lookup alike:
-
-#thy("default_st")
-
-Two carrier states are therefore equal exactly when every lookup agrees
-(#isathm("default_st_eq_iff")). Comparing the two defaults and the finitely
-many listed names decides the order (#isathm("le_default_st_rep_code_iff")),
-and equality tests it in both directions.
-
-The program's global-variable classifier $cal(G)$ (@sec:pstep) assigns each
-name $x$ its _location_ $ell(x)$, local or global. A lookup reads the
-dictionary of the variable's location: the override if there is one, the
-default otherwise. We write
-$d⟨l⟩$ for the lookup at location $l$ and $d⟨l := a⟩$ for the update. Looking
-up every variable at its location gives the total function $rho_(cal(G))(d)$
-that a carrier state represents (#isaconst("default_st_to_fun")). A carrier
-state means what its function means under the concretization
-#isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
-(#isaconst("default_st_gamma")) is
-$ conc(d) = conc(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
-The solver never computes $conc(d)$. It uses only the executable lattice operations. Function states get order, join, and bottom pointwise from HOL, but
-no widening or narrowing. The carrier instantiates all of these classes on
-#isatype("default_st") whenever the values do, so the generic solver runs on
-it unchanged.
-
-Distinct carrier states can still denote the same stores: every state whose
-local default is #lbot denotes $emptyset$, yet the quotient keeps such states
-apart because they represent distinct functions.
-
-Each lattice operation is computed with the value domain's operation on the
-two defaults and on each listed name, so under lookup it agrees with the
-pointwise operation on functions. For the join,
-#isathm("default_st_get_sup") states
-$(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and analogous lemmas cover
-bottom, order, widening, and narrowing. The transfer functions must commute
-with the represented function in the same way,
-$ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
-and since $conc(d) = conc(rho_(cal(G))(d))$, the soundness facts of
-@ch:analysis-interface then transport from the abstract to the executable
-operation. The locale #isalocale("dg_analysis_exec") states this commutation
-for the transfer on nonempty states and for procedure entry. For primitives
-proved sound it holds without a per-domain proof, because the abstract and
-executable steps are derived from the same operations
-(#isathm("sound_nonrelational_ops.tf_st_for_commute"), @sec:instances-supply).
-
-Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
-listed overrides do not decide: an unlisted variable can make the state empty
-through its default. The carrier's test inspects the local default, the
-overrides that the represented function reads, and each declared global. The globals are listed explicitly because a program has finitely many of them, so
-the global default may describe no variable at all.
-#isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
-$ #isaconst("default_st_is_bot_for") space "globals" space d <==> conc(d) = emptyset, $
-provided the list enumerates exactly the globals of $cal(G)$. Because the test
-is exact, collapsing the states it finds empty to #lbot commutes with the
-represented function, as the specification's collapse requires, and a state
-it keeps is nonempty, which is where the numeric transfer commutes
-(#isaconst("live_default_st")).
-
-== Why termination is not proved <sec:termination>
-
-The previous sections assume that the solve returns, and no theorem shows
-that every solve does. HOL admits only terminating recursion, so Isabelle
-defines the solver with a domain predicate
-(#isaconst("solve_dom", thy: "TD_side_upd_rule"), @sec:isabelle), the
-arguments on which its recursion terminates, and proves the certificate of
-@sec:certificate on that domain. The analyzer runs the executable form
-#isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when the
-recursion finishes, and #isathm("solve_dom_of_solve_c") turns a returned
-run into domain membership, so the theorems about #isaconst("run_voblint")
-have no termination premise.
-
-Under the unit context the unknowns of a compiled program form a finite set
-(#isathm("compiled_unit_vars_finite")), and bounded call strings over a
-compiled program form a finite space (#isathm("compiled_call_strings_finite")).
-Under entry-state contexts we expect termination to fail for some programs.
-With Interval, a recursion that changes its argument at every level demands a
-fresh context at every level, and widening bounds the values of existing
-unknowns but not their number (#fixture(
-  "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
-  label: "01-unbounded_context_chain_diverges",
-)). Goblint's configuration for the SV-COMP
-competition avoids this explosion by omitting intervals from the contexts of
-recursive functions @saan26phd[§3.4.3]. Finitely many unknowns do not suffice either: without contexts, the
-interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ makes the one seed of `f`
-grow through $[0, 0], [0, 1], [0, 2], dots$, and the joining update rules never
-widen this chain (#fixture(
-  "24-site-figures/01-recursion_grows_join_diverges.vimp",
-  label: "01-recursion_grows_join_diverges",
-), @fig:rules-programs). Both programs exceed their time limits, and we expect, without proof, that
-they diverge (@sec:trust-boundary). Both are recursive. For partial
-tabulation over abstract calling contexts, Schulze Frielinghaus et al. give a
-local solver that terminates on every non-recursive program, even over lattices
-with infinite ascending or descending chains @schulzefrielinghaus18.
-
-The vendored termination theorems cover top-down solvers without side effects
-over a finite type of unknowns. The solver with separate widening and narrowing
-phases terminates under this condition, given widening and narrowing operators
-whose iterations are ultimately stable @tilscher26jar[Thm. 2], and the
-warrowing solver additionally needs a precise widening and monotonic
-right-hand sides and dependencies @tilscher26jar[Cor. 1]. Voblint's unknowns
-pair nodes of an infinite type with contexts, so these theorems do not apply to any of its configurations. Seidl and Vogler prove on paper that
-their side-effecting solver terminates on every system in which side effects
-target only unknowns without a right-hand side, as long as only finitely many
-unknowns are encountered @seidl21[§9, Thm. 5], for widening and narrowing
-operators whose iteration sequences are ultimately stable @seidl21[§3]. The joining update rules never widen, so this result does not carry over to
-them. Mechanizing such a result for the vendored solver is future work, so the
-end-to-end theorem (@sec:headline) is a partial-correctness result about every
-report the analyzer returns.

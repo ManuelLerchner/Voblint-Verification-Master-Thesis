@@ -503,7 +503,7 @@ make this theorem possible or show that it is not vacuous.
   that ask one another for facts can be combined under conditions on their
   answers
   (@ch:cooperation). The solver enters the proof only through
-  proved facts about its result (@sec:cert-param).
+  proved facts about its result (@sec:certificate).
 - _Needed assumptions and nonempty results._ For several conditions of the
   proof, a theorem shows that dropping or weakening the condition admits an answer that a concrete execution contradicts. Examples are an analysis result that misses a store that some run reaches, or an abstract remainder that excludes the concrete one. Therefore, none of these conditions can simply be dropped (@sec:eval-1161). One example is dropping the requirement that every call from a store the claim contains gets a context (#isathm("total_dropped_unsound")). Since a soundness
   theorem would also hold for an analyzer that answers #verdict("UNKNOWN")

@@ -79,7 +79,7 @@
 #set heading(numbering: "1.1.")
 #counter(heading).update(0)
 
-#part("The Problem", lbl: <part:problem>)
+#part("Problem and Foundations", lbl: <part:problem>)
 #include "content/01-introduction.typ"
 #include "content/02-background.typ"
 
@@ -87,7 +87,7 @@
 #include "content/03-program-model.typ"
 #include "content/04-traces.typ"
 
-#part("Analyses", lbl: <part:analyses>)
+#part("Building Analyses", lbl: <part:analyses>)
 #include "content/05-domains.typ"
 #include "content/06-analysis-interface.typ"
 #include "content/07-cooperation.typ"
@@ -97,13 +97,13 @@
 #include "content/09-solving.typ"
 #include "content/10-results.typ"
 
-#part("Instances and Practice", lbl: <part:instances>)
+#part("Instances, Tooling, and Evaluation", lbl: <part:instances>)
 #include "content/11-instances.typ"
 #include "content/12-executable.typ"
 #include "content/13-evaluation.typ"
 #include "content/14-tooling.typ"
 
-#part("Assessment", lbl: <part:assessment>)
+#part("Context and Conclusion", lbl: <part:assessment>)
 #include "content/15-related.typ"
 #include "content/16-conclusion.typ"
 
