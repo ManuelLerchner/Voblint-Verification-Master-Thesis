@@ -9,9 +9,11 @@ back from it.
 
     pixi run thesis-text abstract | pbcopy
     pixi run thesis-text 2.4
+    pixi run thesis-text 01-introduction
     pixi run thesis-text "Widening and narrowing" --captions
 
-A section is chosen by its number, its label id or a substring of its title,
+A section is chosen by its number, its label id, a substring of its title or
+the content file it opens,
 and runs to the next heading of the same or a higher level. Display math,
 listings and figures are left out; `--captions` keeps figure captions.
 """
@@ -29,6 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 HEADING = re.compile(r"h([1-6])")
 BLOCKS = {"p", "li", "figcaption", "blockquote"}
 MATH_SELECTORS = re.compile("[\ufe00-\ufe0f]")
+MATH_RELATIONS = re.compile("([=∈∉≤≥<>⊆⊇≠])")
 
 
 class Sections(HTMLParser):
@@ -87,6 +90,7 @@ class Sections(HTMLParser):
             # Math italics (𝑖, 𝒳) read as misspellings to a grammar checker.
             if self.math:
                 data = MATH_SELECTORS.sub("", unicodedata.normalize("NFKC", data))
+                data = MATH_RELATIONS.sub(r" \1 ", data)
             self.buf.append(data)
 
 
@@ -125,16 +129,32 @@ def export_html(out: Path) -> None:
     )
 
 
-def matches(query: str, ident: str, title: str) -> bool:
+def chapter_title(query: str) -> str | None:
+    """The title of the first heading in a content file named by `query`."""
+    name = Path(query).name
+    path = ROOT / "content" / (name if name.endswith(".typ") else name + ".typ")
+    if not path.is_file():
+        return None
+    for line in path.read_text().splitlines():
+        if m := re.fullmatch(r"=\s+(.+?)(\s+<[^>]+>)?\s*", line):
+            return m[1]
+    return None
+
+
+def matches(query: str, ident: str, title: str, exact: bool) -> bool:
     q = query.lower()
-    number = title.split(" ", 1)[0].rstrip(".")
-    return q in (ident.lower(), number) or q in title.lower()
+    number, _, name = title.partition(" ")
+    if exact:
+        return q in (title.lower(), name.lower())
+    return q in (ident.lower(), number.rstrip(".")) or q in title.lower()
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
-        "section", help="number (2.4), label id (abstract) or title substring"
+        "section",
+        help="number (2.4), label id (abstract), title substring or content file"
+        " (01-introduction)",
     )
     ap.add_argument("--captions", action="store_true", help="keep figure captions")
     args = ap.parse_args()
@@ -145,12 +165,15 @@ def main() -> int:
         parser = Sections(args.captions)
         parser.feed(html.read_text())
 
+    title = chapter_title(args.section)
+    query, exact = (title, True) if title else (args.section, False)
+
     out: list[str] = []
     level = None
     for kind, value in parser.items:
         if kind == "h":
             lvl, ident, title = value
-            if level is None and matches(args.section, ident, title):
+            if level is None and matches(query, ident, title, exact):
                 level = lvl
             elif level is not None and lvl <= level:
                 break
@@ -160,7 +183,13 @@ def main() -> int:
             out.append(value)
 
     if level is None:
-        print(f"text_export: no section matches {args.section!r}", file=sys.stderr)
+        print(
+            f"text_export: no section matches {args.section!r}; headings:",
+            file=sys.stderr,
+        )
+        for kind, value in parser.items:
+            if kind == "h":
+                print("  " * (value[0] - 1) + value[2], file=sys.stderr)
         return 1
     print("\n\n".join(out))
     return 0

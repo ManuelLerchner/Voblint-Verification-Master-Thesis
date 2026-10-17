@@ -8,18 +8,13 @@
 = Introduction <ch:intro>
 
 A static analyzer answers questions about every execution of a program at once:
-whether a divisor can be zero at some point, or whether a check always holds.
-The analyzer
-is itself a program, and an error in a transfer operation, in the
-treatment of a call, or in the reading of the computed state produces a
-confident answer that real executions contradict. Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156] reports
-that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$ @goblint1156, although
-the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$. #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
+whether a divisor can be zero at some point, whether a signed operation can overflow, whether a conversion can change a value, whether a program point is reachable at all, or whether a check always holds. The analyzer is itself a program and can contain errors. Such an error can produce a confident answer that real executions contradict. In Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156], Goblint claimed that `c % 2 == 1` holds for $c in {-5, -7}$ @goblint1156. However, the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$ for both values. #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
   1161] fixed the congruence domain, which had ignored the sign of the dividend
-@goblint1161. A user who trusts such an answer has no reason to look for the
-bug it hides, whereas an imprecise answer only leaves the check undecided.
-This thesis asks under which assumptions the answers of an executable analyzer
-are sound for every execution of the analyzed program.
+@goblint1161. Such bugs are particularly bad because a user who trusts the
+answer has no reason to look for the error. An imprecise answer, in contrast,
+only leaves the check undecided. In this thesis, we build Voblint, an executable
+analyzer whose answers are proved sound for every execution of the analyzed
+program, and we state exactly under which assumptions this proof holds.
 
 Formal verification states such a claim as a proposition over explicit
 definitions, and a proof assistant checks its proof @nipkow14. Isabelle/HOL
@@ -34,48 +29,48 @@ results proved. This thesis was developed with AI assistance as well (see
 The kernel guarantees only that the formal statement follows from the
 definitions. Whether the definitions model the intended objects, and whether
 the statement expresses the intended claim, is left to human review. A review
-of parts of the Munkres formalization found definitions logically weaker than
-the textbook's, harmless only because each theorem assumes the missing
-constraints again @bryant26munkres[§8.1].
+of parts of the Munkres formalization found definitions that are logically
+weaker than the textbook's. They are harmless only because each theorem assumes
+the missing constraints again @bryant26munkres[§8.1].
 
-Verification projects therefore state this boundary explicitly. The seL4 proof
+Verification projects therefore explicitly state what lies outside the proof.
+The seL4 proof
 relates the kernel's C implementation to an abstract specification in
 Isabelle/HOL and names the compiler, assembly code, boot code, cache
-management, and hardware as assumptions @klein09. Voblint, the analyzer this
-thesis verifies, draws its boundary at the source language. Its main theorem
+management, and hardware as assumptions @klein09. Voblint draws its boundary at
+the source language. Its main theorem
 starts from _source executions_, the executions of the elaborated program
 under the small-step semantics #isaconst("pstep") of Voblint's input language
-VIMP. _Elaboration_ translates the parsed program into core VIMP with explicit
+VIMP. _Elaboration_ (#isaconst("elab_ptable")) translates the parsed program into core VIMP with explicit
 integer kinds. Every later representation is connected to source executions
 by proof, so only elaboration and #isaconst("pstep") need an adequacy
 argument. That argument states which fragment of C they model, where they
 depart from C11 (@sec:vimp-vs-c), and why no existing verified semantics
-serves as the anchor. IMP2 @lammich19imp2, for instance, represents operators
-by HOL functions, which an executable analyzer cannot inspect to choose its
-abstract operation.
+serves as the anchor.
 
 == From executions to static guarantees
 
 Software is usually checked by testing. A failing test demonstrates a bug, but
 a passing test suite has observed only finitely many executions
-@rival20[§1.4.1], and a test of an analyzer says nothing about the next
-program it analyzes. A static analysis reasons about all
-executions instead. At each program point it computes an _abstract state_, a
-finite representation of a set of program states, for instance an interval
+@rival20[§1.4.1]. A static analysis reasons about all
+executions instead. At each program point, it computes an _abstract state_. An
+abstract state is a finite representation of a set of program states, for
+instance, an interval
 that contains every value a variable takes whenever execution reaches the
 point. The analysis is _sound_ if the abstract state contains every state that
 occurs in a real run, although it may contain more. If a sound abstract state
 contains no state that violates a check, no execution violates it, tested or
 not (@fig:intro-runs). The converse does not hold.
 An abstract state can contain violating states that no execution reaches, and
-the analysis then cannot decide the check even when every execution satisfies
+the analysis then cannot decide the check, even when every execution satisfies
 it.
 
 Suppose the analysis computes $x in [43, +infinity]$ at a point that divides
-by `x`. Every execution reaching the point has $x >= 43$, so the division is
-safe. If it computes only $x in [0, 100]$, the abstract state contains $x = 0$
-and the division stays unproved, although every real execution may still have
-$x >= 43$, for instance because of a relation to another variable that an
+by `x`. Every execution that reaches this point has $x >= 43$, so the division is
+safe. If it computes only $x in [0, 100]$, the abstract state contains $x = 0$,
+and the analysis cannot prove the division safe. However, every real execution
+may still have
+$x >= 43$, for instance, because of a relation to another variable that an
 interval cannot express.
 
 #figure(
@@ -90,20 +85,22 @@ interval cannot express.
     them.],
 ) <fig:intro-runs>
 
-For a general-purpose language this incompleteness is unavoidable. By Rice's
+For a general-purpose language, this incompleteness is unavoidable. By Rice's
 theorem, no algorithm decides a nontrivial semantic property for every program
-of a Turing-complete language @rice53 @rival20[§1.3.3]. A sound analysis
-therefore permits false alarms and undecided checks but no false claims, and it
-is useful as long as it decides the checks of interest often enough
+of a Turing-complete language @rice53 @rival20[§1.3.3]. A sound analysis may
+therefore raise false alarms and leave checks undecided, but it never makes a
+false claim. It is
+useful as long as it decides the checks of interest often enough
 @rival20[§1.3.5]. Since every sound analysis over-approximates the same
-executions, analyses can specialize. One tracks intervals, another parities,
-another relations between variables, and a check that any one of them proves
-holds in every run. An analysis can also separate the activations of a
+executions, analyses can specialize. One tracks intervals, another parities, and
+another relations between variables. If any one of them proves a check, the
+check holds in every run. An analysis can also separate the activations of a
 procedure by their _calling context_, an abstraction of how the call was
-reached such as the call site or the abstract state at entry, and keep one
+reached, such as the call site or the abstract state at entry. It then keeps one
 abstract state per program point and context. A richer domain or more contexts
-decide more checks but enlarge the analysis, and with very many contexts it may
-not finish in practice.
+can decide more checks, but they also make the analysis more expensive. If there
+are
+many contexts, the analysis may not finish in practice.
 
 Voblint answers every check that the user writes into the source program as a
 statement `__voblint_check(e);`. It also warns at every arithmetic operation
@@ -112,10 +109,12 @@ conversion that changes a value. @fig:intro-answers shows a run in the
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
   playground] together with what each answer guarantees. Only #verdict("DEAD")
 makes a claim about reachability, and #verdict("REFUTED") is not a verified
-counterexample. Each run fixes an analysis configuration: the abstract domain
-(Sign, Interval, Parity, Congruence, or the reduced-product domain Int), the
-context policy that chooses the contexts, and the rule that combines
-contributions to global values. The run shown uses intervals without calling
+counterexample. Each run fixes an analysis configuration. It consists of the
+activated analyses (the domains Sign, Interval, Parity, Congruence, and the
+reduced-product domain Int, and an order analysis), the context policy that
+chooses the contexts, the rule that combines contributions to global values, the
+placement of the program's globals, and the treatment of signed overflow. The
+run shown uses intervals without calling
 contexts.
 
 #let _ans-warn = check-row("intro-answers", cond: "WARNING")
@@ -166,7 +165,7 @@ contexts.
         [#_line("1000 / p;")], tag(vb.verdict-warning, raw(_ans-warn.cond)),
         [a zero divisor could not be excluded; no run is shown to divide by zero],
         [#_line("1000 / (p + 1)")], tag(vb.muted, [none]),
-        [no run reaching this point divides by zero],
+        [no run reaching this point divides by zero, overflows, or changes a value by a conversion],
         table.hline(stroke: 0.5pt),
       ),
     )
@@ -183,10 +182,16 @@ contexts.
 
 == State of the art <sec:state-of-art>
 
-Most abstract interpreters in use have no machine-checked soundness proof and
-earn trust by testing. Livshits et al. @livshits15 observe that realistic
-whole-program analyses purposely make unsound choices and ask authors to state
-the nature and extent of the unsoundness.
+Most abstract interpreters in practical use have no machine-checked soundness
+proof and rely on testing instead. Livshits et al. observe that virtually all
+published whole-program analyses purposely make unsound choices @livshits15[p.
+  44]. Such an analysis over-approximates most language features but
+under-approximates a few features that experts know well, for instance,
+reflection in Java, `eval` in JavaScript, or `setjmp`/`longjmp` in C. The
+authors call such analyses _soundy_. They treat this as an engineering choice
+for precision and scalability, and they ask authors to state clearly the nature
+and extent of the unsoundness, instead of mentioning it only in passing
+@livshits15[p. 45].
 
 #figure(
   {
@@ -242,19 +247,20 @@ the nature and extent of the unsoundness.
 ) <tab:production-analyzers>
 
 @tab:production-analyzers compares Voblint with six analyzers that have no
-machine-checked soundness proof. Four of them handle a call by inlining, which
-reanalyzes the callee at every call and so never needs a context policy
-@blanchet03[§5.3] @eva-manual[§5.3] @journault19[§5.1] @brat14[§3]. Astrée,
-which proves the absence of run-time errors in C programs of up to 132,000 lines
-@blanchet03, targets programs without recursion @blanchet03[§5.3]. For
-recursion, Eva relies on a user-written contract or unrolls to a given depth
-@eva-manual[§6.3.9], MOPSA has no support @mopsa-manual[Limitations], and IKOS
-assumes that a recursive call may update any value in memory
+machine-checked soundness proof. Five of them claim to be sound. Astrée, for
+instance, proves the absence of run-time errors in C programs of up to 132,000
+lines @blanchet03. Pulse-X is a bug finder instead, and its under-approximating
+soundness theorem is proved on paper @le22[pp. 81:2--81:3]. The tools differ
+most in how they treat procedures. Four of them inline the callee at every call
+and therefore need no context policy @blanchet03[§5.3] @eva-manual[§5.3]
+@journault19[§5.1] @brat14[§3]. Inlining cannot handle unbounded recursion,
+and these tools exclude recursion, unroll it to a bounded depth, rely on
+user-written contracts, or assume that a recursive call may change any value
+@blanchet03[§5.3] @eva-manual[§6.3.9] @mopsa-manual[Limitations]
 @ikos-readme[Analysis Assumptions]. Goblint, like Voblint, keeps one abstract
-state per program point and context and analyzes recursive programs. Pulse-X,
-built from Infer on incorrectness logic, has an under-approximating soundness
-theorem proved on paper, by which reported errors are real within a formal
-model @le22[pp. 81:2--81:3].
+state per program point and calling context and analyzes recursive programs.
+It is therefore the closest model for Voblint, but only its solver has a
+mechanized proof @stade24 @tilscher26.
 
 Such tools are checked against executions. Cuoq et al. @cuoq12 compare
 Frama-C's value analysis with compiled execution on programs generated by
@@ -262,15 +268,20 @@ Csmith and report fifty bugs found and fixed. By differential testing, which
 flags answers on which analyzers disagree, Klinger et al. @klinger19 find
 soundness or precision issues in four of six analyzers, and Kaindlstorfer et
 al. @kaindlstorfer24 find 16 soundness issues in seven of eight, including MOPSA.
-Goblint had no incorrect result in five years of SV-COMP, yet its developers
-report soundness issues its benchmarks missed @saan26phd[§3.4.6]. The Goblint
-defect at the start of this chapter is an error in one abstract operation, the
-kind that a per-operation soundness obligation excludes inside the proof
-boundary.
+Since its first participation in SV-COMP in 2021, Goblint has never produced a
+false negative on the competition's benchmark suite @seidl26. Still, its
+developers report soundness issues that the benchmarks missed
+@saan26phd[§3.4.6].
+// TODO: check the claim above against Saan's thesis, §3.4.6 (dspace.ut.ee unreachable on 2026-10-17).
+The
+Goblint
+defect at the start of this chapter is an error in one abstract operation.
+Voblint proves a soundness obligation for each of its abstract operations, which
+excludes this kind of error.
 
 CompCert provides a precedent for a theorem about a delivered tool. It proves
-that its compiled code behaves as the source semantics specifies and lists the
-components that remain trusted @leroy09. Verasco carries the approach to a
+that its compiled code behaves as the source semantics specifies, and it lists
+the components that remain trusted @leroy09. Verasco carries the approach to a
 static analyzer for C @jourdan15. For Goblint, local traces give each thread a
 concrete semantics against which its thread-modular analyses are proved sound
 on paper @schwarz21 @schwarz23 @schwarz25phd[Ch. 6].
@@ -312,32 +323,41 @@ on paper @schwarz21 @schwarz23 @schwarz25phd[Ch. 6].
   kind: table,
   placement: bottom,
   caption: [Mechanized abstract interpreters with machine-checked soundness
-    proofs. The text explains the entries. @ch:related gives
-    the details.],
+    proofs, as described in each work. _Prover_ is the proof assistant and
+    _Language_ the analyzed language. _Recursion_ says how a recursive call is
+    treated: _alarm_ raises an alarm, _covered_ means the theorem includes
+    recursive programs, _exact_ interprets calls and returns exactly, and _no
+    procedures_ means the language has none. _Contexts_ says how calls are
+    distinguished: _per call site_ reanalyzes a function at every call site,
+    _object-sensitive_ computes contexts by a function, _summaries_ computes
+    one summary per procedure, _set per call_ lets the context policy return
+    several contexts for one call, and _none_ and _intraprocedural_ mean that
+    calls are not distinguished or not analyzed. _Fixpoint_ says how the
+    result is computed: _structural_ iterates over the program's syntax,
+    _iterator_ over the whole annotated program, _checked_ verifies the result
+    of an untrusted iterator, _solver_ and _TD solver_ use a verified solver,
+    and _specified_ only states the constraints. _Executable_ says whether the
+    analyzer runs outside the prover. @ch:related gives the details.],
 ) <tab:state-of-art>
 
-@tab:state-of-art compares the mechanized abstract interpreters closest to
-Voblint. For _recursion_, Verasco @jourdan15 raises an alarm where a recursive
-call can occur, Lammich and Müller-Olm @lammich07afp interpret calls and
-returns exactly, and the theorems of Blazy et al. @blazy13 (whose analysis is
-intraprocedural), Cachera et al. @cachera05, Dabrowski and Pichardie
-@dabrowski09, and Voblint quantify over all programs, recursive ones included.
-For _contexts_, Verasco reanalyzes a function at every call site, Dabrowski and
-Pichardie compute object-sensitive contexts by a function, and Lammich and
-Müller-Olm use per-procedure summaries. Voblint's context policy instead
-returns a set of contexts per call ("set per call"), since an analysis may
-split one call into several alternatives. For the _fixpoint_, three analyzers iterate over the
-program's syntax ("structural"), Nipkow and Klein over the whole annotated
-program, Blazy et al. check the result of an untrusted iterator, Cachera et
-al. use a verified solver of ordinary inequations, and two works only specify
-constraints.
+@tab:state-of-art compares the mechanized abstract interpreters most closely
+related to Voblint. Their proofs cover small or intermediate languages, from
+While and IMP to C\#minor. The differences that matter for Voblint lie in
+recursion, contexts, and the fixpoint computation. Verasco raises an alarm
+where a recursive call can occur @jourdan15, and three of the works have no
+procedures at all. No work in the table lets the context policy give one call
+several contexts, which an analysis needs when it splits one call into several
+alternatives. Only Cachera et al. compute the fixpoint with a verified solver,
+and that solver handles ordinary inequations, not side-effecting ones
+@cachera05. Only two works specify the constraints without computing them, and
+they have no executable analyzer @dabrowski09 @lammich07afp.
 
 Voblint's architecture follows Goblint, an abstract interpreter for
 multithreaded C programs @vojdani16 @seidl26. Goblint defines analyses
-independently of the generic solvers that compute their results. The
-interface between the two is a side-effecting constraint system @seidl03
-@apinis12 @seidl26, which relates unknown abstract values by inequalities and
-lets the inequality of one unknown also contribute to others. Goblint's
+independently of the generic solvers that compute their results. The interface
+between the two is a side-effecting constraint system @seidl03 @apinis12
+@seidl26. Such a system relates unknown abstract values by inequalities, and the
+inequality of one unknown may also contribute to other unknowns. Goblint's
 top-down solver, including its extension to side effects, has been formalized
 and proved partially correct in Isabelle/HOL @stade24 @tilscher26. When it
 terminates, it returns values that satisfy the inequalities of the queried
@@ -346,31 +366,44 @@ unknown and of every unknown it transitively reads
 describes the program, and whether the verdicts read off its solution hold,
 lies outside the solver's theorem.
 
-Calling contexts add a further gap, since the per-context abstract states of
+Calling contexts add another gap, since the per-context abstract states of
 an analyzer have no counterpart in an ordinary concrete semantics. Suppose
 `main` calls `bump(5)` and `bump(4)`, and `bump` returns its argument plus
 one. An analysis whose contexts record the argument at entry claims the result
-$6$ in the first context and $5$ in the second. The collecting semantics at
-the point where `bump` returns holds both results, and neither it nor the call
-stack of a run says which store belongs to which context. To state these
+$6$ in the first context and $5$ in the second. The collecting semantics at the
+point where `bump` returns holds both results. It forgets how each store was
+reached, so it does not say which store belongs to which context. To state these
 claims, the concrete semantics must record the context of every _activation_,
 one execution of a procedure from its call to its return.
 
-To our knowledge, no prior mechanized analyzer connects a source semantics to
-a side-effecting constraint system or is proved sound through a verified
-solver for such systems. Among the works of @tab:state-of-art, Dabrowski and
-Pichardie come closest on contexts. Their context function is a parameter of
-the concrete semantics, but it gives each call exactly one context, and their
+To our knowledge, no prior mechanized analyzer connects a source semantics to a
+side-effecting constraint system and its verified solver. Among the works of
+@tab:state-of-art, Dabrowski and
+Pichardie are closest to Voblint in their treatment of contexts. Their context
+function is a parameter of
+the concrete semantics, but it gives each call exactly one context. Their
 analyses are constraints that no solver computes @dabrowski09[§7]. Voblint's
 theorem combines four properties that no work in the table has together. It
-covers recursive procedures, takes the context policy as a parameter that may give one call
-several contexts, goes through a verified solver, and holds for the executable
+covers recursive procedures, takes the context policy as a parameter that may
+give several contexts to one call, is proved through a verified solver, and
+holds for the executable
 analyzer. It is also stated over source executions, whereas Verasco's theorem
 concerns C\#minor, an intermediate language of CompCert. Voblint claims no
-better precision than any of these tools. Its language VIMP has no pointers or
-heap and is far smaller than the C, C++, and Python dialects the unverified
-tools accept, which Astrée and IKOS have applied to safety-critical control
-software @blanchet03 @brat14[§3].
+better precision than any of these tools.
+
+Voblint builds on prior work. The solver and the soundness proofs of its
+update rules come from the Isabelle formalization of Tilscher et al.
+@tilscher26. Voblint uses a copy of it with changes made for this thesis
+(@sec:upstream-td). The update rules come from
+Stemmler et
+al. @stemmler25, side-effecting constraint systems from Seidl et al. @seidl03
+and Apinis et al. @apinis12, and the local/global analysis architecture from
+Goblint. Widening, narrowing, and the reduced product are well studied
+@cousot77 @cousot79. The derivation of transfer functions from sound value
+operations follows Nipkow and Klein @nipkow14[Sects. 13.5, 13.7], and the
+activation traces adapt the local traces of Schwarz et al. @schwarz21 to
+procedure activations. Isabelle's code generator @haftmann10 produces the
+OCaml code the tools run.
 
 == Contributions <sec:contributions>
 
@@ -379,15 +412,12 @@ machine-checked soundness proof, available at
 #link(
   "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis",
 )[`github.com/ManuelLerchner/Voblint-Verification-Master-Thesis`]
-and archived on Zenodo @voblint. The proof follows every execution through
-each representation the analyzer uses: the source program, its control-flow
-graph, the equations over abstract states, and the reported verdicts. Each
-change of representation may add states that no execution reaches, which costs
-precision, but must not lose a reachable state. A compiler that drops an edge,
-a return to the wrong caller, a solver that stops before its equations hold, or
-a verdict read at the wrong program point would each lose an execution and
-yield a guarantee that some run violates. @fig:intro-nest shows the resulting
-chain of inclusions at one program point.
+and archived on Zenodo @voblint. @fig:intro-nest shows the chain of inclusions that the
+proof establishes at one program point, from source executions to the reported
+verdicts. Each step may add states that no execution reaches, which costs
+precision, but must not lose a reachable state. Errors such as a compiler that
+drops an edge or a return to the wrong caller would lose such a state, and the
+proof excludes them.
 
 #figure(
   {
@@ -448,6 +478,10 @@ chain of inclusions at one program point.
     (#isathm("run_voblint_source_sound"), @ch:results).],
 ) <fig:intro-nest>
 
+The formalization makes four contributions. The first is the end-to-end
+theorem itself. The other three
+make this theorem possible or show that it is not vacuous.
+
 - _End-to-end soundness._ Whenever the analysis function
   #isaconst("run_voblint") returns a report, its definite verdicts
   (#verdict("PROVED") and #verdict("REFUTED")) hold for every source execution
@@ -457,11 +491,13 @@ chain of inclusions at one program point.
   justify #verdict("DEAD") and the absence of arithmetic warnings
   (@ch:results).
 - _A concrete semantics of calling contexts._ An activation trace records the
-  path of one activation together with the activation that called it, so the
-  contexts a policy assigns to a call can be read off the concrete execution.
-  A policy may assign one call several contexts. As long as it assigns at
-  least one to every call the analysis considers reachable, the stores
-  collected per context together are exactly the stores of the node collecting
+  path of one activation together with the activation that called it. Therefore,
+  the contexts that a policy assigns to a call can be read off the concrete
+  execution.
+  A policy may assign several contexts to one call. Assume that an analysis claim meets the coverage contract.
+  This contract includes that every call from a store the claim contains gets
+  at least one context. Then the stores collected per context together are
+  exactly the stores of the node collecting
   semantics, which ignores contexts
   (#isathm("node_collect_eq_Union_activation_collect"), @sec:contract).
 - _Separately verified components._ Domains, context policies, analyses, and
@@ -470,32 +506,27 @@ chain of inclusions at one program point.
   its primitive operations sound, and the transfer functions derived from them
   are sound for every such domain (#isathm("nonrel_spec_sound")). A context
   policy proves only that its contexts agree with the concrete semantics and
-  that every call from a store the claim contains gets one, analyses that ask one another for facts compose under conditions on their
-  answers (@ch:cooperation), and the solver enters the proof only through
+  that every call from a store that the claim contains gets a context. Analyses
+  that ask one another for facts can be combined under conditions on their
+  answers
+  (@ch:cooperation). The solver enters the proof only through
   proved facts about its result (@sec:cert-param).
 - _Needed assumptions and nonempty results._ For several conditions of the
-  proof, a theorem shows that dropping or weakening the condition admits an
-  answer that a concrete execution contradicts, such as an analysis result that
-  misses a store some run reaches or an abstract remainder that excludes the
-  concrete one, so none of them can simply be dropped (@sec:eval-1161). Dropping the requirement that every such call gets a context is one example (#isathm("total_dropped_unsound")). Since a soundness
+  proof, a theorem shows that dropping or weakening the condition admits an answer that a concrete execution contradicts. Examples are an analysis result that misses a store that some run reaches, or an abstract remainder that excludes the concrete one. Therefore, none of these conditions can simply be dropped (@sec:eval-1161). One example is dropping the requirement that every call from a store the claim contains gets a context (#isathm("total_dropped_unsound")). Since a soundness
   theorem would also hold for an analyzer that answers #verdict("UNKNOWN")
   everywhere, further theorems show definite verdicts on concrete programs
-  (@sec:nonvacuity) and one context policy strictly more precise than another
+  (@sec:nonvacuity) and that one context policy is strictly more precise than another
   on one program (@sec:eval-precision).
 
 == Scope and limitations <sec:intro-scope>
 
 Voblint is a Goblint-style analyzer with several context policies, over a
 small language with parameters, return values, and recursive procedures. It
-isolates the parts of Goblint's architecture the proof is about (calling
-contexts, side-effecting constraint systems, configurable domains, analyses
-that answer one another's queries, and the top-down solver) and is not a
-verification of Goblint itself. _End to end_ means from source executions to the result
-the analysis function returns. Voblint provides the semantic connections on
-both sides of the solver and depends on it only through its post-solution
-guarantee and three facts about a returned run, namely that its solved set
-is finite, that the run lies in the solver's domain, and that the executable
-solver returns the same result (@sec:cert-param). @fig:intro-trust places each
+isolates the parts of Goblint's architecture that the proof is about: calling
+contexts, side-effecting constraint systems, configurable domains, analyses that
+answer one another's queries, and the top-down solver. It is not a verification
+of Goblint itself. _End-to-end_ means that the proof reaches from source
+executions to the result that the analysis function returns.  @fig:intro-trust places each
 stage of the analyzer relative to the proof.
 
 #figure(
@@ -539,7 +570,7 @@ stage of the analyzer relative to the proof.
           inset: 3pt,
           radius: 3pt,
           stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dashed"),
-        )[Source semantics: elaboration, #isaconst("pstep") and its operators]),
+        )[Source semantics: elaboration (#isaconst("elab_ptable")), #isaconst("pstep") and its operators]),
         align(center, text(fill: vb.neutral)[#sym.arrow.b]),
         zone(vb.proved, [proved in Isabelle/HOL])[
           #p[CFG compiler] #arrow #p[equations] #arrow #p[solver] #arrow #p[result, verdicts]
@@ -563,48 +594,29 @@ stage of the analyzer relative to the proof.
     integer library, and @sec:trust-boundary gives the exact boundary.],
 ) <fig:intro-trust>
 
-Voblint builds on prior work. The solver and the soundness proofs of its
-update rules come from the Isabelle formalization of Tilscher et al.
-@tilscher26, which Voblint uses in a copy with changes made for this thesis
-and checks in every build (@sec:upstream-td). The rules come from Stemmler et
-al. @stemmler25, side-effecting constraint systems from Seidl et al. @seidl03
-and Apinis et al. @apinis12, and the local/global analysis architecture from
-Goblint. Widening, narrowing, and the reduced product are well studied
-@cousot77 @cousot79. The derivation of transfer functions from sound value
-operations follows Nipkow and Klein @nipkow14[Sects. 13.5, 13.7], and the
-activation traces adapt the local traces of Schwarz et al. @schwarz21 to
-procedure activations. Isabelle's code generator @haftmann10 produces the
-OCaml code the tools run.
-
 The theorem has the following limits (@sec:limitations).
 
-- _Language._ VIMP has no pointers, heap, or threads. Its integers have fixed
-  widths and wrap, every operation is defined, division by zero included, and
-  a local declared without an initializer holds some value of its kind. A
-  verdict therefore does not necessarily transfer to a C program with the same
-  text (@sec:vimp-vs-c).
-- _Properties._ Voblint checks assertions and arithmetic hazards: division and
-  remainder by zero, signed overflow, and conversions that may change a value.
-  Goblint also checks data races, memory safety, memory leaks, and program
-  termination @saan26phd[§3.3].
-- _Adequacy._ We argue, but do not prove, that elaboration and the core
-  semantics #isaconst("pstep") model the intended language (@sec:vimp-vs-c).
-- _Partial correctness._ The theorem covers every answer the analyzer returns.
-  Termination of the solve is not proved for every program (@sec:termination).
-- _Trusted components._ The parser, the code generator, and the target
+- _Language and properties._ VIMP has no pointers, heap, or threads. Its
+  integers have fixed widths and wrap around. Every operation is defined,
+  including division by zero, and a local declared without an initializer
+  holds some value of its kind. Therefore, a verdict does not always hold for
+  a C program with the same text (@sec:vimp-vs-c). Voblint checks assertions
+  and arithmetic hazards, while Goblint also checks data races, memory
+  safety, memory leaks, and program termination @saan26phd[§3.3].
+- _Adequacy and trusted components._ We argue, but do not prove, that
+  elaboration and the core semantics #isaconst("pstep") model the intended
+  language (@sec:vimp-vs-c). The parser, the code generator, and the target
   toolchains lie outside the proof (@sec:trust-boundary).
-- _Precision._ No completeness or general precision ordering is proved
-  (@sec:eval-precision).
-- _Goblint._ The correspondence is architectural, and no theorem transfers to
-  Goblint's implementation (@sec:rel-goblint).
-- _Direction._ Every source run is proved to have a matching graph run, and
-  every graph run a representing trace, but not conversely. Soundness needs
-  only this direction (@sec:csim).
-- _Executable cost._ The executable keeps the proofs' data representations,
-  and no time or memory measurement is reported (@sec:limitations).
-- _Evidence beyond the theorem._ Each counterexample theorem weakens one
-  condition on one program (@sec:eval-1161), and the regression corpus is
-  small and was written or adapted for this work (@sec:eval-corpus).
+- _Partial correctness._ The theorem covers every report the analyzer returns.
+  Termination of the solve is not proved for every program (@sec:termination).
+- _Precision and cost._ No completeness or general precision ordering is
+  proved (@sec:eval-precision). The executable uses the same data
+  representations as the proofs, and we report no time or memory measurements
+  (@sec:limitations).
+- _Goblint and evidence._ The correspondence to Goblint is architectural, and
+  no theorem transfers to Goblint's implementation (@sec:rel-goblint). The
+  regression corpus is small and was written or adapted for this work
+  (@sec:eval-corpus).
 
 == Outline
 
@@ -612,7 +624,8 @@ After @ch:background, the thesis follows the nested sets of @fig:intro-nest
 from the inside out. #partref(<part:over-approx>) fixes what an analysis must
 over-approximate: VIMP and its compilation to a control-flow graph
 (@ch:program-model), and activation traces indexed by calling context with the
-coverage contract analyses must meet (@ch:traces). #partref(<part:analyses>) develops what each analysis
+coverage contract that analyses must meet (@ch:traces). #partref(<part:analyses>)
+develops what each analysis
 contributes, without contexts or a solver: the abstract domains
 (@ch:domains), the interface through which an analysis supplies its transfer
 functions (@ch:analysis-interface), and the combination of analyses that query
@@ -622,9 +635,7 @@ one another (@ch:cooperation).
 sound result. @ch:equations generates the equations of a program, @ch:solving
 computes their solution with the verified solver, and @ch:results composes
 these parts into the source-level theorem. #partref(<part:instances>) puts the
-theorem to use. @ch:instances instantiates it for five domains and an order
-analysis, @ch:executable follows #isaconst("run_voblint") to the delivered
-tools and their trust boundary, @ch:evaluation tests the premises and
+theorem to use. @ch:instances instantiates it for five domains and an order analysis. @ch:executable follows #isaconst("run_voblint") to the delivered tools and their trust boundary. @ch:evaluation tests the premises and
 obligations, the precision, and the unverified code, and @ch:tooling describes
 the tooling. #partref(<part:assessment>) compares Voblint with prior work
 (@ch:related) and closes with limitations and future work (@ch:conclusion).
