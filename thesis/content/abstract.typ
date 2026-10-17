@@ -3,53 +3,60 @@
 
 = Abstract <abstract>
 
-Abstract interpretation over-approximates program executions. Goblint, a static
-analyzer for C, implements it by reducing a program to a system of equations
-over abstract values and solving that system with a generic fixpoint solver
-@vojdani16 @seidl26. End-to-end soundness requires that the control-flow graph
-simulates the source program, that the equations over-approximate its
-executions in every calling context, that the solver's result satisfies the
-equations, and that the reported verdicts follow from that result. For
-Goblint's top-down solver, only the third step had been verified @stade24
-@tilscher26.
+An abstract interpreter over-approximates a program's executions, so any
+property that holds for the over-approximation holds in every run. Goblint, an
+abstract interpreter for C, builds a control-flow graph of the program,
+translates the graph into a system of equations over abstract values, and solves
+that system with a generic fixpoint solver @vojdani16 @seidl26. Its guarantee
+therefore depends on four conditions: a control-flow graph that simulates the
+source program, equations that over-approximate its executions in every calling
+context, a solver result that is a post-solution of the equations, and verdicts
+that follow from that result. For Goblint's top-down solver, only the third
+condition had been verified @stade24 @tilscher26.
 
 We present Voblint, an Isabelle/HOL formalization of a context-sensitive
-interprocedural analyzer for VIMP, a small C-like language with fixed-width
-global and local integer variables and recursive procedures with parameters
-and return values. Inside Isabelle, a parsed program is translated into core VIMP,
-in which every operation carries its integer type and every conversion
-inside an expression is explicit, as CIL does for Goblint @necula02. A proved forward simulation maps core
-executions to runs of the control-flow graph. The main theorem states that whenever the analyzer returns
-a report, the report covers every store reached by a finite execution of the
-translated program from an initial store, and every
-definite verdict at the corresponding program point holds for that store,
-without claiming that the point itself is reached. Further theorems show that
-a check reported #verdict("DEAD") is unreachable, that at a point without an
-arithmetic diagnostic no divisor is zero, no signed operation overflows and no
-conversion changes its value, and that an arithmetic obligation reported as an error fails wherever its point is reached. To our knowledge, Voblint is the first mechanized analyzer whose
-soundness proof connects a source semantics to a side-effecting constraint system, in which evaluating one unknown may contribute to others, and its verified solver.
+interprocedural analyzer. Its soundness proof covers all four conditions for
+VIMP, a small C-like language with fixed-width integer variables and recursive
+procedures with parameters and return values. A parsed program is translated
+into core VIMP, which makes every integer type and conversion explicit, as CIL
+does for Goblint @necula02. The main theorem combines the proofs of the four
+conditions. It states that if the analyzer returns a report, the report covers
+every store that a finite execution of the translated program reaches from an
+initial store, and that every definite verdict at the corresponding program
+point holds for that store. We also prove that a check reported #verdict("DEAD")
+is unreachable and that an arithmetic obligation reported as an error fails
+wherever its point is reached. At a point without an arithmetic warning or
+error, no divisor is zero, no signed operation overflows, and no conversion
+changes its value. To our knowledge, Voblint is the first mechanized analyzer
+whose soundness proof connects a source semantics to a side-effecting constraint
+system and its verified solver.
 
-A central difficulty is context sensitivity. A context-sensitive analyzer
-claims a separate invariant for each program point and calling context, but the
-collecting semantics merges the stores of all calls of a procedure. We
+The main difficulty is context sensitivity. A context-sensitive analyzer
+computes a separate invariant for each program point and calling context. The
+collecting semantics, however, merges the stores of all calls to a procedure, so
+it cannot say which stores a given context must cover. To solve this, we
 introduce activation traces, inspired by the local traces of Schwarz et al.
-@schwarz21, which follow individual procedure activations and determine which
-executions each context represents. If a context policy admits every reachable call in some context, the union of the per-context sets of stores equals the
+@schwarz21. Each trace follows one procedure activation, and a context policy
+decides to which contexts it belongs. If the policy admits every reachable call
+in some context, the union of the per-context sets of stores equals the
 collecting semantics, so splitting by context loses no execution.
 
-The formalization is modular and follows Goblint's architecture.
-Domains, context policies, analyses, and the solver discharge separate proof
-obligations, which are composed by a single soundness theorem. A numeric domain
-proves only the soundness of its abstract value operations, and the framework
-derives its transfer functions and their soundness once, as in the generic
-abstract interpreter of Nipkow and Klein @nipkow14[§13.5]. The main theorem covers every combination of the offered numeric and relational analyses, context policies, placements of program globals and treatments of signed overflow.
+The proof is modular and follows Goblint's architecture. Domains, context
+policies, analyses, and the solver each have their own proof obligations, and
+one soundness theorem combines them. A numeric domain only has to implement a
+shared interface and prove its abstract operations sound. The framework builds
+transfer functions from these operations and proves them sound once for all
+domains, as in Nipkow and Klein's generic abstract interpreter @nipkow14[§13.5].
+The main theorem holds for every offered choice of analysis, context policy,
+placement of program globals, and treatment of signed overflow.
 
-The analysis function is exported to OCaml, runs in a command-line interface
-and a #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser playground], and is tested on
-#stat("corpus.cases") regression programs. Proofs by evaluation show that the
-main theorem is non-vacuous on concrete programs.
+The analysis function is exported to OCaml, runs in a command-line interface and
+a
+#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
+  playground], and is tested on #stat("corpus.cases") regression programs. Proofs
+by evaluation show that the main theorem is non-vacuous on concrete programs.
 
-The main result is partial correctness: termination of the solver is not
-proved. The parser, the code generator, the OCaml and WebAssembly
-toolchains, and the rendering code remain trusted. We document how VIMP
-differs from C11 @iso-c11.
+The main result is partial correctness: termination of the solver is not proved.
+We trust everything outside the formalization: the hand-written OCaml code,
+including the parser and the rendering, Isabelle's code generator, and the OCaml
+and WebAssembly toolchains. We document how VIMP differs from C11 @iso-c11.

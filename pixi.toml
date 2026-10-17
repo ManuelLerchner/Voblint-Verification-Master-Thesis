@@ -205,6 +205,7 @@ thesis-local-data = { depends-on = [
 thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", depends-on = [
   "thesis-local-data",
 ], description = "Build the thesis PDF and fail on warnings." }
+thesis-text = { cmd = "python3 thesis/tools/text_export.py", description = "Print a thesis section as plain text with one paragraph per line, e.g. `pixi run thesis-text abstract | pbcopy`." }
 thesis-whitespace = { cmd = "python3 thesis/tools/whitespace.py", description = "Warn about thesis pages with a large blank stretch (reads the built PDF)." }
 thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", depends-on = [
   "thesis-local-data",

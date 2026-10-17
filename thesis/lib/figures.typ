@@ -365,7 +365,19 @@
 // A reference to a part ("Figure 5.2b") is resolved by the `show ref` rule in
 // tum.typ, at the part's own location: subpar's `numbering-sub-ref` would run
 // at the citing sentence and count the part's own kind.
-#let subfigures(..args) = subpar.grid(numbering: chapter-numbering, ..args)
+//
+// HTML export drops grids and with them the labels of the parts, which breaks
+// every reference to one; `thesis-text` sets `text-export` so the parts and
+// the outer caption become plain labelled figures instead.
+#let subfigures(..args) = if "text-export" in sys.inputs {
+  for (i, part) in args.pos().enumerate() {
+    if type(part) == label { continue }
+    let next = args.pos().at(i + 1, default: none)
+    if type(next) == label [#part #next] else { part }
+  }
+  let named = args.named()
+  [#figure([], caption: named.at("caption", default: none)) #named.at("label", default: none)]
+} else { subpar.grid(numbering: chapter-numbering, ..args) }
 
 
 // ------------------------------------------------------------------ parts --
