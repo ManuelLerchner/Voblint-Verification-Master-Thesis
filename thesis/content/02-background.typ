@@ -383,9 +383,7 @@ states a sound result
 @mine17[Thm. 2.8]. The standard argument uses one domain element that
 describes the whole program. It works with _configurations_, each a program
 point together with a store, so that one relation $->$ describes every step
-of the program, each moving an execution along one edge. The constraint systems of
-@sec:constraints then split this element into one abstract state per program
-point. In the counting loop, a configuration is a pair
+of the program, each moving an execution along one edge. In the counting loop, a configuration is a pair
 $(p, n)$ of a program point and the value of $i$, so
 $U = {"start", h, b, t, e} times ZZ$. With the set $I$ of initial
 configurations, the reachable configurations form the least fixpoint of
@@ -412,7 +410,7 @@ Voblint's proof uses the same principle on a set of execution traces defined
 inductively as a least fixpoint, and proceeds by induction over its rules.
 Analyzers such as Goblint keep one abstract state per program point
 @rival20[§4.2.1] and state one inequality per point, whose solution plays the
-role of $a$.
+role of $a$ (@sec:constraints).
 
 == Constraint systems <sec:constraints>
 
@@ -492,6 +490,13 @@ separately per calling context, which abstracts how an activation
 distinguish call strings, which record recent call sites, from the functional approach,
 which relates abstract entry and return states @sharir81. Context-sensitive constraint
 systems use unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3].
+At a call, such an analysis computes the abstract state in which the callee is
+entered, which also determines the callee's context. At the return, it combines
+the callee's result with the caller's state before the call, as Goblint's
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245",
+)[constraint generator]
+does with its operations `enter` and `combine` (@sec:calls).
 For the calls `bump(5)` and `bump(4)` in @ch:intro, entry-argument contexts
 distinguish return values $6$ and $5$, while a single unknown must cover both.
 
@@ -530,44 +535,42 @@ $ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
 
 A _widening_ $a widen b$ replaces the update from the old value $a$ to the new
 value $b$ by a guess that lies above both, which keeps the result sound
-(#isalocale("widening")). A classical widening is also chosen so that repeated
-widening stabilizes after finitely many steps @cousot77[§9.1.3]
-@cousot92plilp[§4], which the upper-bound law alone does not ensure. A common
-strategy widens at loop heads. The standard interval widening replaces a
-growing bound by $+infinity$ @cousot77[§9.2] @mine17[§4.5.2], so widening at
-$h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
-$[0, +infinity]$ at once. Propagated through the loop, this value yields the
-less precise solution of @fig:loop-solutions, which loses the bound $5$ of the
-loop condition `i < 5`.
+(#isalocale("widening")). A common strategy widens at loop heads. The standard
+interval widening replaces a growing bound by $+infinity$ @cousot77[§9.2]
+@mine17[§4.5.2], so widening at $h$ turns the first change there, from
+$[0, 0]$ to $[0, 1]$, into $[0, +infinity]$ at once. Propagated through the
+loop, this value yields the less precise solution of @fig:loop-solutions,
+which loses the bound $5$ of the loop condition `i < 5`.
 
 The branch into the body restricts $[0, +infinity]$ to $[0, 4]$, the body
 yields $[1, 5]$, and evaluating the head again gives
 $[0, 0] ljoin [1, 5] = [0, 5]$. A widened iteration only grows and would not
-take this smaller value. A _narrowing_ lets it descend. Both steps
-appear in @fig:widening-phases, and @fig:widening-warrow shows one update
-operator that combines them, widening or narrowing depending on the candidate.
+take this smaller value. A _narrowing_ lets it descend. It combines the
+current value $a$ with a candidate $b lle a$ and returns a value between the
+two @cousot77[§9.3.4] @cousot92plilp[§4]:
+$ b lle a narrow b lle a. $
+In the counting loop, the interval narrowing reaches $[0, 5]$, but in general,
+narrowing need not recover the least fixpoint. Both steps appear in
+@fig:widening-phases. The verified TD solver applies both operators in a single
+update, _warrowing_ (#isaconst("warrow")), shown in @fig:widening-warrow. It
+narrows when the candidate lies below the current value and widens otherwise
+@apinis13 @apinis16[§3] @grass24.
 
-
-A narrowing $a narrow b$ combines the current value $a$ with a candidate
-$b lle a$ and returns a value between the two @cousot77[§9.3.4]
-@cousot92plilp[§4]:
-$ b lle a narrow b lle a. $ These are the _bracket laws_ of the solver's class #isalocale("narrowing"). A classical
-narrowing must also make repeated narrowing stabilize. The class omits this
-law, since termination of the solver is not proved. In the counting loop, the
-interval narrowing reaches $[0, 5]$, but in general, narrowing need not recover
-the least fixpoint.
-
-Soundness of the result does not depend on how the solver widens and narrows.
-The verified TD solver applies both operators in a single update,
-_warrowing_ (#isaconst("warrow")). It narrows when the candidate lies below
-the current value and widens otherwise @apinis13 @apinis16[§3] @grass24, so
-each update lies above the candidate
-(#isathm("warrowing_properties", thy: "Warrowing")). An unknown whose value no
-longer changes under this update therefore satisfies its inequality. The
-solver's correctness theorem uses only this and holds whether or not the
-right-hand sides are monotone (@sec:td). Monotonicity is thus needed for the
-classical theory of least fixpoints, but not to certify that a returned
-valuation is a post-solution. As long as the operators satisfy their laws, the
+Soundness, termination, and precision depend on different properties of these
+operators. Soundness needs only the upper-bound law of widening and the
+_bracket laws_ of narrowing above, which the solver's classes
+#isalocale("widening") and #isalocale("narrowing") state. With them, each
+warrowing update lies above the candidate
+(#isathm("warrowing_properties", thy: "Warrowing")), so an unknown whose value
+no longer changes satisfies its inequality. The solver's correctness theorem
+uses only this and holds whether or not the right-hand sides are monotone
+(@sec:td). Monotonicity is needed for the classical theory of least fixpoints,
+but not to certify that a returned valuation is a post-solution. Termination
+needs more. A classical widening is chosen so that repeated widening stabilizes
+after finitely many steps @cousot77[§9.1.3] @cousot92plilp[§4], and a classical
+narrowing must also make repeated narrowing stabilize. The solver's classes
+omit these stabilization laws, since termination of the solver is not proved,
+so the laws they state do not make a solve terminate. Within these laws, the
 choice of widening and narrowing affects only precision and termination.
 
 == Side-effecting constraint systems <sec:side-effects>
@@ -792,13 +795,6 @@ report gives there, and in the stores its verdicts admit. Inside a proposition, 
 $and$, $or$ are the usual connectives. Subscripts, superscripts, and symbols
 such as $tack.r$ are notation for a constant applied to its arguments, and the
 text names the constant at first use.
-
-A _quotient type_ identifies representations up to an equivalence
-@huffman13. The executable abstract states of @ch:solving are one: two finite
-representations are identified when they read back to the same
-function-valued state:
-#thy("default_st")
-Its operations are lifted with #isacmd("lift_definition").
 
 _Code equations_ determine what code generation emits @haftmann10, and one
 #isacmd("export_code") declaration emits the analyzer's OCaml from them, so

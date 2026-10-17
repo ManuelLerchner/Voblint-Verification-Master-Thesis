@@ -84,8 +84,9 @@ $⟪(lbot, []), (lbot, [])⟫$.
 
 Different representations can describe the same state: overrides of distinct
 names may appear in any order, and an override equal to its default changes
-nothing. A _quotient type_ (@sec:isabelle) identifies the representations
-that answer every lookup alike:
+nothing. A _quotient type_ @huffman13 identifies the representations that
+answer every lookup alike, and its operations are lifted with
+#isacmd("lift_definition"):
 
 #thy("default_st")
 

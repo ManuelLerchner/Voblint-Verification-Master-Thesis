@@ -5,13 +5,88 @@
 
 = Related Work <ch:related>
 
-@sec:state-of-art compared Voblint by what its theorem covers, first with
-unverified analyzers and then with mechanized ones (@tab:production-analyzers,
-@tab:state-of-art). This chapter compares its mechanisms with the closest lines
-of work: verified analyzers, mechanized abstract interpretation, verified
-fixpoint solvers, context sensitivity, and Goblint together with local-trace
-semantics. The comparisons are based on a web and OpenAlex search with
+This chapter places Voblint among the analyzers in practical use and compares
+its mechanisms with the closest lines of work: verified analyzers, mechanized
+abstract interpretation, verified fixpoint solvers, context sensitivity, and
+Goblint together with local-trace semantics. The comparisons are based on a web and OpenAlex search with
 full-text reads of the closest papers, not on a systematic review.
+
+== Analyzers in practical use <sec:rel-practice>
+
+Most analyzers applied to real C programs have no machine-checked soundness
+proof, and they differ from Voblint most in how they treat procedures.
+@tab:production-analyzers compares six of them with Voblint. Five of them claim to be sound. Pulse-X is a bug finder instead, and its under-approximating
+soundness theorem is proved on paper @le22[pp. 81:2--81:3]. Four of them inline the callee at every call
+and therefore need no context policy @blanchet03[§5.3] @eva-manual[§5.3]
+@journault19[§5.1] @brat14[§3]. Inlining cannot handle unbounded recursion,
+and these tools exclude recursion, unroll it to a bounded depth, rely on
+user-written contracts, or assume that a recursive call may change any value
+@blanchet03[§5.3] @eva-manual[§6.3.9] @mopsa-manual[Limitations]
+@ikos-readme[Analysis Assumptions]. Goblint, in contrast, keeps one abstract
+state per program point and calling context and analyzes recursive programs.
+
+Without a proof, these tools are tested against independent evidence. By
+differential testing, which flags answers on which analyzers disagree, Klinger
+et al. @klinger19 find potential soundness or precision issues in four of six
+analyzers. Kaindlstorfer et al. @kaindlstorfer24 extend metamorphic testing,
+which checks an analyzer's answers to related queries against one another. On
+eight analyzers for C and C++ they find 24 issues, 16 of them related to
+soundness.
+// TODO: check whether the issues span seven of the eight analyzers and include MOPSA (paper PDF unreachable on 2026-10-18; the abstract gives only the totals).
+
+#figure(
+  {
+    set text(size: 8pt)
+    set par(justify: false, leading: 0.45em)
+    table(
+      columns: (auto, auto, auto, auto, auto, auto, auto, auto),
+      align: (col, _) => (if col == 0 { left } else { center }) + horizon,
+      stroke: none,
+      inset: (x: 3pt, y: 2.6pt),
+      table.hline(stroke: 0.5pt),
+      [*Tool*], [*Language*], [*Stance*], [*Calls*], [*Recursion*], [*Relational*],
+      [*Combination*], [*Mechanized*],
+      table.hline(stroke: 0.4pt),
+      [Astrée @cousot07astree], [C subset], [sound], [inlining], [not used], [octagons],
+      [channels], [none],
+      [Eva @eva-manual], [C], [sound], [inlining], [contract], [Apron], [via values],
+      [none],
+      [MOPSA @journault19], [C, Python], [sound], [inlining], [unsupported], [Apron],
+      [products, queries], [none],
+      [IKOS @brat14], [C/C++], [sound], [inlining], [assumptions], [Apron],
+      [fixed products], [none],
+      [Pulse-X @le22], [C], [bug finding], [summaries], [unrolled], [pure conditions],
+      [one domain], [none],
+      [Goblint @saan23], [C], [sound], [per context], [analyzed], [Apron], [products, queries],
+      [TD algorithm],
+      table.hline(stroke: 0.4pt),
+      [*Voblint*], [VIMP], [proved sound], [per context], [covered], [order analysis],
+      [products, queries], [end to end],
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: table,
+  placement: bottom,
+  caption: [Unverified analyzers and Voblint, as described by each tool's papers
+    and documentation. _Stance_ is the tool's own soundness claim. Under
+    _calls_, inlining reanalyzes the callee at every call, a summary is
+    computed once per procedure, and _per context_ means one abstract state
+    per program point and context. _Recursion_ says how a recursive call is
+    treated. _Analyzed_ means the tool analyzes recursive calls, and _covered_
+    means that Voblint's theorem includes them. _Relational_ names the domains
+    that relate variables. Apron is a library of relational numeric domains,
+    and Voblint's order analysis tracks which variable is at most which.
+    _Combination_ names how domains exchange facts. Astrée's domains send each
+    other constraints through reduction channels, Eva's domains communicate
+    through the abstract values of expressions, a product runs domains side by
+    side on one state, and a query lets one analysis ask another for a fact
+    at the current point. _Mechanized_ records what a proof assistant has
+    checked. _End to end_ means from source
+    executions to the verdicts of the exported function, for every answer it
+    returns (partial correctness) and with the trusted components of
+    @sec:trust-boundary.],
+) <tab:production-analyzers>
+
 
 == Verified analyzers: Verasco and the CompCert line
 
@@ -77,12 +152,78 @@ side-effecting, context-indexed systems, where the certificate
 #isaconst("part_post_solution", thy: "Basics_side") also accounts for contributions to global
 unknowns.
 
-== Mechanized abstract interpretation
+== Mechanized abstract interpretation <sec:rel-mechanized>
 
 Abstract interpreters have been mechanized in several provers, with different
 ways of factoring their proofs for reuse. Voblint follows the design of Nipkow
 and Klein's generic interpreter for its domains and splits the rest into
 analysis, context policy, and solver.
+
+#figure(
+  {
+    set text(size: 9pt)
+    set par(justify: false, leading: 0.45em)
+    table(
+      columns: (auto, auto, auto, auto, auto, auto, auto),
+      align: (col, _) => (if col == 0 { left } else { center }) + horizon,
+      stroke: none,
+      inset: (x: 2.4pt, y: 2.6pt),
+      table.hline(stroke: 0.5pt),
+      [*Work*], [*Prover*], [*Language*], [*Recursion*], [*Contexts*], [*Fixpoint*],
+      [*Executable*],
+      table.hline(stroke: 0.4pt),
+      [Verasco @jourdan15], [Coq], [C\#minor], [alarm], [per call site], [structural],
+      [yes],
+      [Blazy et al. @blazy13], [Coq], [Cminor CFG], [covered], [intraprocedural],
+      [checked], [yes],
+      [Cachera et al. @cachera05], [Coq], [Java Card], [covered], [none], [solver],
+      [yes],
+      [Cachera, Pichardie @cachera10], [Coq], [While], [no procedures], [none],
+      [structural], [yes],
+      [Dabrowski, Pichardie @dabrowski09], [Coq], [Java-like], [covered],
+      [object-sensitive], [specified], [no],
+      [Nipkow, Klein @nipkow14], [Isabelle], [IMP], [no procedures], [none],
+      [iterator], [in prover],
+      [Lammich, Müller-Olm @lammich07afp], [Isabelle], [flowgraphs], [exact],
+      [summaries], [specified], [no],
+      [Franceschino et al. @franceschino21], [F\*], [IMP], [no procedures], [none],
+      [structural], [yes],
+      table.hline(stroke: 0.4pt),
+      [*Voblint*], [Isabelle], [VIMP], [covered], [set per call], [TD solver], [yes],
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: table,
+  placement: bottom,
+  caption: [Mechanized abstract interpreters with machine-checked soundness
+    proofs, as described in each work. _Prover_ is the proof assistant and
+    _Language_ the analyzed language. _Recursion_ says how a recursive call is
+    treated: _alarm_ raises an alarm, _covered_ means the theorem includes
+    recursive programs, _exact_ interprets calls and returns exactly, and _no
+    procedures_ means the language has none. _Contexts_ says how calls are
+    distinguished: _per call site_ reanalyzes a function at every call site,
+    _object-sensitive_ computes contexts by a function, _summaries_ computes
+    one summary per procedure, _set per call_ lets the context policy return
+    several contexts for one call, and _none_ and _intraprocedural_ mean that
+    calls are not distinguished or not analyzed. _Fixpoint_ says how the
+    result is computed: _structural_ iterates over the program's syntax,
+    _iterator_ over the whole annotated program, _checked_ verifies the result
+    of an untrusted iterator, _solver_ and _TD solver_ use a verified solver,
+    and _specified_ only states the constraints. _Executable_ says whether the
+    analyzer runs outside the prover.],
+) <tab:state-of-art>
+
+@tab:state-of-art compares the mechanized abstract interpreters most closely
+related to Voblint. Their proofs cover small or intermediate languages, from
+While and IMP to C\#minor. The differences that matter for Voblint lie in
+recursion, contexts, and the fixpoint computation. Verasco raises an alarm
+where a recursive call can occur @jourdan15, and three of the works have no
+procedures at all. No work in the table lets the context policy give one call
+several contexts, which an analysis needs when it splits one call into several
+alternatives. Only Cachera et al. compute the fixpoint with a verified solver,
+and that solver handles ordinary inequations, not side-effecting ones
+@cachera05. Only two works specify the constraints without computing them, and
+they have no executable analyzer @dabrowski09 @lammich07afp.
 
 Nipkow and Klein develop abstract interpretation in Isabelle/HOL over annotated
 commands of the While language IMP @nipkow12 @nipkow14. A collecting semantics
@@ -339,8 +480,13 @@ context-indexed collection exhaustive
 connected to an executable solver.
 
 Voblint thus takes its trust pattern from CompCert and Verasco, its domain
-interface from Nipkow and Klein, its solver from Tilscher et al., and its
-architecture from Goblint, and combines these with what we did not find
+interface from Nipkow and Klein @nipkow14[Sects. 13.5, 13.7], its solver from
+Tilscher et al. @tilscher26, its update rules from Stemmler et al.
+@stemmler25, side-effecting constraint systems from Seidl et al. @seidl03 and
+Apinis et al. @apinis12, widening, narrowing, and the reduced product from
+Cousot and Cousot @cousot77 @cousot79, its activation traces from the local
+traces of Schwarz et al. @schwarz21, and its architecture from Goblint. It
+combines these with what we did not find
 mechanized elsewhere: a
 context-indexed collecting semantics over activation traces, covered by
 equations that a verified side-effecting solver computes.
