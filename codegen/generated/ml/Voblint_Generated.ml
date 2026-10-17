@@ -10756,7 +10756,8 @@ let rec edge_vars
     | EA_Special (sc, x) -> x :: special_vars sc
     | EA_Assume b -> var_list b
     | EA_AssumeNot b -> var_list b
-    | EA_Ret (e, uu) -> (match e with None -> [] | Some a -> var_list a)
+    | EA_Ret (e, uu) ->
+        (match e with None -> [] | Some ea -> ReturnVar :: var_list ea)
     | EA_Check (uv, e) -> var_list e
     | EA_Nop -> []
     | EA_Body v -> [];;
@@ -10949,7 +10950,7 @@ let rec trace_printers
              (render (activation_of asa) vs))
            (map_lift (mcp_rd is_global) d))
        in
-     let vars = cfg_vars (elab_cfg p ds) @ [ReturnVar] in
+     let vars = remdups equal_var_id (cfg_vars (elab_cfg p ds) @ [ReturnVar]) in
      let gs = declared_globals p in
      let local =
        (match pg with Program_Globals_Flow_Sensitive -> raw vars

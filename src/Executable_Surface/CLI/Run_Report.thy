@@ -301,7 +301,8 @@ lemma mem_obligations_at:
   by (force simp: obligations_at_def split: if_splits)
 
 text \<open>The variables a report lists: every variable an edge or a call of the elaborated
-  graph mentions.\<close>
+  graph mentions, and the return slot a \<open>return e\<close> writes, so the value a procedure
+  returns can be shown.\<close>
 
 fun special_vars :: "exp gspecial_call \<Rightarrow> var_id list" where
   "special_vars Nondet_Int = []"
@@ -313,7 +314,7 @@ fun edge_vars :: "(var_id, exp) gedge_action \<Rightarrow> var_id list" where
 | "edge_vars (EA_Special sc x) = x # special_vars sc"
 | "edge_vars (EA_Assume b) = var_list b"
 | "edge_vars (EA_AssumeNot b) = var_list b"
-| "edge_vars (EA_Ret e _) = (case e of Some e \<Rightarrow> var_list e | None \<Rightarrow> [])"
+| "edge_vars (EA_Ret e _) = (case e of Some e \<Rightarrow> ReturnVar # var_list e | None \<Rightarrow> [])"
 | "edge_vars (EA_Check _ e) = var_list e"
 | "edge_vars _ = []"
 
