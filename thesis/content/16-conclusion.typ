@@ -155,13 +155,10 @@ activation seeds and buffering unnecessary. Its partial-correctness proof would
 have to be redone for local side effects.
 
 A termination theorem would guarantee an answer for every program. The
-total-correctness result of Tilscher et al. covers the top-down solver without
-side effects. It assumes finitely many unknowns, a precise widening, and
-monotonic right-hand sides with monotonic dependencies
-@tilscher26jar[Cor. 1]. Their widening stabilizes every widening sequence by
-definition @tilscher26jar[Def. 2]. The vendored class #isalocale("warrowing")
-states no stabilization law (@sec:widening), so even finitely many unknowns may
-take values that increase forever (@sec:termination).
+existing total-correctness results do not apply to any configuration of
+Voblint (@sec:termination). Following them, such a theorem would need finitely
+many unknowns and a widening that stabilizes, a law the vendored class
+#isalocale("warrowing") does not state (@sec:widening).
 
 === Agent-assisted development <sec:outlook-agents>
 
