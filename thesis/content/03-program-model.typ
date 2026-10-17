@@ -175,6 +175,19 @@ yield $0$ or $1$ (#c11("6.5.8p6"), #c11("6.5.9p3"), #c11("6.5.3.3p5"), #c11("6.5
 condition holds when it is nonzero (#isaconst("truthy"), #c11("6.8.4.1p2"),
 #c11("6.8.5p4")).
 
+From here on, we show definitions and theorems in Isabelle/HOL @nipkow14,
+a typed logic of total functions. We write $x :: tau$ for "$x$ has type
+$tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
+#isai("'a") for a type variable, and $lambda x. t$ for the function that maps
+$x$ to $t$. A _datatype_ declares a type by its constructors and comes with
+case distinction and structural induction, and a _record_ is a tuple with
+named fields. A theorem declares its variables after #isai("fixes"), local
+abbreviations after #isai("defines"), its premises after #isai("assumes"),
+and its conclusion after #isai("shows"). Inside a proposition, $A ==> B$ is
+an implication. Subscripts, superscripts, and symbols such as $tack.r$ are
+notation for a constant applied to its arguments, and the text names the
+constant at first use.
+
 #definition(name: [Surface expressions], isa: "src_exp", cmd: "datatype")[
   $
     e ::= & n | x | e #vop("+") e | e #vop("−") e | e #vop("*") e | e #vop("/") e
@@ -488,6 +501,7 @@ kind of its target (#isathm("wt_com_elab_com")).
     columns are printed from the analyzer's `--ast` and `--dot` output (claims
     #claim-ref("elab-tour*")); variables print by name, not identity.],
   kind: image,
+  placement: auto,
 ) <fig:elab-stages>
 
 *Evaluation.* Since every kind is written in the core expression, evaluation
@@ -542,6 +556,10 @@ without a #keyw("return"), that is, once it _falls through_. A
 #keyw("return") becomes the marker #ctor("Unwind"), which discards the
 commands after it until it meets the #ctor("Restore") of its call. Each
 suspended activation keeps its data in a _frame_.
+
+Isabelle defines step relations such as this one inductively. An _inductive
+definition_ is the least relation closed under its rules, and its _rule
+induction_ proves a property of every element with one case per rule.
 
 #definition(name: [Source execution], isa: "pstep", cmd: "inductive")[
   A source configuration is a triple $(c, s, italic("frs"))$ of the command that

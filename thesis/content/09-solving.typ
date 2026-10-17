@@ -1,7 +1,7 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": (
-  c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing, thy-badge,
+  c11, fixture, isacmd, isaconst, isai, isalocale, isathm, isatype, listing, thy-badge,
 )
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": *
@@ -614,7 +614,7 @@ therefore needs no premise about which unknowns the solve visited.
 The soundness argument uses the certificate (C1) to (C4) of a solve that
 returns and three further facts, and none of them depends on how the solver
 works. The solved set is finite, the run lies in the domain on which the
-certificate and finiteness hold (@sec:isabelle), and the executable run
+certificate and finiteness hold (@sec:td), and the executable run
 returns that same result. Finiteness lets the analyzer combine the finitely
 many contexts solved at a node into one verdict. The solver is therefore a
 parameter of the analysis (#isalocale("certified_solver") states the
@@ -743,8 +743,10 @@ its kind, every declared global is overridden by the zero of its own kind.
 
 Different representations can describe the same state, because overrides of
 distinct names may appear in any order and an override equal to its default
-changes nothing. A _quotient type_ (@sec:isabelle) identifies the
-representations that answer every lookup alike:
+changes nothing. A _quotient type_ identifies representations up to an
+equivalence @huffman13, and its operations are lifted with
+#isacmd("lift_definition"). The executable state is a quotient type that
+identifies the representations that answer every lookup alike:
 
 #thy("default_st")
 
@@ -796,7 +798,7 @@ succeeds exactly when that function maps some identity to an empty value
 The previous sections assume that the solve returns, and no theorem shows
 that every solve does. HOL admits only terminating recursion, so Isabelle
 defines the solver with a domain predicate
-(#isaconst("solve_dom", thy: "TD_side_upd_rule"), @sec:isabelle), the
+(#isaconst("solve_dom", thy: "TD_side_upd_rule"), @sec:td), the
 arguments on which its recursion terminates, and proves the certificate of
 @sec:certificate on that domain. The analyzer runs the executable form
 #isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when the

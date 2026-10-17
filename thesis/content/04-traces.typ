@@ -574,9 +574,11 @@ claim, so
 #oblig("TOTAL") is stated over the stores the claim contains. Call strings, including the context-insensitive length zero,
 admit a context for every call and meet #oblig("TOTAL") for every claim
 (#isathm("call_context_total_on_of_fun")). For entry-state contexts it follows
-from the coverage of the analysis's entry operation. Isabelle states the five
-obligations as the assumptions of the locale
-#isalocale("activation_coverage") (@fig:activation-coverage).
+from the coverage of the analysis's entry operation. Isabelle states the five obligations as the assumptions of the locale
+#isalocale("activation_coverage") (@fig:activation-coverage). A _locale_ fixes
+parameters and assumptions. Interpreting it for an instance proves the
+assumptions and yields the locale's theorems for that instance @ballarin14.
+An analysis therefore becomes sound by interpreting a locale.
 
 #figure(
   {

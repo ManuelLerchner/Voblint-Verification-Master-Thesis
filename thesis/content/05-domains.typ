@@ -471,7 +471,10 @@ $conc(lbot) = emptyset$ and $conc(ltop) = ZZ$. A _numeric domain_
 (#isalocale("numeric_domain")) adds the two requirements of the chapter
 opening as laws. The concretization is monotone (#isathm("gamma_mono")), and
 the emptiness test holds of a value exactly when its concretization is empty
-(#isathm("is_empty_correct")).
+(#isathm("is_empty_correct")). Isabelle states such an interface as a _type
+class_, which collects operations and laws that an instance proves once for a
+carrier @haftmann07. Unlike a locale (@sec:contract), a class has at most one
+instance for each type.
 
 Intervals (@sec:abs-int) are this chapter's running example
 #thy-badge("Voblint_Domain", "Interval_Lattice"). As in Nipkow and Klein

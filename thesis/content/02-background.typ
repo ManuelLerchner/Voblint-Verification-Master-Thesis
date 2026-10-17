@@ -128,14 +128,12 @@
 
 = Background <ch:background>
 
-A static analyzer answers questions about every execution of a program without
-running it: which values a variable can hold at a given point, whether a
-division by zero can occur, or whether an assertion can fail. For a
-Turing-complete language, no algorithm answers such questions exactly for
-every program @rice53. An analysis based on abstract interpretation therefore
-computes an _over-approximation_ directly, a description that includes every
-state an execution can reach at a point and possibly states that no execution
-reaches. We develop the notions this requires on one small program.
+@ch:intro described soundness informally: an analysis result must contain
+every state that a real run reaches, and it may contain more. Such a result is
+an _over-approximation_. To prove that Voblint computes one, we need precise
+definitions of the runs, of the abstract states, and of how an analyzer
+computes them from a system of constraints. We introduce them using one small
+program, which we follow from its executions to the result of the solver.
 
 == Executions and the collecting semantics <sec:collecting>
 
@@ -146,7 +144,7 @@ points as nodes and an edge for every way control can pass from one point to
 the next, labeled with the assignment or condition executed on the way.
 @fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
 our running example. The loop becomes a cycle through $h$, $b$, and $t$, and
-its _loop head_ $h$ is the node at which the cycle is entered and left.
+its _loop head_ $h$ is the node through which control enters and exits the cycle.
 
 #figure(
   grid(
@@ -183,11 +181,11 @@ programs with procedures, @ch:traces defines Voblint's version over execution
 traces (#isaconst("node_collect")).
 
 The collecting semantics is the exact answer an analysis approximates. An
-analysis is _sound_ if, at every program point, its result describes every
-store the collecting semantics gives there. It may describe more stores,
-which costs precision, but never fewer. Soundness thus relates three levels,
-the individual executions, the collecting semantics that gathers the stores
-they reach, and the abstract states an analysis computes. @fig:intro-nest
+analysis is _sound_ if, at every program point, its result describes every store
+that the collecting semantics gives there. It may describe more stores,
+which costs precision, but never fewer. Soundness thus relates three levels: the
+individual executions, the collecting semantics that gathers the stores
+they reach, and the abstract states that an analysis computes. @fig:intro-nest
 refines these levels for Voblint.
 
 == Lattices and fixpoints <sec:lattices>
@@ -221,42 +219,36 @@ element (#isalocale("bounded_semilattice_sup_bot")) that carries the widening
 and narrowing operators of @sec:widening, so joins need to exist only for
 pairs. A numeric domain adds a top element. Refinement at a branch adds a
 pairwise intersection that keeps every value both operands admit
-(#isathm("meet_ik_sound"), @sec:branches). It need not be the meet, because
-Voblint requires nothing else of it. A domain's representation may, for
-instance, contain several elements that describe no value, and the
-intersection may return a fixed one of them when the operands share no value.
+(#isathm("meet_ik_sound"), @sec:branches).
 
 An analysis computes the description at a point from the descriptions at its
 predecessors, by a function $f$ on $lat(D)$. The classical theory requires $f$
 to be _monotone_ (#isaconst("mono")), so that $a lle b$ implies
 $f(a) lle f(b)$ @nipkow14[Def. 10.26] @mine17[Def. 2.9] and more precise input
-never yields less precise output. Starting from $lbot$, the iterates
-$lbot, f(lbot), f(f(lbot)), dots$ of a monotone $f$ then only grow, and each
-lies below every fixpoint. The verified solver of @sec:td, however, does not
-assume monotonicity, and @sec:widening explains why it need not.
+never yields less precise output. For a monotone $f$, the iterates $lbot,
+f(lbot), f(f(lbot)), dots$ form an ascending chain. Each of them lies below
+every fixpoint. The verified solver that Voblint reuses, however, does not assume
+monotonicity.
 
 A _fixpoint_ of $f$ is an element with $f(d) = d$, and a _post-fixpoint_ is an
-element with $f(d) lle d$, to which applying $f$ once more adds nothing. By the
+element with $f(d) lle d$, so applying $f$ once more yields nothing above $d$. By the
 Knaster–Tarski theorem, a monotone $f$ on a complete lattice has a least
 fixpoint $lfp f$, the meet of all post-fixpoints @tarski55[Thm. 1]
 (#isaconst("lfp"), #isathm("lfp_unfold")), so every post-fixpoint lies above
-$lfp f$. If $f$ is moreover _continuous_, that is, preserves least upper bounds
-of chains, $lfp f$ is the supremum of the iterates $f^n (lbot)$ (Kleene's
-theorem) @rival20[App. A.6, Thm. A.1] @mine17[Thm. 2.2]. On a finite-height
-order, the iteration from $lbot$ stabilizes after finitely many steps
+$lfp f$. For a monotone $f$ on a
+finite-height order, the iteration from $lbot$ stabilizes after finitely many
+steps
 @seidl12compiler[§1.5], and an iterate that no longer changes is the least
 fixpoint (#isathm("lfp_Kleene_iter")).
 
-An analysis does not have to reach $lfp f$. Soundness needs only an element
-that contains the collecting semantics, and every post-fixpoint does
-(@sec:abs-int). On domains with infinite ascending chains, such as intervals,
-the iteration may never stabilize, so the least fixpoint can be out of reach in
-finite time.
+An analysis does not have to reach $lfp f$. Every post-fixpoint of an $f$ that
+includes the initial states and approximates each step soundly already contains
+the collecting semantics (@sec:abs-int).
 
 
 == Abstract interpretation <sec:abs-int>
 
-Correctness of an abstract result needs a meaning for its elements. Let $U$ be
+The correctness of an abstract result needs a meaning for its elements. Let $U$ be
 a set of concrete objects, such as integers or stores (#isatype("store")),
 and $A$ an _abstract
 domain_, an ordered set of _domain elements_ whose underlying set is its
@@ -286,9 +278,9 @@ intersects the bounds. This is the textbook domain. Voblint's representation
 #isatype("ivl") admits every pair of bounds, so $lbot$ is one of several empty
 pairs (@sec:domain-carrier-laws).
 
-At the loop head both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
-as is every interval that contains $[0, 5]$. An analysis aims for the most
-precise of them, because it admits fewer values and so decides more checks:
+At the loop head, both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
+as is every interval that contains $[0, 5]$. An analysis aims for a precise one,
+because a more precise element admits fewer values and so decides more checks:
 $[0, 5]$ proves `i <= 5` at the loop head, and $[0, 10]$ does not.
 
 #figure(
@@ -342,14 +334,14 @@ the ideal case that efficient representations do not always meet
 Jourdan et al. and of Nipkow @jourdan15[§2] @nipkow12[§5.2], since its
 soundness theorem claims coverage and nothing about optimal precision. The
 concretization exists only in the logic. Since its result is in general an
-infinite set, it is never executed, and the analyzer itself is defined from executable operations only,
+infinite set, it is never executed, and the analyzer itself is defined from
+executable operations only,
 so that it can be exported and run as a standalone program.
 
 The analysis replaces each concrete operation by an abstract one, a _transfer
 function_ $sh(f) : A -> A$, which must not lose any state that the concrete
 operation can produce. In general, a program's steps form a relation $->$ on
-$U$, and one state may have several successors, even infinitely many, for
-example when the next value is read from user input. The _post-image_
+$U$, and one state may have several successors, even infinitely many, for example, when the next value is read from user input. The _post-image_
 $"post"(X) = setcomp(s', exists s in X. s -> s')$ collects the successors of
 all states in $X$. The transfer function is sound if, for every $a$,
 $ "post"(conc(a)) subset.eq conc(sh(f)(a)), $
@@ -360,8 +352,11 @@ counting loop, the edge from $b$ to $t$ executes `i = i + 1`. Over $ZZ$, the
 interval transfer $[l, u] |-> [l + 1, u + 1]$ is sound for it, and applied to
 $[0, 4]$ it yields $[1, 5]$, which contains every successor $i = 1, dots, 5$.
 In VIMP, `i` is a 32-bit integer whose increment wraps around at the largest
-value, and Voblint's transfer accounts for this by mapping a result outside
-the range back into it. Soundness composes along paths
+value. Voblint's transfer accounts for this. If a result leaves the range, it
+returns the whole range of the type. If the configuration lets the type wrap and
+the wrapped bounds still form one interval, it returns the wrapped interval
+instead. Soundness
+composes along paths
 @mine17[Thm. 2.6], and at control-flow joins the upper-bound laws of the join
 keep the states from both predecessors (#isathm("gamma_sup_ub1"),
 #isathm("gamma_sup_ub2")).
@@ -388,7 +383,8 @@ keep the states from both predecessors (#isathm("gamma_sup_ub1"),
     inclusion.],
 ) <fig:transfer-square>
 
-Sound transfer functions make every post-fixpoint a sound result
+Sound transfer functions make every post-fixpoint that contains the initial
+states a sound result
 @mine17[Thm. 2.8]. The standard argument uses one domain element that
 describes the whole program. It works with _configurations_, each a program
 point together with a store, so that one relation $->$ describes every step
@@ -402,7 +398,7 @@ $ F(X) = I union "post"(X) $
 @rival20[§4.1.1, Thm. 4.1]. A set with $F(X) subset.eq X$ contains the initial
 configurations and the successors of all its elements, so no execution can
 leave it, and $lfp F$ is the smallest such set. In the counting loop,
-executions start at `start` with any value of $i$, so
+executions begin at the node `start`, with any value of $i$, so
 $I = {("start", n) | n in ZZ}$. Iterating $F$ from $emptyset$ adds one step at
 a time: $(h, 0)$, then $(b, 0)$, $(t, 1)$, $(h, 1)$, and so on, up to $(h, 5)$
 and finally $(e, 5)$. The least fixpoint contains $(h, n)$ exactly for
@@ -414,7 +410,8 @@ $sh(f)(a) lle a$, for a sound $sh(f)$. Soundness of $sh(f)$ and monotonicity
 of $conc$ give
 $F(conc(a)) subset.eq I union conc(sh(f)(a)) subset.eq conc(a)$. So $conc(a)$
 is a post-fixpoint of $F$ and, by Knaster–Tarski, contains $lfp F$, every
-reachable configuration.
+reachable configuration. Here $F$ works on sets of configurations and $sh(f)$ on
+domain elements, and the soundness of $sh(f)$ relates the two through $conc$.
 
 Voblint's proof uses the same principle on a set of execution traces defined
 inductively as a least fixpoint, and proceeds by induction over its rules.
@@ -442,7 +439,7 @@ $
 The assignment `i = 0` yields $[0, 0]$ at $h$, the condition `i < 5`
 restricts the branch into the body, and its negation restricts the exit.
 Substituting $b$ and $t$ into the first inequality gives one for the loop head,
-$h gt.eq f(h)$ with
+$h gt.eq f(h)$, with
 $ f(d) = [0, 0] ljoin ((d lmeet [-infinity, 4]) sh(+) [1, 1]), $
 whose post-fixpoints appear in @fig:lattice-fixpoints. A solution assigns an
 interval to every unknown such that all four inequalities hold, and
@@ -461,8 +458,9 @@ solution @saan26phd[§2.4.4]. For the loop head,
 $rhs(h)(sol) = [0, 0] ljoin sol(t)$. A post-solution is a post-fixpoint of all
 right-hand sides at once, so the argument of @sec:abs-int applies at every
 program point, and a post-solution bounds the reachable states everywhere. We
-use _constraint system_ for the general concept and _equation system_ for the
-system Voblint generates and the solver receives, although soundness only
+use the term _constraint system_ for the general concept and the term _equation
+system_ for the system that Voblint generates and the solver receives, although
+soundness only
 requires inequalities.
 
 #subfigures(
@@ -502,20 +500,25 @@ call-string approach, whose contexts record the most recent call sites, from
 the functional approach, which relates the abstract state at entry to the
 state at the return @sharir81. In the constraint-system formulation of
 Apinis et al., a context-sensitive analysis has one unknown $[v, c]$ per
-program point $v$ and context $c$ @apinis12[§3]. Suppose `main` calls
-`bump(5)` and `bump(4)`, and `bump` returns its argument plus one. With
-contexts that record the argument at entry, the unknowns at the point where
+program point $v$ and context $c$ @apinis12[§3]. Recall the calls `bump(5)` and
+`bump(4)` of @ch:intro. With contexts that
+record the argument at entry, the
+unknowns at the point where
 `bump` returns can claim $6$ and $5$ separately, whereas a single unknown there
 must cover both results.
 
 == Widening and narrowing <sec:widening>
 
-An analysis should terminate quickly even on a program that does not. With
+An analysis should terminate in reasonable time, even on a program whose
+executions do not terminate. With
 joins alone, successive abstract iterates can mirror successive loop
-iterations. At the example's loop head, joins take five increases after
-$[0, 0]$, and for `while (true) { i = i + 1; }` the iteration never
-stabilizes, because intervals have infinite ascending chains such as
+iterations. At the example's loop head, joins take five increases after $[0,
+  0]$. For `while (true) { i = i + 1; }`, the iteration over intervals with bounds
+in $ZZ$ never stabilizes, because these intervals have infinite ascending chains
+such as
 $ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
+With signed 32-bit bounds, a corresponding chain is finite, but it can still
+have more than two billion elements.
 
 #subfigures(
   figure(
@@ -529,7 +532,7 @@ $ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
   ),
   <fig:widening-warrow>,
   columns: (1fr, 1fr),
-  placement: bottom,
+  placement: auto,
   caption: [Extrapolation on the lattice of @fig:lattice-fixpoints. (a) Widening
     jumps from $[0, 0]$ to the post-fixpoint $[0, +infinity]$, and narrowing then
     recovers the least fixpoint $[0, 5]$. (b) Warrowing takes the same two
@@ -547,50 +550,40 @@ strategy widens at loop heads. The standard interval widening replaces a
 growing bound by $+infinity$ @cousot77[§9.2] @mine17[§4.5.2], so widening at
 $h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
 $[0, +infinity]$ at once. Propagated through the loop, this value yields the
-less precise solution of @fig:loop-solutions, which loses the bound $5$ of the loop condition `i < 5`.
-For a fixed-width integer type, Voblint's widening moves the bound to the
-type's limit instead of $+infinity$ and loses the bound $5$ in the same way.
+less precise solution of @fig:loop-solutions, which loses the bound $5$ of the
+loop condition `i < 5`.
+
 The branch into the body restricts $[0, +infinity]$ to $[0, 4]$, the body
 yields $[1, 5]$, and evaluating the head again gives
 $[0, 0] ljoin [1, 5] = [0, 5]$. A widened iteration only grows and would not
 take this smaller value. A _narrowing_ lets it descend. Both steps
 appear in @fig:widening-phases, and @fig:widening-warrow shows one update
 operator that combines them, widening or narrowing depending on the candidate.
+The example uses intervals over $ZZ$. For VIMP's fixed-width integers, Voblint's
+widening moves a growing bound to the type's limit instead of $+infinity$, which
+loses the bound $5$ in the same way and needs narrowing just as much.
 
 A narrowing $a narrow b$ combines the current value $a$ with a candidate
 $b lle a$ and returns a value between the two @cousot77[§9.3.4]
 @cousot92plilp[§4]:
-$ b lle a narrow b lle a, $
-the _bracket laws_ of the solver's class #isalocale("narrowing"). A classical
+$ b lle a narrow b lle a. $ These are the _bracket laws_ of the solver's class #isalocale("narrowing"). A classical
 narrowing must also make repeated narrowing stabilize. The class omits this
-law, since termination of the solver is not proved. In the counting loop the
-interval narrowing reaches $[0, 5]$, but in general narrowing need not recover
+law, since termination of the solver is not proved. In the counting loop, the
+interval narrowing reaches $[0, 5]$, but in general, narrowing need not recover
 the least fixpoint.
 
 Soundness of the result does not depend on how the solver widens and narrows.
-The verified TD solver applies both operators through one update,
+The verified TD solver applies both operators in a single update,
 _warrowing_ (#isaconst("warrow")). It narrows when the candidate lies below
 the current value and widens otherwise @apinis13 @apinis16[§3] @grass24, so
 each update lies above the candidate
 (#isathm("warrowing_properties", thy: "Warrowing")). An unknown whose value no
 longer changes under this update therefore satisfies its inequality. The
 solver's correctness theorem uses only this and holds whether or not the
-right-hand sides are monotone (@sec:td). Widening and narrowing affect only
-precision and termination.
-
-The classical argument for narrowing, in contrast, needs monotonicity. It
-narrows a post-fixpoint $a$ with the candidate $f(a)$, and if $f$ is
-monotone, the narrowed value is again a post-fixpoint, since
-$f(a narrow f(a)) lle f(a) lle a narrow f(a)$ @seidl12compiler[§1.10].
-Widening itself is not monotone in its old value @cousot92plilp[Ex. 11]. For
-intervals, $[0, 1] widen [0, 2] = [0, +infinity]$, whereas the larger old
-value $[0, 2]$ gives $[0, 2] widen [0, 2] = [0, 2]$, so an iteration that
-widens is not a monotone function. In general, the two strategies of
-@fig:widening, separate widening and narrowing phases and warrowing, can also
-reach different solutions. Tilscher et al. prove them equivalent for TD without side
-effects when the right-hand sides and their dependencies are monotone and the
-widening is precise, which means that it stabilizes every widening sequence
-by definition @tilscher26jar[Thm. 3, Def. 2].
+right-hand sides are monotone (@sec:td). Monotonicity is thus needed for the
+classical theory of least fixpoints, but not to certify that a returned
+valuation is a post-solution. As long as the operators satisfy their laws, the
+choice of widening and narrowing affects only precision and termination.
 
 == Side-effecting constraint systems <sec:side-effects>
 
@@ -598,8 +591,8 @@ The analyses so far are _flow-sensitive_: they respect the order in which
 statements execute and therefore compute a separate abstract state for every
 program point. For some facts, one value for the whole program is enough. A
 _flow-insensitive_ analysis ignores execution order and keeps one abstract
-value for an aspect of the state across the program, for example one range
-for a global variable, and mixed analyses choose between the two per aspect
+value for an aspect of the state across the program, for example, one range for
+a global variable, and mixed analyses choose between the two per aspect
 @seidl26.
 
 A flow-insensitive fact needs an unknown of its own that belongs to no program
@@ -626,58 +619,50 @@ unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a post-solution
 must bound both, $d lle sol(x)$ and $rho(g) lle sol(g)$ for every
 $g in op("dom")(rho)$. If the assignments
 `g = 5` and `g = 4` publish $[5, 5]$ and $[4, 4]$ to the unknown of a
-flow-insensitive global `g`, that unknown must bound their join $[4, 5]$.
+flow-insensitive global `g`, that unknown must bound their join $[4, 5]$. This
+describes what a right-hand side computes. The verified solver represents its
+evaluation by a strategy tree (@sec:td), so that it discovers reads and side
+effects while it solves.
 
 With contexts as indices, a system can have infinitely many unknowns, of which
 only those that influence the _query_, the unknown whose value is asked for,
 matter. A _local_ solver therefore explores the system from the query and
-solves only the unknowns it meets @seidl21. Its result comes with a
+solves only the unknowns that it meets @seidl21. Its result comes with a
 _certificate_, the property #isaconst("part_post_solution", thy: "Basics_side"),
 which requires the bounds above only on a set of unknowns that contains the
-query and is closed under the local reads of its right-hand sides. Seidl and
-Vogler prove on paper that their top-down variants with widening and
-narrowing, including the side-effecting one, terminate on arbitrary, possibly
-non-monotone, systems as long as only finitely many unknowns are encountered
-@seidl21[Thms. 1 and 5] and the widening and narrowing iterations are
-ultimately stable @seidl21[§3]. Like the formulation above, the side-effecting
-variant lets side effects target only unknowns without a right-hand side.
+query and is closed under the local reads of its right-hand sides.
 
 == The verified top-down solver <sec:td>
 
 // The counting loop of fig:counting-loop, for the playground link below.
 #let _counting-loop = "i32 i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
 
-Kleene iteration recomputes every unknown in every round, although most values
-no longer change. Practical solvers therefore update one unknown at a time:
-in rounds or with a worklist of unknowns whose inequalities may be violated
+A straightforward implementation of Kleene iteration recomputes every unknown in
+every round, although most values
+no longer change. Practical solvers therefore update one unknown at a time. They
+work in rounds or with a worklist of unknowns whose inequalities may be violated
 @seidl12compiler[§§1.5, 1.12], in orders chosen for widening @bourdoncle93, or
 locally, on demand from a query, as the solver RLD does @hofmann10. Voblint
 reuses the verified local top-down solver (TD) of @stade24 @tilscher26.
 
 TD starts from the query and evaluates right-hand sides on demand. When the
 right-hand side of $x$ reads an unknown $y$, TD first solves $y$ and records
-that $x$ depends on $y$. An unknown is _stable_ once it has been evaluated and
-none of the unknowns it read has changed since. When the value of $y$ changes
+that $x$ depends on $y$. An unknown is _stable_ if it has been evaluated and no
+unknown that it read has changed since then. When the value of $y$ changes
 later, every unknown that read it is _destabilized_ and evaluated again. The
 unknowns at which a read closes a cycle are the solver's _widening points_
-@seidl21. TD detects them during the solve @apinis16[§4], so they need not
-coincide with the loop heads of the control-flow graph, and at a widening
-point it combines the old and the new value with warrowing. The
-#link(playground-link(_counting-loop, trace: "verbose"))[playground] replays
-this solve on the counting loop step by step. Contributions published to a
+@seidl21. TD detects them while it solves @apinis16[§4], so they need not
+coincide with the loop heads of the control-flow graph. At a widening point, it
+combines the old and the new value with warrowing. The
+#link(playground-link(_counting-loop, trace: "verbose"))[playground] replays this run on the counting loop step by step. Contributions published to a
 global unknown are merged into its value by an _update rule_
-(#isalocale("update_rule")), which keeps one record per _origin_, the unknown
-whose right-hand side published the contribution. With a plain join, the
-value of a global unknown can only grow, even after a re-evaluated origin
-publishes a smaller contribution. A record per origin lets the new
-contribution replace the old one, so the value can shrink again, for instance
-when narrowing makes the origin more precise. The analyzer offers five update
-rules, among them joining and warrowing ones (@sec:update-rules). The run ends
+(#isalocale("update_rule")), which keeps one record per _origin_, the unknown whose right-hand side
+published the contribution (@sec:update-rules). The run ends
 once every unknown the query transitively reads is stable, and it returns this
 _stable set_ $V$ together with the valuation $sol$.
 
 To solve on demand, TD has to discover which unknowns a right-hand side reads,
-so that it can solve each of them first. In the counting loop the reads are
+so that it can solve each of them first. In the counting loop, the reads are
 fixed, since the right-hand side of $h$ always reads $t$. In general, a
 right-hand side may choose the next unknown from a value it has already read.
 At a procedure call, for instance, the callee context to read is known only
@@ -743,100 +728,21 @@ loop and of a flow-insensitive assignment.
 
 The solver's main theorem, #isathm("partial_post_solution"), establishes the
 certificate #isaconst("part_post_solution", thy: "Basics_side") of
-@sec:side-effects and states partial correctness. If the run terminates on the query $x$ and returns its stable set
+@sec:side-effects and states partial correctness. If the run terminates on the
+query $x$ and returns its stable set
 $V$ and the valuation $sol$, then $V$ contains $x$, is closed under the local
 reads of its right-hand sides, and on $V$ the valuation is a post-solution,
 published contributions included. The theorem needs no monotonicity of the
 right-hand sides and says nothing about unknowns outside $V$. We call the set
-on which this certificate holds the _solved set_. Termination of the solver is
-not proved, and @sec:isabelle explains how Isabelle defines such a function.
+on which this certificate holds the _solved set_. Termination of the solver is not proved.
 
-== Isabelle/HOL mechanisms used in this development <sec:isabelle>
-
-// The declarations below are examples, set smaller than the running text.
-#show raw.where(block: true): set text(size: 6.5pt)
-
-Later chapters show definitions and theorems of the formalization. Reading
-them requires a few mechanisms of Isabelle/HOL @nipkow14.
-
-HOL is a typed logic of total functions. We write $x :: tau$ for "$x$ has type
-$tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
-#isai("'a") for a type variable, and $lambda x. t$ for the function that maps
-$x$ to $t$. A _datatype_ declares a type by its constructors and comes with
-case distinction and structural induction, and a _record_ is a tuple with
-named fields.
-
-Every HOL function is total, so an ordinary recursive definition needs a
-termination proof. Otherwise a definition such as $f(n) = f(n) + 1$ would
-yield $0 = 1$ @nipkow14[§2.3.4]. Isabelle's function package can also define a
-recursive function without one. The result is still a total HOL constant, but
-its defining equations are proved only on its _domain_, the arguments on which
-the recursion terminates, and theorems about it assume membership in that
-domain. The solver Voblint reuses is defined this way, with the domain
-#isaconst("solve_dom", thy: "TD_side_upd_rule"). Voblint's main theorem
-nevertheless needs no termination premise. The analyzer runs the executable
-form #isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when
-its recursion finishes, and a returned run lies in the domain
-(#isathm("solve_dom_of_solve_c"), @sec:termination). The theorem assumes that
-#isaconst("run_voblint") has returned a report, which implies such a run.
-
-A _type class_ collects operations and laws that an instance proves once for a
-carrier @haftmann07. The solver's class #isalocale("widening") of
-@sec:widening fixes the operator $widen$ and assumes that it bounds both
-operands:
-#thy("widening")
-A type has at most one instance of each class, and the numeric domains state
-their algebra as classes.
-
-A _locale_ fixes parameters and assumptions, and interpreting it proves the
-assumptions for an instance and yields its theorems @ballarin14. Unlike a
-class, a locale can be interpreted several times for one type. Voblint states
-its soundness obligations as locale assumptions, so an analysis becomes sound
-by interpreting a locale, such as #isalocale("analysis_contract") of
-@sec:sound-core. A small library locale shows the syntax.
-#isalocale("sound_intersection") fixes an intersection that keeps every value
-both operands admit and lies below both. The interface of the shipped
-domains omits the second law (@sec:lattices):
-#thy("sound_intersection")
-
-An _inductive definition_ is the least relation closed under its rules, and
-#isacmd("inductive_set") defines a set the same way. Its _rule induction_
-proves a property of every element with one case per rule. The solver's
-verification defines #isaconst("reach"), the unknowns on which a query $x$
-transitively depends, by two rules. In them, $T$ gives the right-hand sides
-as strategy trees, $sigma$ is the valuation, and #isai("dep T \<sigma> y") is
-the set of unknowns that the right-hand side of $y$ reads under $sigma$:
-#thy("reach")
-The execution relations and trace sets of later chapters are inductive
-definitions as well.
-
-A theorem declares its variables after #isai("fixes"), local abbreviations
-after #isai("defines"), its premises after #isai("assumes"), and its
-conclusion after #isai("shows"). Inside a proposition, $A ==> B$ is
-implication and $exists$, $and$, $or$ are the usual connectives. Subscripts,
-superscripts, and symbols such as $tack.r$ are notation for a constant applied
-to its arguments, and the text names the constant at first use.
-
-A _quotient type_ identifies representations up to an equivalence
-@huffman13, and its operations are lifted with #isacmd("lift_definition").
-Voblint's executable abstract states form one, identifying finite
-representations that read back to the same function-valued state.
-
-_Code equations_ determine what code generation emits @haftmann10, and one
-#isacmd("export_code") declaration emits the analyzer's OCaml from them, so
-the delivered analyzer runs the definitions the theorems are about. The
-generated code is _trusted_, not proved, and its correctness rests on the code
-generator, target-language adaptations such as #isacmd("code_printing"), and
-the OCaml toolchain (@sec:trust-boundary). Theories are grouped into
-_sessions_, which Isabelle builds and checks as units, such as
-#isasession("Voblint_CFG").
-
-The _trusted computing base_ is the code that must be correct for a proof to
-be believed, normally only Isabelle's inference kernel. A _proof by
-evaluation_ extends it. The method `eval` compiles a closed proposition to
-code, runs it, and accepts the result through the code generator's evaluation
-oracle. In 2025, a defect in
-normalization by evaluation, which also extends trust beyond the kernel,
-admitted a proof of `False` @paulson26broken. The theorems that show definite
-verdicts on concrete programs (@sec:nonvacuity) are proved by evaluation and
-therefore rest on this extended base.
+HOL functions are total, but Isabelle's #isacmd("function") package also
+accepts a recursive definition without a termination proof. Its defining
+equations then hold only on a _domain_, the arguments on which the recursion
+terminates. The solver is defined this way, with the domain
+#isaconst("solve_dom", thy: "TD_side_upd_rule"), and its correctness theorem
+assumes membership in it. Voblint proves that every completed run of the
+executable form #isaconst("solve_c", thy: "TD_side_upd_rule") lies in the
+domain (#isathm("solve_dom_of_solve_c"), @sec:termination). The end-to-end
+theorem therefore needs no termination premise. It applies whenever
+#isaconst("run_voblint") returns a report.

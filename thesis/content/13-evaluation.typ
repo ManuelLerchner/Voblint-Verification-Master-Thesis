@@ -62,6 +62,14 @@ instance discharges the premises of the arithmetic theorems
 #isathm("run_voblint_arithmetic_safe") and
 #isathm("run_voblint_arithmetic_refuted") on a concrete program.
 
+These proofs by evaluation extend the _trusted computing base_, the code that
+must be correct for a proof to be believed, which is normally only Isabelle's
+inference kernel. The method `eval` compiles a closed proposition to code,
+runs it, and accepts the result through the code generator's evaluation
+oracle. In 2025, a defect in normalization by evaluation, which also extends
+trust beyond the kernel, admitted a proof of `False` @paulson26broken. The
+instances of this section therefore rest on this extended base.
+
 == Do the obligations exclude real errors? <sec:eval-1161>
 
 _Evidence: machine-checked, and executable against a defect documented

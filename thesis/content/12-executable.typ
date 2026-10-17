@@ -55,8 +55,9 @@ sound. A user, however, writes source text and reads a report in a terminal or a
 function-valued abstract states and the solver defined through its domain
 predicate, with executable versions (@sec:represented-function,
 @sec:termination). Every function that
-#isaconst("run_voblint") uses therefore has code equations, and Isabelle's
-code generator @haftmann10 exports it, together with the constructors and
+#isaconst("run_voblint") uses therefore has _code equations_, the equations
+that determine what code generation emits, and Isabelle's code generator
+@haftmann10 exports it, together with the constructors and
 selectors a caller needs, into one OCaml module,
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
 The command-line tool and the playground reach this module only through the

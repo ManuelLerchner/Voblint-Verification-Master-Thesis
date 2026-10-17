@@ -10,7 +10,7 @@ thesis is derived from the sources and rechecked on every change
 (@sec:voblint-repo). This chapter describes the repository and the tools that
 make this hold, and the changes made to the vendored solver. Isabelle's batch
 build checks every proof, but it does not check that the prose cites existing
-names, that every theory belongs to a session, or that a locale assumption
+names, that every theory belongs to a _session_, a group of theories that Isabelle builds and checks as a unit, or that a locale assumption
 still mentions the constants its author meant.
 
 The need grows with AI assistance. Agents wrote many proofs and a large share
