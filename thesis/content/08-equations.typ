@@ -540,9 +540,7 @@ initial state $d_0$ describes the initial stores $S_0$ under an environment
 $rho_0$ of analysis-global values below the solved ones,
 $S_0 subset.eq conc_(D G)(d_0, rho_0)$ ($rho_0$ is #isai("e\<^sub>0") in the
 statement).
-#theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[
-  #proved("activation_collect_dg_sound")
-]
+#theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound", statement: true)[]
 Each row of @tab:eq-obligations follows from the bound that the post-solution
 gives one part of the right-hand side, together with a law of the analysis
 contract and the monotonicity of $conc_(D G)$. The step that needs care is

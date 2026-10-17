@@ -344,9 +344,11 @@ of #isaconst("run_voblint") (@sec:report). It is about #isaconst("run_voblint")
 itself, the constant that code generation exports, so it concerns the analyzer
 the tools run, up to the trusted code generator and target toolchains
 (@sec:trust-boundary).
-#theorem(name: [Source-level soundness of the analyzer], isa: "run_voblint_source_sound")[
-  #proved("run_voblint_source_sound")
-]
+#theorem(
+  name: [Source-level soundness of the analyzer],
+  isa: "run_voblint_source_sound",
+  statement: true,
+)[]
 
 The theorem speaks about the elaborated program, with the core procedure table
 #isaconst("elab_ptable") $p$ $italic("ds")$ of @sec:elaboration and its graph

@@ -16,11 +16,12 @@
 soundness theorem, however, should talk about the programs a user writes, and
 these have procedures and recursion. This chapter defines two views of such a
 program and connects them. The source semantics executes a program directly
-(@sec:pstep). An analysis cannot generate its equations from it, because a
-constraint system needs a fixed, finite set of program points, and under
-recursion the commands that remain to run nest arbitrarily deep
-(@sec:why-graph). Voblint therefore compiles a program to a procedure-aware
-control-flow graph and generates its equations from the graph
+(@sec:pstep). An analysis cannot generate its equations from it, because its
+equations need a fixed, finite set of program points, which contexts may then
+refine (@sec:constraints), and under recursion the commands that remain to run
+nest arbitrarily deep
+(@sec:why-graph). Voblint therefore compiles the elaborated program to a
+procedure-aware control-flow graph and generates its equations from the graph
 (@fig:program-to-equations). A soundness proof for the graph alone would leave
 the compiler outside the theorem. This chapter therefore proves the first link
 of the soundness chain: every source run of a well-formed program is matched
@@ -141,7 +142,8 @@ the running example of the remaining chapters.
     edge labels as `voblint --dot` prints them. Solid arrows are local edges and
     dashed arrows are call edges. Dotted connectors are not edges. They show the
     continuation of a call edge, that is, the node where the caller resumes.
-    The edge `return` into the result node of `main` is the return without a value by which
+    The edge `return` into the result node of `main` is the return without a
+    value by which
     `main` falls through (@sec:compile). The drawing omits the corresponding
     node `pp1` of `bump` and its edge, which no run reaches because `bump`
     always returns explicitly.],
@@ -156,7 +158,8 @@ abstract domain. It has integer variables of C's machine integer types, locals
 and globals, procedures with value
 parameters, direct calls with an optional result, recursion, assignment,
 sequencing, conditionals, `while` loops, nondeterministic input, and checks. It
-omits pointers and the heap, arrays and structs, indirect calls, threads, floating point, `goto`,
+omits pointers and the heap, arrays and structs, indirect calls, threads,
+floating point, `goto`,
 `break`, `continue`, and exceptions. Because VIMP has no pointers, concrete
 memory is a store that maps variables to integers.
 
@@ -298,8 +301,7 @@ would hold $300$ and the second check would be
 #claim-ref("kinds-i32")). A verdict is therefore only meaningful
 together with the width at which each operation computes.
 
-*Machine kinds.* A variable has one of eight _machine kinds_
-(#isatype("ikind")), the signed and unsigned integers of 8, 16, 32 and 64 bits,
+*Machine kinds.* A variable has one of eight _machine kinds_ (#isatype("ikind")): the signed and unsigned integers of 8, 16, 32 and 64 bits,
 written `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64` and `u64`. A kind $k$ of
 width $w$ fixes a range, $[-2^(w-1), 2^(w-1) - 1]$ if $k$ is signed and
 $[0, 2^w - 1]$ if it is unsigned. Values remain mathematical integers, and a
@@ -309,7 +311,7 @@ value of the range,
 $
   #isaconst("ik_norm") med k med n = ((n - m) mod 2^w) + m
 $
-(#isathm("ik_norm_mod")), so $300$ wraps to $44$ at `u8`. Wraparound applies
+(#isathm("ik_norm_mod")). For example, $300$ wraps to $44$ at `u8`. Wraparound applies
 to signed kinds too, whose overflow C leaves undefined (#c11("6.5p5")).
 
 A program declares kinds in C's style, for instance `global u8 g;` for a
@@ -353,28 +355,17 @@ arithmetic conversions determine, and promotion turns every kind narrower than
 and yields $0$ or $1$ at `i32`, and a logical operator tests each operand at
 its own kind. A conversion is inserted wherever a value meets a context of
 another kind and omitted where the kinds agree, because even a conversion that
-changes no value costs precision in a domain that records only signs. The
-assignment to `z` above thus becomes
-`z := (u8) ((i32) x + (i32) y)`, and the analyzer prints the check conditions
-of the listing in the same elaborated form, #raw(check-row("kinds-promotion", cond: "(i32) x + (i32) y < 250").cond)
-and #raw(check-row("kinds-promotion", cond: "(i32) z < 250").cond).
+changes no value costs precision in a domain that records only signs. assignment to `z` above thus becomes `z := (u8) ((i32) x + (i32) y)`.
 
-Goblint's front end makes the same translation for C @necula02. In CIL, every
-operator node carries its result type, the operands of an arithmetic operator
-are converted to the type of the usual arithmetic conversions, a cast between
-equal types is omitted, and a cast of an integer constant becomes a constant
-of the target kind
+Goblint's front end CIL makes the same translation for C @necula02
 (#link("https://github.com/goblint/cil/blob/d97418f2e8d2aa88a36c22397c38ccf4d3ffbcde/src/frontc/cabs2cil.ml#L5111")[`doBinOp`],
 #link("https://github.com/goblint/cil/blob/d97418f2e8d2aa88a36c22397c38ccf4d3ffbcde/src/cil.ml#L6137")[`mkCastT`]).
-CIL differs in lowering `&&` and `||` into branches, where VIMP evaluates
-both operands, and in being unverified OCaml, where elaboration is an Isabelle
-function whose meaning #isathm("eval_elaborate") relates to the surface
-expression.
+It differs in lowering `&&` and `||` into branches, where VIMP evaluates both
+operands, and in being unverified OCaml.
 
-A literal takes the kind of its context, so `u8 z = 300;` stores $44$. Where
-a literal decides the kind of an operation, it counts as `i32` if its magnitude is at
-most $2^31 - 1$ and as `i64` otherwise, as in C when `long` has 64 bits
-(#c11("6.4.4.1p5")). Thus `-2147483648` is an `i64`, and the analyzer rejects a literal outside the range of `i64`. Commands are
+A literal takes the kind of its context, so `u8 z = 300;` stores $44$. The
+literal keeps its value $300$ in the core expression, so the analyzer still
+reports the conversion as an arithmetic error. Where a literal decides the kind of an operation, it counts as `i32` or, if it does not fit, as `i64` (#c11("6.4.4.1p5")). Commands are
 elaborated in the same way. A written value is converted to the kind of its
 target, the variable at an assignment, the formal at an argument, and the
 return kind at a #keyw("return"). A condition or a check is evaluated at its
@@ -488,20 +479,15 @@ kind of its target (#isathm("wt_com_elab_com")).
     ],
   ),
   caption: [One program in its three forms. The trusted parser lowers each
-    declaration with an initializer to an assignment, or to a call with that
-    destination when the initializer is a call, and one without, such as
-    `u8 x;`, to `x = __voblint_nondet_int();`. It collects the declared kinds into
-    #isatype("kind_decls"), and its expressions carry no kinds. Elaboration, inside the proof,
-    computes every operation at its C kind and inserts each conversion: `n + 1`
-    computes at `i32` and returns at `u16`, `x + 100` is written back as a
-    `u8`, $(200 + 100) mod 2^8 = 44$, `s < u` compares at `u32`, so $-1$ becomes
-    $2^32 - 1$ and the check `b == 0` is
-    #verdict(claim-check("elab-tour", "b == 0").at(3)), and `f(x)` needs no
-    conversion because `x` already has the kind of `n`. The surface and core
-    columns are printed from the analyzer's `--ast` and `--dot` output (claims
-    #claim-ref("elab-tour*")); variables print by name, not identity.],
+    declaration to an assignment, `u8 x;` to `x = __voblint_nondet_int();`, and
+    collects the declared kinds into #isatype("kind_decls"). Elaboration computes
+    every operation at its C kind and inserts each conversion, so `x + 100`
+    wraps to $44$, `s < u` compares $2^32 - 1$ with $1$, and the check `b == 0`
+    is #verdict(claim-check("elab-tour", "b == 0").at(3)). The surface and core
+    columns are the analyzer's `--ast` and `--dot` output (claims
+    #claim-ref("elab-tour*")).],
   kind: image,
-  placement: auto,
+  placement: none,
 ) <fig:elab-stages>
 
 *Evaluation.* Since every kind is written in the core expression, evaluation
@@ -527,9 +513,7 @@ $t compose rho$ is the procedure's view of a core store $t$, $kappa compose rho$
 gives each name its kind, and $italic("ik")$ is the kind that the context
 expects of the expression's value.
 
-#theorem(name: [Elaboration preserves meaning], isa: "eval_elaborate")[
-  #proved("eval_elaborate")
-]
+#theorem(name: [Elaboration preserves meaning], isa: "eval_elaborate", statement: true)[]
 
 == Executing a source program #thy-badge("Voblint_VIMP", "VIMP_Proc") <sec:pstep>
 
@@ -541,8 +525,7 @@ this kind, and so is the semantics of the control-flow graph.
 Without calls, a configuration is a pair $(c, s)$ of the command that remains
 to run and the store, as in the semantics of IMP by Nipkow and Klein
 @nipkow14[§7.3]. An assignment updates the store and leaves #skipC, and a
-check leaves the store unchanged. A sequence steps its first command until it
-is #skipC, a conditional selects a branch by #isaconst("truthy"), and a loop
+check leaves the store unchanged. A sequence steps its first command until it is #skipC. A conditional selects a branch by #isaconst("truthy"), and a loop
 unfolds into a conditional that runs the body and then the loop again. The
 command that remains after a step, which describes the remainder of the
 execution @plotkin04[§3.2], is the _residual_.
@@ -561,23 +544,20 @@ Isabelle defines step relations such as this one inductively. An _inductive
 definition_ is the least relation closed under its rules, and its _rule
 induction_ proves a property of every element with one case per rule.
 
-#definition(name: [Source execution], isa: "pstep", cmd: "inductive")[
+#definition(
+  name: [Source execution],
+  isa: "pstep",
+  cmd: "inductive",
+  snippet: thy("pstep"),
+  snippet-caption: [The declaration of the step relation #isaconst("pstep"), lifted from the theory.],
+  snippet-label: <fig:pstep>,
+)[
   A source configuration is a triple $(c, s, italic("frs"))$ of the command that
   remains to run, a store $s$, and a list $italic("frs")$ of
   frames (#isatype("frame")) for the suspended activations. Each frame
   records the caller's store and the variable, if any, that receives the
   result. The step relation #isaconst("pstep") of @fig:pstep relates a configuration of a core program to its successor.
 ]
-
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("pstep")
-  },
-  kind: image,
-  placement: top,
-  caption: [The declaration of the step relation #isaconst("pstep"), lifted from the theory.],
-) <fig:pstep>
 
 Expressions are evaluated by #isaconst("eval", thy: "Core_Exp"), and every
 written value is converted to the kind that a kind environment $kappa$ assigns
@@ -637,7 +617,8 @@ Just as Nipkow and Klein show that well-typed programs do not get stuck
 @nipkow14[§9.1.2], we show that well-formed VIMP programs do not, since claims
 about the points after a stuck run would hold vacuously. For a program satisfying
 #isaconst("wf_source_program"), every reachable configuration has either
-finished, as #skipC with an empty frame stack, or can step:
+finished, as #skipC with an empty frame stack, or can step. This progress result
+does not imply termination, since a run may still diverge:
 
 #proved("source_progress")
 
@@ -720,7 +701,7 @@ reports possible arithmetic hazards as separate diagnostics
 
 The parser folds a leading minus sign into the literal and chooses its kind by
 magnitude, so `-9223372036854775808`, the one literal on which VIMP and C
-differ, is an `i64`. In C it is unary minus applied to
+differ, is an `i64`. In C, it is unary minus applied to
 `9223372036854775808`, which no standard type represents when `long long` has
 64 bits (#c11("6.4.4.1p6")). Division and remainder truncate toward zero as in
 C11. Goblint once got the remainder wrong, and issue
@@ -740,9 +721,10 @@ whatever `x` held before (#isathm("pstep_declare"),
 #isathm("pstep_declare_forgets")). A declared local thus starts at some value
 of its kind each time its declaration executes, and that the parser lowers
 every declaration this way is trusted. A call also resets the callee's locals to $0$
-(#isaconst("enter_state")), but no program the parser accepts observes the
+(#isaconst("enter_state")). However, no program the parser accepts observes the
 reset, because the parser rejects a use before the declaration and the
-declaration writes the local before any read. No shipped analysis relies on the reset either, because
+declaration writes the local before any read. No shipped analysis relies on the
+reset either, because
 every abstract entry assumes nothing about callee locals beyond their kinds
 (#isaconst("nonrel_enter_frame") for the analyses that track each variable separately). Checks never
 prune executions, so the verdict for one check does not depend on an earlier
@@ -763,11 +745,11 @@ adequacy argument, which is left as future work.
 
 An analysis attaches abstract states to program points and transfer functions
 to transitions. #isaconst("pstep") offers neither in a usable form. Its only
-notion of location is the residual. Without recursion only finitely many
+notion of location is the residual. Without recursion, only finitely many
 residuals arise, because a loop's unfolding revisits the same command forms,
 but a recursive call can nest another #ctor("Restore") wrapper at every call
 depth. An assignment is also not a transition between fixed program points,
-because inside a sequence it steps through the rule #isathm("pstep.Seq2"),
+because inside a sequence, it steps through the rule #isathm("pstep.Seq2"),
 which rebuilds the surrounding residual. Finally, nothing names the entry of a
 procedure, its result, or the point where a caller resumes. The schematic
 control-flow graph of @fig:counting-loop solves the first two problems, with
@@ -800,8 +782,7 @@ top-down solver of @sec:td.
     show raw.where(block: true): set text(size: 6.5pt)
     thy("gcfg")
   }
-  #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labeled by a
-  #isatype("gedge_action") $a$. #isaconst("calls") holds the _call edges_
+  The field #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labeled by a #isatype("gedge_action") $a$. The field #isaconst("calls") holds the _call edges_
   $(u, italic("ca"), ctor("FunctionEntry") med q, k)$. Such an edge consists
   of the call site $u$, the call information $italic("ca")$, the entry node of
   the callee (by #isaconst("wf_cfg")), and the node $k$ where the caller
@@ -875,7 +856,7 @@ of Goblint's CFG, except inline assembly and in-place declarations, has a VIMP
 counterpart (@tab:cfg-edges). No translation from C to VIMP is formalized.
 
 The graph keeps local edges and call edges in separate fields, because a local
-edge changes the store within one activation while a call edge starts a new
+edge changes the store within one activation, while a call edge starts a new
 one. No edge action denotes a call, so a call can never be taken as a local
 step.
 
@@ -884,9 +865,10 @@ to the result node $ctor("FunctionResult") med p$, which all callers of $p$
 share, so recursion needs no copies of nodes. A shared result node has no
 single continuation, and in a compiled graph no edge leaves it. The call edge
 records the continuation $k$ instead. After a return, execution resumes at the
-continuation saved in the frame, and an analysis connects the callee's result
-to the correct caller through the call edge, so no separate return-to-call
-matching is needed. A completed program ends at
+continuation saved in the frame, and an analysis connects the callee's result to
+the correct caller through the call edge. The saved frame identifies the
+matching call, so the graph needs no return edges to individual callers. A
+completed program ends at
 $ctor("FunctionResult") med #raw("main")$ (#isaconst("cfg_exit")).
 @fig:cfgmap shows these properties on a recursive program.
 
@@ -988,7 +970,7 @@ always returns, the fall-through node and its edge are dead code.
     thy("compile_proc")
   },
   kind: image,
-  placement: auto,
+  placement: none,
   caption: [The declaration of #isaconst("compile_proc"), lifted from the theory.],
 ) <fig:compile-proc>
 
@@ -1004,7 +986,14 @@ them.
 === Graph execution #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
 
 #block(breakable: false)[
-  #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[
+  #definition(
+    name: [Graph execution],
+    isa: "cstep",
+    cmd: "inductive",
+    snippet: thy("cstep"),
+    snippet-caption: [The declaration of the graph step #isaconst("cstep"), lifted from the theory.],
+    snippet-label: <fig:cstep>,
+  )[
     A graph configuration (#isatype("cconf")) is a triple of a node, a store,
     and a stack of suspended callers (#isatype("cframe")). Each entry records
     where to resume, which variable receives the result, and the caller's store.
@@ -1013,16 +1002,6 @@ them.
     #isai("\<kappa>, g \<turnstile> c \<rightarrow>\<^sub>c c'"), and
     #isai("\<rightarrow>\<^sub>c\<^sup>*") is its closure.
   ]
-
-  #figure(
-    {
-      show raw.where(block: true): set text(size: 6.2pt)
-      thy("cstep")
-    },
-    kind: image,
-    placement: none,
-    caption: [The declaration of the graph step #isaconst("cstep"), lifted from the theory.],
-  ) <fig:cstep>
 ]
 
 @fig:cstep lists the rules, one per kind of step. A local edge applies its
@@ -1040,10 +1019,11 @@ only for compiled ones.
 == Relating the two executions <sec:csim>
 
 The soundness theorem is stated over #isaconst("pstep"), but the analysis
-solves equations generated from the graph. Every source run must therefore be
-matched by a run of the compiled graph that holds the same store at
-corresponding points. We prove this with a _forward simulation_, a relation
-between source and graph configurations that every source step preserves.
+solves equations generated from the graph. Every finite source run must
+therefore be matched by a run of the compiled graph that ends with the same
+store at a related node. We prove this with a _forward simulation_, a relation
+between source and graph configurations such that every source step can be
+matched by zero or more graph steps that preserve it.
 
 The source keeps the remaining work of a suspended caller inside the running
 command, behind a #ctor("Restore") marker, while the graph keeps it on the
@@ -1071,23 +1051,20 @@ graph runs from $italic("cont")$ on. Once the call has finished, it leaves
 $#skipC med i";" a_1";" ...";" a_m$, and this residual is at
 $italic("cont")$.
 
-#definition(name: [Simulation relation], isa: "csim", cmd: "inductive")[
+#definition(
+  name: [Simulation relation],
+  isa: "csim",
+  cmd: "inductive",
+  snippet: thy("csim"),
+  snippet-caption: [The declaration of #isaconst("csim"), lifted from the theory.],
+  snippet-label: <fig:csim>,
+)[
   #isaconst("csim"), written
   #isai("\<Pi>, g, p \<turnstile> (c, s, frs) \<approx> (v, s, stk)"), relates a
   source configuration to a graph configuration holding the same store, where
   $p$ is the procedure of the outermost activation, `main` for a run of the
   program.
 ]
-
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("csim")
-  },
-  kind: image,
-  placement: none,
-  caption: [The declaration of #isaconst("csim"), lifted from the theory.],
-) <fig:csim>
 
 In @fig:csim, #isaconst("compiled_at") states that $italic("body_p")$ is the
 body of $p$ and that its compiled edges, together with its entry edge and its
@@ -1116,7 +1093,7 @@ determine the node. In `if (b) { x = 1; } else { x = 1; }`, the residual
 `x = 1` is related to both branch nodes. The simulation theorems therefore
 state that some related graph configuration exists.
 
-#theorem(name: [One step is matched], isa: "csim_step")[
+#theorem(name: [One step is matched], isa: "csim_step", statement: true)[
   If a source configuration and a graph configuration are related by
   #isaconst("csim") and the source takes one step, the graph takes zero or more
   steps to a configuration related to the new source configuration.

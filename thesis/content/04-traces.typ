@@ -193,21 +193,20 @@ records one activation's view of a sequential run.
 We turn the grouping of @fig:flat-nested into a datatype.
 
 #block(breakable: false)[
-  #definition(name: [Activation trace], isa: "activation_trace", cmd: "datatype")[
-    A trace has one constructor per way an activation begins or continues
-    (@fig:activation-trace).
-  ]
-
-  #figure(
-    {
-      show raw.where(block: true): set text(size: 6.2pt)
+  #definition(
+    name: [Activation trace],
+    isa: "activation_trace",
+    cmd: "datatype",
+    snippet: {
       thy("activation_path")
       thy("activation_trace")
     },
-    kind: image,
-    placement: none,
-    caption: [The declarations of #isatype("activation_path") and #isatype("activation_trace"), lifted from the theory. An #isatype("activation_path") is the path of one activation, a list of pairs of a CFG node and a store.],
-  ) <fig:activation-trace>
+    snippet-caption: [The declarations of #isatype("activation_path") and #isatype("activation_trace"), lifted from the theory. An #isatype("activation_path") is the path of one activation, a list of pairs of a CFG node and a store.],
+    snippet-label: <fig:activation-trace>,
+  )[
+    A trace has one constructor per way an activation begins or continues
+    (@fig:activation-trace).
+  ]
 ]
 
 $#Root($pi$)$ is the initial activation of the program with activation path
@@ -255,19 +254,18 @@ graph, and a $ctor("Resume")$ may continue `main` after its call `sum(2)` with
 the finished inner activation `sum(1)`, whose caller is `sum(2)`. Validity
 rules out such terms.
 
-#definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
+#definition(
+  name: [Valid traces],
+  isa: "valid_activation_trace",
+  cmd: "inductive_set",
+  snippet: thy("valid_activation_trace"),
+  snippet-caption: [The four rules of #isaconst("valid_activation_trace"): root, intra, call, and ret. Each reads the graph relation for its own kind of step: #isaconst("intra") for local flow, and #isaconst("calls") both for entering a callee and for recovering the continuation $italic("cont")$ at a return.],
+  snippet-label: <fig:valid-rules>,
+)[
   For a graph $g$ and a set $S$ of initial stores,
   #isai("valid_activation_trace g S") is the least set of traces closed under
   the four rules of @fig:valid-rules.
 ]
-
-
-
-#figure(
-  thy("valid_activation_trace"),
-  kind: image,
-  caption: [The four rules of #isaconst("valid_activation_trace"): root, intra, call, and ret. Each reads the graph relation for its own kind of step: #isaconst("intra") for local flow, and #isaconst("calls") both for entering a callee and for recovering the continuation $italic("cont")$ at a return.],
-) <fig:valid-rules>
 
 The root rule corresponds to the initial graph configuration, and the other
 three correspond to the rules of #isaconst("cstep"). Intra appends a step
@@ -305,7 +303,7 @@ representing valid trace
 proved, and soundness does not need it. With the simulation of
 @ch:program-model, this result extends to VIMP programs.
 
-#theorem(name: [Source runs are traces], isa: "source_run_has_activation_trace")[
+#theorem(name: [Source runs are traces], isa: "source_run_has_activation_trace", statement: true)[
   For a well-formed compiled program, every finite source execution from an
   initial store in $S$ has a matching graph configuration and a valid trace
   ending at the same node with the same store, whose caller chain represents
@@ -399,20 +397,17 @@ The coverage contract therefore has to require a context at every call whose
 caller store the claim contains.
 
 #block(breakable: false)[
-  #definition(name: [Context policy], isa: "call_context_policy", cmd: "type_synonym")[
+  #definition(
+    name: [Context policy],
+    isa: "call_context_policy",
+    cmd: "type_synonym",
+    snippet: thy("context_policy"),
+    snippet-caption: [The declaration of #isatype("call_context_policy"), lifted from the theory.],
+    snippet-label: <fig:call-context-rel>,
+  )[
     A context policy maps a concrete call to the set of callee contexts it admits
     (@fig:call-context-rel).
   ]
-
-  #figure(
-    {
-      show raw.where(block: true): set text(size: 6.2pt)
-      thy("context_policy")
-    },
-    kind: image,
-    placement: none,
-    caption: [The declaration of #isatype("call_context_policy"), lifted from the theory.],
-  ) <fig:call-context-rel>
 ]
 
 A context policy is a function on concrete calls and is never executed. It
@@ -630,6 +625,7 @@ $c$.
   #theorem(
     name: [Exhaustive contexts],
     isa: "node_collect_eq_Union_activation_collect",
+    statement: true,
   )[
     Under the five coverage obligations, including #oblig("TOTAL"), the node
     collecting semantics at every node $v$ is the union of the activation
@@ -637,7 +633,7 @@ $c$.
   ]
 ]
 
-#corollary(name: [Claims cover the collection], isa: "node_collect_covered")[
+#corollary(name: [Claims cover the collection], isa: "node_collect_covered", statement: true)[
   Under the five coverage obligations, every store of the node collecting
   semantics at $v$ lies in the claim #isai("cover v c") of some context $c$.
 ]
