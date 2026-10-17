@@ -31,8 +31,8 @@ et al. @klinger19 find potential soundness or precision issues in four of six
 analyzers. Kaindlstorfer et al. @kaindlstorfer24 extend metamorphic testing,
 which checks an analyzer's answers to related queries against one another. On
 eight analyzers for C and C++ they find 24 issues, 16 of them related to
-soundness.
-// TODO: check whether the issues span seven of the eight analyzers and include MOPSA (paper PDF unreachable on 2026-10-18; the abstract gives only the totals).
+soundness. Every analyzer had issues, and seven had soundness issues,
+including MOPSA @kaindlstorfer24[p. 326, Tab. 2; p. 329].
 
 #figure(
   {

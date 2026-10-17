@@ -41,8 +41,11 @@ why = "Chapter 3, the source-to-graph simulation relation: its three constructor
 [snippets.reach]
 why = "Background, Isabelle mechanisms: an inductive set, the unknowns a query transitively depends on."
 
+[snippets.first_deciding]
+why = "Background, Isabelle mechanisms: a computable function defined by pattern matching on lists."
+
 [snippets.default_st]
-why = "Background, Isabelle mechanisms: a quotient type, finite abstract states up to readback."
+why = "Chapter 12, executable states: a quotient type, finite abstract states up to readback."
 proof = true
 
 [snippets.caller_of]

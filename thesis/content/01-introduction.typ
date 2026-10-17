@@ -235,10 +235,9 @@ Differential
 testing, which flags answers on which analyzers disagree, has found soundness
 issues in most of the analyzers it was applied to (@sec:rel-practice). Since its first participation in SV-COMP in 2021, a
 competition on benchmark programs with known verdicts, Goblint has never
-produced a false negative on the competition's benchmark suite @seidl26. Still, its
-developers report soundness issues that the benchmarks missed
-@saan26phd[§3.4.6].
-// TODO: check the claim above against Saan's thesis, §3.4.6 (dspace.ut.ee unreachable on 2026-10-17).
+produced a false negative on the competition's benchmark suite @seidl26. Still, its issue
+tracker lists more than a hundred issues labelled as unsound that were opened
+since 2021 @goblint-unsound.
 Testing finds such an error only when some test program exercises it. The
 Goblint defect at the start of this chapter shows only for a negative dividend,
 and only in the congruence domain. A proof does not depend on such a program.

@@ -172,7 +172,7 @@ bound:
 $
   #ctor("Side") (g, a); #ctor("Side") (g, b)
   quad "means" quad
-  sol(g) gt.eq a union.sq b.
+  sol(g) lge a ljoin b.
 $
 The vendored solver applies the update rule at every #ctor("Side"), first to
 $a$ and then to $a union.sq b$. The per-origin update rules keep one record

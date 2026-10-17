@@ -1,7 +1,7 @@
 #import "theme.typ": vb
 // Notation library. Only mathematical notation lives here, and each symbol is
 // the one the theories print: gamma for every concretization (overloaded by
-// type), the semantic brackets for evaluation, HOL's order, lattice and function-
+// type), the semantic brackets for evaluation, the lattice order and operations, function-
 // update syntax, and the solver's widening and narrowing. Every other formal
 // object is written under its Isabelle name (isaconst, isai), not a macro.
 
@@ -13,9 +13,12 @@
 #let setcomp(x, y) = $lr({ #x mid(bar.v) #y })$
 
 // ============================================================== lattices ====
-// HOL's order classes: the theories write <= for every carrier's order.
-#let lle = $lt.eq$
-#let llt = $lt$
+// The lattice order. The theories write <= for every carrier's order; the
+// prose uses the abstract-interpretation symbols, so it reads apart from <= on
+// integers, and listings lifted from the theories keep <=.
+#let lle = $subset.eq.sq$
+#let llt = $subset.sq$
+#let lge = $supset.eq.sq$
 #let ljoin = $union.sq$
 #let lmeet = $inter.sq$
 #let lJoin = $union.sq.big$
