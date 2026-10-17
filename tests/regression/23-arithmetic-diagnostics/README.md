@@ -35,3 +35,9 @@ directive continue to check their verdicts alone.
 The dead-branch fixture checks silence after branch refinement. The entry-state
 fixtures cover mixed safe/unsafe calls (one warning), all unsafe calls (one
 error), and all safe calls (no diagnostic).
+
+Diagnostics cover every operand of `&&` and `||`, because VIMP evaluates both
+operands of a logical operator. C does not evaluate the right operand when the
+left one decides the result, so Voblint may report a hazard C would skip
+(`precision/10`). This only makes reports more conservative: a point
+without a diagnostic is still safe for every operation C evaluates there.

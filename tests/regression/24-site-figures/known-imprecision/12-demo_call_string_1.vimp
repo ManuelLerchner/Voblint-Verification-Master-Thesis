@@ -5,6 +5,7 @@
 // scale through its single call site s3.
 // Concretely a = 2, but this setting gives scale one copy for both calls, v joins
 // [1,1] and [4,4], and a == 2 is UNKNOWN.
+// The widened v and a leave v * 2 and a - 2 possible signed overflows.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context
@@ -88,23 +89,24 @@
 //         share=⊤
 //   main_pp21_ctx0: pp21 [unknown]
 //       interval:
-//         a=⊤
-//         b=⊤
+//         a=[-2147483648,2147483647]
+//         b=[-2147483648,2147483647]
 //         i=[5,5]
 //         share=⊤
+//       possible signed integer overflow in -: a - 2
 //       possible division by zero: 10 / (a - 2)
 //   main_pp22_ctx0: pp22
 //       interval:
-//         a=⊤
-//         b=⊤
+//         a=[-2147483648,2147483647]
+//         b=[-2147483648,2147483647]
 //         i=[5,5]
-//         share=⊤
+//         share=[-10,10]
 //   main_exit_main_ctx0: exit_main
 //       interval:
-//         a=⊤
-//         b=⊤
+//         a=[-2147483648,2147483647]
+//         b=[-2147483648,2147483647]
 //         i=[5,5]
-//         share=⊤
+//         share=[-10,10]
 //   main_pp7_ctx0: pp7
 //       interval:
 //         a=⊤
@@ -140,14 +142,14 @@
 //         share=⊤
 //   main_pp19_ctx0: pp19
 //       interval:
-//         a=⊤
+//         a=[-2147483648,2147483647]
 //         b=⊤
 //         i=[5,5]
 //         share=⊤
 //   main_pp20_ctx0: pp20 [unknown]
 //       interval:
-//         a=⊤
-//         b=⊤
+//         a=[-2147483648,2147483647]
+//         b=[-2147483648,2147483647]
 //         i=[5,5]
 //         share=⊤
 //       check a == 2
@@ -161,13 +163,14 @@
 //       unreachable
 //   scale_exit_scale_ctx0: exit_scale
 //       interval:
-//         v=[1,+∞]
-//   scale_pp2_ctx0: pp2
+//         v=[1,2147483647]
+//   scale_pp2_ctx0: pp2 [unknown]
 //       interval:
-//         v=[1,+∞]
+//         v=[1,2147483647]
+//       possible signed integer overflow in *: v * 2
 //   scale_entry_scale_ctx0: entry_scale
 //       interval:
-//         v=[1,+∞]
+//         v=[1,2147483647]
 //   record_pp1_ctx0: pp1
 //       interval:
 //         amount=[5,5]
@@ -197,7 +200,7 @@
 //   wrap_exit_wrap_ctx0: exit_wrap
 //       interval:
 //         w=[1,1]
-//         r=⊤
+//         r=[-2147483648,2147483647]
 //   wrap_pp4_ctx0: pp4
 //       interval:
 //         w=[1,1]
@@ -205,7 +208,7 @@
 //   wrap_pp5_ctx0: pp5
 //       interval:
 //         w=[1,1]
-//         r=⊤
+//         r=[-2147483648,2147483647]
 //   wrap_entry_wrap_ctx0: entry_wrap
 //       interval:
 //         w=[1,1]
@@ -215,7 +218,7 @@
 //   wrap_exit_wrap_ctx1: exit_wrap
 //       interval:
 //         w=[4,4]
-//         r=⊤
+//         r=[-2147483648,2147483647]
 //   wrap_pp4_ctx1: pp4
 //       interval:
 //         w=[4,4]
@@ -223,7 +226,7 @@
 //   wrap_pp5_ctx1: pp5
 //       interval:
 //         w=[4,4]
-//         r=⊤
+//         r=[-2147483648,2147483647]
 //   wrap_entry_wrap_ctx1: entry_wrap
 //       interval:
 //         w=[4,4]
@@ -279,23 +282,23 @@
 //   main_pp19_ctx0 -> main_pp20_ctx0: call-to-return wrap
 // EXPECT-GRAPH-END
 
-global hits;
+global i32 hits;
 
-fun record(amount) {
+fun record(i32 amount) {
   hits = hits + amount;
 }
 
-fun scale(v) {
-  return v * 2;
+fun i32 scale(i32 v) {
+  return v * 2; // ARITH: WARN signed-overflow
 }
 
-fun wrap(w) {
-  r = scale(w);
+fun i32 wrap(i32 w) {
+  i32 r = scale(w);
   return r;
 }
 
 fun main() {
-  i = 0;
+  i32 i = 0;
   while (i < 5) {
     i = i + 1;
   }
@@ -310,8 +313,8 @@ fun main() {
     record(100);
   }
 
-  a = wrap(1);
-  b = wrap(4);
+  i32 a = wrap(1);
+  i32 b = wrap(4);
   __voblint_check(a == 2); // UNKNOWN
-  share = 10 / (a - 2); // ARITH: WARN division-by-zero
+  i32 share = 10 / (a - 2); // ARITH: WARN division-by-zero; WARN signed-overflow
 }

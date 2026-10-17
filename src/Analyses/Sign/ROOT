@@ -1,7 +1,8 @@
 chapter Voblint
 
 session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
-  description "The Sign domain: seven-element lattice, executable bridge, end-to-end soundness"
+  description "The Sign domain: warrowing, arithmetic, backward operators, and the domain at
+    machine kinds"
   sessions
     "Voblint_VIMP"
     "Voblint_CFG"
@@ -10,16 +11,8 @@ session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
     "Voblint_Framework"
     "Voblint_Solver"
     "TD"
-  directories
-    "generated"
   theories
     Sign_Warrowing
     Sign_Arithmetic
     Sign_Backward
-    Sign_Special
-    Sign_Numeric_Queries
-    Sign_Transfer
-    Sign_Exec
-    Sign_Sound
-    Sign_Classify
-    Sign_Analyses
+    Sign_Kind

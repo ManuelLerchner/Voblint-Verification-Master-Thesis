@@ -1,0 +1,36 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// Signed overflow diagnostics, decided from the interval of each operation's
+// mathematical result. An ERROR holds at every store reaching the operation;
+// a WARN is a possible overflow; an unannotated operation provably fits.
+//
+// b = a + 1 overflows on the one value a holds, and the run still knows the
+// wrapped result exactly: the check pins b == INT_MIN. The twin under the
+// default assume_top is ../known-imprecision/04-diagnostics_assume_top.vimp: the same obligations,
+// with the nested product h = (a + 1) * 2 only a possible overflow there.
+fun i32 inc(i32 n) {
+  return n + 1; // ARITH: WARN signed-overflow
+}
+fun main() {
+  i32 a; i32 b; i32 c; i32 d; i32 e; i32 f; i32 g; i32 h; i32 m; i32 x; i32 y;
+  a = 2147483647;
+  b = a + 1; // ARITH: ERROR signed-overflow
+  h = (a + 1) * 2; // ARITH: ERROR signed-overflow; ERROR signed-overflow
+  __voblint_check(b == -2147483648); // PROVED
+  c = a - 1;
+  d = -a;
+  m = -2147483648;
+  e = -m; // ARITH: ERROR signed-overflow
+  f = m / -1; // ARITH: ERROR signed-overflow
+  g = m % -1; // ARITH: ERROR signed-overflow
+  x = __voblint_nondet_int();
+  if (x < 1000 + x * 2) { // ARITH: WARN signed-overflow; WARN signed-overflow
+    y = 1;
+  }
+  y = inc(x);
+  if (x < 1000) {
+    if (x > -1000) {
+      y = inc(x * 1000);
+    }
+  }
+}

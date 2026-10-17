@@ -29,9 +29,8 @@ text \<open>
   classification the framework branches on.
 \<close>
 
-
 text \<open>
-  An \<open>analysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
+  A \<open>analysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
   control-flow transfer: a domain may observe it, but it must not by itself refine
   execution. The channel mirrors Goblint's separation of its ordinary \<open>Spec\<close>
   transfer methods (\<open>assign\<close>/\<open>branch\<close>/\<open>skip\<close>/...) from \<open>Spec.event\<close>. The
@@ -56,17 +55,21 @@ datatype analysis_event =
   Check_Event check_label exp
 
 record ('x,'k,'v,'dl,'dg) dg_spec =
-  dgs_skip           :: "('x,'k,'v,'dl,'dg) man_transfer" ("skip\<^sup>\<sharp>")
-  dgs_assign         :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("assign\<^sup>\<sharp>")
-  dgs_special        :: "special_call \<Rightarrow> vname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("special\<^sup>\<sharp>")
-  dgs_branch         :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("branch\<^sup>\<sharp>")
-  dgs_body           :: "pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("body\<^sup>\<sharp>")
-  dgs_return         :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("return\<^sup>\<sharp>")
-  dgs_enter          :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer" ("enter\<^sup>\<sharp>")
-  dgs_event          :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("event\<^sup>\<sharp>")
-  dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_env\<^sup>\<sharp>")
-  dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_assign\<^sup>\<sharp>")
-  dgs_query          :: "('x,'k,'v,'dl,'dg) man_query"
+  dgs_skip           :: "('x, 'k, 'v, 'dl, 'dg) man_transfer" ("skip\<^sup>\<sharp>")
+  dgs_assign         :: "var_id \<Rightarrow> exp \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer" ("assign\<^sup>\<sharp>")
+  dgs_special        :: "exp gspecial_call \<Rightarrow> var_id \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer"
+    ("special\<^sup>\<sharp>")
+  dgs_branch         :: "exp \<Rightarrow> bool \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer" ("branch\<^sup>\<sharp>")
+  dgs_body           :: "pname \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer" ("body\<^sup>\<sharp>")
+  dgs_return         :: "exp option \<Rightarrow> pname \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer" ("return\<^sup>\<sharp>")
+  dgs_enter          :: "call_info \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_enter_transfer"
+    ("enter\<^sup>\<sharp>")
+  dgs_event          :: "analysis_event \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer" ("event\<^sup>\<sharp>")
+  dgs_combine_env    :: "call_info \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_combine_transfer"
+    ("combine'_env\<^sup>\<sharp>")
+  dgs_combine_assign :: "call_info \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_combine_transfer"
+    ("combine'_assign\<^sup>\<sharp>")
+  dgs_query          :: "('x, 'k, 'v, 'dl, 'dg) man_query"
 
 text \<open>
   \<open>dgs_query\<close> is Goblint's \<open>Spec.query\<close>: it answers a query from the manager
@@ -101,7 +104,7 @@ text \<open>
 \<close>
 
 definition dg_spec_combine_transfer ::
-  "('x,'k,'v,'dl,'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
+  "('x, 'k, 'v, 'dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_combine_transfer"
 where
   "dg_spec_combine_transfer S ci m exit =
      do {
@@ -121,7 +124,7 @@ text \<open>
 \<close>
 
 fun dg_spec_step ::
-  "('x,'k,'v,'dl,'dg,'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+  "('x, 'k, 'v, 'dl, 'dg, 'z) dg_spec_scheme \<Rightarrow> (var_id,exp) gedge_action \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer"
 where
   "dg_spec_step S EA_Nop            = skip\<^sup>\<sharp> S"
 | "dg_spec_step S (EA_Assign x e)   = assign\<^sup>\<sharp> S x e"
@@ -147,7 +150,7 @@ text \<open>
 \<close>
 
 definition transfer_program_at ::
-  "('x,'k,'v,'dl,'dg) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('x, 'k, 'v, 'dl, 'dg) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
 where
   "transfer_program_at transfer src unknown_of =
@@ -157,7 +160,7 @@ where
      }"
 
 definition transfer_program ::
-  "('x,'k,'v,'dl::bot,'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('x, 'k, 'v, 'dl::bot, 'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
   "transfer_program T src unknown_of = sp_map (\<lambda>d. DG d bot) (transfer_program_at T src unknown_of)"
@@ -186,7 +189,7 @@ definition query_depth :: nat where
   "query_depth = 1024"
 
 fun ask_with ::
-  "('x,'k,'v,'dl,'dg) man_query \<Rightarrow> nat \<Rightarrow> query set \<Rightarrow> ('x,'k,'v,'dl,'dg) man
+  "('x, 'k, 'v, 'dl, 'dg) man_query \<Rightarrow> nat \<Rightarrow> query set \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man
    \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
 where
   "ask_with Q 0 asked m q =
@@ -196,7 +199,7 @@ where
       else Q (m\<lparr>man_ask := ask_with Q n (insert q asked) m\<rparr>) q)"
 
 definition outer_man ::
-  "('x,'k,'v,'dl,'dg) man_query \<Rightarrow> ('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,'v,'dl,'dg) man"
+  "('x, 'k, 'v, 'dl, 'dg) man_query \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man"
 where
   "outer_man Q m = m\<lparr>man_ask := ask_with Q query_depth {} m\<rparr>"
 
@@ -208,7 +211,7 @@ lemma outer_man_simps [simp]:
   by (simp_all add: outer_man_def)
 
 definition dg_spec_edge_program ::
-  "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('x, 'k, 'v, 'dl::bot, 'dg::bot) dg_spec \<Rightarrow> (var_id,exp) gedge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
   "dg_spec_edge_program S a src unknown_of =
@@ -265,7 +268,7 @@ text \<open>
   since every primitive and every combinator carries a closure lemma.
 \<close>
 
-definition dg_spec_wf :: "('x,'k,'v,'dl::bot,'dg) dg_spec \<Rightarrow> bool" where
+definition dg_spec_wf :: "('x, 'k, 'v, 'dl::bot, 'dg) dg_spec \<Rightarrow> bool" where
   "dg_spec_wf S \<longleftrightarrow>
      (\<forall>a d unknown_of ch. (\<forall>q. sp_wf (ch q))
           \<longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := ch\<rparr>)))
@@ -352,7 +355,7 @@ text \<open>
   soundness argument collapse to plain inclusions on pure functions.
 \<close>
 
-definition local_transfer :: "('dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" where
+definition local_transfer :: "('dl \<Rightarrow> 'dl) \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_transfer" where
   "local_transfer f m = sp_return (f (man_local m))"
 
 lemma local_transfer_outer_man [simp]:
@@ -375,7 +378,7 @@ text \<open>
   installs around it reduces to the handler itself.
 \<close>
 
-definition local_query :: "('dl \<Rightarrow> channel) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_query" where
+definition local_query :: "('dl \<Rightarrow> channel) \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_query" where
   "local_query h m q = sp_return (h (man_local m) q)"
 
 lemma local_query_update [simp]:
@@ -396,7 +399,6 @@ lemma outer_man_local_query [simp]:
   unfolding outer_man_def
   by (simp add: ask_with_local_query query_depth_def local_query_def fun_eq_iff)
 
-
 text \<open>
   The entry counterpart: the alternatives are a pure function of the caller
   value, so the program reads no unknown and publishes nothing. \<open>f\<close> answers the
@@ -405,7 +407,7 @@ text \<open>
 \<close>
 
 definition local_enter_transfer ::
-  "('dl \<Rightarrow> 'dl enter_result list) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer"
+  "('dl \<Rightarrow> 'dl enter_result list) \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_enter_transfer"
 where
   "local_enter_transfer f m = sp_return (f (man_local m))"
 
@@ -443,7 +445,7 @@ text \<open>
 \<close>
 
 definition local_combine_transfer ::
-  "('dl \<Rightarrow> 'dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer"
+  "('dl \<Rightarrow> 'dl \<Rightarrow> 'dl) \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man_combine_transfer"
 where
   "local_combine_transfer f m exit = sp_return (f (man_local m) exit)"
 
@@ -504,15 +506,13 @@ text \<open>
   Goblint's \<open>combine_env\<close> answers the callee exit and its \<open>combine_assign\<close>
   answers \<open>man.local\<close>, so the composed default there ends at the callee's
   value. Both are neutral for their own purpose; this one is neutral for
-  \<^emph>\<open>record update\<close>. A wrapper that overrides only the final stage, such as
-  \<open>ownership_split_dg_spec_st_for\<close> in \<open>Ownership_Split_Exec\<close>, relies on
+  \<^emph>\<open>record update\<close>. A wrapper that overrides only the final stage relies on
   that: were the default to substitute the callee exit first, the wrapper would run against a
   continuation the caller never had. Changing the default is therefore an
   audit of every partial override, not a one-line edit.
 \<close>
 
-
-definition local_dg_spec_template :: "('x,'k,'v,'D,'G) dg_spec" where
+definition local_dg_spec_template :: "('x, 'k, 'v, 'D, 'G) dg_spec" where
   "local_dg_spec_template = \<lparr>
      dgs_skip = local_transfer id,
      dgs_assign = (\<lambda>x e. local_transfer id),
@@ -555,10 +555,10 @@ text \<open>
 \<close>
 
 fun local_spec_step ::
-  "('D \<Rightarrow> 'D) \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D)
+  "('D \<Rightarrow> 'D) \<Rightarrow> (var_id \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (exp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (pname \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D)
-   \<Rightarrow> (analysis_event \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> edge_action \<Rightarrow> 'D \<Rightarrow> 'D"
+   \<Rightarrow> (analysis_event \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (var_id,exp) gedge_action \<Rightarrow> 'D \<Rightarrow> 'D"
 where
   "local_spec_step sk asn sp br bd rt ev EA_Nop = sk"
 | "local_spec_step sk asn sp br bd rt ev (EA_Assign x e) = asn x e"
@@ -569,7 +569,7 @@ where
 | "local_spec_step sk asn sp br bd rt ev (EA_Ret e p) = rt e p"
 | "local_spec_step sk asn sp br bd rt ev (EA_Check l cnd) = ev (Check_Event l cnd)"
 
-fun event_action :: "analysis_event \<Rightarrow> edge_action" where
+fun event_action :: "analysis_event \<Rightarrow> (var_id,exp) gedge_action" where
   "event_action (Check_Event l cnd) = EA_Check l cnd"
 
 end

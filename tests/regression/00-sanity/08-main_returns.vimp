@@ -2,6 +2,6 @@
 // Ported from Example_Compile_Regression.thy (root_return_rejected): main must not return, since a top-level Return never completes.
 // The well-formedness gate rejects the program before any analysis runs.
 fun main() {
-  x = 1;
+  i32 x = 1;
   return;
 }

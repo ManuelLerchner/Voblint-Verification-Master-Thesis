@@ -1,5 +1,5 @@
 theory Analysis_Query
-  imports "Voblint_Domain.Query_Lift" "Voblint_Domain.Int_Lattice"
+  imports "Voblint_Domain.Query_Lift" "Voblint_Domain.Int_Lattice" "Voblint_VIMP.Core_Exp"
 begin
 
 unbundle lattice_syntax
@@ -18,7 +18,7 @@ text \<open>
 \<close>
 
 locale query_algebra =
-  fixes answer_holds :: "'q \<Rightarrow> 'r::{semilattice_inf, order_top} \<Rightarrow> store \<Rightarrow> bool"
+  fixes answer_holds :: "'q \<Rightarrow> 'r::{semilattice_inf, order_top} \<Rightarrow> 's \<Rightarrow> bool"
   assumes top_sound: "answer_holds q \<top> s"
       and inf_sound: "\<lbrakk>answer_holds q a s; answer_holds q b s\<rbrakk> \<Longrightarrow> answer_holds q (a \<sqinter> b) s"
 begin
@@ -29,7 +29,7 @@ text \<open>
   against a particular partner.
 \<close>
 
-definition channel_holds :: "('q \<Rightarrow> 'r) \<Rightarrow> store \<Rightarrow> bool" where
+definition channel_holds :: "('q \<Rightarrow> 'r) \<Rightarrow> 's \<Rightarrow> bool" where
   "channel_holds ch s \<longleftrightarrow> (\<forall>q. answer_holds q (ch q) s)"
 
 lemma channel_holdsD: "channel_holds ch s \<Longrightarrow> answer_holds q (ch q) s"
@@ -54,7 +54,7 @@ text \<open>
   operator evaluates to \<open>0\<close> or \<open>1\<close>, so its truth is the exact answer \<open>1\<close> or
   \<open>0\<close>; Goblint derives its former \<open>MustBeEqual\<close> and \<open>MayBeLess\<close> queries from
   \<open>EvalInt\<close> the same way (lines 528 to 539). The query is a constructor
-  rather than a bare \<^typ>\<open>exp\<close> so that a later kind extends the datatype.
+  rather than a bare expression so that a later kind extends the datatype.
 \<close>
 
 datatype query = EvalInt exp
@@ -73,12 +73,15 @@ text \<open>
   two sound analyses whose answers do not overlap describe no store in common.
 \<close>
 
+text \<open>An answer about an expression holds when the expression's value lies in the
+  answer's concretization.\<close>
+
 fun eval_holds :: "query \<Rightarrow> answer \<Rightarrow> store \<Rightarrow> bool" where
-  "eval_holds (EvalInt e) a s \<longleftrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_answer a"
+  "eval_holds (EvalInt e) a s \<longleftrightarrow> eval e s \<in> gamma_answer a"
 
 interpretation eval_query: query_algebra eval_holds
 proof
-  fix q :: query and a b :: answer and s
+  fix q and a b :: answer and s
   show "eval_holds q \<top> s"
     by (cases q) simp
   show "eval_holds q a s \<Longrightarrow> eval_holds q b s \<Longrightarrow> eval_holds q (a \<sqinter> b) s"
@@ -104,15 +107,21 @@ fun answer_const :: "answer \<Rightarrow> int option" where
   "answer_const (QLifted d) = int_dom_constant d"
 | "answer_const _ = None"
 
-lemma eval_holds_constD:
-  assumes "eval_holds (EvalInt e) a s" and "answer_const a = Some n"
-  shows "\<lbrakk>e\<rbrakk>\<^sub>e s = n"
-  using assms gamma_int_dom_constant_subset
-  by (cases a rule: answer_const.cases) auto
-
 lemma answer_const_of_int [simp]: "answer_const (answer_of_int n) = Some n"
   by (simp add: answer_of_int_def int_dom_of_int_def int_dom_constant_def
       top_int_dom_ext_def)
+
+text \<open>An answer excludes \<open>n\<close> when it admits no value \<open>n\<close>. The meet with the exact
+  \<open>n\<close> decides it, since the \<^typ>\<open>int_dom\<close> meet and emptiness test are exact; so a
+  parity or sign answer excludes a constant no component names.\<close>
+
+fun answer_excludes :: "int \<Rightarrow> answer \<Rightarrow> bool" where
+  "answer_excludes n (QLifted d) = is_bottom_int_dom (d \<sqinter> int_dom_of_int n)"
+| "answer_excludes n QBot = True"
+| "answer_excludes n QTop = False"
+
+lemma answer_excludes_iff: "answer_excludes n a \<longleftrightarrow> n \<notin> gamma_answer a"
+  by (cases a) (auto simp: is_bottom_int_dom_correct)
 
 text \<open>
   An interval analysis knows only the interval component; the others stay at

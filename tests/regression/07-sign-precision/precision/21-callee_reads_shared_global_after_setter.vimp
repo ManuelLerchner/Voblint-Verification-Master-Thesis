@@ -5,13 +5,13 @@
 // flow-insensitive. Gx has one value for the whole run, at its own global
 // unknown, so its initial 0 joins the write 1 and get() returns only
 // NonNegative: 0 < x and y >= 0 are proved, 0 < y and 0 < Gx are not.
-global Gx;
+global i32 Gx;
 fun set() { Gx = 1; }
-fun get() { return Gx; }
+fun i32 get() { return Gx; }
 fun main() {
-  x = 1;
+  i32 x = 1;
   set();
-  y = get();
+  i32 y = get();
   __voblint_check(0 < x); // PROVED
   __voblint_check(y >= 0); // PROVED
   __voblint_check(0 < y); // UNKNOWN

@@ -1,0 +1,15 @@
+// PARAM: --analysis interval
+// An initializer replaces the arbitrary starting value on every activation, so
+// both calls see exactly the initialized value.
+fun i32 f() {
+  i8 x = 3;
+  __voblint_check(x == 3); // PROVED
+  return x;
+}
+fun main() {
+  i32 a;
+  a = f();
+  __voblint_check(a == 3); // PROVED
+  a = f();
+  __voblint_check(a == 3); // PROVED
+}

@@ -12,11 +12,11 @@
 // strings, and each carries its own singleton through dbl, so combine
 // reads back 12 and 18 exactly. Context-insensitively both are UNKNOWN at
 // 0 (mod 3) -- the two call sites join to 3 (mod 3) at mid's entry.
-fun dbl(p) { return p + p; }
-fun mid(p) { t = dbl(p); return t; }
+fun i32 dbl(i32 p) { return p + p; }
+fun i32 mid(i32 p) { i32 t = dbl(p); return t; }
 fun main() {
-  x = mid(6);
-  y = mid(9);
+  i32 x = mid(6);
+  i32 y = mid(9);
   __voblint_check(x == 12); // PROVED
   __voblint_check(y == 18); // PROVED
 }

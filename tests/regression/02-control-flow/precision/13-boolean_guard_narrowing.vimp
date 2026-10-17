@@ -1,0 +1,27 @@
+// PARAM: --analysis interval
+// f is called with -5 and 5.
+//
+// A guard that must hold through either operand of || narrows by each operand
+// that can still hold and joins the results: x > 3 joined with x > 4 gives x >= 4.
+// The else branch of && narrows by the same two alternatives. In the last guard,
+// after x > 0 neither x < 0 can hold, so narrowing reaches bottom and y = 1 is
+// unreachable.
+fun f(i32 x) {
+  i32 y;
+  if (x > 3 || x > 4) {
+    __voblint_check(x >= 4); // PROVED
+  }
+  if (x <= 3 && x <= 4) {
+  } else {
+    __voblint_check(x >= 4); // PROVED
+  }
+  y = 0;
+  if (x > 0 && (x < 0 || x < 0)) {
+    y = 1;
+  }
+  __voblint_check(y == 0); // PROVED
+}
+fun main() {
+  f(0 - 5);
+  f(5);
+}

@@ -39,17 +39,18 @@ text \<open>
 \<close>
 
 locale analysis_surface =
-  fixes table :: "imp_prog \<Rightarrow> ('c, 'a) solved_table"
+  fixes table :: "'p \<Rightarrow> ('c, 'a) solved_table"
     and bot_state :: 'a
     and classify :: "exp \<Rightarrow> 'a \<Rightarrow> check_result"
+    and pcfg :: "'p \<Rightarrow> (var_id, exp) gcfg"
 begin
 
-definition state_at :: "imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'a" where
+definition state_at :: "'p \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'a" where
   "state_at p ctx v =
      (case lookup_table (table p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
 
-definition report :: "imp_prog \<Rightarrow> 'c \<Rightarrow> check_report_entry list" where
-  "report p ctx = classify_checks (prog_cfg p) (state_at p ctx) classify"
+definition report :: "'p \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result) list" where
+  "report p ctx = classify_checks (pcfg p) (state_at p ctx) classify"
 
 text \<open>
   The same table read with its \<^const>\<open>Bot\<close> entries kept visible: \<open>True\<close> marks a
@@ -64,7 +65,7 @@ text \<open>
   it from its own soundness theorem about the table it supplies.
 \<close>
 
-definition reach_state_at :: "imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
+definition reach_state_at :: "'p \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
   "reach_state_at p ctx v =
      (case lookup_table (table p) v ctx of
         Bot \<Rightarrow> (True, bot_state) | Lifted st \<Rightarrow> (False, st))"
@@ -101,9 +102,9 @@ lemma fst_reach_state_at [simp]:
   by (simp add: reach_state_at_def split: lifted.splits)
 
 definition report_with_state ::
-  "imp_prog \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
+  "'p \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
   "report_with_state p ctx =
-     classify_checks_with_state (prog_cfg p) (reach_state_at p ctx)
+     classify_checks_with_state (pcfg p) (reach_state_at p ctx)
        (\<lambda>c (_, s). classify c s)"
 
 end

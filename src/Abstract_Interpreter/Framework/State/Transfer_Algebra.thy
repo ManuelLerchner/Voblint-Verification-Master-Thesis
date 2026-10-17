@@ -26,14 +26,7 @@ text \<open>
   CFG session are both in scope.
 \<close>
 
-
 subsection \<open>The structural environment combine\<close>
-
-lemma combine_env_mono:
-  fixes sc1 sc2 se1 se2 :: "'a::order abs_state"
-  assumes "sc1 \<le> sc2" and "se1 \<le> se2"
-  shows "combine_env \<G> sc1 se1 \<le> combine_env \<G> sc2 se2"
-  using assms by (auto simp: combine_env_def le_fun_def)
 
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
@@ -45,7 +38,7 @@ text \<open>
   environment stage instead.
 \<close>
 lemma combine_env_sound [intro]:
-  fixes dc de :: "'a::numeric_domain abs_state"
+  fixes dc de :: "('k, 'a::numeric_domain) gabs_state"
   assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
   shows "combine_env \<G> s t \<in> \<gamma> (combine_env \<G> dc de)"
   using assms by (auto simp: gamma_state_def le_fun_def)
@@ -57,7 +50,7 @@ text \<open>The two facts a call boundary keeps re-deriving: writing one variabl
   arbitrary domain and no transfer function, so every analysis picks them up rather than
   proving its own copy.\<close>
 lemma gamma_state_upd [intro]:
-  fixes d :: "'a::numeric_domain abs_state"
+  fixes d :: "('k, 'a::numeric_domain) gabs_state"
   assumes s: "s \<in> \<gamma> d" and v: "v \<in> \<gamma> a"
   shows "s(x := v) \<in> \<gamma> (d(x := a))"
   using s v unfolding gamma_state_def by auto
@@ -67,7 +60,7 @@ text \<open>
   same formals yield a sound entry state.
 \<close>
 lemma bind_formals_sound [intro]:
-  fixes d :: "'a::numeric_domain abs_state"
+  fixes d :: "('k, 'a::numeric_domain) gabs_state"
   assumes s: "s \<in> \<gamma> d"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a) vs avs"
   shows "bind_formals xs vs s \<in> \<gamma> (bind_formals xs avs d)"
@@ -78,25 +71,13 @@ lemma bind_formals_sound [intro]:
     by (cases vs; cases avs) (auto simp: gamma_state_upd)
   done
 
-lemma bind_formals_mono:
-  fixes d1 d2 :: "'a::order abs_state"
-  assumes base: "d1 \<le> d2"
-    and vals: "list_all2 (\<le>) avs1 avs2"
-  shows "bind_formals xs avs1 d1 \<le> bind_formals xs avs2 d2"
-  using assms apply (induction xs arbitrary: avs1 avs2 d1 d2)
-  subgoal
-    by simp
-  subgoal for _ _ avs1 avs2
-    by (cases avs1; cases avs2) (auto simp add: le_fun_def)
-  done
-
 subsection \<open>Procedure entry: binding formals and resetting the frame\<close>
 
 text \<open>
   Procedure entry itself is not defined here. \<^const>\<open>enter_frame\<close> and
   \<^const>\<open>enter_binding\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Proc\<close>) are already generic in
   the state's codomain, and the concrete semantics is \<^const>\<open>enter_binding\<close> at
-  the reset value \<open>0\<close> and the evaluator \<^const>\<open>aval\<close>
+  the reset value \<open>0\<close> and the language's evaluator
   (\<^const>\<open>call_enter\<close>). An abstract domain runs the same constant at its own
   \<open>top\<close> and its own evaluator, so the two can never drift apart: there is one
   definition and two instances of it.
@@ -115,12 +96,6 @@ lemma enter_frame_sound [intro]:
   unfolding gamma_state_def enter_state_def
   using gamma_stateD[OF sv] reset_full by auto
 
-lemma enter_frame_mono:
-  fixes reset_val :: "'a::order"
-  assumes "d1 \<le> d2"
-  shows "enter_frame \<G> reset_val d1 \<le> enter_frame \<G> reset_val d2"
-  by (simp add: assms le_funD le_funI)
-
 text \<open>
   \<^const>\<open>bind_formals\<close>'s own soundness and monotonicity are relational in the
   actual values, but that is not the shape a domain owns: an evaluator's
@@ -138,8 +113,8 @@ lemma enter_binding_sound_list_all2 [intro]:
   fixes reset_val :: "'a::numeric_domain"
   assumes sv: "s \<in> \<gamma> d" and reset_full: "\<gamma> reset_val = UNIV"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
-                 (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
-  shows "enter_binding \<G> 0 aval xs es s
+                 (map (\<lambda>e. ev e s) es) (map (\<lambda>e. aval_abs e d) es)"
+  shows "enter_binding \<G> 0 ev xs es s
            \<in> \<gamma> (enter_binding \<G> reset_val aval_abs xs es d)"
   unfolding enter_binding_def enter_state_def[symmetric]
   by (rule bind_formals_sound[OF enter_frame_sound[OF sv reset_full] vals])
@@ -147,32 +122,20 @@ lemma enter_binding_sound_list_all2 [intro]:
 lemma enter_binding_sound [intro]:
   fixes reset_val :: "'a::numeric_domain"
   assumes sv: "s \<in> \<gamma> d" and reset_full: "\<gamma> reset_val = UNIV"
-    and eval: "\<And>e. e \<in> set es \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
-  shows "enter_binding \<G> 0 aval xs es s
+    and eval: "\<And>e. e \<in> set es \<Longrightarrow> ev e s \<in> \<gamma> (aval_abs e d)"
+  shows "enter_binding \<G> 0 ev xs es s
            \<in> \<gamma> (enter_binding \<G> reset_val aval_abs xs es d)"
 proof (rule enter_binding_sound_list_all2[OF sv reset_full])
   show "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
-          (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
+          (map (\<lambda>e. ev e s) es) (map (\<lambda>e. aval_abs e d) es)"
     by (rule list_all2_map_mapI) (rule eval)
-qed
-
-lemma enter_binding_mono:
-  fixes reset_val :: "'a::order"
-  assumes state_le: "d1 \<le> d2"
-    and eval_mono: "\<And>e. e \<in> set es \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
-  shows "enter_binding \<G> reset_val aval_abs xs es d1
-           \<le> enter_binding \<G> reset_val aval_abs xs es d2"
-  unfolding enter_binding_def
-proof (rule bind_formals_mono[OF enter_frame_mono[OF state_le]])
-  show "list_all2 (\<le>) (map (\<lambda>e. aval_abs e d1) es) (map (\<lambda>e. aval_abs e d2) es)"
-    by (rule list_all2_map_mapI) (rule eval_mono)
 qed
 
 text \<open>
   A call site reads the formals and actuals off \<^typ>\<open>call_info\<close> rather than
   passing them separately, but that projection stays at the call site: a domain
   writes \<open>enter_binding \<G> top ev (ci_formals ci) (ci_args ci)\<close>, exactly as the
-  return side writes \<open>combine\<^sup>\<sharp> \<G> (ci_dst ci)\<close>. No constant here wraps it.
+  return side writes \<open>combine_assign (ci_dst ci)\<close>. No constant here wraps it.
 
   The caller's own continuation is not computed here either. Goblint's
   \<open>Spec.enter\<close> answers caller/callee pairs and \<open>constraints.ml\<close> hands the caller
@@ -183,76 +146,5 @@ text \<open>
   this algebra chooses that half: the operations below are what a whole-state
   domain computes each half \<^emph>\<open>with\<close>.
 \<close>
-
-subsection \<open>The structural return combine\<close>
-
-text \<open>The return-value write is a single-slot update, hence monotone in both the
-  written value and the state it writes into.  Any combine built over it inherits
-  monotonicity from this one fact.\<close>
-
-lemma combine_assign_mono:
-  fixes s1 s2 :: "'a::order abs_state"
-  assumes v: "v1 \<le> v2" and s: "s1 \<le> s2"
-  shows "combine_assign dst v1 s1 \<le> combine_assign dst v2 s2"
-  using assms by (cases dst) (auto simp: le_fun_def)
-
-text \<open>
-  Return combination joins caller locals with callee globals and then assigns the
-  callee's @{const ret_var} to the optional destination.  The ordinary abstract
-  state update publishes the result without domain-specific return machinery.
-\<close>
-definition combine_collect_abs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    ("combine\<^sup>\<sharp>") where
-  "combine_collect_abs \<G> dst dc de =
-     combine_assign dst (de ret_var) (combine_env \<G> dc de)"
-
-lemma combine_collect_abs_mono:
-  fixes dc1 dc2 de1 de2 :: "'a::order abs_state"
-  assumes c: "dc1 \<le> dc2" and e: "de1 \<le> de2"
-  shows "combine\<^sup>\<sharp> \<G> dst dc1 de1 \<le> combine\<^sup>\<sharp> \<G> dst dc2 de2"
-  unfolding combine_collect_abs_def
-  by (rule combine_assign_mono[OF le_funD[OF e] combine_env_mono[OF c e]])
-
-text \<open>
-  The binary env-combine is the destination-free instance of the
-  return-threaded combine: with no destination the return slot is not written.
-  Together with the writing case these reduce the abstract combine under a
-  \<open>cases dst\<close>, so no caller unfolds its definition by hand.
-\<close>
-lemma combine_collect_abs_None[simp]:
-  "combine\<^sup>\<sharp> \<G> None a b = combine_env \<G> a b"
-  by (simp add: combine_collect_abs_def)
-
-lemma combine_collect_abs_Some[simp]:
-  "combine\<^sup>\<sharp> \<G> (Some x) a b = (combine_env \<G> a b)(x := b ret_var)"
-  by (simp add: combine_collect_abs_def)
-
-subsection \<open>Soundness of the structural return combine\<close>
-
-
-text \<open>
-  Soundness of the abstract combine including result publication.  A pure
-  @{class numeric_domain} fact: the destination slot is sound because the callee's
-  @{const ret_var} slot is, and every other slot is handled by
-  @{thm combine_env_sound}.
-\<close>
-lemma combine_collect_sound [intro]:
-  fixes dc de :: "'a::numeric_domain abs_state"
-  assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
-  shows "combine_collect \<G> dst s t \<in> \<gamma> (combine\<^sup>\<sharp> \<G> dst dc de)"
-  unfolding combine_collect_def combine_collect_abs_def
-  using combine_env_sound[OF sc se] gamma_stateD[OF se]
-  by (cases dst) (auto simp add: gamma_state_upd)
-
-subsection \<open>The C-faithful initial store set\<close>
-
-text \<open>
-  \<^const>\<open>cinit_stores\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>) is the C-faithful initial
-  store set. Any analysis that uses a domain-specific abstract seed \<open>s0\<close>
-  satisfying \<open>cinit_stores \<G> \<subseteq> \<gamma> s0\<close> may state its soundness
-  theorem against \<open>cinit_stores \<G>\<close> rather than \<open>UNIV\<close>, matching VIMP's
-  C-like initialization semantics.\<close>
-
 
 end

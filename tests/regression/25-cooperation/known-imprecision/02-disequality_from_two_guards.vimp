@@ -11,11 +11,11 @@
 // --analysis interval,order assigns 0 and proves the check
 // (precision/04-disequality_asked_of_order). This case pins the baseline.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (x <= y) {
     if (y <= x) {
-      z = (x != y);
+      i32 z = (x != y);
       __voblint_check(z == 0); // UNKNOWN
     }
   }

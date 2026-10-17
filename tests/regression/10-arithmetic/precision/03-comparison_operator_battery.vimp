@@ -13,13 +13,15 @@
 // known-imprecision/01-equality_else_arm_no_exclusion_set.vimp. int gives the
 // same verdicts.
 fun main() {
-  top = __voblint_nondet_int();
-  top2 = __voblint_nondet_int();
+  i32 top = __voblint_nondet_int();
+  i32 top2 = __voblint_nondet_int();
+  i32 x;
   if (top) {
     x = 1;
   } else {
     x = 0;
   }
+  i32 y;
   if (top2) {
     y = 1;
   } else {
@@ -45,7 +47,7 @@ fun main() {
   __voblint_check(x != y); // UNKNOWN
   __voblint_check(x != 1); // UNKNOWN
   __voblint_check(x != 2); // PROVED
-  z = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
   y = 3;
   if (z == 3) {
     __voblint_check(y == z); // PROVED

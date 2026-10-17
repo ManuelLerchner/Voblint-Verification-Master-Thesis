@@ -28,6 +28,6 @@ text \<open>
   \<open>\<rho>\<^bsub>\<G>\<^esub> x\<close> is opt-in, in the bundle \<open>default_st_syntax\<close>.
 \<close>
 
-consts readback :: "(vname \<Rightarrow> bool) \<Rightarrow> 'e \<Rightarrow> 'a"
+consts readback :: "('k \<Rightarrow> bool) \<Rightarrow> 'e \<Rightarrow> 'a"
 
 end

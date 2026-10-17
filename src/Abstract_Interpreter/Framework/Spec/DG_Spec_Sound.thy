@@ -79,8 +79,8 @@ text \<open>
 \<close>
 
 definition enter_runs ::
-  "('x,'k,'v,'D::bounded_semilattice_sup_bot,'G::bounded_semilattice_sup_bot) man_enter_transfer
-   \<Rightarrow> ('x,'k,'v,'D,'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
+  "('x, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) man_enter_transfer
+   \<Rightarrow> ('x, 'k, 'v, 'D, 'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
    \<Rightarrow> 'D enter_result list \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state) \<Rightarrow> bool"
 where
   "enter_runs T m sigma pairs pub \<longleftrightarrow>
@@ -144,8 +144,8 @@ text \<open>
 \<close>
 
 definition enter_deps ::
-  "('x,'k,'v,'D::bounded_semilattice_sup_bot,'G::bounded_semilattice_sup_bot) man_enter_transfer
-   \<Rightarrow> ('x,'k,'v,'D,'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
+  "('x, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) man_enter_transfer
+   \<Rightarrow> ('x, 'k, 'v, 'D, 'G) man \<Rightarrow> ('x + 'k \<Rightarrow> ('D,'G) dg_state)
    \<Rightarrow> 'D enter_result list \<Rightarrow> ('x + 'k) set \<Rightarrow> bool"
 where
   "enter_deps T m sigma pairs deps \<longleftrightarrow>
@@ -201,8 +201,7 @@ text \<open>
 
   Both levels earn their place, which is why there are two of them.
   \<open>combine_transfer_program\<close> is used at an arbitrary
-  \<^type>\<open>man_combine_transfer\<close> --- by the ownership-split observation
-  equations in \<open>DG_Ownership_Split_Spec\<close>, and by the relational domain's --- while
+  \<^type>\<open>man_combine_transfer\<close>, while
   \<open>dg_spec_combine_program\<close> is used at a selected specification, by
   \<open>combine_sound_program\<close> below, which restates the return obligation at
   two \<^emph>\<open>solver addresses\<close>. That is what the value form cannot express: a
@@ -212,7 +211,7 @@ text \<open>
 \<close>
 
 definition combine_program_at ::
-  "('x,'k,'v,'dl,'dg) man_combine_transfer
+  "('x, 'k, 'v, 'dl, 'dg) man_combine_transfer
    \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
 where
@@ -224,14 +223,14 @@ where
      }"
 
 definition combine_transfer_program ::
-  "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('x, 'k, 'v, 'dl::bot, 'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
   "combine_transfer_program T src_cc src_ex unknown_of =
      sp_map (\<lambda>d. DG d \<bottom>) (combine_program_at T src_cc src_ex unknown_of)"
 
 definition dg_spec_combine_program ::
-  "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('x, 'k, 'v, 'dl::bot, 'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
   "dg_spec_combine_program S ci src_cc src_ex unknown_of =
@@ -335,19 +334,19 @@ text \<open>The contract a specification signs: its concretization is monotone, 
   a global the step does not write is still what was read, so a step owes no
   publication for it.\<close>
 locale analysis_contract =
-  fixes S :: "('x,'k,'v,'D::bounded_semilattice_sup_bot,
-                'G::bounded_semilattice_sup_bot) dg_spec"
+  fixes \<kappa> :: kenv
+    and S ::
+      "('x, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
   assumes spec_wf: "dg_spec_wf S"
     and gammaDG_mono:
       "\<lbrakk>d \<le> d'; e \<le> e'\<rbrakk> \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d e \<subseteq> \<gamma>\<^sub>D\<^sub>G d' e'"
     and step_sound:
-      "edge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
+      "edge_collect \<kappa> a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
          \<subseteq> \<gamma>\<^sub>D\<^sub>G (edge_out S a src key \<tau>) (genv key \<tau> \<squnion> edge_pub S a src key \<tau>)"
     and combine_sound:
       "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G q (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G r (genv key \<tau>)\<rbrakk> \<Longrightarrow>
-        combine_collect \<G> (ci_dst ci) s t
+        combine_collect \<kappa> (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key q r \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key q r \<tau>)"
 
 text \<open>
@@ -362,64 +361,12 @@ text \<open>
 lemma (in analysis_contract) combine_sound_program:
   assumes sc: "s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src_cc)) (genv key \<tau>)"
     and se: "t \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src_ex)) (genv key \<tau>)"
-  shows "combine_collect \<G> (ci_dst ci) s t
+  shows "combine_collect \<kappa> (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_program (dg_spec_combine_program S ci src_cc src_ex key) \<tau>))
               (genv key \<tau> \<squnion> genv key (sides_of_program (dg_spec_combine_program S ci src_cc src_ex key) \<tau>))"
   using combine_sound[where q = "dg_local (\<tau> src_cc)" and r = "dg_local (\<tau> src_ex)"
       and \<tau> = \<tau> and key = key and ci = ci, OF sc se]
   by (simp add: dg_spec_combine_program_def traverse_combine_transfer_program
       sides_combine_transfer_program)
-
-text \<open>
-  A specification with a single global fact owes the contract at the environment that
-  holds it. The stricter obligations below, which describe the result against what the
-  program publishes alone, imply it, because the published value lies below its join
-  with the one read.
-\<close>
-
-lemma analysis_contract_unitI:
-  fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
-                'G::bounded_semilattice_sup_bot) dg_spec"
-    and gm :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
-  assumes wf: "dg_spec_wf S"
-    and mono: "\<And>d d' g g'. \<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gm d g \<subseteq> gm d' g'"
-    and step: "\<And>a \<tau> src gk.
-      edge_collect a (gm (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
-        \<subseteq> gm (edge_out S a src (\<lambda>_. gk) \<tau>)
-            (dg_global (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
-    and comb: "\<And>s \<tau> dc gk t de ci.
-      \<lbrakk>s \<in> gm dc (dg_global (\<tau> (Inr gk))); t \<in> gm de (dg_global (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
-        combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (combine_out S ci (\<lambda>_. gk) dc de \<tau>)
-              (dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
-  shows "analysis_contract S (\<lambda>d e. gm d (e ())) \<G>"
-proof
-  show "dg_spec_wf S" by (rule wf)
-next
-  fix d d' :: 'D and e e' :: "unit \<Rightarrow> 'G"
-  assume "d \<le> d'" "e \<le> e'"
-  then show "gm d (e ()) \<subseteq> gm d' (e' ())" by (simp add: mono le_funD)
-next
-  fix a \<tau> src and key :: "unit \<Rightarrow> 'k"
-  have key: "key = (\<lambda>_. key ())" by (rule ext) simp
-  have "edge_collect a (gm (dg_local (\<tau> src)) (genv key \<tau> ()))
-          \<subseteq> gm (edge_out S a src key \<tau>) (edge_pub S a src key \<tau> ())"
-    using step[of a \<tau> src "key ()"] by (subst (1 2 3) key) (simp add: genv_def)
-  also have "\<dots> \<subseteq> gm (edge_out S a src key \<tau>) ((genv key \<tau> \<squnion> edge_pub S a src key \<tau>) ())"
-    by (rule mono) simp_all
-  finally show "edge_collect a (gm (dg_local (\<tau> src)) (genv key \<tau> ()))
-          \<subseteq> gm (edge_out S a src key \<tau>) ((genv key \<tau> \<squnion> edge_pub S a src key \<tau>) ())" .
-next
-  fix s dc t de ci and key :: "unit \<Rightarrow> 'k" and \<tau> :: "'x + 'k \<Rightarrow> ('D, 'G) dg_state"
-  assume s: "s \<in> gm dc (genv key \<tau> ())" and t: "t \<in> gm de (genv key \<tau> ())"
-  have key: "key = (\<lambda>_. key ())" by (rule ext) simp
-  have "combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (combine_out S ci key dc de \<tau>) (combine_pub S ci key dc de \<tau> ())"
-    using comb[of s dc \<tau> "key ()" t de ci] s t by (subst (1 2 3) key) (simp add: genv_def)
-  then show "combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (combine_out S ci key dc de \<tau>) ((genv key \<tau> \<squnion> combine_pub S ci key dc de \<tau>) ())"
-    by (rule subsetD[OF mono, rotated 2]) simp_all
-qed
 
 end

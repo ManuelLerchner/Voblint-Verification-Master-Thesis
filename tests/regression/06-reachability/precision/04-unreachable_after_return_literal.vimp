@@ -7,8 +7,8 @@
 // main itself may not contain a return (wf_source_program's no_return
 // conjunct), so the return lives in a helper procedure p instead, called
 // destination-less.
-fun p() {
-  x = 5;
+fun i32 p() {
+  i32 x = 5;
   __voblint_check(true); // PROVED
   return x;
   __voblint_check(false); // NOWARN (unreachable)

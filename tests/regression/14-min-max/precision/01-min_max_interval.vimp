@@ -2,10 +2,10 @@
 // min/max special calls on concrete constants: min(3, -5) is negative,
 // max(3, -5) is positive -- exact for concrete constant intervals.
 fun main() {
-  x = 3;
-  y = 0 - 5;
-  z = min(x, y);
-  w = max(x, y);
+  i32 x = 3;
+  i32 y = 0 - 5;
+  i32 z = min(x, y);
+  i32 w = max(x, y);
   __voblint_check(z < 0); // PROVED
   __voblint_check(0 < w); // PROVED
 }

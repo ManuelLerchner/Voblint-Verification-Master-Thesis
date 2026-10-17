@@ -1,0 +1,7 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Two declarations of `x` in
+// one block, as C rejects them.
+fun main() {
+  i32 x = 1;
+  i8 x = 2;
+}

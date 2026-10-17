@@ -16,24 +16,24 @@ text \<open>
   Entry and callee-seed coverage remain with the concrete analysis.
 
   Both carriers are parameters: \<open>\<gamma>\<^sub>D\<^sub>G\<close> interprets a D/G pair, while
-  \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
-  \<open>abs_state\<close> therefore instantiates this locale directly. The generator
+  \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not a
+  \<open>gabs_state\<close> therefore instantiates this locale directly. The generator
   buffers its writes at \<open>Inr buffer_key\<close>; \<open>global_of\<close> names the key each global
   name is read from, and \<open>sg_cov\<close> ties the reader at a covered key to
   \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against the environment \<^term>\<open>genv global_of sigma\<close>.
 \<close>
 
-locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
-  for S :: "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
+locale dg_context_base =
+  fixes S ::
+    "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool" +
-  fixes g :: cfg and buffer_key :: 'k and global_of :: "'v \<Rightarrow> 'k"
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
-    and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+    and g :: "(var_id, exp) gcfg" and buffer_key :: 'k and global_of :: "'v \<Rightarrow> 'k"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c"
+    and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c
+                  \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pp \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
       \<comment> \<open>one program per call site: the site's own resolver decides which callees it folds\<close>
-    and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
+    and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program list"
     and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
@@ -56,6 +56,18 @@ locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
         \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, c)))) (genv global_of sigma) \<noteq> {}
         \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
+
+text \<open>The obligations above do not mention the concrete semantics, so every language
+  shares them.\<close>
+
+locale dg_context_activation =
+  analysis_contract \<kappa> S \<gamma>\<^sub>D\<^sub>G +
+  dg_context_base S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0
+    sigma vars x0 sg \<gamma>\<^sub>M
+  for \<kappa> :: kenv
+    and S ::
+      "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
@@ -201,7 +213,7 @@ lemma edge_bound_genv:
 
 theorem dg_ctx_act_edge:
   assumes e: "(u, a, v) \<in> intra g"
-    and sin: "s \<in> \<gamma>\<^sub>M (sg (Inl (u, ctx)))" and st: "s' \<in> edge_step a s"
+    and sin: "s \<in> \<gamma>\<^sub>M (sg (Inl (u, ctx)))" and st: "s' \<in> edge_step \<kappa> a s"
   shows "s' \<in> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
 proof (cases "(u, ctx) \<in> vars")
   case False
@@ -216,9 +228,9 @@ next
   have cov_v: "(v, ctx) \<in> vars"
     using True _ e by (rule fwd) (use sin' in blast)
   have "{s} \<subseteq> \<gamma>\<^sub>D\<^sub>G ?d ?g" using sin' by simp
-  hence "edge_collect a {s} \<subseteq> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by (rule edge_collect_mono)
-  moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
-  ultimately have "s' \<in> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
+  hence "edge_collect \<kappa> a {s} \<subseteq> edge_collect \<kappa> a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by (rule edge_collect_mono)
+  moreover have "s' \<in> edge_collect \<kappa> a {s}" using st by (simp add: edge_collect_single)
+  ultimately have "s' \<in> edge_collect \<kappa> a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
   hence "s' \<in> \<gamma>\<^sub>D\<^sub>G
       (edge_out S a (Inl (u, ctx)) global_of sigma)
       (?g \<squnion> edge_pub S a (Inl (u, ctx)) global_of sigma)"

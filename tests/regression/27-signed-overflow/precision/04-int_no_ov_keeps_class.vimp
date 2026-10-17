@@ -1,0 +1,23 @@
+// PARAM: --analysis int
+// EXPECT-ARITHMETIC
+// Under the default assume_top the Int product still keeps a congruence
+// across a signed * and + when its interval proves that the result fits:
+// Goblint's no_ov, passed from the interval to the congruence. The guard
+// bounds n to [0,10], so x = 4 * n + 1 lies in [1,41] and the congruence keeps
+// 1 (mod 4). That excludes 3, which the interval [1,41] alone cannot.
+// Without the bound, y = 4 * m + 1 may overflow, the congruence goes to top
+// under assume_top, and y != 3 is not decided, although it holds: y is
+// 1 (mod 4) also after wraparound, since 4 divides 2^32. That last check is
+// a known imprecision of assume_top, kept beside the bounded case it
+// contrasts with.
+fun main() {
+  i32 n = __voblint_nondet_int();
+  if (0 <= n && n <= 10) {
+    i32 x = 4 * n + 1;
+    __voblint_check(x != 3); // PROVED
+    __voblint_check(x % 4 == 1); // PROVED
+  }
+  i32 m = __voblint_nondet_int();
+  i32 y = 4 * m + 1; // ARITH: WARN signed-overflow; WARN signed-overflow
+  __voblint_check(y != 3); // UNKNOWN
+}

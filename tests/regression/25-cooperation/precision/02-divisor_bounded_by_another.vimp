@@ -9,6 +9,6 @@
 // together, the divisor's value is the met answer of both, which excludes 0,
 // so no diagnostic is reported.
 fun main() {
-  x = __voblint_nondet_int();
-  r = x % 2; // ARITH: NONE
+  i32 x = __voblint_nondet_int();
+  i32 r = x % 2; // ARITH: NONE
 }

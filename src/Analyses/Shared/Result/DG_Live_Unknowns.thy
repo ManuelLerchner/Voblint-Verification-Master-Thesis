@@ -139,84 +139,90 @@ text \<open>
 context dg_analysis
 begin
 
+context
+  fixes ptab :: "'p \<Rightarrow> ('ann, var_id, exp) gptable" and pprocs :: "'p \<Rightarrow> pname list"
+    and vars :: "exp \<Rightarrow> var_id set"
+  assumes pcfg_compile: "\<And>p. pcfg p = compile_prog (ptab p) (pprocs p)"
+begin
+
 lemma analysis_contribs_wf [simp]:
   "\<forall>q \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list
-       (route (declared_global p))
-       (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec (declared_global p) p) a src
+       (route is_global)
+       (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec is_global p) a src
           global_of)
-       (routed_call_program (analysis_spec (declared_global p) p) global_of seed rsv
+       (routed_call_program (analysis_spec is_global p) global_of seed rsv
           (\<lambda>d. d = Bot))
        (routed_entry_seed_programs seed) cfg cx w). sp_wf q"
   by (rule routed_contribution_programs_wf) auto
 
 lemma sol_vars_dep_closed:
-  assumes solves: "terminates (declared_global p) p"
-    and x: "x \<in> sol_vars (declared_global p) p"
+  assumes solves: "terminates is_global p"
+    and x: "x \<in> sol_vars is_global p"
     and y: "y \<in> dep\<^sub>L
        (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key)
-          (route (declared_global p))
-          (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec (declared_global p) p) a src global_of)
-          (routed_call_program (analysis_spec (declared_global p) p) global_of seed
-             (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))
+          (route is_global)
+          (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec is_global p) a src global_of)
+          (routed_call_program (analysis_spec is_global p) global_of seed
+             (static_resolve (pcfg p)) (\<lambda>d. d = Bot))
           (routed_entry_seed_programs seed)
-          (prog_cfg p) Bot (Lifted init_st) (place_rg (declared_global p) (Lifted init_st)))
-       (sol_env (declared_global p) p) x"
-  shows "y \<in> sol_vars (declared_global p) p"
+          (pcfg p) Bot (Lifted init_st) (place_rg is_global (Lifted init_st)))
+       (sol_env is_global p) x"
+  shows "y \<in> sol_vars is_global p"
   using pp_routed[OF solves] x y by blast
 
-lemma prog_cfg_finite: "finite (intra (prog_cfg p))" "finite (calls (prog_cfg p))"
-  unfolding prog_cfg_def by (simp_all add: compile_prog_finite)
+lemma prog_cfg_finite: "finite (intra (pcfg p))" "finite (calls (pcfg p))"
+  unfolding pcfg_compile by (simp_all add: compile_prog_finite)
 
 lemma sol_vars_back_intra:
-  assumes solves: "terminates (declared_global p) p"
-    and v: "(v, cx) \<in> sol_vars (declared_global p) p" and e: "(u, a, v) \<in> intra (prog_cfg p)"
-  shows "(u, cx) \<in> sol_vars (declared_global p) p"
+  assumes solves: "terminates is_global p"
+    and v: "(v, cx) \<in> sol_vars is_global p" and e: "(u, a, v) \<in> intra (pcfg p)"
+  shows "(u, cx) \<in> sol_vars is_global p"
   by (rule sol_vars_dep_closed
         [OF solves v dep_L_routed_node_rhs_intra[OF prog_cfg_finite(1) e analysis_contribs_wf]])
 
 lemma sol_vars_back_call_site:
-  assumes solves: "terminates (declared_global p) p"
-    and k: "(k, cx) \<in> sol_vars (declared_global p) p"
-    and e: "(u, ca, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-  shows "(u, cx) \<in> sol_vars (declared_global p) p"
+  assumes solves: "terminates is_global p"
+    and k: "(k, cx) \<in> sol_vars is_global p"
+    and e: "(u, ca, FunctionEntry q, k) \<in> calls (pcfg p)"
+  shows "(u, cx) \<in> sol_vars is_global p"
   by (rule sol_vars_dep_closed
         [OF solves k dep_L_routed_node_rhs_call_site
            [OF prog_cfg_finite(2) e dg_spec_wf_analysis_spec analysis_contribs_wf]])
 
 lemma sol_vars_callee_result:
-  assumes solves: "terminates (declared_global p) p"
-    and k: "(k, cx) \<in> sol_vars (declared_global p) p"
-    and e: "(u, ca, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-    and nb: "entry_of (declared_global p) p (call_info_of ca q)
-               (dg_local (sol_env (declared_global p) p (Inl (u, cx))))
-               (sol_global (declared_global p) p) \<noteq> Bot"
-  shows "(FunctionResult q, ctx_succ (declared_global p) p u cx ca q)
-           \<in> sol_vars (declared_global p) p"
+  assumes solves: "terminates is_global p"
+    and k: "(k, cx) \<in> sol_vars is_global p"
+    and e: "(u, ca, FunctionEntry q, k) \<in> calls (pcfg p)"
+    and nb: "entry_of is_global p (call_info_of ca q)
+               (dg_local (sol_env is_global p (Inl (u, cx))))
+               (sol_global is_global p) \<noteq> Bot"
+  shows "(FunctionResult q, ctx_succ is_global p u cx ca q)
+           \<in> sol_vars is_global p"
 proof -
-  let ?d = "dg_local (sol_env (declared_global p) p (Inl (u, cx)))"
+  let ?d = "dg_local (sol_env is_global p (Inl (u, cx)))"
   let ?alt =
-    "entry_alt (declared_global p) p (call_info_of ca q) ?d (sol_global (declared_global p) p)"
-  have res: "q \<in> set (static_resolve (prog_cfg p) k u ca ?d)"
+    "entry_alt is_global p (call_info_of ca q) ?d (sol_global is_global p)"
+  have res: "q \<in> set (static_resolve (pcfg p) k u ca ?d)"
     using e prog_cfg_finite(2) by simp
-  obtain D where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) (call_info_of ca q))
-      (mk_dg_man ?d global_of) (sol_env (declared_global p) p) [?alt] D"
+  obtain D where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec is_global p) (call_info_of ca q))
+      (mk_dg_man ?d global_of) (sol_env is_global p) [?alt] D"
     using place_enter_deps unfolding sol_global_def by blast
   have mem: "(fst ?alt, snd ?alt) \<in> set [?alt]" by simp
   show ?thesis
     unfolding ctx_succ_def entry_of_def
     by (rule sol_vars_dep_closed[OF solves k],
-        rule dep_L_routed_node_rhs_callee_result[where resolve = "static_resolve (prog_cfg p)"
-            and \<tau> = "sol_env (declared_global p) p" and cx = cx,
+        rule dep_L_routed_node_rhs_callee_result[where resolve = "static_resolve (pcfg p)"
+            and \<tau> = "sol_env is_global p" and cx = cx,
           OF prog_cfg_finite(2) e deps mem res])
        (use nb in \<open>simp add: entry_of_def\<close>, rule dg_spec_wf_analysis_spec, rule
          analysis_contribs_wf)
 qed
 
 lemma sol_vars_back_reach:
-  assumes solves: "terminates (declared_global p) p"
-    and w: "(w, cx) \<in> sol_vars (declared_global p) p"
-    and r: "local_reaches (prog_cfg p) y w"
-  shows "(y, cx) \<in> sol_vars (declared_global p) p"
+  assumes solves: "terminates is_global p"
+    and w: "(w, cx) \<in> sol_vars is_global p"
+    and r: "local_reaches (pcfg p) y w"
+  shows "(y, cx) \<in> sol_vars is_global p"
   using r[unfolded local_reaches_def]
 proof (induction rule: converse_rtrancl_induct)
   case base show ?case by (rule w)
@@ -227,90 +233,93 @@ next
     using sol_vars_back_intra[OF solves step.IH] sol_vars_back_call_site[OF solves step.IH]
     by blast
 qed
-definition live_unknowns :: "imp_prog \<Rightarrow> (pp \<times> 'c) set" where
+definition live_unknowns :: "'p \<Rightarrow> (pp \<times> 'c) set" where
   "live_unknowns p =
-     {(u, cx) \<in> sol_vars (declared_global p) p.
-        \<exists>q. prog_node (prog_table p) (prog_procs p) q u
-          \<and> (FunctionResult q, cx) \<in> sol_vars (declared_global p) p}"
+     {(u, cx) \<in> sol_vars is_global p.
+        \<exists>q. prog_node (ptab p) (pprocs p) q u
+          \<and> (FunctionResult q, cx) \<in> sol_vars is_global p}"
 
-lemma live_unknowns_sub: "live_unknowns p \<subseteq> sol_vars (declared_global p) p"
+lemma live_unknowns_sub: "live_unknowns p \<subseteq> sol_vars is_global p"
   unfolding live_unknowns_def by blast
 
 lemma live_unknowns_of_result:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-    and live: "prog_node (prog_table p) (prog_procs p) q y"
-    and r: "(FunctionResult q, cx) \<in> sol_vars (declared_global p) p"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+    and live: "prog_node (ptab p) (pprocs p) q y"
+    and r: "(FunctionResult q, cx) \<in> sol_vars is_global p"
   shows "(y, cx) \<in> live_unknowns p"
 proof -
-  have "local_reaches (prog_cfg p) y (FunctionResult q)"
-    unfolding prog_cfg_def by (rule prog_node_reaches[OF live])
-  then have "(y, cx) \<in> sol_vars (declared_global p) p" by (rule sol_vars_back_reach[OF solves r])
+  have "local_reaches (pcfg p) y (FunctionResult q)"
+    unfolding pcfg_compile by (rule prog_node_reaches[OF live])
+  then have "(y, cx) \<in> sol_vars is_global p" by (rule sol_vars_back_reach[OF solves r])
   then show ?thesis unfolding live_unknowns_def using live r by blast
 qed
 
 theorem live_unknowns_cover:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "ctx_vars_cover_live (prog_cfg p) (\<lambda>_ _. True) (live_succ (declared_global p) p)
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+  shows "ctx_vars_cover_live (pcfg p) (\<lambda>_ _. True) (live_succ is_global p)
            root_ctx (live_unknowns p)"
 proof (rule ctx_vars_cover_liveI)
-  have root: "(FunctionResult prog_main_name, root_ctx) \<in> sol_vars (declared_global p) p"
-    using pp_routed[OF solves] by (simp add: root_query_def prog_cfg_def)
-  show "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
+  have root: "(FunctionResult prog_main_name, root_ctx) \<in> sol_vars is_global p"
+    using pp_routed[OF solves] by (simp add: root_query_def pcfg_compile)
+  show "(cfg_entry (pcfg p), root_ctx) \<in> live_unknowns p"
     using live_unknowns_of_result[OF wf solves prog_node_main_entry[OF wf] root]
-    by (simp add: prog_cfg_def)
+    by (simp add: pcfg_compile)
 next
   fix u a v ctx
-  assume u: "(u, ctx) \<in> live_unknowns p" and e: "(u, a, v) \<in> intra (prog_cfg p)"
-  from u obtain q where lq: "prog_node (prog_table p) (prog_procs p) q u"
-    and r: "(FunctionResult q, ctx) \<in> sol_vars (declared_global p) p"
+  assume u: "(u, ctx) \<in> live_unknowns p" and e: "(u, a, v) \<in> intra (pcfg p)"
+  from u obtain q where lq: "prog_node (ptab p) (pprocs p) q u"
+    and r: "(FunctionResult q, ctx) \<in> sol_vars is_global p"
     unfolding live_unknowns_def by blast
-  have "prog_node (prog_table p) (prog_procs p) q v"
-    using prog_node_intra[OF wf lq] e by (simp add: prog_cfg_def)
+  have "prog_node (ptab p) (pprocs p) q v"
+    using prog_node_intra[OF wf lq] e by (simp add: pcfg_compile)
   then show "(v, ctx) \<in> live_unknowns p" by (rule live_unknowns_of_result[OF wf solves _ r])
 next
   fix u ctx dst fs as q k
   assume u: "(u, ctx) \<in> live_unknowns p"
-    and e: "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-  from u obtain r where lr: "prog_node (prog_table p) (prog_procs p) r u"
-    and res: "(FunctionResult r, ctx) \<in> sol_vars (declared_global p) p"
+    and e: "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (pcfg p)"
+  from u obtain r where lr: "prog_node (ptab p) (pprocs p) r u"
+    and res: "(FunctionResult r, ctx) \<in> sol_vars is_global p"
     unfolding live_unknowns_def by blast
-  have "prog_node (prog_table p) (prog_procs p) r k"
-    using prog_node_calls[OF wf lr] e by (simp add: prog_cfg_def)
+  have "prog_node (ptab p) (pprocs p) r k"
+    using prog_node_calls[OF wf lr] e by (simp add: pcfg_compile)
   then show "(k, ctx) \<in> live_unknowns p" by (rule live_unknowns_of_result[OF wf solves _ res])
 next
   fix u ctx dst fs as q k ctx'
   assume u: "(u, ctx) \<in> live_unknowns p"
-    and e: "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-    and s: "live_succ (declared_global p) p u ctx (CallEdge dst fs as) q = Some ctx'"
-  from u obtain r where lr: "prog_node (prog_table p) (prog_procs p) r u"
-    and res: "(FunctionResult r, ctx) \<in> sol_vars (declared_global p) p"
+    and e: "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (pcfg p)"
+    and s: "live_succ is_global p u ctx (CallEdge dst fs as) q = Some ctx'"
+  from u obtain r where lr: "prog_node (ptab p) (pprocs p) r u"
+    and res: "(FunctionResult r, ctx) \<in> sol_vars is_global p"
     unfolding live_unknowns_def by blast
-  have "prog_node (prog_table p) (prog_procs p) r k"
-    using prog_node_calls[OF wf lr] e by (simp add: prog_cfg_def)
-  then have k: "(k, ctx) \<in> sol_vars (declared_global p) p"
+  have "prog_node (ptab p) (pprocs p) r k"
+    using prog_node_calls[OF wf lr] e by (simp add: pcfg_compile)
+  then have k: "(k, ctx) \<in> sol_vars is_global p"
     using live_unknowns_of_result[OF wf solves _ res] live_unknowns_sub by blast
-  from s have nb: "entry_of (declared_global p) p (call_info_of (CallEdge dst fs as) q)
-               (dg_local (sol_env (declared_global p) p (Inl (u, ctx))))
-               (sol_global (declared_global p) p) \<noteq> Bot"
-    and c': "ctx' = ctx_succ (declared_global p) p u ctx (CallEdge dst fs as) q"
+  from s have nb: "entry_of is_global p (call_info_of (CallEdge dst fs as) q)
+               (dg_local (sol_env is_global p (Inl (u, ctx))))
+               (sol_global is_global p) \<noteq> Bot"
+    and c': "ctx' = ctx_succ is_global p u ctx (CallEdge dst fs as) q"
     by (auto simp: live_succ_def split: if_splits)
-  have rq: "(FunctionResult q, ctx') \<in> sol_vars (declared_global p) p"
+  have rq: "(FunctionResult q, ctx') \<in> sol_vars is_global p"
     unfolding c' by (rule sol_vars_callee_result[OF solves k e nb])
-  have "prog_node (prog_table p) (prog_procs p) q (FunctionEntry q)"
-    using prog_node_callee_entry[OF wf] e by (simp add: prog_cfg_def)
+  have "prog_node (ptab p) (pprocs p) q (FunctionEntry q)"
+    using prog_node_callee_entry[OF wf] e by (simp add: pcfg_compile)
   then show "(FunctionEntry q, ctx') \<in> live_unknowns p"
     by (rule live_unknowns_of_result[OF wf solves _ rq])
 qed
 
 lemma root_live_key:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
   shows "root_query p \<in> live_unknowns p"
 proof -
-  have r: "(FunctionResult prog_main_name, root_ctx) \<in> sol_vars (declared_global p) p"
-    using pp_routed[OF solves] by (simp add: root_query_def prog_cfg_def)
+  have r: "(FunctionResult prog_main_name, root_ctx) \<in> sol_vars is_global p"
+    using pp_routed[OF solves] by (simp add: root_query_def pcfg_compile)
   show ?thesis
     using live_unknowns_of_result[OF wf solves prog_node_result[OF prog_node_main_entry[OF wf]] r]
-    by (simp add: root_query_def prog_cfg_def)
+    by (simp add: root_query_def pcfg_compile)
 qed
 subsection \<open>The entry-state endpoint over the live keys\<close>
 
@@ -321,11 +330,11 @@ text \<open>
 \<close>
 
 context
-  fixes p :: imp_prog
+  fixes p :: 'p
 begin
 
-interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p"
-    "\<lambda>d e. pgam p d e" "declared_global p"
+interpretation dg_base: analysis_contract \<kappa> "analysis_spec is_global p"
+    "\<lambda>d e. pgam p d e"
   by (rule place_contract)
 
 text \<open>
@@ -337,27 +346,27 @@ text \<open>
 \<close>
 
 lemma routed_analysis_from_live_unknowns:
-  fixes adm :: "'c context_policy"
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+  fixes adm :: "'c call_context_policy"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> live_unknowns p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
         \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-              (call_enter (declared_global p) (CallEdge dst pars args) s)
-        \<Longrightarrow> route (declared_global p) u ctx
+              (call_enter \<kappa> (CallEdge dst pars args) s)
+        \<Longrightarrow> route is_global u ctx
               (entered p (call_info_of (CallEdge dst pars args) q)
-                 (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
+                 (dg_local (sol_env is_global p (Inl (u, ctx)))))
               (CallEdge dst pars args) = ctx'"
     and total_R: "\<And>u ctx dst pars args q cont s. (u, ctx) \<in> live_unknowns p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> s \<in> pgam p (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))) (gsol p)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> s \<in> pgam p (dg_local (sol_env is_global p (Inl (u, ctx)))) (gsol p)
         \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
-  shows "routed_analysis (analysis_spec (declared_global p) p) (\<lambda>d e. pgam p d e)
-     (declared_global p) (prog_cfg p) buffer_key global_of
-     (route (declared_global p)) Bot (Lifted init_st)
-     (place_rg (declared_global p) (Lifted init_st))
-     (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) adm
-     (\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e))
+                      (call_enter \<kappa> (CallEdge dst pars args) s) \<noteq> {}"
+  shows "routed_analysis \<kappa> (analysis_spec is_global p) (\<lambda>d e. pgam p d e) (pcfg p) buffer_key global_of
+     (route is_global) Bot (Lifted init_st)
+     (place_rg is_global (Lifted init_st))
+     (sol_env is_global p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) adm
+     (\<lambda>d e. map_lift (rd is_global) (place_cmb p d e))
      \<gamma>\<^sub>V empty\<^sub>V classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedUnknown SeedNeGlobal IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
@@ -366,7 +375,7 @@ proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC C
 next
   case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
-  case FinE show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
+  case FinE show ?case unfolding pcfg_compile by (simp add: compile_prog_finite)
 next
   case PP show ?case
     by (rule post_bounded_subset[OF post_bounded_of_part_post_solution[OF pp_routed[OF solves]]
@@ -380,10 +389,10 @@ next
   show ?case
     by (rule ctx_vars_cover_live_edgeD[OF live_unknowns_cover[OF wf solves] Fwd(1) _ Fwd(3)]) simp
 next
-  case FinC show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
+  case FinC show ?case unfolding pcfg_compile by (simp add: compile_prog_finite)
 next
   case CallsUnique show ?case
-    unfolding calls_source_unique_def prog_cfg_def
+    unfolding calls_source_unique_def pcfg_compile
     using compile_prog_calls_source_unique by blast
 next
   case (SeedUnknown q ctx) show ?case by (rule seed_ne_buffer_key)
@@ -394,49 +403,50 @@ next
   case (IsBotSound d g') then show ?case by simp
 next
   case (ResolveSound u ctx dst pars args q cont s)
-  then show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
+  then show ?case unfolding pcfg_compile by (simp add: compile_prog_finite)
 next
   case (EnterCover u ctx dst pars args q cont s ctx')
   let ?ci = "call_info_of (CallEdge dst pars args) q"
-  let ?caller = "dg_local (sol_env (declared_global p) p (Inl (u, ctx)))"
-  let ?g = "genv global_of (sol_env (declared_global p) p)"
+  let ?caller = "dg_local (sol_env is_global p (Inl (u, ctx)))"
+  let ?g = "genv global_of (sol_env is_global p)"
   let ?ent = "entered p ?ci ?caller"
   have sin: "s \<in> pgam p ?caller (gsol p)"
     using EnterCover(3) by (simp add: sol_global_def)
   have cov: "entry_pairs_cover (\<lambda>d. pgam p d (gsol p)) s
-      (call_enter (declared_global p) (CallEdge dst pars args) s)
-      [entry_alt (declared_global p) p ?ci ?caller (gsol p)]"
+      (call_enter \<kappa> (CallEdge dst pars args) s)
+      [entry_alt is_global p ?ci ?caller (gsol p)]"
   proof (rule entry_cover[OF solves _ EnterCover(2) sin])
-    show "(cont, ctx) \<in> sol_vars (declared_global p) p"
+    show "(cont, ctx) \<in> sol_vars is_global p"
       using ctx_vars_cover_live_combineD[OF live_unknowns_cover[OF wf solves] EnterCover(1,2)]
         live_unknowns_sub by blast
   qed
-  obtain c e where ce: "entry_alt (declared_global p) p ?ci ?caller (gsol p) = (c, e)"
-    by (cases "entry_alt (declared_global p) p ?ci ?caller (gsol p)")
+  obtain c e where ce: "entry_alt is_global p ?ci ?caller (gsol p) = (c, e)"
+    by (cases "entry_alt is_global p ?ci ?caller (gsol p)")
   have nbE: "?ent \<noteq> Bot"
   proof
     assume "?ent = Bot"
     with cov ce show False by (simp add: entry_pairs_cover_def entry_of_def place_cmb_bot)
   qed
-  have req: "route (declared_global p) u ctx ?ent (CallEdge dst pars args) = ctx'"
+  have req: "route is_global u ctx ?ent (CallEdge dst pars args) = ctx'"
     by (rule cover_R[OF EnterCover(1,2,4)])
   have covE: "(FunctionEntry q, ctx') \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_enterD[OF live_unknowns_cover[OF wf solves] EnterCover(1,2)])
        (use nbE req in \<open>simp add: live_succ_def ctx_succ_def\<close>)
-  obtain pub where runs: "enter_runs (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ?ci)
-      (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
-      [entry_alt (declared_global p) p ?ci ?caller ?g] pub"
+  obtain pub where runs: "enter_runs (enter\<^sup>\<sharp> (analysis_spec is_global p) ?ci)
+      (mk_dg_man ?caller global_of) (sol_env is_global p)
+      [entry_alt is_global p ?ci ?caller ?g] pub"
     using place_enter_runs by blast
-  obtain deps where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ?ci)
-      (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
-      [entry_alt (declared_global p) p ?ci ?caller ?g] deps"
+  obtain deps where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec is_global p) ?ci)
+      (mk_dg_man ?caller global_of) (sol_env is_global p)
+      [entry_alt is_global p ?ci ?caller ?g] deps"
     using place_enter_deps by blast
-  have ce': "entry_alt (declared_global p) p ?ci ?caller ?g = (c, e)"
+  have ce': "entry_alt is_global p ?ci ?caller ?g = (c, e)"
     using ce by (simp add: sol_global_def)
   have sc: "s \<in> pgam p c ?g"
-    and ec: "call_enter (declared_global p) (CallEdge dst pars args) s \<in> pgam p e ?g"
+    and ec:
+      "call_enter \<kappa> (CallEdge dst pars args) s \<in> pgam p e ?g"
     using cov ce by (simp_all add: entry_pairs_cover_def sol_global_def)
-  have re: "route (declared_global p) u ctx e (CallEdge dst pars args) = ctx'"
+  have re: "route is_global u ctx e (CallEdge dst pars args) = ctx'"
     using req ce by (simp add: entry_of_def)
   show ?case
     using runs deps sc ec re covE unfolding ce' by fastforce
@@ -466,56 +476,57 @@ text \<open>
 \<close>
 
 lemma gamma_live_reader_le:
-  "pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
+  "pgam p (solved_local_reader (live_unknowns p) (sol_env is_global p) (Inl (v, ctx)))
        (gsol p)
-     \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
+     \<subseteq> pgam p (reader is_global p (Inl (v, ctx))) (gsol p)"
 proof (cases "(v, ctx) \<in> live_unknowns p")
   case True
-  then have "(v, ctx) \<in> sol_vars (declared_global p) p" by (rule subsetD[OF live_unknowns_sub])
+  then have "(v, ctx) \<in> sol_vars is_global p" by (rule subsetD[OF live_unknowns_sub])
   with True show ?thesis by (simp add: reader_def)
 next
   case False then show ?thesis by (simp add: place_cmb_bot)
 qed
 
 theorem activation_collect_sound_live_unknowns:
-  fixes adm :: "'c context_policy"
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+  fixes adm :: "'c call_context_policy"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> live_unknowns p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
         \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-              (call_enter (declared_global p) (CallEdge dst pars args) s)
-        \<Longrightarrow> route (declared_global p) u ctx
+              (call_enter \<kappa> (CallEdge dst pars args) s)
+        \<Longrightarrow> route is_global u ctx
               (entered p (call_info_of (CallEdge dst pars args) q)
-                 (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
+                 (dg_local (sol_env is_global p (Inl (u, ctx)))))
               (CallEdge dst pars args) = ctx'"
     and total_R: "\<And>u ctx dst pars args q cont s. (u, ctx) \<in> live_unknowns p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> s \<in> pgam p (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))) (gsol p)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> s \<in> pgam p (dg_local (sol_env is_global p (Inl (u, ctx)))) (gsol p)
         \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
-  shows "\<A>\<^bsub>declared_global p,adm,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
+                      (call_enter \<kappa> (CallEdge dst pars args) s) \<noteq> {}"
+  shows "\<A>\<^bsub>\<kappa>,adm,root_ctx,pcfg p,pinit p\<^esub> v ctx
+           \<subseteq> pgam p (reader is_global p (Inl (v, ctx))) (gsol p)"
 proof -
-  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d e. pgam p d e"
-      "declared_global p" "prog_cfg p" buffer_key global_of
-      "route (declared_global p)" Bot
-        "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
-      "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" adm
-      "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e)"
+  interpret live: routed_analysis \<kappa> "analysis_spec is_global p"
+    "\<lambda>d e. pgam p d e" "pcfg p" buffer_key global_of
+      "route is_global" Bot
+        "Lifted init_st" "place_rg is_global (Lifted init_st)"
+      "sol_env is_global p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" adm
+      "\<lambda>d e. map_lift (rd is_global) (place_cmb p d e)"
       \<gamma>\<^sub>V empty\<^sub>V classify
     by (rule routed_analysis_from_live_unknowns[where adm = adm, OF wf solves cover_R total_R])
-  have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
+  have entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
   have init_env_le:
-    "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+    "init_env is_global p \<le> genv global_of (sol_env is_global p)"
     using init_env_le_sol[OF solves subsetD[OF live_unknowns_sub entry_cov]
       live.pp_entry_init_global_bound[OF entry_cov]]
     by (simp add: sol_global_def)
-  have "\<A>\<^bsub>declared_global p,adm,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-        \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
+  have "\<A>\<^bsub>\<kappa>,adm,root_ctx,pcfg p,pinit p\<^esub> v ctx
+        \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env is_global p) (Inl (v, ctx)))
              (gsol p)"
     using live.activation_collect_dg_sound
-        [OF entry_cov _ init_env_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
+        [OF entry_cov _ init_env_le, of "pinit p" v ctx] cinit_le_init
     by (simp add: sol_global_def)
   then show ?thesis using gamma_live_reader_le by blast
 qed
@@ -528,28 +539,29 @@ text \<open>
 
 theorem fun_route_activation_collect_sound_of_terminates:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
-    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
-           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
+  assumes route_const: "\<And>u ctx d ca s. route is_global u ctx d ca = ctx_fun u ctx s"
+    and wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+      "terminates is_global p"
+  shows "\<A>\<^bsub>\<kappa>,context_policy_of_fun ctx_fun,root_ctx,pcfg p,pinit p\<^esub> v ctx
+           \<subseteq> pgam p (reader is_global p (Inl (v, ctx))) (gsol p)"
 proof (rule activation_collect_sound_live_unknowns[OF wf solves])
-  fix u ctx dst pars args q cont and s :: store and ctx'
+  fix u ctx dst pars args q cont and s :: "var_id \<Rightarrow> int" and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
-    and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
+    and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
     and Rc: "ctx' \<in> context_policy_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
-               (call_enter (declared_global p) (CallEdge dst pars args) s)"
-  show "route (declared_global p) u ctx
+               (call_enter \<kappa> (CallEdge dst pars args) s)"
+  show "route is_global u ctx
           (entered p (call_info_of (CallEdge dst pars args) q)
-             (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
+             (dg_local (sol_env is_global p (Inl (u, ctx)))))
           (CallEdge dst pars args) = ctx'"
     using Rc
     by (simp add:
-      route_const[of _ _ _ _ "call_enter (declared_global p) (CallEdge dst pars args) s"])
+      route_const[of _ _ _ _
+        "call_enter \<kappa> (CallEdge dst pars args) s"])
 next
-  fix u ctx dst pars args q cont and s :: store
+  fix u ctx dst pars args q cont and s :: "var_id \<Rightarrow> int"
   show "context_policy_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
-                 (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
+                 (call_enter \<kappa> (CallEdge dst pars args) s) \<noteq> {}"
     by simp
 qed
 
@@ -562,15 +574,14 @@ text \<open>
 
 theorem fun_route_state_at_sound:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
-    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
-           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> \<gamma>\<^sub>V (state_at (declared_global p) p ctx v)"
+  assumes route_const: "\<And>u ctx d ca s. route is_global u ctx d ca = ctx_fun u ctx s"
+    and wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+      "terminates is_global p"
+  shows "\<A>\<^bsub>\<kappa>,context_policy_of_fun ctx_fun,root_ctx,pcfg p,pinit p\<^esub> v ctx
+           \<subseteq> \<gamma>\<^sub>V (state_at is_global p ctx v)"
 proof -
-  have "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
-          prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-        \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
+  have "\<A>\<^bsub>\<kappa>,context_policy_of_fun ctx_fun,root_ctx,pcfg p,pinit p\<^esub> v ctx
+        \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table (result is_global p) v ctx)"
     using fun_route_activation_collect_sound_of_terminates[OF route_const wf solves]
     unfolding gamma_reader_eq_lookup .
   then show ?thesis
@@ -579,72 +590,55 @@ qed
 
 theorem fun_route_result_node_sound:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
-    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-           \<subseteq> (\<Union>ctx. \<gamma>\<^sub>V (state_at (declared_global p) p ctx v))"
+  assumes route_const: "\<And>u ctx d ca s. route is_global u ctx d ca = ctx_fun u ctx s"
+    and wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+      "terminates is_global p"
+  shows "\<C>\<^bsub>\<kappa>,pcfg p,pinit p\<^esub> v
+           \<subseteq> (\<Union>ctx. \<gamma>\<^sub>V (state_at is_global p ctx v))"
   using fun_route_node_collect_eq_Union[where ctx_fun = ctx_fun and p = p and v = v]
     fun_route_state_at_sound[OF route_const wf solves]
   by (simp add: SUP_mono')
 
 theorem fun_route_report_proved_sound:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
-    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-    and mem: "(v, c, Check_Proved) \<in> set (report (declared_global p) p ctx)"
-  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
-                 prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+  assumes route_const: "\<And>u ctx d ca s. route is_global u ctx d ca = ctx_fun u ctx s"
+    and wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+      "terminates is_global p"
+    and mem: "(v, c, Check_Proved) \<in> set (report is_global p ctx)"
+  shows
+    "\<forall>s \<in> \<A>\<^bsub>\<kappa>,context_policy_of_fun ctx_fun,root_ctx,pcfg p,pinit p\<^esub> v ctx. truthy (eval c s)"
 proof -
-  have fin: "finite (intra (prog_cfg p))"
-    unfolding prog_cfg_def by (simp add: compile_prog_finite)
+  have fin: "finite (intra (pcfg p))"
+    unfolding pcfg_compile by (simp add: compile_prog_finite)
   show ?thesis
     by (rule classify_checks_proved_sound
-          [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
+          [where g = "pcfg p" and env = "state_at is_global p ctx"
              and classify = classify and \<gamma>\<^sub>S = \<gamma>\<^sub>V
-             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
-                               prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
+             and reach =
+               "\<lambda>v. \<A>\<^bsub>\<kappa>,context_policy_of_fun ctx_fun,root_ctx,pcfg p,pinit p\<^esub> v ctx",
            OF fin _ classify_proved fun_route_state_at_sound[OF route_const wf solves]])
        (use mem in \<open>simp add: report_def state_at_def analysis_surface.report_def\<close>)
 qed
 
 theorem fun_route_report_refuted_sound:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
-    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-    and mem: "(v, c, Check_Refuted) \<in> set (report (declared_global p) p ctx)"
-  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
-                 prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+  assumes route_const: "\<And>u ctx d ca s. route is_global u ctx d ca = ctx_fun u ctx s"
+    and wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+      "terminates is_global p"
+    and mem: "(v, c, Check_Refuted) \<in> set (report is_global p ctx)"
+  shows
+    "\<forall>s \<in> \<A>\<^bsub>\<kappa>,context_policy_of_fun ctx_fun,root_ctx,pcfg p,pinit p\<^esub> v ctx. \<not> truthy (eval c s)"
 proof -
-  have fin: "finite (intra (prog_cfg p))"
-    unfolding prog_cfg_def by (simp add: compile_prog_finite)
+  have fin: "finite (intra (pcfg p))"
+    unfolding pcfg_compile by (simp add: compile_prog_finite)
   show ?thesis
     by (rule classify_checks_refuted_sound
-          [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
+          [where g = "pcfg p" and env = "state_at is_global p ctx"
              and classify = classify and \<gamma>\<^sub>S = \<gamma>\<^sub>V
-             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
-                               prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
+             and reach =
+               "\<lambda>v. \<A>\<^bsub>\<kappa>,context_policy_of_fun ctx_fun,root_ctx,pcfg p,pinit p\<^esub> v ctx",
            OF fin _ classify_refuted fun_route_state_at_sound[OF route_const wf solves]])
        (use mem in \<open>simp add: report_def state_at_def analysis_surface.report_def\<close>)
-qed
-
-theorem fun_route_source_sound:
-  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and s0 s :: store
-  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
-    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-    and s0: "s0 \<in> cinit_stores (declared_global p)"
-    and run: "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, [])
-                \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-  shows "\<exists>v stk ctx. prog_table p, prog_cfg p, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> s \<in> \<gamma>\<^sub>V (state_at (declared_global p) p ctx v)"
-proof -
-  have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
-    by (rule prog_cfg_def)
-  have "\<exists>v stk. prog_table p, prog_cfg p, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-          \<and> s \<in> (\<Union>ctx. \<gamma>\<^sub>V (state_at (declared_global p) p ctx v))"
-    unfolding cfg_eq
-    by (rule source_sound_from_node_collect_cap[OF wf s0 run])
-       (use fun_route_result_node_sound[OF route_const wf solves] in \<open>simp add: cfg_eq\<close>)
-  then show ?thesis by blast
 qed
 
 subsection \<open>Entry-state routing\<close>
@@ -656,109 +650,109 @@ text \<open>
 \<close>
 
 lemma entry_state_routed_analysis_from_live_unknowns:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "routed_analysis (analysis_spec (declared_global p) p) (\<lambda>d e. pgam p d e)
-     (declared_global p) (prog_cfg p) buffer_key global_of
-     (route (declared_global p)) Bot (Lifted init_st)
-     (place_rg (declared_global p) (Lifted init_st))
-     (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
-     (admitted_contexts (declared_global p) p)
-     (\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e))
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+  shows "routed_analysis \<kappa> (analysis_spec is_global p) (\<lambda>d e. pgam p d e) (pcfg p) buffer_key global_of
+     (route is_global) Bot (Lifted init_st)
+     (place_rg is_global (Lifted init_st))
+     (sol_env is_global p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
+     (admitted_contexts is_global p)
+     (\<lambda>d e. map_lift (rd is_global) (place_cmb p d e))
      \<gamma>\<^sub>V empty\<^sub>V classify"
 proof (rule routed_analysis_from_live_unknowns[OF wf solves])
-  fix u ctx dst pars args q cont and s :: store and ctx'
+  fix u ctx dst pars args q cont and s :: "var_id \<Rightarrow> int" and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
-    and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and Rc: "ctx' \<in> admitted_contexts (declared_global p) p u ctx
+    and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
+    and Rc: "ctx' \<in> admitted_contexts is_global p u ctx
                (call_info_of (CallEdge dst pars args) q) s
-               (call_enter (declared_global p) (CallEdge dst pars args) s)"
+               (call_enter \<kappa> (CallEdge dst pars args) s)"
   let ?ci = "call_info_of (CallEdge dst pars args) q"
-  let ?caller = "dg_local (sol_env (declared_global p) p (Inl (u, ctx)))"
+  let ?caller = "dg_local (sol_env is_global p (Inl (u, ctx)))"
   let ?ent = "entered p ?ci ?caller"
   from Rc[unfolded admitted_contexts_alt] obtain cont' entry
-    where mem: "(cont', entry) \<in> set [entry_alt (declared_global p) p ?ci ?caller (gsol p)]"
-      and req0: "ctx' = route (declared_global p) u ctx entry
+    where mem: "(cont', entry) \<in> set [entry_alt is_global p ?ci ?caller (gsol p)]"
+      and req0: "ctx' = route is_global u ctx entry
                    (CallEdge (ci_dst ?ci) (ci_formals ?ci) (ci_args ?ci))"
     by (rule routed_entry_context_relE)
   have "entry = ?ent" using mem by (simp add: entry_of_def) (metis snd_conv)
-  then show "route (declared_global p) u ctx ?ent (CallEdge dst pars args) = ctx'"
+  then show "route is_global u ctx ?ent (CallEdge dst pars args) = ctx'"
     using req0 by simp
 next
-  fix u ctx dst pars args q cont and s :: store
+  fix u ctx dst pars args q cont and s :: "var_id \<Rightarrow> int"
   assume uL: "(u, ctx) \<in> live_unknowns p"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and sin: "s \<in> pgam p (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))) (gsol p)"
-  have cont: "(cont, ctx) \<in> sol_vars (declared_global p) p"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
+    and sin: "s \<in> pgam p (dg_local (sol_env is_global p (Inl (u, ctx)))) (gsol p)"
+  have cont: "(cont, ctx) \<in> sol_vars is_global p"
     using ctx_vars_cover_live_combineD[OF live_unknowns_cover[OF wf solves] uL ce]
       live_unknowns_sub by blast
-  show "admitted_contexts (declared_global p) p u ctx
+  show "admitted_contexts is_global p u ctx
                  (call_info_of (CallEdge dst pars args) q) s
-                 (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
+                 (call_enter \<kappa> (CallEdge dst pars args) s) \<noteq> {}"
     unfolding admitted_contexts_alt
     by (rule routed_entry_context_rel_total)
        (use entry_cover[OF solves cont ce sin]
-         in \<open>simp add: sol_global_def del: declared_global_iff\<close>)
+         in \<open>simp add: sol_global_def\<close>)
 qed
 
 theorem entry_state_activation_collect_sound_of_terminates:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
-           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+  shows "\<A>\<^bsub>\<kappa>,admitted_contexts is_global p,root_ctx,pcfg p,pinit p\<^esub> v ctx
+           \<subseteq> pgam p (reader is_global p (Inl (v, ctx))) (gsol p)"
 proof -
-  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d e. pgam p d e"
-      "declared_global p" "prog_cfg p" buffer_key global_of
-      "route (declared_global p)" Bot
-        "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
-      "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
-      "admitted_contexts (declared_global p) p"
-      "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e)"
+  interpret live: routed_analysis \<kappa> "analysis_spec is_global p"
+    "\<lambda>d e. pgam p d e" "pcfg p" buffer_key global_of
+      "route is_global" Bot
+        "Lifted init_st" "place_rg is_global (Lifted init_st)"
+      "sol_env is_global p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
+      "admitted_contexts is_global p"
+      "\<lambda>d e. map_lift (rd is_global) (place_cmb p d e)"
       \<gamma>\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
-  have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
+  have entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
   have init_env_le:
-    "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+    "init_env is_global p \<le> genv global_of (sol_env is_global p)"
     using init_env_le_sol[OF solves subsetD[OF live_unknowns_sub entry_cov]
       live.pp_entry_init_global_bound[OF entry_cov]]
     by (simp add: sol_global_def)
-  have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
-          root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-        \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
+  have "\<A>\<^bsub>\<kappa>,admitted_contexts is_global p,root_ctx,pcfg p,pinit p\<^esub> v ctx
+        \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env is_global p) (Inl (v, ctx)))
              (gsol p)"
     using live.activation_collect_dg_sound
-        [OF entry_cov _ init_env_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
+        [OF entry_cov _ init_env_le, of "pinit p" v ctx] cinit_le_init
     by (simp add: sol_global_def)
   then show ?thesis using gamma_live_reader_le by blast
 qed
 
 corollary entry_state_lookup_sound_of_terminates:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
-           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+  shows "\<A>\<^bsub>\<kappa>,admitted_contexts is_global p,root_ctx,pcfg p,pinit p\<^esub> v ctx
+           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table (result is_global p) v ctx)"
   using entry_state_activation_collect_sound_of_terminates[OF wf solves]
   unfolding gamma_reader_eq_lookup .
 
 lemma entry_state_has_context_of_terminates:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-    and t: "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
-  shows "\<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)
-               root_ctx (prog_cfg p) t c"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+    and t: "t \<in> \<T>\<^bsub>\<kappa>,pcfg p,pinit p\<^esub>"
+  shows "\<exists>c. activation_context_rel \<kappa> (admitted_contexts is_global p)
+               root_ctx (pcfg p) t c"
 proof -
-  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d e. pgam p d e"
-      "declared_global p" "prog_cfg p" buffer_key global_of
-      "route (declared_global p)" Bot
-        "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
-      "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
-      "admitted_contexts (declared_global p) p"
-      "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e)"
+  interpret live: routed_analysis \<kappa> "analysis_spec is_global p"
+    "\<lambda>d e. pgam p d e" "pcfg p" buffer_key global_of
+      "route is_global" Bot
+        "Lifted init_st" "place_rg is_global (Lifted init_st)"
+      "sol_env is_global p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
+      "admitted_contexts is_global p"
+      "\<lambda>d e. map_lift (rd is_global) (place_cmb p d e)"
       \<gamma>\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
-  have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
+  have entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
   have init_env_le:
-    "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+    "init_env is_global p \<le> genv global_of (sol_env is_global p)"
     using init_env_le_sol[OF solves subsetD[OF live_unknowns_sub entry_cov]
       live.pp_entry_init_global_bound[OF entry_cov]]
     by (simp add: sol_global_def)
@@ -768,12 +762,28 @@ proof -
 qed
 
 theorem entry_state_node_collect_eq_Union_of_terminates:
-  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-           = (\<Union>ctx. \<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
-                       root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx)"
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+  shows "\<C>\<^bsub>\<kappa>,pcfg p,pinit p\<^esub> v
+           = (\<Union>ctx. \<A>\<^bsub>\<kappa>,admitted_contexts is_global p,root_ctx,pcfg p,pinit p\<^esub> v ctx)"
   by (rule node_collect_eq_Union_activation_of_has_context)
      (rule entry_state_has_context_of_terminates[OF wf solves])
+
+theorem entry_state_result_node_sound:
+  assumes wf: "gwf_compile_input vars ReturnVar is_global (ptab p) (pprocs p)" and solves:
+    "terminates is_global p"
+  shows "\<C>\<^bsub>\<kappa>,pcfg p,pinit p\<^esub> v
+           \<subseteq> (\<Union>ctx. \<gamma>\<^sub>V (state_at is_global p ctx v))"
+proof -
+  have "\<A>\<^bsub>\<kappa>,admitted_contexts is_global p,root_ctx,pcfg p,pinit p\<^esub> v ctx \<subseteq> \<gamma>\<^sub>V (state_at is_global p ctx v)"
+    for ctx
+    using entry_state_lookup_sound_of_terminates[OF wf solves, of v ctx]
+    by (auto simp: state_at_unfold bot_state_empty split: lifted.splits)
+  then show ?thesis
+    unfolding entry_state_node_collect_eq_Union_of_terminates[OF wf solves] by blast
+qed
+
+end
 
 end
 

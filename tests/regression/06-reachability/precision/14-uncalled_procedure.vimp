@@ -8,6 +8,6 @@ fun foo() {
   __voblint_check(true); // NOWARN (unreachable)
 }
 fun main() {
-  x = 0;
+  i32 x = 0;
   __voblint_check(x == 0); // PROVED
 }

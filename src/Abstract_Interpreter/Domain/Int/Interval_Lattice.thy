@@ -67,7 +67,6 @@ proof intro_classes
   show "x \<le> y \<or> y \<le> x"                  unfolding less_eq_eint_def by (rule eint_le_linear)
 qed
 
-
 instantiation eint :: plus begin
 fun plus_eint :: "eint => eint => eint" where
     "plus_eint (Fin n)   (Fin m)   = Fin (n + m)"
@@ -101,30 +100,6 @@ lemma eint_le_PlusInf_iff: "eint_le PlusInf z \<longleftrightarrow> z = PlusInf"
 lemma eint_le_MinInf_iff: "eint_le z MinInf \<longleftrightarrow> z = MinInf"
   by (cases z) auto
 
-lemma eint_plus_mono:
-  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (a1 + b1) (a2 + b2)"
-  by (cases a1; cases a2; cases b1; cases b2; auto)
-
-lemma eint_minus_mono:
-  "eint_le a1 a2 \<Longrightarrow> eint_le b2 b1 \<Longrightarrow> eint_le (a1 - b1) (a2 - b2)"
-  by (cases a1; cases a2; cases b1; cases b2; auto)
-
-text \<open>\<open>Fin\<close> embeds \<open>int\<close> into \<open>eint\<close> as an order isomorphism onto the finite
-  bounds, so it commutes with \<open>min\<close>/\<open>max\<close>.\<close>
-lemma Fin_min: "Fin (min i j) = min (Fin i) (Fin j)"
-  by (simp add: min_def)
-
-lemma Fin_max: "Fin (max i j) = max (Fin i) (Fin j)"
-  by (simp add: max_def)
-
-lemma eint_min_mono:
-  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (min a1 b1) (min a2 b2)"
-  by (cases a1; cases a2; cases b1; cases b2; auto simp: min_def)
-
-lemma eint_max_mono:
-  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (max a1 b1) (max a2 b2)"
-  by (cases a1; cases a2; cases b1; cases b2; auto simp: max_def)
-
 subsection \<open>Carrier and concretization\<close>
 
 text \<open>
@@ -145,13 +120,11 @@ lemma ivl_exhaustE:
   obtains l u where "x = Ivl l u"
   by (cases x) auto
 
-
 fun gamma_ivl :: "ivl => int set" where
     "gamma_ivl (Ivl l u) = {n. l \<le> Fin n \<and> Fin n \<le> u}"
 
 definition ivl_of_int :: "int \<Rightarrow> ivl" where
   [simp]: "ivl_of_int n = Ivl (Fin n) (Fin n)"
-
 
 subsection \<open>Order\<close>
 
@@ -229,9 +202,6 @@ proof (cases a; cases b)
     unfolding \<open>a = Ivl l1 u1\<close> \<open>b = Ivl l2 u2\<close>
     using le by (auto intro: eint_le_trans)
 qed
-
-lemma ivl_le_top: "(x::ivl) \<le> ivl_top"
-  by (cases x) (simp add: less_eq_ivl_def ivl_top_def)
 
 subsection \<open>Join\<close>
 
@@ -440,7 +410,6 @@ lemma normalize_ivl_gamma: "gamma_ivl (normalize_ivl v) = gamma_ivl v"
   by (cases v) (auto simp: normalize_ivl_def bot_ivl_def
         split: eint.splits if_splits intro: eint_le_trans)
 
-
 lemma normalize_ivl_mono: "x \<le> y \<Longrightarrow> normalize_ivl x \<le> normalize_ivl y"
   by (cases x; cases y)
      (auto simp: normalize_ivl_def less_eq_ivl_def bot_ivl_def
@@ -460,10 +429,6 @@ fun ivl_nonempty :: "ivl => bool" where
 
 lemma gamma_ivl_nonempty: "i \<in> gamma_ivl v \<Longrightarrow> ivl_nonempty v"
   by (cases v; cases "case v of Ivl l _ => l"; cases "case v of Ivl _ u => u"; auto)
-
-lemma ivl_nonempty_mono: "ivl_nonempty a \<Longrightarrow> a \<le> b \<Longrightarrow> ivl_nonempty b"
-  by (cases a; cases b; auto simp: less_eq_ivl_def intro: eint_le_trans
-        elim: eint_le.elims)
 
 text \<open>
   \<^const>\<open>normalize_ivl\<close> picks one representative per abstract value: non-empty

@@ -8,8 +8,8 @@
 // the whole guard comes back witness-bottom, and the branch is recognized
 // as unreachable.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
     __voblint_check(x == 5); // NOWARN (unreachable)
   }

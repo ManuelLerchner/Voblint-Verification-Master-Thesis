@@ -1,21 +1,32 @@
 theory Example_Keyed_Solver_Update_Rule_Regression
   imports
-    "Voblint_Analysis_Interval.Interval_Exec"
+    "Voblint_Framework.Routed_Call_Programs"
+    "Voblint_Solver.Globals_Rule"
+    "Voblint_Analysis_Interval.Interval_Warrowing"
 begin
+
+text \<open>The graphs below are core VIMP graphs: edges over variable identities and typed
+  expressions.\<close>
+
+type_synonym core_edge = "(var_id, exp) gedge_action"
+type_synonym core_call = "(var_id, exp) gcall_action"
+type_synonym core_cfg = "(var_id, exp) gcfg"
+
+abbreviation x_id :: var_id where "x_id \<equiv> ScopedId (STR ''main'') (STR ''x'')"
 
 section \<open>Minimal keyed update-rule regression: multiple Side writes per RHS evaluation (keyed)\<close>
 
 text \<open>
   Isolates the keyed-generator instance of multiple Side writes per RHS evaluation at
   \<^const>\<open>routed_node_rhs\<close>'s own interface, independent of a real
-  \<^typ>\<open>cfg\<close>, procedure calls, or Interval program construction: a dummy
-  \<^typ>\<open>cfg\<close> with no edges of its own (\<open>intra = {}\<close>, \<open>calls = {}\<close>) paired with a
+  \<^typ>\<open>core_cfg\<close>, procedure calls, or Interval program construction: a dummy
+  \<^typ>\<open>core_cfg\<close> with no edges of its own (\<open>intra = {}\<close>, \<open>calls = {}\<close>) paired with a
   hand-supplied \<open>pred_sel\<close> that reports two intra predecessors for one node --
   exactly the shape a real merge node with two incoming intra edges produces
   (\<^theory>\<open>Voblint_Framework.DG_Constraint_Programs\<close>'s own \<open>intra\<close> fold), collapsed to its
   essential two-write pattern.
 
-  The two predecessor edges carry different \<open>edge_action\<close>s (\<open>EA_Nop\<close> vs.
+  The two predecessor edges carry different edge actions (\<open>EA_Nop\<close> vs.
   \<open>EA_Assign\<close>) against \<open>keyed_step\<close> below, so their \<^const>\<open>dg_edge_program_at\<close>
   contributions publish genuinely different global values -- reproducing the
   same per-origin-gate destabilization \<^const>\<open>update_global_warrowing_apinis\<close>
@@ -27,34 +38,34 @@ text \<open>An edge step in the framework's own \<open>'dl \<Rightarrow> 'dg \<R
   the step is supplied directly to \<^const>\<open>dg_edge_program_at\<close> and its Side-free
   analogue. Only \<open>EA_Assign\<close> raises the published global, so the two predecessor
   edges below publish different values.\<close>
-definition keyed_step :: "edge_action \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
+definition keyed_step :: "core_edge \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
   "keyed_step a d g =
      (case a of EA_Assign _ _ \<Rightarrow> (g \<squnion> Ivl (Fin 1) (Fin 1), d) | _ \<Rightarrow> (g, d))"
 
-definition keyed_dummy_cfg :: cfg where
-  "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
+definition keyed_dummy_cfg :: core_cfg where
+  "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0 \<rparr>"
 
 text \<open>Two predecessors of \<open>Statement 1\<close>, both from \<open>Statement 0\<close>, with different
-  \<open>edge_action\<close>s so their \<^const>\<open>dg_edge_program_at\<close> contributions differ.\<close>
+  edge actions so their \<^const>\<open>dg_edge_program_at\<close> contributions differ.\<close>
 definition keyed_pred_sel ::
-  "cfg \<Rightarrow> pp \<Rightarrow> unit \<Rightarrow> ((pp \<times> unit + unit) \<times> edge_action) list" where
+  "core_cfg \<Rightarrow> pp \<Rightarrow> unit \<Rightarrow> ((pp \<times> unit + unit) \<times> core_edge) list" where
   "keyed_pred_sel g v ctx =
      (if v = Statement 1 then
         [(Inl (Statement 0, ctx), EA_Nop),
-         (Inl (Statement 0, ctx), EA_Assign (STR ''x'') (exp.N 0))]
+         (Inl (Statement 0, ctx), EA_Assign x_id (TN I32 0))]
       else [])"
 
 text \<open>\<open>cmb\<close>/\<open>extra\<close> are never invoked: \<open>calls = {}\<close> makes
-  \<open>return_call_action_list\<close>/\<open>entry_call_list\<close> empty for every node.\<close>
-definition keyed_cmb :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+  \<^const>\<open>call_site_list\<close> empty for every node.\<close>
+definition keyed_cmb :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> core_call \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> core_call \<Rightarrow> pp \<Rightarrow> pp
     \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program" where
   "keyed_cmb route ctx ca cc ex = sp_return (DG bot bot)"
 
-definition keyed_cmb_c :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+definition keyed_cmb_c :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> core_call \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> core_call \<Rightarrow> pp \<Rightarrow> pp
     \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program" where
   "keyed_cmb_c route ctx ca cc ex = sp_return (DG bot bot)"
 
-definition keyed_extra :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
+definition keyed_extra :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> core_call \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
     \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program list" where
   "keyed_extra route ctx v = []"
 
@@ -85,18 +96,18 @@ lemma keyed_multiwrite_buffered_terminates:
 section \<open>Merge-node regression: a real two-predecessor CFG node\<close>
 
 text \<open>
-  Unlike \<open>keyed_multiwrite_buffered_eqs\<close> above, this uses a genuine \<^typ>\<open>cfg\<close>
-  with two real \<open>intra\<close> edges into one merge node and the PRODUCTION
-  \<^const>\<open>intra_predecessor_list\<close> selector (no hand-rolled \<open>pred_sel\<close>) --
-  exactly the shape \<open>FunctionResult factorial\<close> has in the real factorial
-  regression (two incoming intra edges, one per branch). \<open>merge_step\<close>
+  Unlike \<open>keyed_multiwrite_buffered_eqs\<close> above, this uses a genuine \<^typ>\<open>core_cfg\<close>
+  with two real \<open>intra\<close> edges into one merge node and the production selector
+  \<^const>\<open>intra_predecessor_addr_list\<close> (no hand-rolled \<open>pred_sel\<close>) --
+  the shape a procedure's result node has when both branches of a conditional
+  return. \<open>merge_step\<close>
   answers fixed constants at \<open>EA_Nop\<close>/\<open>EA_Assign\<close> regardless of the incoming
   local/global state, so the solved global value at \<open>buffer_key_at ()\<close> is exactly
   the join of the two edges' own contributions, not a self-referential
   fixpoint -- letting the check below assert that join directly.
 \<close>
 
-definition merge_step :: "edge_action \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
+definition merge_step :: "core_edge \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
   "merge_step a d g =
      (case a of EA_Nop \<Rightarrow> (Ivl (Fin 0) (Fin 0), d)
               | EA_Assign _ _ \<Rightarrow> (Ivl (Fin 1) (Fin 1), d)
@@ -105,11 +116,11 @@ definition merge_step :: "edge_action \<Rightarrow> ivl \<Rightarrow> ivl \<Righ
 text \<open>Two real predecessors of \<open>Statement 2\<close>: \<open>Statement 0\<close> via \<open>EA_Nop\<close>,
   \<open>Statement 1\<close> via \<open>EA_Assign\<close>. \<open>calls = {}\<close> keeps \<open>cmb\<close>/\<open>extra\<close> unused, as
   in \<open>keyed_dummy_cfg\<close>.\<close>
-definition merge_cfg :: cfg where
+definition merge_cfg :: core_cfg where
   "merge_cfg = \<lparr>
      intra = {(Statement 0, EA_Nop, Statement 2),
-              (Statement 1, EA_Assign (STR ''x'') (exp.N 0), Statement 2)},
-     calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
+              (Statement 1, EA_Assign x_id (TN I32 0), Statement 2)},
+     calls = {}, cfg_entry = Statement 0 \<rparr>"
 
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "merge_eqs =
@@ -154,7 +165,7 @@ definition w0_spec :: "(pp \<times> ivl, w0_gk, unit, ivl, ivl) dg_spec" where
      dgs_enter := (\<lambda>ci m K. man_global m () (\<lambda>g. K [(man_local m, g)])),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer (\<lambda>dc de. dc \<squnion> de)) \<rparr>"
 
-definition w0_route :: "pp \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> ivl" where
+definition w0_route :: "pp \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> core_call \<Rightarrow> ivl" where
   "w0_route u ctx d ca = d"
 
 text \<open>The caller's local state is \<open>[1,1]\<close> and the solver's global is \<open>[7,7]\<close>, so
@@ -170,14 +181,14 @@ text \<open>The call site resolves to the single callee \<open>f\<close>. Stated
   through \<^const>\<open>static_resolve\<close>, because this witness builds one call tree by hand
   instead of compiling a program.\<close>
 
-definition w0_resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> ivl \<Rightarrow> pname list" where
+definition w0_resolve :: "pp \<Rightarrow> pp \<Rightarrow> core_call \<Rightarrow> ivl \<Rightarrow> pname list" where
   "w0_resolve v cc ca d = [STR ''f'']"
 
 definition w0_program ::
   "(pp \<times> ivl, w0_gk, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program" where
   "w0_program =
      routed_call_program w0_spec (\<lambda>_. W0Global) W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
-       (CallEdge None [STR ''p''] []) (Statement 0) (FunctionResult (STR ''f''))"
+       (CallEdge None [ScopedId (STR ''f'') (STR ''p'')] []) (Statement 0) (FunctionResult (STR ''f''))"
 
 text \<open>The seed lands at the entered frame's own key, carrying that same frame.\<close>
 lemma w0_seed_at_entered_frame:

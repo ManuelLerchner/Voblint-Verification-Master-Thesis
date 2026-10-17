@@ -4,8 +4,6 @@ session Voblint_Examples_Tooling in "." = "Voblint_Analysis_Interval" +
   description
     "Solver- and generator-layer witnesses, stated over whichever domain makes the
      effect visible rather than to demonstrate that domain"
-  sessions
-    "Voblint_Analysis_Sign"
   theories
     (* Generator-layer Side buffering: the buffered RHS generator terminates
        where issuing two Side writes per evaluation livelocks the solver. *)
@@ -19,3 +17,6 @@ session Voblint_Examples_Tooling in "." = "Voblint_Analysis_Interval" +
     (* Keyed globals: an edge depends only on the globals it reads and
        publishes only at the globals it writes. *)
     Example_Keyed_Global_Footprint
+    (* One call entered under two overlapping alternatives, routed to two
+       contexts; and the empty entry that leaves a live call uncovered. *)
+    Example_Overlapping_Enter

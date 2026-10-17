@@ -181,17 +181,17 @@
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return bump
 // EXPECT-GRAPH-END
 
-global g;
+global i32 g;
 
-fun bump(n) {
-  m = n + 1;
+fun i32 bump(i32 n) {
+  i32 m = n + 1;
   return m;
 }
 fun main() {
   g = 19;
-  a = bump(5);
-  b = bump(4);
-  c = bump(g);
+  i32 a = bump(5);
+  i32 b = bump(4);
+  i32 c = bump(g);
   __voblint_check(a == 6); // PROVED
   __voblint_check(b == 5); // PROVED
   __voblint_check(c == 20); // PROVED

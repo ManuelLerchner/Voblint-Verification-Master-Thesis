@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// A call may initialize a declaration, as in C: `u8 b = inc(255);` is the
+// call with b as its destination, so the result converts to b's kind. As
+// for any call with a destination, the diagnostic for that conversion sits on
+// the callee's return. A library call initializes the same way.
+fun u16 inc(u16 n) {
+  return n + 1; // ARITH: ERROR conversion-overflow
+}
+fun main() {
+  u16 a = inc(255); // ARITH: NONE
+  u8 b = inc(255); // ARITH: NONE
+  u8 c = max(a, 7); // ARITH: ERROR conversion-overflow
+  __voblint_check(a == 256); // PROVED
+  __voblint_check(b == 0); // PROVED
+  __voblint_check(c == 0); // PROVED
+}

@@ -5,19 +5,18 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint.run_voblint
-            (Analysis_Config (domains, globals, context, program_globals))
+       -> Voblint.run_voblint conf kind_decls prog
           (Isabelle-generated). One call checks the activation and the program and
-          runs the analyses the activation list, global update rule and context
-          name. Every well-formed combination is answered. What comes back is a
-          semantic analysis_report: states as abstract values per point and
-          context, the routes calls take, the check column and diagnostics.
-       -> Voblint.render_report (Isabelle-generated, outside the
+          runs the analyses, global update rule and context the configuration
+          names. What comes back is a semantic typed report: states as abstract
+          values per point and context, the routes calls take, the check column
+          and diagnostics.
+       -> Voblint.prog_render_report (Isabelle-generated, outside the
           theorems) with the CLI's value printer (Value_symbols): the displayed
           run_result. Every rendering below (text report, graph, snapshot, HTML)
           is built from that one result, so none can draw from a different solve
           than another.
-       -> the theorems in Analysis_Certified.thy hold for every Analysed answer
+       -> the theorems in Run_Voblint.thy hold for every Analysed answer
           with no termination premise: where the solve does not return, no
           answer exists and nothing is claimed. A PROVED verdict does not
           assert that its point is reachable.
@@ -36,7 +35,10 @@ let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
-   N] [--int-refinement never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
+   N] [--program-globals flow-sensitive|flow-insensitive]\n\
+  \  [--int-refinement never|once|fixpoint] [--signed-overflow \
+   assume_top|assume_wraparound] [--set PATH VALUE]\n\
+  \  [--dot|--graph-snapshot|--html|--html-out DIR|--json] [--timeout SECONDS]\n\
   \  [--trace] [--verbose|--compact] [--trace-sys SYS[,...]] [--format \
    text|jsonl]\n\
   \  [--output FILE]\n\
@@ -46,10 +48,10 @@ let usage =
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
-  \                             --parse-only). int is the refining composite\n\
-  \                             Sign x Interval x Parity x Congruence domain,\n\
-  \                             whose components refine each other as\n\
-  \                             --int-refinement selects.\n\
+  \                             --parse-only). int is the reduced product of\n\
+  \                             Interval and Congruence at each variable's\n\
+  \                             machine kind, whose components refine each\n\
+  \                             other as --int-refinement selects.\n\
   \                             parity is the four-element Bot/Even/Odd/Top\n\
   \                             lattice; it decides equalities only by\n\
   \                             refuting them across differing parities.\n\
@@ -95,8 +97,9 @@ let usage =
   \                             Where a program's globals live (default:\n\
   \                             flow-sensitive). flow-sensitive keeps them\n\
   \                             in every point's own state; flow-insensitive\n\
-  \                             puts them on one shared value every point\n\
-  \                             reads, for the analyses whose state splits\n\
+  \                             keeps each global at its own global unknown,\n\
+  \                             read only by the points whose expressions\n\
+  \                             mention it, for the analyses whose state splits\n\
   \                             by variable; order relates variables across\n\
   \                             that split and keeps its whole state per\n\
   \                             point. Both are proved sound. Under\n\
@@ -170,12 +173,14 @@ let usage =
   \  --format text|jsonl        Trace as text (default) or JSON Lines.\n\
   \  --output FILE              Write the trace to FILE instead of stderr.\n\
   \                             Each of --compact, --verbose, --trace-sys,\n\
-  \                             --format and --output implies --trace.\n\
-  \  --help                     Show this message.\n\n\
-   Trust boundary: results are sound for the program this file's unverified\n\
-  \  parser actually built, not a guarantee that the parser read your source\n\
-  \  correctly. The analyzer core (parsing excluded) is generated from a\n\
-  \  machine-checked Isabelle/HOL proof."
+  \                             --format and --output implies --trace.\n"
+  ^ Analysis_request.options_usage ()
+  ^ "  --help                     Show this message.\n\n\
+     Trust boundary: results are sound for the program this file's unverified\n\
+    \  parser actually built, not a guarantee that the parser read your source\n\
+    \  correctly. The analyzer core is OCaml generated from Isabelle/HOL\n\
+    \  definitions whose soundness is machine-checked; code generation, the\n\
+    \  OCaml toolchain and the rendering are trusted."
 
 module C = Voblint
 module A = Result_text
@@ -305,6 +310,9 @@ type outcome =
      the contained run rather than from a gate this file keeps. *)
   | Malformed
   | Invalid_activation
+  (* The analyzer gave no certified report: the solver did not finish, or a
+     chain of nested queries exceeded its depth bound. *)
+  | No_answer
 
 (* Raised where an answer other than a successful run arrives, so every
    rendering below can be written against the output it needs. *)
@@ -339,7 +347,8 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                   output_string oc "R\n";
                   output_string oc s
               | Malformed -> output_string oc "M\n"
-              | Invalid_activation -> output_string oc "I\n");
+              | Invalid_activation -> output_string oc "I\n"
+              | No_answer -> output_string oc "N\n");
               close_out oc;
               0
             with e ->
@@ -388,6 +397,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                     | "R" -> Ok (Ok_report body)
                     | "M" -> Ok Malformed
                     | "I" -> Ok Invalid_activation
+                    | "N" -> Ok No_answer
                     | _ -> Error body)
                 | None -> Error "analysis subprocess produced no output")
             | _, Unix.WEXITED code ->
@@ -446,6 +456,8 @@ let () =
   let trace_output = ref None in
   let globals_name = ref None in
   let program_globals_name = ref "flow-sensitive" in
+  (* The PATH VALUE pairs of --set and of each option's own flag, in order. *)
+  let settings = ref [] in
   let file = ref None in
   let rec parse_args = function
     | [] -> ()
@@ -472,6 +484,16 @@ let () =
         parse_args rest
     | "--program-globals" :: v :: rest ->
         program_globals_name := v;
+        parse_args rest
+    | "--set" :: path :: v :: rest ->
+        settings := (path, v) :: !settings;
+        parse_args rest
+    | [ "--set" ] | [ "--set"; _ ] ->
+        prerr_endline "voblint: --set expects PATH VALUE";
+        exit 1
+    | f :: v :: rest when Option.is_some (Analysis_request.option_of_flag f) ->
+        let spec = Option.get (Analysis_request.option_of_flag f) in
+        settings := (spec.Analysis_request.path, v) :: !settings;
         parse_args rest
     | "--narrow-bound" :: v :: rest ->
         (try narrow_bound := Some (int_of_string v)
@@ -579,15 +601,30 @@ let () =
       context = !context_name;
       depth = !context_depth;
       program_globals = !program_globals_name;
+      settings = List.rev !settings;
     }
   in
   let fail message =
     prerr_endline message;
     exit 1
   in
-  let { Analysis_request.domains = analyses; rule; mode = context; placement } =
+  let {
+    Analysis_request.domains = analyses;
+    rule;
+    mode = context;
+    placement;
+    sem;
+  } =
     match Analysis_request.resolve request with
     | Ok resolved -> resolved
+    | Error (Analysis_request.Unknown_option path) ->
+        fail ("unknown --set option: " ^ path)
+    | Error (Analysis_request.Invalid_option_value (spec, v)) ->
+        fail
+          (Printf.sprintf "unknown %s value: %s (expected %s)"
+             (Option.value spec.flag ~default:("--set " ^ spec.path))
+             v
+             (String.concat ", " spec.values))
     | Error (Analysis_request.Unknown_refinement v) ->
         fail ("unknown --int-refinement value: " ^ v)
     | Error (Analysis_request.Unknown_context_name v) ->
@@ -636,7 +673,7 @@ let () =
       prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg);
       exit 1
   in
-  let prog, stmt_positions, header_positions =
+  let prog, decls, stmt_positions, header_positions =
     try Vimp_frontend.program path src
     with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
@@ -656,18 +693,16 @@ let () =
         prerr_endline usage;
         exit 1
   in
+  let run_conf () =
+    Analysis_request.conf ~domains ~rule:!globals ~context ~placement ~sem
+  in
   (* --html writes a directory; the other renderings write one document to
      stdout. Asking for both is a contradiction about where output goes, not a
      combination to silently resolve. *)
   if !json then begin
-    let answer =
-      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
-        ~program_globals:placement prog
-    in
-    let raw =
-      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context
-        ~program_globals:placement prog answer
-    in
+    let conf = run_conf () in
+    let answer = Analysis_request.analyse ~conf ~decls prog in
+    let raw = Render_json.run_voblint_json ~conf ~decls prog answer in
     (match answer with
     | C.Analysed result ->
         print_endline
@@ -704,13 +739,10 @@ let () =
         Fun.protect ~finally:(fun () -> close_out oc) (fun () -> write oc)
   in
   let solve () =
-    match
-      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
-        ~program_globals:placement prog
-    with
+    match Analysis_request.analyse ~conf:(run_conf ()) ~decls prog with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
-    | C.No_Answer -> failwith "voblint: the solver returned no answer"
+    | C.No_Answer -> raise (Answered No_answer)
     | C.Analysed result ->
         if !trace then emit_trace result;
         if !html || !dot || !graph_snapshot then
@@ -749,7 +781,8 @@ let () =
                           Render_xml.line;
                           column;
                           verdict = A.verdict_name v;
-                          cond = Vimp_printer.string_of_exp (C.check_exp check);
+                          cond =
+                            Typed_printer.string_of_texp (C.check_exp check);
                           message = None;
                         })
                 (Render_text.located_checks (C.res_checks result))
@@ -857,6 +890,11 @@ let () =
   | Ok Invalid_activation ->
       prerr_endline "voblint: --analysis names a domain more than once";
       exit 1
+  | Ok No_answer ->
+      prerr_endline
+        "voblint: no answer: the solver did not finish, or nested analysis \
+         queries exceeded their depth bound";
+      exit 3
   | Error msg ->
       Printf.eprintf "voblint: %s\n" msg;
       exit 3

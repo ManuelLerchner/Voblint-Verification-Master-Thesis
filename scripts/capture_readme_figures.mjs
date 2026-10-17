@@ -114,7 +114,8 @@ const CAPTURE_CSS = `
   .analyzer-workspace { grid-template-areas: "editor" "controls" !important; grid-template-columns: max-content !important; }
   .analyzer-sidebar { width: 460px; }
   .editor-shell { width: max-content !important; min-width: 360px; }
-  .state-inspector { width: max-content !important; }
+  .state-inspector { position: static !important; width: max-content !important; max-height: none !important; box-shadow: none !important; }
+  .state-inspector-close { display: none !important; }
   .state-inspector-body { grid-template-columns: repeat(auto-fit, minmax(300px, max-content)) !important; }
 `;
 
@@ -144,7 +145,11 @@ async function run(query, width, fileName = "example.vimp") {
   return page;
 }
 
-/* Puts the cursor on the first line containing a fragment, so the inspector shows it. */
+/*
+ * Opens the inspector on the first line containing a fragment. The cursor only
+ * selects that line's graph node; the inspector opens on a tap of the node, emitted
+ * through Cytoscape because the graph can lie below the window.
+ */
 async function inspect(page, fragment) {
   const index = await page.$$eval(
     ".cm-line",
@@ -153,9 +158,27 @@ async function inspect(page, fragment) {
   );
 
   await page.click(`.cm-line:nth-child(${index + 1})`);
-  await page.keyboard.press("End");
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    document.querySelector("#analysis-graph")._cyreg.cy.nodes(".graph-node-selected").first().emit("tap");
+  });
+  /* No further key press: moving the cursor would re-inspect without the joined state. */
+  await page.waitForSelector(".state-inspector:not([hidden])");
   await page.waitForTimeout(300);
   await page.mouse.move(0, 0);
+}
+
+/* Redraws the graph as the analysis view, one box per procedure and context. */
+async function analysisView(page) {
+  await page.click('[data-graph-view="analysis"]');
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#analysis-graph canvas") &&
+      !document.querySelector("#analysis-graph .analysis-graph-message"),
+    null,
+    { timeout: 60000 },
+  );
+  await page.waitForTimeout(600);
 }
 
 async function shot(page, selector) {
@@ -267,6 +290,7 @@ const FIGURES = {
   async "playground-overview"() {
     const page = await run("analysis=interval,order&globals=warrow&context=call-string&k=1", 1100);
 
+    await analysisView(page);
     await inspect(page, "__voblint_check(i == 3)");
     await compose(
       "playground-overview",
@@ -288,6 +312,7 @@ const FIGURES = {
       "contexts.vimp",
     );
 
+    await analysisView(entry);
     await compose(
       "playground-contexts",
       [
@@ -302,18 +327,22 @@ const FIGURES = {
   async "playground-int-refinement"() {
     const cells = [];
 
-    for (const analysis of ["int", "interval", "sign", "parity"]) {
-      const page = await run(programLink("int-refinement", "--analysis", analysis), 900, "int-refinement.vimp");
+    /* Int against its two components alone, and against itself without refinement. */
+    const runs = [
+      ["int", ["--analysis", "int"]],
+      ["interval", ["--analysis", "interval"]],
+      ["congruence", ["--analysis", "congruence"]],
+      ["never", ["--analysis", "int", "--int-refinement", "never"]],
+    ];
 
-      cells.push({
-        image: await shot(page, ".editor-shell"),
-        caption: `--analysis ${analysis}`,
-        area: analysis,
-      });
+    for (const [area, settings] of runs) {
+      const page = await run(programLink("int-refinement", ...settings), 900, "int-refinement.vimp");
+
+      cells.push({ image: await shot(page, ".editor-shell"), caption: settings.join(" "), area });
       await page.close();
     }
 
-    await compose("playground-int-refinement", cells, `"int interval" "sign parity"`);
+    await compose("playground-int-refinement", cells, `"int interval" "congruence never"`);
   },
 
   async "playground-division-definite"() {

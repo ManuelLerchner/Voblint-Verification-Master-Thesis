@@ -27,15 +27,15 @@ text \<open>The equation-level route: push the call site, keep only the most rec
   the entered abstract/executable value \<open>d\<close> entirely, so it is representation-independent
   for \<^emph>\<open>any\<close> domain without a per-domain commute lemma (\<open>cs_route_indep_of_data\<close> below).\<close>
 
-definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> call_string" where
+definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> ('v, exp) gcall_action \<Rightarrow> call_string" where
   "cs_route k u ctx d ca = take k (u # ctx)"
 
 text \<open>The trace-semantic context function whose graph, \<open>context_policy_of_fun (cs_context k)\<close>,
   instantiates \<open>routed_context\<close>'s \<open>adm\<close>: same closed term as \<^const>\<open>cs_route\<close>,
-  over the concrete \<^typ>\<open>store\<close> the activation-trace semantics supplies instead of an
+  over the concrete store \<open>'s\<close> the activation-trace semantics supplies instead of an
   abstract/executable \<open>'d\<close>.\<close>
 
-definition cs_context :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<Rightarrow> store \<Rightarrow> call_string" where
+definition cs_context :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<Rightarrow> 's \<Rightarrow> call_string" where
   "cs_context k u ctx s = take k (u # ctx)"
 
 subsection \<open>The two facts every instance needs\<close>

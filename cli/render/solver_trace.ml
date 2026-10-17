@@ -64,9 +64,12 @@ let read_back raw =
 (* ---------------------------------------------------------------- naming *)
 
 let node_name = A.point_name
-let value_text v = Value_symbols.decode (C.string_of_abstract_value v)
 
-let context_label (ctx : C.abstract_value C.analysis_context) =
+(* The printers hand every value over as its rendering and every analysis by its
+   name, whatever analyzer the run used. *)
+let value_text v = Value_symbols.decode v
+
+let context_label (ctx : string C.analysis_context) =
   match ctx with
   | C.Context_Unit -> "unit"
   | C.Context_Entry [] | C.Context_Call_String [] -> "root"
@@ -75,18 +78,18 @@ let context_label (ctx : C.abstract_value C.analysis_context) =
   | C.Context_Call_String ps ->
       "[" ^ String.concat " " (List.map A.point_name ps) ^ "]"
 
-type 'v view = (C.analysis_domain * 'v C.field_state) list C.lifted
+type ('d, 'v) view = ('d * 'v C.field_state) list C.lifted
 
-(* A state as one line, with [value_text] for each value: the trace's own
-   values, or the strings of the returned result. *)
-let view_text_with value_text (v : 'v view) =
+(* A state as one line, with [label] for each analysis and [value_text] for each
+   value: the trace's own values, or the strings of the returned result. *)
+let view_text_with label value_text (v : ('d, 'v) view) =
   match v with
   | C.Bot -> "⊥"
   | C.Lifted sections ->
       String.concat "; "
         (List.map
            (fun (a, field) ->
-             A.analysis_label a ^ ": "
+             label a ^ ": "
              ^
              match field with
              | C.Field_Store [] -> "{}"
@@ -96,7 +99,7 @@ let view_text_with value_text (v : 'v view) =
              | C.Field_Whole v -> value_text v)
            sections)
 
-let view_text v = view_text_with value_text v
+let view_text v = view_text_with Fun.id value_text v
 
 let proc_of = function
   | C.FunctionEntry p | C.FunctionResult p -> p
@@ -107,7 +110,7 @@ type global = Buffer | Program_global of string | Seed of C.cfg_node * Obj.t
 (* Everything that reads a run's unknowns and values, from its printers. *)
 type names = {
   point : C.cfg_node -> string;
-  context : Obj.t -> C.abstract_value C.analysis_context;
+  context : Obj.t -> string C.analysis_context;
   global : Obj.t -> global;
   local_value : Obj.t -> string;
   global_value : Obj.t -> Obj.t -> string;
@@ -654,14 +657,15 @@ let result_records result =
         {|{"event":"result","unknown":{"kind":"local","node":%s,"context":%s},"value":%s}|}
         (json_string (node_name (C.state_point st)))
         (json_ctx contexts.(A.int_of_nat (C.state_context st)))
-        (json_string (view_text_with Fun.id (C.state_value st))))
+        (json_string
+           (view_text_with A.analysis_label Fun.id (C.state_value st))))
     (C.res_states result)
 
 let checks result =
   List.map
     (fun c ->
       ( node_name (C.check_point c),
-        Vimp_printer.string_of_exp (C.check_exp c),
+        Typed_printer.string_of_texp (C.check_exp c),
         A.contextual_verdict_name (C.check_verdict c) ))
     (C.res_checks result)
 
@@ -677,9 +681,9 @@ let counts steps =
 
 (* The name the header gives a context mode, as voblint's --context spells it. *)
 let context_name = function
-  | C.Ctx_None -> "none"
-  | C.Ctx_EntryState -> "entry-state"
-  | C.Ctx_CallString k -> "call-string:" ^ string_of_int (A.int_of_nat k)
+  | C.Call_String k when A.int_of_nat k = 0 -> "none"
+  | C.Entry_State -> "entry-state"
+  | C.Call_String k -> "call-string:" ^ string_of_int (A.int_of_nat k)
 
 let text_header ~out ~analyses ~context ~globals ~program =
   out "Voblint trace\n";

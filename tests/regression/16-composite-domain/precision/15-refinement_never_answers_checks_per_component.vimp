@@ -6,10 +6,10 @@
 // combine them. Parity alone knows r is odd, which rules out 0.
 // Under once and fixpoint all six checks are proved (09-remainder_reduction).
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (0 <= n && n <= 20) {
-    dividend = n * 6 + 1;
-    r = dividend % 6;
+    i32 dividend = n * 6 + 1;
+    i32 r = dividend % 6;
     __voblint_check(r == 1); // UNKNOWN
     __voblint_check(r != 0); // PROVED
     __voblint_check(r > 0); // UNKNOWN

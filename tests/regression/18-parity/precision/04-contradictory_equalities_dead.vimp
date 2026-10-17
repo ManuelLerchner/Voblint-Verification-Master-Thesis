@@ -6,8 +6,8 @@
 // Bottom. The y arm empties the same way, the lifted filter canonicalizes each
 // empty arm to Bottom before the join, and the branch is proved dead.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
     __voblint_check(x == 5); // NOWARN (unreachable)
   }

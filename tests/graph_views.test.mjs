@@ -84,8 +84,8 @@ test("flow-sensitive globals have no global dependencies to draw", () => {
 test("each step's result is joined over contexts by run_voblint, for the editor's hints", () => {
   const result = payload(TWO_CALLS, CALL_STRING);
   const step = result.cfg.nodes.find((n) => n.point === "pp0").next[0];
-  const y = step.state[0].bindings.find(([x]) => x === "y")?.[1];
+  const y = step.state[0].bindings.find(([x]) => x === "f::y")?.[1];
 
-  assert.equal(step.writes, "y");
+  assert.equal(step.writes, "f::y");
   assert.equal(y, "[2,3]");
 });

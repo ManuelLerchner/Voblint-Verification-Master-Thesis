@@ -11,13 +11,13 @@
 // check is joined across contexts, so each is written to be decided and true in
 // all of them at once (see 08-global_entry_value_per_context.vimp). The
 // base-case check is live only under n = [1,1].
-fun factorial(n) {
+fun i32 factorial(i32 n) {
   __voblint_check(0 < n); // PROVED
   if (n < 2) {
     __voblint_check(n == 1); // PROVED
     return 1;
   } else {
-    r = factorial(n - 1);
+    i32 r = factorial(n - 1);
     __voblint_check(0 < r); // PROVED
     __voblint_check((n == 2) == (r == 1)); // PROVED
     __voblint_check((n == 3) == (r == 2)); // PROVED
@@ -26,8 +26,8 @@ fun factorial(n) {
   }
 }
 fun main() {
-  a = factorial(3);
-  b = factorial(4);
+  i32 a = factorial(3);
+  i32 b = factorial(4);
   __voblint_check(a == 6); // PROVED
   __voblint_check(b == 24); // PROVED
 }

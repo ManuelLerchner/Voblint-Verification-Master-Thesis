@@ -1,15 +1,16 @@
 theory DG_Keyed_Split_Spec
-  imports DG_Local_State_Spec "Voblint_Solver.Strategy_Tree_Side_Buffering"
+  imports "Voblint_Framework.MCP_Spec" Transfer_Algebra "Voblint_Domain.Nonrelational_Reachability"
+    "Voblint_Solver.Strategy_Tree_Side_Buffering"
     "Voblint_Solver.Strategy_Program_Fold"
 begin
 
 section \<open>One solver unknown per global name\<close>
 
 text \<open>
-  The ownership-split lifter of \<open>DG_Ownership_Split_Spec\<close> keeps every program
-  global in one shared value. Reading a global therefore depends on all of them,
-  and writing one wakes every reader of any other. Goblint keys its globals by
-  name instead, and this theory does the same for a whole-state component.
+  Keeping every program global in one shared value makes reading a global depend
+  on all of them, and writing one wakes every reader of any other. Goblint keys
+  its globals by name instead, and this theory does the same for a whole-state
+  component.
 
   A global name \<open>x\<close> lives at its own unknown. Its value there is a global half
   that describes \<open>x\<close> alone, cut out of a whole state by \<open>rg x\<close>. A transfer
@@ -35,30 +36,30 @@ text \<open>
 \<close>
 
 fun read_view ::
-  "('x,'k,vname,'d::semilattice_sup,'d) man \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> vname list \<Rightarrow> 'd
+  "('x, 'k, 'v, 'd::semilattice_sup, 'd) man \<Rightarrow> ('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> 'v list \<Rightarrow> 'd
    \<Rightarrow> ('x,'k,('d,'d) dg_state,'d) strategy_program"
 where
   "read_view m rg [] acc = sp_return acc"
 | "read_view m rg (x # xs) acc = man_global m x \<bind> (\<lambda>g. read_view m rg xs (rg x g \<squnion> acc))"
 
 fun publish_at ::
-  "('x,'k,vname,'d,'d) man \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> vname list \<Rightarrow> 'd
+  "('x, 'k, 'v, 'd, 'd) man \<Rightarrow> ('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> 'v list \<Rightarrow> 'd
    \<Rightarrow> ('x,'k,('d,'d) dg_state,unit) strategy_program"
 where
   "publish_at m rg [] r = sp_return ()"
 | "publish_at m rg (x # xs) r = man_sideg m x (rg x r) \<bind> (\<lambda>_. publish_at m rg xs r)"
 
-definition view_of :: "(vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> vname list \<Rightarrow> (vname \<Rightarrow> 'd) \<Rightarrow> 'd
+definition view_of :: "('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> 'v list \<Rightarrow> ('v \<Rightarrow> 'd) \<Rightarrow> 'd
     \<Rightarrow> 'd::semilattice_sup" where
   "view_of rg xs e acc = fold (\<lambda>x acc. rg x (e x) \<squnion> acc) xs acc"
 
 text \<open>The global half a whole environment describes, over a list of names.\<close>
 
-definition full_view :: "(vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> vname list \<Rightarrow> (vname \<Rightarrow> 'd)
+definition full_view :: "('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> 'v list \<Rightarrow> ('v \<Rightarrow> 'd)
     \<Rightarrow> 'd::bounded_semilattice_sup_bot" where
   "full_view rg xs e = view_of rg xs e bot"
 
-definition pub_sides :: "(vname \<Rightarrow> 'k) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> vname list \<Rightarrow> 'd
+definition pub_sides :: "('v \<Rightarrow> 'k) \<Rightarrow> ('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> 'v list \<Rightarrow> 'd
     \<Rightarrow> 'x + 'k \<Rightarrow> ('d::bounded_semilattice_sup_bot, 'd) dg_state" where
   "pub_sides key rg xs r = foldr (\<lambda>x acc. acc \<squnion> bot(Inr (key x) := DG bot (rg x r))) xs bot"
 
@@ -163,46 +164,32 @@ text \<open>
   Each transfer reads its names, recombines them with the point's local half,
   runs the wrapped whole-state operation, publishes the names it may change and
   answers with the local half of the result. \<open>cmb\<close> and \<open>rl\<close> are the binary
-  recombination and local projection the ownership split already uses.
+  recombination of a local and a global half and the local projection.
 \<close>
 
 definition keyed_transfer ::
-  "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> (vname list \<Rightarrow> 'd)
-   \<Rightarrow> vname list \<Rightarrow> vname list \<Rightarrow> ('d \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,vname,'d::bounded_semilattice_sup_bot,'d) man_transfer"
+  "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('v list \<Rightarrow> 'd)
+   \<Rightarrow> 'v list \<Rightarrow> 'v list \<Rightarrow> ('d \<Rightarrow> 'd)
+   \<Rightarrow> ('x, 'k, 'v, 'd::bounded_semilattice_sup_bot, 'd) man_transfer"
 where
   "keyed_transfer cmb rl rg free R W f m =
      read_view m rg R (free R) \<bind> (\<lambda>g.
      publish_at m rg W (f (cmb (man_local m) g)) \<bind> (\<lambda>_.
      sp_return (rl (f (cmb (man_local m) g)))))"
 
-lemma dep_keyed_transfer:
-  "dep_program \<tau> (transfer_program (keyed_transfer cmb rl rg free R W f) src key)
-     = insert src ((Inr \<circ> key) ` set R)"
-  by (simp add: dep_transfer_program keyed_transfer_def
-      sp_compile_with_def sp_bind_def sp_return_def)
-
-lemma side_path_keyed_transfer:
-  "side_path \<tau> (sp_compile
-      (transfer_program (keyed_transfer cmb rl rg free R W f) src key)) = map key W"
-  by (cases src)
-     (simp_all add: transfer_program_def transfer_program_at_def keyed_transfer_def
-        sp_compile_def sp_compile_with_def sp_map_def sp_bind_def sp_return_def
-        dg_read_at_def sp_read_local_def sp_read_global_def)
-
 definition keyed_combine_transfer ::
-  "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> (vname list \<Rightarrow> 'd)
-   \<Rightarrow> vname list \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd)
-   \<Rightarrow> ('x,'k,vname,'d::bounded_semilattice_sup_bot,'d) man_combine_transfer"
+  "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('v list \<Rightarrow> 'd)
+   \<Rightarrow> 'v list \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd)
+   \<Rightarrow> ('x, 'k, 'v, 'd::bounded_semilattice_sup_bot, 'd) man_combine_transfer"
 where
   "keyed_combine_transfer cmb rl rg free W h m de =
      publish_at m rg W (h (cmb (man_local m) (free [])) (cmb de (free []))) \<bind> (\<lambda>_.
      sp_return (rl (h (cmb (man_local m) (free [])) (cmb de (free [])))))"
 
 definition keyed_enter_transfer ::
-  "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> (vname list \<Rightarrow> 'd)
-   \<Rightarrow> vname list \<Rightarrow> vname list \<Rightarrow> ('d \<Rightarrow> 'd enter_result list)
-   \<Rightarrow> ('x,'k,vname,'d::bounded_semilattice_sup_bot,'d) man_enter_transfer"
+  "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('v list \<Rightarrow> 'd)
+   \<Rightarrow> 'v list \<Rightarrow> 'v list \<Rightarrow> ('d \<Rightarrow> 'd enter_result list)
+   \<Rightarrow> ('x, 'k, 'v, 'd::bounded_semilattice_sup_bot, 'd) man_enter_transfer"
 where
   "keyed_enter_transfer cmb rl rg free R W en m =
      read_view m rg R (free R) \<bind> (\<lambda>g.
@@ -248,17 +235,18 @@ text \<open>
   Every edge runs the component's closed step through \<open>keyed_transfer\<close>, reading
   the globals its expressions mention and publishing the globals it may assign.
   A return reads nothing and may assign its destination. The return pipeline is
-  wrapped once, as in the ownership split.
+  wrapped once rather than stage by stage.
 
   A call reads the globals its actuals mention and passes every other global as
   \<open>free\<close>. The context a call enters is computed from that state, and the analyzer
   recomputes it outside the solver from the same view of the solved environment.
+
 \<close>
 
 definition keyed_split_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd)
-   \<Rightarrow> (vname list \<Rightarrow> 'd) \<Rightarrow> 'd local_spec
-   \<Rightarrow> ('x,'k,vname,'d::bounded_semilattice_sup_bot,'d) dg_spec"
+  "(var_id \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
+   \<Rightarrow> (var_id \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> (var_id list \<Rightarrow> 'd) \<Rightarrow> 'd local_spec
+   \<Rightarrow> ('x, 'k, var_id, 'd::bounded_semilattice_sup_bot, 'd) dg_spec"
 where
   "keyed_split_spec \<G> cmb rl rg free c =
      (let step = (\<lambda>a. keyed_transfer cmb rl rg free (edge_global_reads \<G> a)
@@ -277,7 +265,6 @@ where
          dgs_combine_assign := (\<lambda>ci. keyed_combine_transfer cmb rl rg free
             (global_names_in \<G> (case_option [] (\<lambda>x. [x]) (ci_dst ci)))
             (\<lambda>dc de. ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de)) \<rparr>)"
-
 
 lemma dg_spec_step_keyed_split_spec [simp]:
   "dg_spec_step (keyed_split_spec \<G> cmb rl rg free c) a
@@ -308,7 +295,6 @@ lemma dg_spec_wf_keyed_split_spec [intro, simp]:
   by (auto simp: keyed_transfer_def keyed_enter_transfer_def keyed_combine_transfer_def
       intro!: sp_wf_bind)
 
-
 subsection \<open>Soundness of the keyed lifter\<close>
 
 text \<open>
@@ -324,15 +310,16 @@ text \<open>
 
 theorem keyed_split_contract:
   fixes cmb :: "'d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd"
-  assumes sound: "sound_local_spec \<G> gm c"
+    and gm :: "'d \<Rightarrow> store set"
+  assumes sound: "sound_local_spec \<kappa> gm c"
     and cmb_mono: "\<And>d d' g g'. d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> cmb d g \<le> cmb d' g'"
     and rg_mono: "\<And>x v v'. v \<le> v' \<Longrightarrow> rg x v \<le> rg x v'"
     and rg_free: "\<And>x R v. x \<notin> set R \<Longrightarrow> rg x v \<le> free R"
     and mix: "\<And>l0 e r s s' W. s \<in> gm (cmb l0 (full_view rg xs e)) \<Longrightarrow> s' \<in> gm r
-        \<Longrightarrow> (\<forall>x. \<G> x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x)
+        \<Longrightarrow> (\<forall>x. is_global x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x)
         \<Longrightarrow> s' \<in> gm (cmb (rl r) (full_view rg xs (\<lambda>x. if x \<in> set W then rg x r else e x)))"
-  shows "analysis_contract (keyed_split_spec \<G> cmb rl rg free c)
-           (\<lambda>d e. gm (cmb d (full_view rg xs e))) \<G>"
+  shows "analysis_contract \<kappa> (keyed_split_spec is_global cmb rl rg free c)
+           (\<lambda>d e. gm (cmb d (full_view rg xs e)))"
 proof -
   have gm_mono_all: "\<forall>x y. x \<le> y \<longrightarrow> gm x \<subseteq> gm y"
     using sound unfolding sound_local_spec_def by (rule conjunct1)
@@ -359,6 +346,7 @@ proof -
   have pub: "rg x r \<le> dg_global ((bot \<squnion> pub_sides key rg W r) (Inr (key x)))"
     if "x \<in> set W" for x W r key
     using pub_sides_ge[OF that, of rg r key] by (simp add: less_eq_dg_state_def)
+  let ?S = "keyed_split_spec is_global cmb rl rg free c"
   show ?thesis
   proof (unfold_locales, goal_cases wf mono step comb)
     case wf show ?case by (rule dg_spec_wf_keyed_split_spec)
@@ -368,40 +356,40 @@ proof -
   next
     case (step a \<tau> src key)
     let ?d = "dg_local (\<tau> src)" and ?e = "genv key \<tau>"
-    let ?R = "edge_global_reads \<G> a" and ?W = "edge_global_writes \<G> a"
+    let ?R = "edge_global_reads is_global a" and ?W = "edge_global_writes is_global a"
     let ?g = "view_of rg ?R ?e (free ?R)"
     let ?r = "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> (cmb ?d ?g)"
-    have loc: "edge_out (keyed_split_spec \<G> cmb rl rg free c) a src key \<tau> = rl ?r"
+    have loc: "edge_out ?S a src key \<tau> = rl ?r"
       by (simp add: dg_spec_edge_program_def traverse_transfer_program keyed_transfer_def
           sp_compile_with_def sp_bind_def sp_return_def)
-    have sides: "sides_of_program
-        (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>
+    have sides: "sides_of_program (dg_spec_edge_program ?S a src key) \<tau>
         = bot \<squnion> pub_sides key rg ?W ?r"
       by (simp add: dg_spec_edge_program_def sides_transfer_program keyed_transfer_def
           sp_compile_with_def sp_bind_def sp_return_def bot_fun_def[symmetric])
     show ?case
     proof
-      fix s' assume "s' \<in> edge_collect a (gm (cmb ?d (full_view rg xs ?e)))"
-      then obtain s where s: "s \<in> gm (cmb ?d (full_view rg xs ?e))" and st: "s' \<in> edge_step a s"
+      fix s' assume "s' \<in> edge_collect \<kappa> a (gm (cmb ?d (full_view rg xs ?e)))"
+      then obtain s where s: "s \<in> gm (cmb ?d (full_view rg xs ?e))" and st: "s' \<in> edge_step \<kappa> a s"
         by (auto simp: edge_collect_def)
       have "s \<in> gm (cmb ?d ?g)"
         using s gm_mono[OF cmb_mono[OF order_refl view_ge]] by blast
-      then have "s' \<in> edge_collect a (gm (cmb ?d ?g))" using st by (auto simp: edge_collect_def)
+      then have "s' \<in> edge_collect \<kappa> a (gm (cmb ?d ?g))" using st
+        by (auto simp: edge_collect_def)
       then have r: "s' \<in> gm ?r" using closed_step_sound[OF sound] by blast
-      have fr: "\<forall>x. \<G> x \<longrightarrow> x \<notin> set ?W \<longrightarrow> s' x = s x"
+      have fr: "\<forall>x. is_global x \<longrightarrow> x \<notin> set ?W \<longrightarrow> s' x = s x"
         using edge_step_frame[OF st] by auto
       have "s' \<in> gm (cmb (rl ?r) (full_view rg xs (\<lambda>x. if x \<in> set ?W then rg x ?r else ?e x)))"
         by (rule mix[OF s r fr])
       also have "\<dots> \<subseteq> gm (cmb (rl ?r) (full_view rg xs (?e \<squnion> genv key (bot \<squnion> pub_sides key rg ?W ?r))))"
         by (rule env_mono[OF order_refl], rule out, erule pub)
-      finally show "s' \<in> gm (cmb (edge_out (keyed_split_spec \<G> cmb rl rg free c) a src key \<tau>)
-          (full_view rg xs
-            (genv key \<tau> \<squnion> edge_pub (keyed_split_spec \<G> cmb rl rg free c) a src key \<tau>)))"
+      finally show "s' \<in> gm (cmb (edge_out ?S a src key \<tau>)
+          (full_view rg xs (genv key \<tau> \<squnion> edge_pub ?S a src key \<tau>)))"
         unfolding loc sides .
     qed
   next
     case (comb s dc key \<tau> t de ci)
-    let ?e = "genv key \<tau>" and ?W = "global_names_in \<G> (case_option [] (\<lambda>x. [x]) (ci_dst ci))"
+    let ?e = "genv key \<tau>" and ?W =
+      "global_names_in is_global (case_option [] (\<lambda>x. [x]) (ci_dst ci))"
     let ?h = "\<lambda>dc de. ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de"
     let ?r = "?h (cmb dc (free [])) (cmb de (free []))"
     have free_ge: "full_view rg xs ?e \<le> free []"
@@ -410,11 +398,11 @@ proof -
       using comb(1) gm_mono[OF cmb_mono[OF order_refl free_ge]] by blast
     have tc: "t \<in> gm (cmb de (free []))"
       using comb(2) gm_mono[OF cmb_mono[OF order_refl free_ge]] by blast
-    have r: "combine_collect \<G> (ci_dst ci) s t \<in> gm ?r"
+    have r: "combine_collect \<kappa> (ci_dst ci) s t \<in> gm ?r"
       by (rule closed_combine_sound[OF sound sc tc])
-    have fr: "\<forall>x. \<G> x \<longrightarrow> x \<notin> set ?W \<longrightarrow> combine_collect \<G> (ci_dst ci) s t x = t x"
+    have fr: "\<forall>x. is_global x \<longrightarrow> x \<notin> set ?W \<longrightarrow> combine_collect \<kappa> (ci_dst ci) s t x = t x"
       by (auto intro: combine_collect_frame)
-    have "combine_collect \<G> (ci_dst ci) s t
+    have "combine_collect \<kappa> (ci_dst ci) s t
         \<in> gm (cmb (rl ?r) (full_view rg xs (\<lambda>x. if x \<in> set ?W then rg x ?r else ?e x)))"
       by (rule mix[OF comb(2) r fr])
     also have "\<dots> \<subseteq> gm (cmb (rl ?r) (full_view rg xs (?e \<squnion> genv key (bot \<squnion> pub_sides key rg ?W ?r))))"

@@ -1,0 +1,17 @@
+// PARAM: --analysis congruence
+// n is an unconstrained i32 and n * 3 may overflow, but the truth is fixed:
+// i32 multiplication wraps modulo 2^32 and 3 is invertible mod 2^32, so
+// n * 3 == 12 holds exactly when n == 4. Both checks hold at every store
+// reaching them.
+//
+// The guard refinement inverts only + and - (refine_var in
+// Nonrelational_Transfer.thy); a product stops it, so the guard leaves n at
+// top whatever the overflow policy, and both checks stay UNKNOWN. Under the
+// default assume_top the forward value of n * 3 is top as well.
+fun main() {
+  i32 n = __voblint_nondet_int();
+  if (n * 3 == 12) {
+    __voblint_check(n == 4); // UNKNOWN
+    __voblint_check(n != 0); // UNKNOWN
+  }
+}

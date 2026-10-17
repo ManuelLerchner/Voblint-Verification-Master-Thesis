@@ -17,31 +17,29 @@ text \<open>
   duplicated nodes.  Nothing here mentions the compiler: this is the execution of any
   graph, just as \<open>valid_activation_trace\<close> is the activation-trace semantics of any graph.
 \<close>
-type_synonym cframe = "cfg_node \<times> vname option \<times> store"
+type_synonym cframe = "cfg_node \<times> var_id option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
-inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50) for \<G> and g where
+inductive cstep :: "kenv \<Rightarrow> (var_id, exp) gcfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50) for \<kappa> g where
   Intra [intro]:
-    "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow>
-     \<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s', stk)"
+    "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step \<kappa> a s \<Longrightarrow> \<kappa>,g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s', stk)"
 | Call [intro]:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-     \<G>, g \<turnstile> (u, s, stk)
-       \<rightarrow>\<^sub>c (FunctionEntry q, call_enter \<G> (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+     \<kappa>,g \<turnstile> (u, s, stk)
+       \<rightarrow>\<^sub>c (FunctionEntry q, call_enter \<kappa> (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
 | Return [intro]:
-    "\<G>, g \<turnstile> (FunctionResult q, t, (cont, dst, caller) # stk)
-       \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller t, stk)"
-
-
-abbreviation csteps :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50)
-  where "csteps \<G> g x y \<equiv> star (cstep \<G> g) x y"
+    "\<kappa>,g \<turnstile> (FunctionResult q, t, (cont, dst, caller) # stk)
+       \<rightarrow>\<^sub>c (cont, combine_collect \<kappa> dst caller t, stk)"
 
 text \<open>One inversion rule, because the three clauses are told apart by the edge taken rather
   than by the shape of the configuration.  It stays plain \<open>[elim]\<close> so the classical reasoner
   does not split every \<open>cstep\<close> hypothesis three ways before trying anything else.\<close>
-inductive_cases cstep_E [elim]: "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c y"
+inductive_cases cstep_E [elim]: "\<kappa>,g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c y"
+
+abbreviation csteps :: "kenv \<Rightarrow> (var_id, exp) gcfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50) where
+  "csteps \<kappa> g x y \<equiv> star (cstep \<kappa> g) x y"
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
@@ -52,34 +50,32 @@ text \<open>
 
 lemma cstep_body:
   assumes "(u, EA_Body p, v) \<in> intra g"
-  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
+  shows "\<kappa>,g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
-  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
+  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (eval b s)"
+  shows "\<kappa>,g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_assume_not:
-  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
+  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (eval b s)"
+  shows "\<kappa>,g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
-subsection \<open>Intra-only paths as stack-preserving runs\<close>
-
-text \<open>An \<^const>\<open>intra_path\<close> is a \<open>cstep\<close> run at any stack: every \<^const>\<open>cfg_intra_step\<close> is a
+text \<open>An intra path is a \<open>cstep\<close> run at any stack: every \<^const>\<open>cfg_intra_step\<close> is a
   \<open>cstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
   along local edges can therefore reason on \<open>(node, store)\<close> pairs and lift the result here.\<close>
 lemma intra_path_imp_cstep_star:
-  "intra_path g x y \<Longrightarrow> \<G>, g \<turnstile> (fst x, snd x, stk) \<rightarrow>\<^sub>c\<^sup>* (fst y, snd y, stk)"
+  "star (cfg_intra_step \<kappa> g) x y \<Longrightarrow> (\<kappa>,g \<turnstile> (fst x, snd x, stk) \<rightarrow>\<^sub>c\<^sup>* (fst y, snd y, stk))"
 proof (induction rule: star.induct)
   case (refl a) show ?case by simp
 next
   case (step a b c)
   obtain ua sa where a: "a = (ua, sa)" by (cases a)
   obtain ub sb where b: "b = (ub, sb)" by (cases b)
-  from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> edge_step e sa" by auto
-  hence "\<G>, g \<turnstile> (ua, sa, stk) \<rightarrow>\<^sub>c (ub, sb, stk)" by (rule cstep.Intra)
+  from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> edge_step \<kappa> e sa" by auto
+  hence "\<kappa>,g \<turnstile> (ua, sa, stk) \<rightarrow>\<^sub>c (ub, sb, stk)" by (rule cstep.Intra)
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 
@@ -88,11 +84,11 @@ subsection \<open>Activation-stack matching\<close>
 text \<open>Both stacks record procedure activations.  \<open>act_frames\<close> removes the CFG-only
   continuation component and retains the caller store and destination used by the source.\<close>
 
-fun act_frames :: "frame list \<Rightarrow> (store \<times> vname option) list" where
+fun act_frames :: "frame list \<Rightarrow> (store \<times> var_id option) list" where
   "act_frames [] = []"
 | "act_frames (Frame s d # frs) = (s, d) # act_frames frs"
 
-definition cframe_act :: "cframe \<Rightarrow> store \<times> vname option" where
+definition cframe_act :: "cframe \<Rightarrow> store \<times> var_id option" where
   "cframe_act cf = (case cf of (cont, d, s) \<Rightarrow> (s, d))"
 
 text \<open>\<open>frames_match\<close> ties a source frame stack to a CFG activation stack: the activation

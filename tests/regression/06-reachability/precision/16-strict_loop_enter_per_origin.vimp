@@ -5,16 +5,16 @@
 // the bottom state instead of being suppressed. Every globals rule now reads
 // reachability from its own solved table, so this agrees with the default
 // rule exactly.
-global g;
+global i32 g;
 fun main() {
-  x = 0;
+  i32 x = 0;
   while (x < 50) {
     g = 1;
     x = x + 1;
   }
   __voblint_check(x == 50); // PROVED
   if (50 < x) {
-    i = 0;
+    i32 i = 0;
     while (i <= 0) {
       g = 57;
       i = i - 1;

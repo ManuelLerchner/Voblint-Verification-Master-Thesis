@@ -1,14 +1,15 @@
 # Site figures
 
 Every case here backs a figure on the GitHub Pages site (`pages/index.html`) that quotes the analyzer's output: a verdict, an interval, a
-node count, or a solve that never finishes. The figures carry those values in
+node count, or a solve that gives no answer within its time bound. The figures carry those values in
 their markup and scripts, so without these cases a change in the analyzer
 would leave the site silently wrong. When one of these cases fails, the
 figure it names needs the same update as its expected result.
 
 Each case's header names its figure. Categories follow `tests/run.py`:
 `precision/` for results the figure presents as exact, `known-imprecision/` for
-the UNKNOWN answers a figure explains, and the group root for the solves a
+the UNKNOWN answers a figure explains, `soundness/` for checks whose concrete
+outcome is undetermined, and the group root for the solves a
 figure reports as "no answer", pinned with `--timeout 5`. The `EXPECT-GRAPH`
 blocks pin the per-node values the figures draw; the node and context counts in
 "The price of precision" are the node and distinct-context counts of those
@@ -23,21 +24,22 @@ blocks.
 | From a graph to equations to values; widening stepper; solver step-through; zoom lens; compiler morph | counting loop | `precision/03-counting_loop` |
 | A real bug, replayed (Voblint side) | goblint/analyzer #1161 regression test `37-congruence/14` | `precision/04-goblint_1161_congruence_mod` |
 | The flagship theorems (explorer program) | `theorems` example | `precision/05-theorems_program` |
-| Many runs in, one region per node out | `multiples-of-three` | `known-imprecision/06-multiples_of_three_interval`, `precision/06-multiples_of_three_int` |
-| Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`17`, `precision/49`–`51`, `known-imprecision/07`–`09`, `known-imprecision/20`, `01`–`02-recursion_grows_*_diverges` |
-| A call that never stops calling | `recursion-bounded`, `recursion-grows` | `precision/18`–`30`, `03-recursion_grows_entry_state_diverges` |
-| The price of precision | fan-out, `down(5)` | `precision/31`–`42`, `known-imprecision/10-down_call_string_4` |
+| Concrete runs and one interval per node | `multiples-of-three` | `known-imprecision/06-multiples_of_three_interval`, `precision/06-multiples_of_three_int` |
+| Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`12`, `precision/15`–`17`, `precision/49`–`50`, `precision/52`–`53`, `soundness/13`–`14`, `soundness/51`, `known-imprecision/07`–`08`, `01`–`02-recursion_grows_*_timeout` |
+| A call that never stops calling | `recursion-bounded`, `recursion-grows` | `precision/18`–`27`, `soundness/28`–`30`, `03-recursion_grows_entry_state_timeout` |
+| The price of precision | fan-out, `down(5)` | `precision/34`, `precision/36`–`42`, `precision/43-down_entry_state`, `known-imprecision/10-down_call_string_99`, `known-imprecision/13`–`18-fan_out_*` |
 | Context sensitivity: how many copies of a procedure; Reading a result | playground demo | `precision/43`–`44-demo_*`, `known-imprecision/11`–`12-demo_*` |
 | One copy of each procedure (compiled graph) | `sum(2)` via `dec` | `precision/46-sum_dec_cfgmap` |
 | What the analyzer will answer (collecting semantics) | `sum(2)` via `dec`, no contexts | `known-imprecision/19-sum_dec_no_context` |
 | Combining two analyses through queries | equality from two guards; order asks Interval | `25-cooperation/precision/03`, `25-cooperation/precision/06`, `25-cooperation/known-imprecision/01`, `03`, `05`, `06` |
 | What does it tell you? | `100 / k`, `100 / d` and two checks | `precision/47-answers_every_kind` |
 | Thesis Figure 1.2 (every answer) | a clamp function, one check per verdict and two divisions | `precision/48-clamp_every_answer` |
+| A bound that looks wrong | `x = 6 * n + 5`, `a = x % 6` | `soundness/45-remainder_sign_split` |
 
 ## What is not pinned
 
 - "No answer within 12 s" (the Globals table) and "within 60 s" (the spiral) are
-  pinned only as "does not finish within 5 s".
+  pinned only as "no answer within 5 s".
 - The spiral's "Stops at 10" program is pinned for Join and Warrow in each
   context mode; Join per origin, Warrow per origin and Bounded narrowing, which
   the figure reports as identical, are not.

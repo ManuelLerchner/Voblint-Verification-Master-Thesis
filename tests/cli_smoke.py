@@ -21,8 +21,15 @@ from run import REPO_ROOT, VOBLINT, bold, green, red
 
 MISSING_FILE = "tests/regression/00-sanity/does-not-exist.vimp"
 SANITY_FILE = "tests/regression/00-sanity/precision/01-straight_line_proved.vimp"
+DEPTH_FILE = "tests/typed/03-query-depth.vimp"
 
 CASES = [
+    (
+        "query recursion past its depth bound answers No_Answer, not a crash",
+        ["--analysis", "interval,order", DEPTH_FILE],
+        3,
+        "nested analysis queries exceeded their depth bound",
+    ),
     ("--help exits 0 with usage", ["--help"], 0, "voblint --analysis sign|interval"),
     ("--help names the default HTML output", ["--help"], 0, "build/report/"),
     (

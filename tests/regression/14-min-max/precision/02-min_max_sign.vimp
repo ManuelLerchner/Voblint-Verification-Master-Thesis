@@ -3,10 +3,10 @@
 // the other side, and symmetrically for sign_max positive -- exact here
 // even at Sign's coarser granularity.
 fun main() {
-  x = 3;
-  y = 0 - 5;
-  z = min(x, y);
-  w = max(x, y);
+  i32 x = 3;
+  i32 y = 0 - 5;
+  i32 z = min(x, y);
+  i32 w = max(x, y);
   __voblint_check(z < 0); // PROVED
   __voblint_check(0 < w); // PROVED
 }

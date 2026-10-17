@@ -10,17 +10,17 @@
 // return combine discards the callee's locals, so main's r is still
 // Positive after the call and z receives the Positive return value.
 // Sign sibling of 03-procedures/precision/03-callee_local_does_not_leak.vimp.
-fun mark(p) {
+fun i32 mark(i32 p) {
   __voblint_check(0 < p); // PROVED
-  r = 0 - 1;
+  i32 r = 0 - 1;
   __voblint_check(0 < p); // PROVED
   __voblint_check(r < 0); // PROVED
   return p;
 }
 fun main() {
-  r = 1;
+  i32 r = 1;
   __voblint_check(0 < r); // PROVED
-  z = mark(7);
+  i32 z = mark(7);
   __voblint_check(0 < r); // PROVED
   __voblint_check(0 < z); // PROVED
 }

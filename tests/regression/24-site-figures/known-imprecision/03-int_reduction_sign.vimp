@@ -1,6 +1,10 @@
-// PARAM: --analysis sign
+// PARAM: --analysis sign --signed-overflow assume_wraparound
 // Backs the "Each domain alone" column of the site figure "Four domains, one value:
 // reduction". Every run has x in {1,5,9}, but a sign cannot bound x: the guards straddle zero, so it stays top and the check is not decided.
+//
+// Run under --signed-overflow assume_wraparound, as the figure's Int column
+// (../precision/02-int_reduction_int.vimp): every column of the figure
+// describes the same wrapping semantics of 4 * n + 1.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / unit
@@ -14,10 +18,12 @@
 //     main_entry_main_ctx0
 //
 // nodes:
-//   main_pp1_ctx0: pp1
+//   main_pp1_ctx0: pp1 [unknown]
 //       sign:
 //         n=⊤
 //         x=⊤
+//       possible signed integer overflow in *: 4 * n
+//       possible signed integer overflow in +: 4 * n + 1
 //   main_pp2_ctx0: pp2
 //       sign:
 //         n=⊤
@@ -61,8 +67,8 @@
 // EXPECT-GRAPH-END
 
 fun main() {
-  n = __voblint_nondet_int();
-  x = 4 * n + 1;
+  i32 n = __voblint_nondet_int();
+  i32 x = 4 * n + 1;
   if (x >= -2) {
     if (x <= 10) {
       __voblint_check(x >= 1 && x <= 9); // UNKNOWN

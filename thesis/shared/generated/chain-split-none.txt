@@ -1,10 +1,12 @@
 thesis/shared/programs/chain-split.vimp [interval]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+2:7       pp0    WARNING   possible signed integer overflow in *: 2 * n
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ---------------
-3:3       pp1    m >= 2     UNKNOWN  interval: m=⊤
-4:3       pp2    m == 2     UNKNOWN  interval: m=⊤
+--------  -----  ---------  -------  ------------------------------------
+3:3       pp1    m >= 2     UNKNOWN  interval: m=[-2147483648,2147483647]
+4:3       pp2    m == 2     UNKNOWN  interval: m=[-2147483648,2147483647]

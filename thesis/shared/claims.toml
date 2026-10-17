@@ -15,7 +15,7 @@ argv = [
   "sign",
   "tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp",
 ]
-why = "The known-imprecision example: sign tracks total=+ (positive) exactly but has no magnitude, so total<100 stays UNKNOWN."
+why = "The known-imprecision example: a sign has no magnitude, so it cannot rule out that total + n overflows; total becomes the kind's top and total<100 stays UNKNOWN."
 
 # Playground runs placed in Chapters 7 and 11, re-run through the CLI,
 # which links the same generated module as the browser page.
@@ -144,7 +144,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: the product Int proves y == 2."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: the product Int narrows x = [3,5] by x = 1+4Z to 5 and proves x == 5."
 
 [claims.pg-int-refinement-congruence]
 argv = [
@@ -156,7 +156,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Congruence alone proves y == 2."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Congruence alone keeps x = 1+4Z and leaves x == 5 UNKNOWN."
 
 [claims.pg-int-refinement-sign]
 argv = [
@@ -168,7 +168,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Sign leaves y == 2 UNKNOWN."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Sign leaves x == 5 UNKNOWN."
 
 [claims.pg-int-refinement-interval]
 argv = [
@@ -180,7 +180,7 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Interval leaves y == 2 UNKNOWN."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Interval alone keeps x = [3,5] and leaves x == 5 UNKNOWN."
 
 [claims.pg-int-refinement-parity]
 argv = [
@@ -192,7 +192,21 @@ argv = [
   "none",
   "docs/readme-figures/int-refinement.vimp",
 ]
-why = "Chapter 11, guard inversion under y + 1 == 3: Parity leaves y == 2 UNKNOWN."
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Parity leaves x == 5 UNKNOWN."
+
+[claims.pg-int-refinement-int-never]
+argv = [
+  "--analysis",
+  "int",
+  "--int-refinement",
+  "never",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/int-refinement.vimp",
+]
+why = "Chapter 11, refinement after the guard 2 < x with x in {1, 5}: Int without refinement keeps both components and leaves x == 5 UNKNOWN."
 
 [claims.cfg-contexts-dot]
 argv = [
@@ -220,10 +234,6 @@ argv = [
 ]
 why = "The compiled graph of the recursive sum/dec program: node names, edge labels and wiring drawn in the compiled-graph figure of Chapter 3."
 
-[claims.callee-uninit-local]
-argv = ["--analysis", "interval", "thesis/shared/programs/callee-uninit.vimp"]
-why = "Chapter 3: the shipped entry resets a callee's locals to top, so a check that an unassigned callee local is 0 stays UNKNOWN although the source semantics starts it at 0."
-
 [claims.and-divisor-warning]
 argv = ["--analysis", "interval", "thesis/shared/programs/and-divisor.vimp"]
 why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns about the divisor in x != 0 && 10 / x > 1."
@@ -232,12 +242,8 @@ why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns
 # per step of the Sign -> Interval -> Parity -> Congruence -> product ladder.
 
 [claims.dom-guard-interval]
-argv = [
-  "--analysis",
-  "interval",
-  "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
-]
-why = "Backward filtering of 0 < x lets Interval prove y >= 0 after both arms, with y=[0,+∞]."
+argv = ["--analysis", "interval", "thesis/shared/programs/guard-interval.vimp"]
+why = "Backward filtering of 0 < x lets Interval prove y >= 0 after both arms, with y=[0,1000]; x is bounded first so that -x cannot wrap."
 
 [claims.dom-query-tree-sign]
 argv = [
@@ -261,7 +267,7 @@ argv = [
   "interval",
   "tests/regression/02-control-flow/known-imprecision/05-conjunct_order.vimp",
 ]
-why = "bfilter refines a conjunction in one pass, so 0 < i && i < j && j < 10 bounds i but not j, and the reversed order bounds j but not i."
+why = "brefine refines a conjunction in one left-to-right pass, so 0 < i && i < j && j < 10 bounds j but not i, and the reversed order bounds i but not j."
 
 [claims.dom-disjunct-sign]
 argv = [
@@ -335,21 +341,25 @@ argv = [
 ]
 why = "x = 2n, y = 2n + 1: Parity proves x != y."
 
-[claims.dom-crt-parity]
+[claims.dom-meet-parity]
 argv = [
   "--analysis",
   "parity",
-  "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
+  "--signed-overflow",
+  "assume_wraparound",
+  "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
 ]
-why = "x = 4n+1, y = 6m+3 under x == y, then x == 13: Parity leaves the inner check UNKNOWN."
+why = "x = 4n+1, y = 6m+3 at i32 under x == y: Parity keeps only odd for y and leaves y != 3 UNKNOWN."
 
-[claims.dom-crt-congruence]
+[claims.dom-meet-congruence]
 argv = [
   "--analysis",
   "congruence",
-  "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
+  "--signed-overflow",
+  "assume_wraparound",
+  "tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp",
 ]
-why = "x = 4n+1, y = 6m+3 under x == y, then x == 13: Congruence intersects to 9 (mod 12) and reports the inner check DEAD."
+why = "x = 4n+1, y = 6m+3 at i32 under x == y: 1 (mod 4) survives wraparound and 3 (mod 6) does not, so the meet narrows y to 1 (mod 4) and proves y != 3."
 
 [claims.goblint-1161-int]
 argv = [
@@ -417,6 +427,8 @@ argv = [
   "none",
   "--int-refinement",
   "never",
+  "--signed-overflow",
+  "assume_wraparound",
   "tests/regression/24-site-figures/precision/02-int_reduction_int.vimp",
 ]
 why = "Reduced product, Section 11.3: without reduction x is [-2,10] and 1+4Z at the check, and x >= 1 && x <= 9 is UNKNOWN."
@@ -427,6 +439,8 @@ argv = [
   "int",
   "--context",
   "none",
+  "--signed-overflow",
+  "assume_wraparound",
   "tests/regression/24-site-figures/precision/02-int_reduction_int.vimp",
 ]
 why = "Reduced product, Section 11.3: reduction trims the interval to [1,9] and makes the sign positive, so x >= 1 && x <= 9 is PROVED."
@@ -453,7 +467,7 @@ argv = [
   "interval",
   "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
 ]
-why = "A PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,2] although x = 3 * n never reaches the check."
+why = "A PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,3] although x = 4 * n (u32) is never 1, 2 or 3, so no run reaches the check."
 
 [claims.verdicts-proved-unreachable-int]
 argv = [
@@ -461,7 +475,7 @@ argv = [
   "int",
   "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
 ]
-why = "The Int product also tracks x = 0 (mod 3), so it marks the same unreached check DEAD."
+why = "The Int product also tracks x = 0 (mod 4), which survives wraparound modulo 2^32, so it marks the same unreached check DEAD."
 
 # Figures redrawn from the explainer (Chapters 7, 8 and 12): context policies on the
 # playground demo, the counting loop solved, the update-rule table, and the
@@ -633,7 +647,7 @@ argv = [
   "join",
   "--timeout",
   "5",
-  "tests/regression/24-site-figures/01-recursion_grows_join_diverges.vimp",
+  "tests/regression/24-site-figures/01-recursion_grows_join_timeout.vimp",
 ]
 why = "Update-rule table, grows program under join: the verdict and state quoted in its cell. The solve does not finish within 5 s."
 expect_status = 3
@@ -648,7 +662,7 @@ argv = [
   "per-origin",
   "--timeout",
   "5",
-  "tests/regression/24-site-figures/02-recursion_grows_per_origin_diverges.vimp",
+  "tests/regression/24-site-figures/02-recursion_grows_per_origin_timeout.vimp",
 ]
 why = "Update-rule table, grows program under per-origin: the verdict and state quoted in its cell. The solve does not finish within 5 s."
 expect_status = 3
@@ -661,7 +675,7 @@ argv = [
   "none",
   "--globals",
   "warrow",
-  "tests/regression/24-site-figures/precision/13-recursion_grows_warrow.vimp",
+  "tests/regression/24-site-figures/soundness/13-recursion_grows_warrow.vimp",
 ]
 why = "Update-rule table, grows program under warrow: the verdict and state quoted in its cell."
 
@@ -673,7 +687,7 @@ argv = [
   "none",
   "--globals",
   "warrow-per-origin",
-  "tests/regression/24-site-figures/precision/14-recursion_grows_warrow_per_origin.vimp",
+  "tests/regression/24-site-figures/soundness/14-recursion_grows_warrow_per_origin.vimp",
 ]
 why = "Update-rule table, grows program under warrow-per-origin: the verdict and state quoted in its cell."
 
@@ -721,7 +735,7 @@ argv = [
   "none",
   "--globals",
   "warrow-per-origin",
-  "tests/regression/24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp",
+  "tests/regression/24-site-figures/precision/52-recursion_shrinks_warrow_per_origin.vimp",
 ]
 why = "Update-rule table, shrinks program under warrow-per-origin: the verdict and state quoted in its cell."
 
@@ -757,7 +771,7 @@ argv = [
   "none",
   "--globals",
   "bounded-narrowing",
-  "tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp",
+  "tests/regression/24-site-figures/soundness/51-recursion_grows_bounded_narrowing.vimp",
 ]
 why = "Update-rule table, grows program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
 
@@ -769,7 +783,7 @@ argv = [
   "none",
   "--globals",
   "bounded-narrowing",
-  "tests/regression/24-site-figures/known-imprecision/20-recursion_shrinks_bounded_narrowing.vimp",
+  "tests/regression/24-site-figures/precision/53-recursion_shrinks_bounded_narrowing.vimp",
 ]
 why = "Update-rule table, shrinks program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
 
@@ -821,10 +835,6 @@ argv = [
   "thesis/shared/programs/mixed-flow.vimp",
 ]
 why = "Flow-insensitive globals: with Gx on the shared channel Sign leaves y at ≥0 at pp7, after both calls."
-
-[claims.ast-contexts]
-argv = ["--ast", "docs/readme-figures/contexts.vimp"]
-why = "The parsed imp_prog of the running example, drawn as the abstract-syntax figure of Chapter 3: main's body as nested Seq, bump's declaration in the procedure table."
 
 # Chapter 7, cooperating analyses: one program per direction, each run with
 # either analysis alone and with both activated.
@@ -936,3 +946,130 @@ argv = [
 ]
 json_path = "raw"
 why = "Chapter 12, the shell figure: the call run_voblint receives and the answer it returns, as the browser adapter serializes them."
+
+[claims.dom-kinds-interval]
+argv = ["--analysis", "interval", "thesis/shared/programs/domain-kinds.vimp"]
+why = "At i32, x + 1 may wrap, so Interval gives y the whole range and leaves y > 0 UNKNOWN; the check fails at x = 2^31 - 1."
+
+[claims.dom-kinds-congruence]
+argv = ["--analysis", "congruence", "thesis/shared/programs/domain-kinds.vimp"]
+why = "At u32, 4 * n keeps the class 4Z through wrapping (4 divides 2^32), so a != 1 is PROVED; 3 * n loses 3Z (gcd(3, 2^32) = 1), and b != 1 fails at n = 2863311531."
+
+[claims.dom-kinds-int]
+argv = ["--analysis", "int", "thesis/shared/programs/domain-kinds.vimp"]
+why = "Section 5.2: Int keeps a in 4Z at u32 and rounds its interval to [0, 2^32 - 4] = [0,4294967292], the largest multiple of 4 in the kind."
+
+[claims.kinds-promotion]
+argv = ["--analysis", "interval", "thesis/shared/programs/kinds-promotion.vimp"]
+why = "Section 3.2: x + y is promoted to i32, so x + y < 250 compares 300 and is REFUTED; z = x + y converts 300 to u8, so z holds 44 and z < 250 is PROVED."
+
+[claims.kinds-i32]
+argv = ["--analysis", "interval", "thesis/shared/programs/kinds-i32.vimp"]
+why = "Section 3.2: kinds-promotion with every variable declared i32, so z holds 300 and z < 250 is REFUTED."
+
+# The flavors suite (Monniaux, ETAPS 2024), Chapter 13 "Where precision ends".
+
+[claims.flavors-vanilla-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/known-imprecision/01-vanilla_sign_sum_may_wrap.vimp",
+]
+why = "At i32 the sum of two negatives may wrap, and a sign bounds no magnitude, so z is the kind top and z < 0 is UNKNOWN."
+
+[claims.flavors-vanilla-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/01-vanilla_interval.vimp",
+]
+why = "Interval keeps z = -15 and proves z < 0."
+
+[claims.flavors-coffee]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value.vimp",
+]
+why = "Interval keeps x unconstrained at the check, so x != 0 is UNKNOWN."
+
+[claims.flavors-coffee-bounded]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/03-coffee_absolute_value_bounded.vimp",
+]
+why = "Interval keeps x at [-1000,2000] after y >= 1, so x != 0 is UNKNOWN."
+
+[claims.flavors-coffee-bounded-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/known-imprecision/03-coffee_absolute_value_bounded.vimp",
+]
+why = "Int and the order analysis keep only x <= y after the join, which does not exclude x = 0, so x != 0 is UNKNOWN."
+
+[claims.flavors-fudge]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+]
+why = "Narrowing through i < 10 recovers i = 10, so i == 10 is PROVED."
+
+[claims.flavors-narrowing-reset]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+]
+why = "Narrowing recovers the upper bound 9 but not the lower bound lost to a possible overflow, so i <= 9 is PROVED with i in [-2147483646,9]."
+
+[claims.flavors-blackcurrant]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/04-blackcurrant_narrowing_foiled.vimp",
+]
+why = "The self-loop keeps the widened head value, so i is the i32 range and i <= 9 is UNKNOWN."
+
+[claims.flavors-reset-eq]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/05-reset_at_equality.vimp",
+]
+why = "i == 10 cuts no interval bound, so i is the i32 range and i <= 9 is UNKNOWN."
+
+[claims.flavors-sign-not-inductive]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp",
+]
+why = "i > 0 is not inductive under i - 2, so Sign reaches every sign and i > 0 is UNKNOWN."
+
+[claims.flavors-sign-not-inductive-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/known-imprecision/06-sign_not_inductive.vimp",
+]
+why = "Int widens the lower bound to the i32 limit, where i - 2 may overflow, so i becomes the kind top and i > 0 is UNKNOWN."
+
+[claims.elab-tour]
+argv = ["--analysis", "interval", "thesis/shared/programs/elab-tour.vimp"]
+why = "Section 3.2 figure: s < u compares at u32, so b is 0 and b == 0 is PROVED."
+
+[claims.elab-tour-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--dot",
+  "thesis/shared/programs/elab-tour.vimp",
+]
+why = "Section 3.2 figure: the edges show each statement in core form, e.g. return (u16) ((i32) n + 1), z := (u8) ((i32) x + 100), b := (u32) s < u and call f(x) without a conversion."
+
+[claims.elab-tour-ast]
+argv = ["--ast", "thesis/shared/programs/elab-tour.vimp"]
+why = "Section 3.2 figure: the surface program the parser hands to the analyzer, with declarations lowered to assignments and no kinds on operations."

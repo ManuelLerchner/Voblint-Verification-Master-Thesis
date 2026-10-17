@@ -1,0 +1,12 @@
+thesis/shared/programs/elab-tour.vimp [interval]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------------------------------------------------------------
+7:6       pp3    ERROR     unsigned integer overflow in conversion whenever this operation is evaluated: (u8) ((i32) x + 100)
+10:7      pp6    ERROR     unsigned integer overflow in conversion whenever this operation is evaluated: (u32) s
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----------------
+12:3      pp8    b == 0     PROVED   interval: b=[0,0]

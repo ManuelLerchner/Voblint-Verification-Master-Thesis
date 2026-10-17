@@ -8,29 +8,75 @@ let paren ctx level text = if level < ctx then "(" ^ text ^ ")" else text
 
 let string_of_int_lit n = Z.to_string (Voblint.integer_of_int n)
 
+let string_of_kind = function
+  | Voblint.I8 -> "i8"
+  | Voblint.U8 -> "u8"
+  | Voblint.I16 -> "i16"
+  | Voblint.U16 -> "u16"
+  | Voblint.I32 -> "i32"
+  | Voblint.U32 -> "u32"
+  | Voblint.I64 -> "i64"
+  | Voblint.U64 -> "u64"
+
+(* The operator table, shared with every printer of an expression tree that uses
+   VIMP's concrete syntax. [left] and [right] are the levels the operands print at,
+   which encode associativity. *)
+type binop = { infix : string; level : int; left : int; right : int }
+
+type prefix_op = { prefix : string; prefix_level : int }
+
+let op_plus = { infix = "+"; level = 5; left = 5; right = 6 }
+let op_minus = { infix = "-"; level = 5; left = 5; right = 6 }
+let op_times = { infix = "*"; level = 6; left = 6; right = 7 }
+let op_div = { infix = "/"; level = 6; left = 6; right = 7 }
+let op_mod = { infix = "%"; level = 6; left = 6; right = 7 }
+let op_less = { infix = "<"; level = 4; left = 5; right = 5 }
+let op_less_eq = { infix = "<="; level = 4; left = 5; right = 5 }
+let op_greater = { infix = ">"; level = 4; left = 5; right = 5 }
+let op_greater_eq = { infix = ">="; level = 4; left = 5; right = 5 }
+let op_eq = { infix = "=="; level = 3; left = 4; right = 4 }
+let op_not_eq = { infix = "!="; level = 3; left = 4; right = 4 }
+let op_and = { infix = "&&"; level = 2; left = 2; right = 3 }
+let op_or = { infix = "||"; level = 1; left = 1; right = 2 }
+
+let op_not = { prefix = "!"; prefix_level = 7 }
+
+(* The printing combinators take the recursive printer [at] for the operands, so a
+   tree with other node types reuses the same spelling and parenthesization. *)
+let print_int_lit ctx n = paren ctx 8 (string_of_int_lit n)
+
+let print_cast at ctx k a =
+  paren ctx 7 ("(" ^ string_of_kind k ^ ") " ^ at 7 a)
+
+let print_binop at ctx op a b =
+  paren ctx op.level (at op.left a ^ " " ^ op.infix ^ " " ^ at op.right b)
+
+let print_prefix at ctx op a = paren ctx op.prefix_level (op.prefix ^ at op.prefix_level a)
+
 let rec exp_at ctx = function
-  | Voblint.N n -> paren ctx 8 (string_of_int_lit n)
+  | Voblint.N n -> print_int_lit ctx n
   | Voblint.V x -> x
+  | Voblint.Cast (k, a) -> print_cast exp_at ctx k a
   (* [0 - e] parses back to itself only when [e] is not a literal: the parser folds
      a negated literal into a negative one, so print that case as a subtraction. *)
   | Voblint.Minus (Voblint.N z, (Voblint.N _ as b)) when Z.equal (Voblint.integer_of_int z) Z.zero ->
     paren ctx 5 ("0 - " ^ exp_at 6 b)
   | Voblint.Minus (Voblint.N z, b) when Z.equal (Voblint.integer_of_int z) Z.zero ->
     paren ctx 7 ("-" ^ exp_at 7 b)
-  | Voblint.Plus (a, b) -> paren ctx 5 (exp_at 5 a ^ " + " ^ exp_at 6 b)
-  | Voblint.Minus (a, b) -> paren ctx 5 (exp_at 5 a ^ " - " ^ exp_at 6 b)
-  | Voblint.Times (a, b) -> paren ctx 6 (exp_at 6 a ^ " * " ^ exp_at 7 b)
-  | Voblint.Div (a, b) -> paren ctx 6 (exp_at 6 a ^ " / " ^ exp_at 7 b)
-  | Voblint.Mod (a, b) -> paren ctx 6 (exp_at 6 a ^ " % " ^ exp_at 7 b)
-  | Voblint.Less (a, b) -> paren ctx 4 (exp_at 5 a ^ " < " ^ exp_at 5 b)
-  | Voblint.LessEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " <= " ^ exp_at 5 b)
-  | Voblint.Greater (a, b) -> paren ctx 4 (exp_at 5 a ^ " > " ^ exp_at 5 b)
-  | Voblint.GreaterEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " >= " ^ exp_at 5 b)
-  | Voblint.Eq (a, b) -> paren ctx 3 (exp_at 4 a ^ " == " ^ exp_at 4 b)
-  | Voblint.NotEq (a, b) -> paren ctx 3 (exp_at 4 a ^ " != " ^ exp_at 4 b)
-  | Voblint.And (a, b) -> paren ctx 2 (exp_at 2 a ^ " && " ^ exp_at 3 b)
-  | Voblint.Or (a, b) -> paren ctx 1 (exp_at 1 a ^ " || " ^ exp_at 2 b)
-  | Voblint.Not a -> paren ctx 7 ("!" ^ exp_at 7 a)
+  | Voblint.Plus (a, b) -> print_binop exp_at ctx op_plus a b
+  | Voblint.Minus (a, b) -> print_binop exp_at ctx op_minus a b
+  | Voblint.Times (a, b) -> print_binop exp_at ctx op_times a b
+  | Voblint.Div (a, b) -> print_binop exp_at ctx op_div a b
+  | Voblint.Mod (a, b) -> print_binop exp_at ctx op_mod a b
+  | Voblint.Less (a, b) -> print_binop exp_at ctx op_less a b
+  | Voblint.LessEq (a, b) -> print_binop exp_at ctx op_less_eq a b
+  | Voblint.Greater (a, b) -> print_binop exp_at ctx op_greater a b
+  | Voblint.GreaterEq (a, b) -> print_binop exp_at ctx op_greater_eq a b
+  | Voblint.Eq (a, b) -> print_binop exp_at ctx op_eq a b
+  | Voblint.NotEq (a, b) -> print_binop exp_at ctx op_not_eq a b
+  | Voblint.And (a, b) -> print_binop exp_at ctx op_and a b
+  | Voblint.Or (a, b) -> print_binop exp_at ctx op_or a b
+  | Voblint.Not a -> print_prefix exp_at ctx op_not a
 
 let string_of_exp e = exp_at 0 e
 
@@ -40,51 +86,104 @@ let indent depth = String.make (2 * depth) ' '
    so every command -- including [Seq (SKIP, SKIP)] -- prints to source that parses
    back to itself. The parser builds left-nested sequences, the only shape a
    sequence of statements has. *)
-let rec com_lines depth c =
+let rec com_lines ?(declare = fun _ -> None) depth c =
   let pad = indent depth in
+  let lines = com_lines ~declare in
+  let call f args = f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ")" in
   match c with
-  | Voblint.Seq (a, b) -> com_lines depth a @ com_lines depth b
+  | Voblint.Seq (a, b) ->
+    (* [declare] marks a local declared, so the parts print in source order. *)
+    let first = lines depth a in
+    first @ lines depth b
   | Voblint.SKIP _ -> [pad ^ "skip;"]
-  | Voblint.Assign (_, x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
+  | Voblint.Assign (_, x, e) -> (
+      match declare x with
+      | Some k -> [pad ^ k ^ " " ^ x ^ " = " ^ string_of_exp e ^ ";"]
+      | None -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"])
   | Voblint.Return (_, None) -> [pad ^ "return;"]
   | Voblint.Return (_, Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
   | Voblint.Check (_, _, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
-  | Voblint.Call (_, None, f, args) ->
-    [pad ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | Voblint.Call (_, Some x, f, args) ->
-    [pad ^ x ^ " = " ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
+  | Voblint.Call (_, None, f, args) -> [pad ^ call f args ^ ";"]
+  | Voblint.Call (_, Some x, f, args) -> (
+      match declare x, f, args with
+      | Some k, "__voblint_nondet_int", [] -> [pad ^ k ^ " " ^ x ^ ";"]
+      | Some k, _, _ -> [pad ^ k ^ " " ^ x ^ " = " ^ call f args ^ ";"]
+      | None, _, _ -> [pad ^ x ^ " = " ^ call f args ^ ";"])
   | Voblint.While (_, b, body) ->
-    [pad ^ "while (" ^ string_of_exp b ^ ") {"] @ com_lines (depth + 1) body @ [pad ^ "}"]
+    [pad ^ "while (" ^ string_of_exp b ^ ") {"] @ lines (depth + 1) body @ [pad ^ "}"]
   | Voblint.If (_, b, t, e) ->
-    [pad ^ "if (" ^ string_of_exp b ^ ") {"] @ com_lines (depth + 1) t
+    let then_lines = lines (depth + 1) t in
+    [pad ^ "if (" ^ string_of_exp b ^ ") {"] @ then_lines
     @ (match e with
        | Voblint.SKIP _ -> [pad ^ "}"]
-       | _ -> [pad ^ "} else {"] @ com_lines (depth + 1) e @ [pad ^ "}"])
+       | _ -> [pad ^ "} else {"] @ lines (depth + 1) e @ [pad ^ "}"])
   | _ -> [pad ^ "(* runtime-only command *)"]
 
-let proc_lines (name, formals, body) =
-  ["fun " ^ name ^ "(" ^ String.concat ", " formals ^ ") {"]
-  @ com_lines 1 body
+(* Every variable declares its kind: [decls] are the kind declarations the parser
+   returns beside the program. A local is declared at the first statement, in source
+   order and at any depth, that writes it, the way the parser lowers a declaration:
+   [k x = e;] is the assignment, [k x = f(a);] the call, and [k x;] the library call
+   that yields an arbitrary value. A local that no statement writes has no source
+   form. *)
+let kind_of decls id = List.assoc_opt id decls
+
+let body_lines decls name formals body =
+  let declared = ref formals in
+  let declare x =
+    if List.mem x !declared then None
+    else
+      match kind_of decls (Voblint.ScopedId (name, x)) with
+      | Some k -> declared := x :: !declared; Some (string_of_kind k)
+      | None -> None
+  in
+  let lines = com_lines ~declare 1 body in
+  List.iter
+    (fun (id, _) ->
+      match id with
+      | Voblint.ScopedId (q, x) when q = name && not (List.mem x !declared) ->
+        failwith ("local '" ^ x ^ "' of '" ^ name ^ "' has no statement writing it")
+      | _ -> ())
+    decls;
+  lines
+
+let proc_lines decls (name, formals, body) =
+  let typed x =
+    match kind_of decls (Voblint.ScopedId (name, x)) with
+    | Some k -> string_of_kind k ^ " " ^ x
+    | None -> x
+  in
+  let ret =
+    match kind_of decls (Voblint.ReturnId name) with
+    | Some k -> string_of_kind k ^ " "
+    | None -> ""
+  in
+  ["fun " ^ ret ^ name ^ "(" ^ String.concat ", " (List.map typed formals) ^ ") {"]
+  @ body_lines decls name formals body
   @ ["}"]
 
 (* [procs] lists every procedure as [(name, formals, body)], [main] among them.
-   Blocks -- the globals line, then each procedure -- are separated by one blank line. *)
-let program_lines ~globals ~procs =
+   Blocks -- the globals, then each procedure -- are separated by one blank line. *)
+let program_lines ~decls ~globals ~procs =
+  let global_line g =
+    match kind_of decls (Voblint.GlobalId g) with
+    | Some k -> "global " ^ string_of_kind k ^ " " ^ g ^ ";"
+    | None -> "global " ^ g ^ ";"
+  in
   let blocks =
-    (match globals with [] -> [] | gs -> [["global " ^ String.concat ", " gs ^ ";"]])
-    @ List.map proc_lines procs
+    (match globals with [] -> [] | gs -> [List.map global_line gs])
+    @ List.map (proc_lines decls) procs
   in
   List.concat (List.mapi (fun i block -> if i = 0 then block else "" :: block) blocks)
 
-let string_of_program ~globals ~procs =
-  String.concat "\n" (program_lines ~globals ~procs) ^ "\n"
+let string_of_program ~decls ~globals ~procs =
+  String.concat "\n" (program_lines ~decls ~globals ~procs) ^ "\n"
 
 (* The program type is abstract to OCaml; read it through the exported readers. *)
-let string_of_imp_prog p =
+let string_of_imp_prog ~decls p =
   let proc name =
     match Voblint.prog_table p name with
     | Some (Voblint.Gproc_decl_ext (formals, body, ())) -> (name, formals, body)
     | None -> (name, [], Voblint.SKIP ())
   in
-  string_of_program ~globals:(Voblint.declared_global_vars p)
+  string_of_program ~decls ~globals:(Voblint.declared_global_vars p)
     ~procs:(("main", [], Voblint.prog_main p) :: List.map proc (Voblint.prog_procs p))

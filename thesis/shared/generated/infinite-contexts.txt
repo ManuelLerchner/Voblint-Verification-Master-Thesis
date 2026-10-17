@@ -6,7 +6,7 @@ clusters:
     main_pp22_ctx0
     main_pp23_ctx0
     main_entry_main_ctx0
-  cluster_ctx_1: w / ⊤
+  cluster_ctx_1: w / [-2147483648,2147483647]
     w_pp6_ctx0
     w_pp10_ctx0
     w_pp11_ctx0
@@ -81,7 +81,7 @@ clusters:
 nodes:
   main_exit_main_ctx0: exit_main
       interval:
-        q=⊤
+        q=[-2147483648,2147483647]
         r=[5,5]
         s=[0,0]
   main_pp20_ctx0: pp20
@@ -91,17 +91,17 @@ nodes:
         s=⊤
   main_pp21_ctx0: pp21
       interval:
-        q=⊤
+        q=[-2147483648,2147483647]
         r=⊤
         s=⊤
   main_pp22_ctx0: pp22
       interval:
-        q=⊤
+        q=[-2147483648,2147483647]
         r=⊤
         s=[0,0]
   main_pp23_ctx0: pp23
       interval:
-        q=⊤
+        q=[-2147483648,2147483647]
         r=[5,5]
         s=[0,0]
   main_entry_main_ctx0: entry_main
@@ -111,39 +111,39 @@ nodes:
         s=⊤
   w_pp6_ctx0: pp6
       interval:
-        x=[1,+∞]
+        x=[1,2147483647]
         r=⊤
         y=⊤
   w_pp10_ctx0: pp10
       interval:
-        x=[-∞,0]
+        x=[-2147483648,0]
         r=⊤
         y=⊤
   w_pp11_ctx0: pp11 [unreachable]
       unreachable
   w_exit_w_ctx0: exit_w
       interval:
-        x=⊤
+        x=[-2147483648,2147483647]
         r=⊤
         y=⊤
   w_pp5_ctx0: pp5
       interval:
-        x=⊤
+        x=[-2147483648,2147483647]
         r=⊤
         y=⊤
   w_pp7_ctx0: pp7
       interval:
-        x=[1,+∞]
+        x=[1,2147483647]
         r=⊤
-        y=⊤
+        y=[-2147483648,2147483647]
   w_pp8_ctx0: pp8
       interval:
-        x=[1,+∞]
+        x=[1,2147483647]
         r=[0,0]
-        y=⊤
+        y=[-2147483648,2147483647]
   w_entry_w_ctx0: entry_w
       interval:
-        x=⊤
+        x=[-2147483648,2147483647]
         r=⊤
         y=⊤
   h_pp1_ctx0: pp1 [unreachable]

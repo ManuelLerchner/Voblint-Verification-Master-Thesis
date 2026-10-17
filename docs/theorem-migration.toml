@@ -1,0 +1,3337 @@
+# Legacy (mathematical-integer) theorems and their typed counterparts.
+#
+# One entry per legacy theorem the thesis, the site or the docs cite. `typed` is
+# the theorem on the canonical analyzer (run_voblint), or "" when none exists
+# yet. `meaning` records what changed beyond the name; a citation may move to
+# the typed name only after its prose has been checked against that note.
+#
+# Semantic changes common to every typed entry:
+#   - stores (store) are over var_id, values are machine integers of each
+#     identity's kind, and expressions are elaborated core expressions (exp,
+#     eval) rather than surface expressions (src_exp);
+#   - the run is of the elaborated program elab_ptable p ds under pstep,
+#     starting from init_stores (kenv_of ds): globals zero, every other identity
+#     any value of its kind;
+#   - "reaching ds p v" is the collecting semantics 𝒞 over the elaborated graph
+#     elab_cfg p ds from those initial stores.
+
+[[theorem]]
+legacy = "run_voblint_legacy_sound"
+typed = "run_voblint_sound"
+meaning = "States and verdicts as before; the report is a typed_report."
+
+[[theorem]]
+legacy = "run_voblint_legacy_report_contract"
+typed = "run_voblint_report_contract"
+meaning = "valid_activation replaces valid_config; report_cfg is typed_cfg p ds. No well_formed_report clause yet."
+
+[[theorem]]
+legacy = "run_voblint_legacy_proved"
+typed = "run_voblint_PROVED"
+meaning = "Same shape over reaching stores; truthy (teval c s)."
+
+[[theorem]]
+legacy = "run_voblint_legacy_refuted"
+typed = "run_voblint_REFUTED"
+meaning = "Same shape over reaching stores."
+
+[[theorem]]
+legacy = "run_voblint_legacy_dead_unreached"
+typed = "run_voblint_dead_unreached"
+meaning = "Same statement."
+
+[[theorem]]
+legacy = "run_voblint_legacy_arithmetic_safe"
+typed = "run_voblint_SAFE"
+meaning = "Covers division by zero, signed overflow (+ - * /) and conversions to a narrower kind, not only division; stated through tobligations_at and s ⊨ ob. Obligations under && and || are not yet guarded by short-circuit evaluation."
+
+[[theorem]]
+legacy = "run_voblint_legacy_arithmetic_refuted"
+typed = "run_voblint_arithmetic_refuted"
+meaning = "A refuted obligation fails at every reaching store (¬ s ⊨ ob); legacy concluded a zero divisor."
+
+[[theorem]]
+legacy = "run_voblint_legacy_arithmetic_intra_safe"
+typed = "run_voblint_arithmetic_safe_intra"
+meaning = "Per evaluated expression of an edge; also _call and _return variants."
+
+[[theorem]]
+legacy = "run_voblint_legacy_source_sound"
+typed = "run_voblint_source_sound"
+meaning = "Existential in the simulating node (legacy also quantified every observed node via at_node); conclusions in the PROVED/REFUTED/DEAD/SAFE vocabulary."
+
+[[theorem]]
+legacy = "run_voblint_legacy_source_sound_joined"
+typed = ""
+meaning = "No typed counterpart for the context-joined state yet."
+
+[[theorem]]
+legacy = "run_voblint_legacy_check_sound"
+typed = "run_voblint_check_sound"
+meaning = "Same shape; the store reaches the check's point."
+
+[[theorem]]
+legacy = "run_voblint_legacy_labelled_check_sound"
+typed = "run_voblint_labelled_check_sound"
+meaning = "Same shape: distinct labels on the report make the labelled row the check's own."
+
+[[theorem]]
+legacy = "run_voblint_legacy_spine"
+typed = "run_voblint_spine"
+meaning = "Typed activation traces and collecting semantics (typed.*); ends in report states and PROVED/REFUTED rather than ℛ ⊆ 𝒱."
+
+[[theorem]]
+legacy = "run_voblint_legacy_call_string_chain"
+typed = "run_voblint_call_string_chain"
+meaning = "Context function typed_cs k; root context []."
+
+[[theorem]]
+legacy = "run_voblint_legacy_unit_chain"
+typed = "run_voblint_call_string_chain"
+meaning = "The typed analyzer has no separate unit policy: no context is a call string of length zero."
+
+[[theorem]]
+legacy = "run_voblint_legacy_entry_state_chain"
+typed = "run_voblint_entry_state_chain"
+meaning = "Admitted contexts mcp_es.entry_context_rel, or mcp_split_es.entry_context_rel under flow-insensitive program globals; both placements are covered."
+
+[[theorem]]
+legacy = "nv_source_certified"
+typed = ""
+meaning = "Legacy capstone cited by the thesis abstract; candidate replacement run_voblint_source_sound, pending review of the abstract's claim."
+
+# Demonstrations removed with the untyped analysis instances (M3, 7747a8144).
+# Sources remain at 7747a8144^. `typed` is filled once a typed port lands.
+
+[[theorem]]
+legacy = "update_rules_example"
+typed = ""
+meaning = "Example_Update_Rule_Steps; depends only on Globals_Rule and Interval_Warrowing, to be restored unchanged. Cited by thesis chapter 9."
+
+[[theorem]]
+legacy = "two_writer_slot_warrow_loses_upper_bound"
+typed = ""
+meaning = "Example_Per_Origin_Widening_Precision; hand-written equations over ivl, to be restored with its import moved to Interval_Warrowing. Cited by the thesis."
+
+[[theorem]]
+legacy = "two_writer_slot_warrow_per_origin_exact"
+typed = ""
+meaning = "As two_writer_slot_warrow_loses_upper_bound."
+
+[[theorem]]
+legacy = "read_g_depends_on_g_only"
+typed = ""
+meaning = "Example_Keyed_Global_Footprint; to be ported to typed edges over var_id after M4. Cited by the site."
+
+[[theorem]]
+legacy = "write_h_publishes_h_only"
+typed = ""
+meaning = "As read_g_depends_on_g_only."
+
+[[theorem]]
+legacy = "keyed_multiwrite_buffered_terminates"
+typed = ""
+meaning = "Example_Keyed_Solver_Update_Rule_Regression; framework-level equations over ivl and the untyped dg_spec, to be ported to gdg_spec after M4. Cited by the site, with w0_seed_at_entered_frame and w0_no_seed_at_caller_frame."
+
+[[theorem]]
+legacy = "ov_two_contexts_admitted"
+typed = ""
+meaning = "Example_Sign_DG_Overlapping_Enter: one call entered under two alternatives, routed to two contexts, on a custom Sign spec with a list-valued enter. No shipped typed analysis returns two alternatives, so a port needs its own typed spec. Cited by the thesis, with ov_empty_no_callee_context and ov_empty_continuation_bot."
+
+[[theorem]]
+legacy = "sign_k2_strictly_more_precise_than_k1_at_g"
+typed = ""
+meaning = "Example_Sign_DG_CallString_K2; to be restated through run_voblint in Example_Run_Voblint_Precision (k=2 proves a check k=1 does not). Cited by the thesis blueprint."
+
+# --- M7 rename (canonical names) ---
+# One entry per renamed session, theory, type, constant, interpretation qualifier and
+# fact, generated from the rename table applied to src/. Core VIMP takes the plain
+# names, surface VIMP the src_ prefix; generic g-prefixed locale constants and
+# run_voblint* are unchanged.
+
+[[rename]]
+old = "Voblint_Typed_CLI"
+new = "Voblint_CLI"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Congruence"
+new = "Voblint_Analysis_Congruence"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Int"
+new = "Voblint_Analysis_Int"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Interval"
+new = "Voblint_Analysis_Interval"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Nonrel"
+new = "Voblint_Nonrelational"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Order"
+new = "Voblint_Analysis_Order"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Parity"
+new = "Voblint_Analysis_Parity"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Sign"
+new = "Voblint_Analysis_Sign"
+kind = "session"
+
+[[rename]]
+old = "Typed_Carrier"
+new = "MCP_Carrier"
+kind = "theory"
+
+[[rename]]
+old = "Typed_CFG_Regression"
+new = "CFG_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Com"
+new = "Core_Com"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Congruence_Regression"
+new = "Congruence_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Exec"
+new = "Nonrelational_Exec"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Exp"
+new = "Core_Exp"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Int_Regression"
+new = "Int_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Interval_Regression"
+new = "Interval_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Invariants"
+new = "Kind_Invariants"
+kind = "theory"
+
+[[rename]]
+old = "Typed_MCP"
+new = "MCP"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Nonrel"
+new = "Nonrelational_Domain"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Nonrel_Analysis"
+new = "Nonrelational_Analysis"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Order_Analysis"
+new = "Order_Analysis"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Order_Regression"
+new = "Order_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Regression"
+new = "Elaboration_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Report"
+new = "Run_Report"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Run"
+new = "Analysis_Config"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Semantics"
+new = "VIMP_Semantics"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Transfer"
+new = "Nonrelational_Transfer"
+kind = "theory"
+
+[[rename]]
+old = "Voblint_Typed_CLI.Cooperation_Regression"
+new = "Voblint_Examples_CLI.Cooperation_Regression"
+kind = "theory"
+
+[[rename]]
+old = "com"
+new = "src_com"
+kind = "type"
+
+[[rename]]
+old = "exp"
+new = "src_exp"
+kind = "type"
+
+[[rename]]
+old = "store"
+new = "src_store"
+kind = "type"
+
+[[rename]]
+old = "tcom"
+new = "com"
+kind = "type"
+
+[[rename]]
+old = "texp"
+new = "exp"
+kind = "type"
+
+[[rename]]
+old = "tmcp_ctx"
+new = "mcp_ctx"
+kind = "type"
+
+[[rename]]
+old = "tmcp_st"
+new = "mcp_st"
+kind = "type"
+
+[[rename]]
+old = "tmcp_val"
+new = "mcp_val"
+kind = "type"
+
+[[rename]]
+old = "tstore"
+new = "store"
+kind = "type"
+
+[[rename]]
+old = "typed_context"
+new = "context_policy"
+kind = "type"
+
+[[rename]]
+old = "typed_domain"
+new = "analysis"
+kind = "type"
+
+[[rename]]
+old = "typed_report"
+new = "report"
+kind = "type"
+
+[[rename]]
+old = "typed_value"
+new = "report_value"
+kind = "type"
+
+[[rename]]
+old = "aval"
+new = ""
+kind = "constant"
+note = "Deleted with the mathematical-integer semantics; src_eval gives a surface expression its machine-kind meaning."
+
+[[rename]]
+old = "calls_typed"
+new = "calls_in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "ord_typed"
+new = "ord_in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot1"
+new = "set_slot1"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot2"
+new = "set_slot2"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3"
+new = "set_slot3"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3f"
+new = "set_slot3f"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3n"
+new = "set_slot3n"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3o"
+new = "set_slot3o"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot4"
+new = "set_slot4"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot5"
+new = "set_slot5"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot6"
+new = "set_slot6"
+kind = "constant"
+
+[[rename]]
+old = "string_of_typed_value"
+new = "string_of_report_value"
+kind = "constant"
+
+[[rename]]
+old = "styped"
+new = "all_in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "tactivation"
+new = "activation_of"
+kind = "constant"
+
+[[rename]]
+old = "taeval"
+new = "aeval"
+kind = "constant"
+
+[[rename]]
+old = "taeval_ask"
+new = "aeval_ask"
+kind = "constant"
+
+[[rename]]
+old = "tanswer"
+new = "answer"
+kind = "constant"
+
+[[rename]]
+old = "tarith_condition"
+new = "arith_condition"
+kind = "constant"
+
+[[rename]]
+old = "tarith_obligations"
+new = "arith_obligations"
+kind = "constant"
+
+[[rename]]
+old = "tassign"
+new = "nonrel_assign"
+kind = "constant"
+
+[[rename]]
+old = "tassign_st"
+new = "assign_st"
+kind = "constant"
+
+[[rename]]
+old = "tatom"
+new = "nonrel_atom"
+kind = "constant"
+
+[[rename]]
+old = "taval"
+new = "src_eval"
+kind = "constant"
+
+[[rename]]
+old = "tbranch"
+new = "nonrel_branch"
+kind = "constant"
+
+[[rename]]
+old = "tbranch_st"
+new = "branch_st"
+kind = "constant"
+
+[[rename]]
+old = "tcall_vars"
+new = "call_vars"
+kind = "constant"
+
+[[rename]]
+old = "tcast_to"
+new = "cast_to"
+kind = "constant"
+
+[[rename]]
+old = "tcfg_call_edges"
+new = "cfg_call_edges"
+kind = "constant"
+
+[[rename]]
+old = "tcfg_intra_edges"
+new = "cfg_intra_edges"
+kind = "constant"
+
+[[rename]]
+old = "tcfg_points"
+new = "cfg_points"
+kind = "constant"
+
+[[rename]]
+old = "tclassify"
+new = "nonrel_classify"
+kind = "constant"
+
+[[rename]]
+old = "tcom_erase"
+new = "com_erase"
+kind = "constant"
+
+[[rename]]
+old = "tcombine_assign"
+new = ""
+kind = "constant"
+note = "combine_assign_conv was deleted: it restated combine_assign dst (kind_conv κ dst n), which gpstep uses."
+
+[[rename]]
+old = "tcombine_assign"
+new = "nonrel_combine_assign"
+kind = "constant"
+
+[[rename]]
+old = "tcombine_assign_st"
+new = "combine_assign_st"
+kind = "constant"
+
+[[rename]]
+old = "tconv"
+new = "kind_conv"
+kind = "constant"
+
+[[rename]]
+old = "tcstep"
+new = "cstep"
+kind = "constant"
+
+[[rename]]
+old = "tdeclared_globals"
+new = "declared_globals"
+kind = "constant"
+
+[[rename]]
+old = "tedge_vars"
+new = "edge_vars"
+kind = "constant"
+
+[[rename]]
+old = "tenter_frame"
+new = "nonrel_enter_frame"
+kind = "constant"
+
+[[rename]]
+old = "tenter_st"
+new = "enter_st"
+kind = "constant"
+
+[[rename]]
+old = "tenter_state"
+new = "nonrel_enter_state"
+kind = "constant"
+
+[[rename]]
+old = "teval"
+new = "eval"
+kind = "constant"
+
+[[rename]]
+old = "texp_erase"
+new = "exp_erase"
+kind = "constant"
+
+[[rename]]
+old = "texp_kind"
+new = "exp_kind"
+kind = "constant"
+
+[[rename]]
+old = "tfeas"
+new = "nonrel_feas"
+kind = "constant"
+
+[[rename]]
+old = "tfield"
+new = "field"
+kind = "constant"
+
+[[rename]]
+old = "tfield_empty"
+new = "field_empty"
+kind = "constant"
+
+[[rename]]
+old = "tfield_view"
+new = "field_view"
+kind = "constant"
+
+[[rename]]
+old = "tglobal"
+new = "is_global"
+kind = "constant"
+
+[[rename]]
+old = "tinit_st"
+new = "nonrel_init_st"
+kind = "constant"
+
+[[rename]]
+old = "tinit_stores"
+new = "init_stores"
+kind = "constant"
+
+[[rename]]
+old = "tlive"
+new = "live"
+kind = "constant"
+
+[[rename]]
+old = "tloc"
+new = "nonrel_loc"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_answer"
+new = "mcp_answer"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_ask"
+new = "mcp_ask"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_classify"
+new = "mcp_classify"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_comp"
+new = "mcp_comp"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_ctx_key"
+new = "mcp_ctx_key"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_emp"
+new = "mcp_emp"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_empty_v"
+new = "mcp_empty_v"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_field"
+new = "mcp_field"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_init"
+new = "mcp_init"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_norm"
+new = "mcp_norm"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_rd"
+new = "mcp_rd"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_root_ctx"
+new = "mcp_root_ctx"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_route"
+new = "mcp_route"
+kind = "constant"
+
+[[rename]]
+old = "tnarrow"
+new = "nonrel_narrow"
+kind = "constant"
+
+[[rename]]
+old = "tnode_collect"
+new = "node_collect"
+kind = "constant"
+
+[[rename]]
+old = "tobligation_classify"
+new = "obligation_classify"
+kind = "constant"
+
+[[rename]]
+old = "tobligation_holds"
+new = "obligation_holds"
+kind = "constant"
+
+[[rename]]
+old = "tobligation_sites"
+new = "prog_obligation_sites"
+kind = "constant"
+
+[[rename]]
+old = "tobligations_at"
+new = "obligations_at"
+kind = "constant"
+
+[[rename]]
+old = "tpart_answer"
+new = "part_answer"
+kind = "constant"
+
+[[rename]]
+old = "tpstep"
+new = "pstep"
+kind = "constant"
+
+[[rename]]
+old = "tquery"
+new = "nonrel_query"
+kind = "constant"
+
+[[rename]]
+old = "trd"
+new = "nonrel_rd"
+kind = "constant"
+
+[[rename]]
+old = "trefine"
+new = "nonrel_refine"
+kind = "constant"
+
+[[rename]]
+old = "trefine_exec"
+new = "nonrel_refine_exec"
+kind = "constant"
+
+[[rename]]
+old = "treturn"
+new = "nonrel_return"
+kind = "constant"
+
+[[rename]]
+old = "treturn_sites"
+new = "return_sites"
+kind = "constant"
+
+[[rename]]
+old = "treturn_st"
+new = "return_st"
+kind = "constant"
+
+[[rename]]
+old = "truth_texp"
+new = "truth_exp"
+kind = "constant"
+
+[[rename]]
+old = "tsatisfies"
+new = "satisfies"
+kind = "constant"
+
+[[rename]]
+old = "tslot1"
+new = "slot1"
+kind = "constant"
+
+[[rename]]
+old = "tslot2"
+new = "slot2"
+kind = "constant"
+
+[[rename]]
+old = "tslot3"
+new = "slot3"
+kind = "constant"
+
+[[rename]]
+old = "tslot3f"
+new = "slot3f"
+kind = "constant"
+
+[[rename]]
+old = "tslot3n"
+new = "slot3n"
+kind = "constant"
+
+[[rename]]
+old = "tslot3o"
+new = "slot3o"
+kind = "constant"
+
+[[rename]]
+old = "tslot4"
+new = "slot4"
+kind = "constant"
+
+[[rename]]
+old = "tslot5"
+new = "slot5"
+kind = "constant"
+
+[[rename]]
+old = "tslot6"
+new = "slot6"
+kind = "constant"
+
+[[rename]]
+old = "tspecial"
+new = "nonrel_special"
+kind = "constant"
+
+[[rename]]
+old = "tspecial"
+new = ""
+kind = "constant"
+note = "special_desc_result was deleted: it restated special_result eval composed with classify_special."
+
+[[rename]]
+old = "tspecial_st"
+new = "special_st"
+kind = "constant"
+
+[[rename]]
+old = "tspecial_vars"
+new = "special_vars"
+kind = "constant"
+
+[[rename]]
+old = "tst_is_bot"
+new = "st_is_bot"
+kind = "constant"
+
+[[rename]]
+old = "tst_lift_empty"
+new = "st_lift_empty"
+kind = "constant"
+
+[[rename]]
+old = "tst_rep_is_bot"
+new = "st_rep_is_bot"
+kind = "constant"
+
+[[rename]]
+old = "tstyped"
+new = "in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "tsubexps"
+new = "subexps"
+kind = "constant"
+
+[[rename]]
+old = "tt_answer"
+new = "t_answer"
+kind = "constant"
+
+[[rename]]
+old = "tt_empty"
+new = "t_empty"
+kind = "constant"
+
+[[rename]]
+old = "tt_lift_empty"
+new = "t_lift_empty"
+kind = "constant"
+
+[[rename]]
+old = "tunwrapped"
+new = "unwrapped"
+kind = "constant"
+
+[[rename]]
+old = "tunwrapped_ivl"
+new = "unwrapped_ivl"
+kind = "constant"
+
+[[rename]]
+old = "tval_empty"
+new = "val_empty"
+kind = "constant"
+
+[[rename]]
+old = "tval_gamma"
+new = "val_gamma"
+kind = "constant"
+
+[[rename]]
+old = "tvar_list"
+new = "var_list"
+kind = "constant"
+
+[[rename]]
+old = "tvars"
+new = "exp_vars"
+kind = "constant"
+
+[[rename]]
+old = "tview"
+new = "nonrel_view"
+kind = "constant"
+
+[[rename]]
+old = "typed.gactivation_collect"
+new = "activation_collect"
+kind = "constant"
+
+[[rename]]
+old = "typed.gvalid_activation_trace"
+new = "valid_activation_trace"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Call_String"
+new = "Call_String"
+kind = "constant"
+
+[[rename]]
+old = "typed_cfg"
+new = "elab_cfg"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Congruence"
+new = "Congruence"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Congruence_Value"
+new = "Congruence_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_cs_run"
+new = "cs_run"
+kind = "constant"
+
+[[rename]]
+old = "typed_ctx_values"
+new = "context_values"
+kind = "constant"
+
+[[rename]]
+old = "typed_domain_name"
+new = "analysis_name"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Entry_State"
+new = "Entry_State"
+kind = "constant"
+
+[[rename]]
+old = "typed_es"
+new = "nonrel_es_ctx"
+kind = "constant"
+
+[[rename]]
+old = "typed_es_run"
+new = "es_run"
+kind = "constant"
+
+[[rename]]
+old = "typed_exec_spec"
+new = "nonrel_exec_spec"
+kind = "constant"
+
+[[rename]]
+old = "typed_footprints"
+new = "footprints"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Int"
+new = "Ana_Int"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Int_Value"
+new = "Int_Value"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Interval"
+new = "Interval"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Interval_Value"
+new = "Interval_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_key_of_global_unknown"
+new = "key_of_global_unknown"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Order"
+new = "Order"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Order_Value"
+new = "Order_Value"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Parity"
+new = "Parity"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Parity_Value"
+new = "Parity_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_ptable"
+new = "elab_ptable"
+kind = "constant"
+
+[[rename]]
+old = "typed_render"
+new = "render"
+kind = "constant"
+
+[[rename]]
+old = "typed_render_report"
+new = "prog_render_report"
+kind = "constant"
+
+[[rename]]
+old = "typed_renderer"
+new = "renderer"
+kind = "constant"
+
+[[rename]]
+old = "typed_report_of"
+new = "prog_report_of"
+kind = "constant"
+
+[[rename]]
+old = "typed_report_run"
+new = "report_run"
+kind = "constant"
+
+[[rename]]
+old = "typed_report_sound"
+new = "report_sound"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Sign"
+new = "Sign"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Sign_Value"
+new = "Sign_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_spec"
+new = "nonrel_spec"
+kind = "constant"
+
+[[rename]]
+old = "typed_trace_printers"
+new = "trace_printers"
+kind = "constant"
+
+[[rename]]
+old = "typed_vars"
+new = "cfg_vars"
+kind = "constant"
+
+[[rename]]
+old = "wt_tcom"
+new = "wt_com"
+kind = "constant"
+
+[[rename]]
+old = "wt_texp"
+new = "wt_exp"
+kind = "constant"
+
+[[rename]]
+old = "tbool"
+new = "nonrel_bool"
+kind = "qualifier"
+
+[[rename]]
+old = "tmcp"
+new = "mcp"
+kind = "qualifier"
+
+[[rename]]
+old = "typed"
+new = "vimp"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp"
+new = "mcp_cs"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp_es"
+new = "mcp_es"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp_split"
+new = "mcp_split"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp_split_es"
+new = "mcp_split_es"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_nonrel"
+new = "nonrel"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_nonrel_es"
+new = "nonrel_es"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_order"
+new = "order_analysis"
+kind = "qualifier"
+
+[[rename]]
+old = "activation_context_of_typed_cs0"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "call_formals_typed_ptable"
+new = "call_formals_elab_ptable"
+kind = "fact"
+
+[[rename]]
+old = "calls_typed_def"
+new = "calls_in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "calls_typed_typed_cfg"
+new = "calls_in_kinds_elab_cfg"
+kind = "fact"
+
+[[rename]]
+old = "distinct_tactivation"
+new = "distinct_activation_of"
+kind = "fact"
+
+[[rename]]
+old = "gwf_proc_decl_typed"
+new = "gwf_proc_decl_elab"
+kind = "fact"
+
+[[rename]]
+old = "inj_tmcp_ctx_key"
+new = "inj_mcp_ctx_key"
+kind = "fact"
+
+[[rename]]
+old = "map_texp_erase_elab_args"
+new = "map_exp_erase_elab_args"
+kind = "fact"
+
+[[rename]]
+old = "mem_tobligations_at"
+new = "mem_obligations_at"
+kind = "fact"
+
+[[rename]]
+old = "ord_typed_def"
+new = "ord_in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "ord_typed_tstyped"
+new = "ord_in_kinds_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "ret_prog_typed_wf"
+new = "ret_prog_elab_wf"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot1_def"
+new = "set_slot1_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot2_def"
+new = "set_slot2_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3_def"
+new = "set_slot3_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3f_def"
+new = "set_slot3f_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3n_def"
+new = "set_slot3n_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3o_def"
+new = "set_slot3o_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot4_def"
+new = "set_slot4_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot5_def"
+new = "set_slot5_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot6_def"
+new = "set_slot6_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tvar_list"
+new = "set_var_list"
+kind = "fact"
+
+[[rename]]
+old = "single_entry_tfield"
+new = "single_entry_field"
+kind = "fact"
+
+[[rename]]
+old = "single_entry_typed_exec_spec"
+new = "single_entry_nonrel_exec_spec"
+kind = "fact"
+
+[[rename]]
+old = "styped_def"
+new = "all_in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "styped_update"
+new = "all_in_kinds_update"
+kind = "fact"
+
+[[rename]]
+old = "styped_zero"
+new = "all_in_kinds_zero"
+kind = "fact"
+
+[[rename]]
+old = "stypedD"
+new = "all_in_kindsD"
+kind = "fact"
+
+[[rename]]
+old = "tactivation_def"
+new = "activation_of_def"
+kind = "fact"
+
+[[rename]]
+old = "tactivation_ne"
+new = "activation_of_ne"
+kind = "fact"
+
+[[rename]]
+old = "taeval_ask_of_sound"
+new = "aeval_ask_of_sound"
+kind = "fact"
+
+[[rename]]
+old = "taeval_ask_sound"
+new = "aeval_ask_sound"
+kind = "fact"
+
+[[rename]]
+old = "taeval_sound"
+new = "aeval_sound"
+kind = "fact"
+
+[[rename]]
+old = "tarith_condition_def"
+new = "arith_condition_def"
+kind = "fact"
+
+[[rename]]
+old = "tarith_obligations_conversion"
+new = "arith_obligations_conversion"
+kind = "fact"
+
+[[rename]]
+old = "tarith_obligations_division"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tarith_obligations_literal"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tarith_obligations_overflow"
+new = "arith_obligations_overflow"
+kind = "fact"
+
+[[rename]]
+old = "tassign_def"
+new = "nonrel_assign_def"
+kind = "fact"
+
+[[rename]]
+old = "tassign_kind"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tassign_sound"
+new = "nonrel_assign_sound"
+kind = "fact"
+
+[[rename]]
+old = "tassign_st_def"
+new = "assign_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tatom_def"
+new = "nonrel_atom_def"
+kind = "fact"
+
+[[rename]]
+old = "tbool_locale"
+new = "nonrel_bool_locale"
+kind = "fact"
+
+[[rename]]
+old = "tbranch_def"
+new = "nonrel_branch_def"
+kind = "fact"
+
+[[rename]]
+old = "tbranch_kind"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tbranch_sound"
+new = "nonrel_branch_sound"
+kind = "fact"
+
+[[rename]]
+old = "tbranch_st_def"
+new = "branch_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tcast_to_def"
+new = "cast_to_def"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_def"
+new = "nonrel_classify_def"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_proved"
+new = "nonrel_classify_proved"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_refuted"
+new = "nonrel_classify_refuted"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_sound"
+new = "nonrel_classify_sound"
+kind = "fact"
+
+[[rename]]
+old = "tcom_erase_elab_com"
+new = "com_erase_elab_com"
+kind = "fact"
+
+[[rename]]
+old = "tcombine_assign_def"
+new = "nonrel_combine_assign_def"
+kind = "fact"
+
+[[rename]]
+old = "tcombine_assign_st_def"
+new = "combine_assign_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tcombine_kind"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tcombine_sound"
+new = "nonrel_combine_sound"
+kind = "fact"
+
+[[rename]]
+old = "tconv_def"
+new = "kind_conv_def"
+kind = "fact"
+
+[[rename]]
+old = "tconv_simps"
+new = "kind_conv_simps"
+kind = "fact"
+
+[[rename]]
+old = "tcstep_def"
+new = "cstep_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_frame_def"
+new = "nonrel_enter_frame_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_st_def"
+new = "enter_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_state_def"
+new = "nonrel_enter_state_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_state_kind"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tenter_state_sound"
+new = "nonrel_enter_state_sound"
+kind = "fact"
+
+[[rename]]
+old = "teval_cong"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "teval_elaborate"
+new = "eval_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "teval_elaborate_syn"
+new = "eval_elaborate_syn"
+kind = "fact"
+
+[[rename]]
+old = "teval_in_range"
+new = "eval_in_range"
+kind = "fact"
+
+[[rename]]
+old = "teval_in_range_kind"
+new = "eval_in_range_kind"
+kind = "fact"
+
+[[rename]]
+old = "teval_truth_texp"
+new = "eval_truth_exp"
+kind = "fact"
+
+[[rename]]
+old = "teval_tstyped_in_range"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "texp_erase_elaborate"
+new = "exp_erase_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "texp_kind_elaborate"
+new = "exp_kind_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "texp_kind_tcast_to"
+new = "exp_kind_cast_to"
+kind = "fact"
+
+[[rename]]
+old = "tfeas_def"
+new = "nonrel_feas_def"
+kind = "fact"
+
+[[rename]]
+old = "tfield_def"
+new = "field_def"
+kind = "fact"
+
+[[rename]]
+old = "tfield_frame"
+new = "field_frame"
+kind = "fact"
+
+[[rename]]
+old = "tfield_sound"
+new = "field_sound"
+kind = "fact"
+
+[[rename]]
+old = "tinit_sound"
+new = "nonrel_init_sound"
+kind = "fact"
+
+[[rename]]
+old = "tinit_st_def"
+new = "nonrel_init_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tinit_stores_def"
+new = "init_stores_def"
+kind = "fact"
+
+[[rename]]
+old = "tinit_stores_tstyped"
+new = "init_stores_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_bot_slots"
+new = "mcp_bot_slots"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_init_def"
+new = "mcp_init_def"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_init_sound"
+new = "mcp_init_sound"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_rd_def"
+new = "mcp_rd_def"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_route_def"
+new = "mcp_route_def"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_route_traced"
+new = "mcp_route_traced"
+kind = "fact"
+
+[[rename]]
+old = "tnarrow_def"
+new = "nonrel_narrow_def"
+kind = "fact"
+
+[[rename]]
+old = "tnode_collect_def"
+new = "node_collect_def"
+kind = "fact"
+
+[[rename]]
+old = "tnode_collect_tstyped"
+new = "node_collect_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_classify_def"
+new = "obligation_classify_def"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_classify_sound"
+new = "obligation_classify_sound"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_conversion"
+new = "obligation_holds_conversion"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_def"
+new = "obligation_holds_def"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_division"
+new = "obligation_holds_division"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_overflow"
+new = "obligation_holds_overflow"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site"
+new = "prog_obligation_site"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site_call"
+new = "prog_obligation_site_call"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site_intra"
+new = "prog_obligation_site_intra"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site_return"
+new = "prog_obligation_site_return"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_sites_def"
+new = "prog_obligation_sites_def"
+kind = "fact"
+
+[[rename]]
+old = "tobligations_at_def"
+new = "obligations_at_def"
+kind = "fact"
+
+[[rename]]
+old = "tpstep_declare"
+new = "pstep_declare"
+kind = "fact"
+
+[[rename]]
+old = "tpstep_declare_forgets"
+new = "pstep_declare_forgets"
+kind = "fact"
+
+[[rename]]
+old = "tpstep_def"
+new = "pstep_def"
+kind = "fact"
+
+[[rename]]
+old = "trd_combine"
+new = "nonrel_rd_combine"
+kind = "fact"
+
+[[rename]]
+old = "trd_tassign_st"
+new = "nonrel_rd_assign_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tbranch_st"
+new = "nonrel_rd_branch_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tcombine_assign_st"
+new = "nonrel_rd_combine_assign_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tenter_st"
+new = "nonrel_rd_enter_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tinit_st"
+new = "nonrel_rd_init_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_treturn_st"
+new = "nonrel_rd_return_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tspecial_st"
+new = "nonrel_rd_special_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_write_back"
+new = "nonrel_rd_write_back"
+kind = "fact"
+
+[[rename]]
+old = "trefine_code"
+new = "nonrel_refine_code"
+kind = "fact"
+
+[[rename]]
+old = "trefine_def"
+new = "nonrel_refine_def"
+kind = "fact"
+
+[[rename]]
+old = "trefine_exec_def"
+new = "nonrel_refine_exec_def"
+kind = "fact"
+
+[[rename]]
+old = "trefine_kind"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "trefine_sound"
+new = "nonrel_refine_sound"
+kind = "fact"
+
+[[rename]]
+old = "treturn_def"
+new = "nonrel_return_def"
+kind = "fact"
+
+[[rename]]
+old = "treturn_kind"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "treturn_sites_def"
+new = "return_sites_def"
+kind = "fact"
+
+[[rename]]
+old = "treturn_sound"
+new = "nonrel_return_sound"
+kind = "fact"
+
+[[rename]]
+old = "treturn_st_def"
+new = "return_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot1_def"
+new = "slot1_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot2_def"
+new = "slot2_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3_def"
+new = "slot3_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3f_def"
+new = "slot3f_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3n_def"
+new = "slot3n_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3o_def"
+new = "slot3o_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot4_def"
+new = "slot4_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot5_def"
+new = "slot5_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot6_def"
+new = "slot6_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot6_keyed"
+new = "slot6_keyed"
+kind = "fact"
+
+[[rename]]
+old = "tslot6_keyed_init"
+new = "slot6_keyed_init"
+kind = "fact"
+
+[[rename]]
+old = "tslot_defs"
+new = "slot_defs"
+kind = "fact"
+
+[[rename]]
+old = "tslot_mono"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tspecial_def"
+new = "nonrel_special_def"
+kind = "fact"
+
+[[rename]]
+old = "tspecial_kind"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tspecial_sound"
+new = "nonrel_special_sound"
+kind = "fact"
+
+[[rename]]
+old = "tspecial_st_def"
+new = "special_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tst_is_bot_iff"
+new = "st_is_bot_iff"
+kind = "fact"
+
+[[rename]]
+old = "tst_is_bot_sound"
+new = "st_is_bot_sound"
+kind = "fact"
+
+[[rename]]
+old = "tst_lift_empty_def"
+new = "st_lift_empty_def"
+kind = "fact"
+
+[[rename]]
+old = "tst_rep_is_bot_iff"
+new = "st_rep_is_bot_iff"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_bind_formals"
+new = "in_kinds_bind_formals"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_call_enter"
+new = "in_kinds_call_enter"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_combine_env"
+new = "in_kinds_combine_env"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_def"
+new = "in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_enter_state"
+new = "in_kinds_enter_state"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_gcombine"
+new = "in_kinds_gcombine"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_styped"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "tstyped_upd"
+new = "in_kinds_upd"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_update"
+new = "in_kinds_update"
+kind = "fact"
+
+[[rename]]
+old = "tt_answer_def"
+new = "t_answer_def"
+kind = "fact"
+
+[[rename]]
+old = "tt_answer_sound"
+new = "t_answer_sound"
+kind = "fact"
+
+[[rename]]
+old = "tt_empty_def"
+new = "t_empty_def"
+kind = "fact"
+
+[[rename]]
+old = "tt_empty_sound"
+new = "t_empty_sound"
+kind = "fact"
+
+[[rename]]
+old = "tt_lift_empty_def"
+new = "t_lift_empty_def"
+kind = "fact"
+
+[[rename]]
+old = "tunwrapped_ivl_sound"
+new = "unwrapped_ivl_sound"
+kind = "fact"
+
+[[rename]]
+old = "tval_gamma_slot"
+new = "val_gamma_slot"
+kind = "fact"
+
+[[rename]]
+old = "tvars_elab_args"
+new = "exp_vars_elab_args"
+kind = "fact"
+
+[[rename]]
+old = "tvars_elaborate"
+new = "exp_vars_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "typed_cfg_calls_source_unique"
+new = "elab_cfg_calls_source_unique"
+kind = "fact"
+
+[[rename]]
+old = "typed_cfg_def"
+new = "elab_cfg_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_cfg_edges"
+new = "elab_cfg_edges"
+kind = "fact"
+
+[[rename]]
+old = "typed_cs0_node_collect"
+new = ""
+kind = "fact"
+note = "Deleted as unused after the rename; nothing replaces it."
+
+[[rename]]
+old = "typed_cs_run_def"
+new = "cs_run_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_cs_run_traced"
+new = "cs_run_traced"
+kind = "fact"
+
+[[rename]]
+old = "typed_domain_cases"
+new = "analysis_cases"
+kind = "fact"
+
+[[rename]]
+old = "typed_es_run_def"
+new = "es_run_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_es_run_traced"
+new = "es_run_traced"
+kind = "fact"
+
+[[rename]]
+old = "typed_exec_spec_def"
+new = "nonrel_exec_spec_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_exec_spec_sound"
+new = "nonrel_exec_spec_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_exec_spec_sound_rd"
+new = "nonrel_exec_spec_sound_rd"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_es_node_sound"
+new = "mcp_es_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_es_verdict_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_mcp_keyed"
+new = "mcp_cs_keyed"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_node_sound"
+new = "mcp_cs_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_routed"
+new = "mcp_cs_routed"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_split_es_node_sound"
+new = "mcp_split_es_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_split_node_sound"
+new = "mcp_split_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_verdict_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_es_node_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_es_verdict_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_node_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_report_ctx_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_report_proved_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_report_refuted_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_routed"
+new = "nonrel_routed"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_source_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_nonrel_verdict_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_order_node_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_order_report_proved_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_order_report_refuted_sound"
+new = ""
+kind = "fact"
+note = "Deleted after the rename; the run_voblint theorems subsume it."
+
+[[rename]]
+old = "typed_ptable_def"
+new = "elab_ptable_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_ptable_main"
+new = "elab_ptable_main"
+kind = "fact"
+
+[[rename]]
+old = "typed_ptable_None_iff"
+new = "elab_ptable_None_iff"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_check_live"
+new = "report_check_live"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_check_row"
+new = "report_check_row"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_check_sound"
+new = "report_check_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_obligation_refuted"
+new = "report_obligation_refuted"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_obligation_safe"
+new = "report_obligation_safe"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_of_def"
+new = "prog_report_of_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_of_sound"
+new = "prog_report_of_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_point_sound"
+new = "report_point_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_run_def"
+new = "report_run_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_run_shape"
+new = "report_run_shape"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_run_sound"
+new = "report_run_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_sound_def"
+new = "report_sound_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_state_sound"
+new = "report_state_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_run_tstyped"
+new = "run_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "typed_source_reaches_node_collect"
+new = "source_reaches_node_collect"
+kind = "fact"
+
+[[rename]]
+old = "typed_source_run_has_activation_trace"
+new = "source_run_has_activation_trace"
+kind = "fact"
+
+[[rename]]
+old = "typed_spec_def"
+new = "nonrel_spec_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_spec_sound"
+new = "nonrel_spec_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_wf_compile_input"
+new = "elab_wf_compile_input"
+kind = "fact"
+
+[[rename]]
+old = "u32_store_typed"
+new = "u32_store_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "valid_activation_trace_callers_tstyped"
+new = "valid_activation_trace_callers_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "valid_activation_trace_tstyped"
+new = "valid_activation_trace_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "wt_tcom_elab_com"
+new = "wt_com_elab_com"
+kind = "fact"
+
+[[rename]]
+old = "wt_texp_elaborate"
+new = "wt_exp_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "relc"
+new = ""
+kind = "type"
+note = "Deleted: an order carrier over vname with no concretization that only printed the order analysis's facts. order_rel (Order_Analysis) is the order domain and now prints itself."
+
+[[rename]]
+old = "Order_Lattice"
+new = ""
+kind = "theory"
+note = "Deleted with relc; the printer moved to Order_Analysis."
+
+[[rename]]
+old = "Relational_Regression"
+new = "Order_Regression"
+kind = "theory"
+note = "Its rendering regression now runs on order_rel."
+
+[[rename]]
+old = "string_of_pairs"
+new = "string_of_facts"
+kind = "constant"
+note = "Same text, generic over a variable type of sort order_name."
+
+[[rename]]
+old = "to_string_relc"
+new = "to_string_order_rel"
+kind = "constant"
+note = "Same text: RelBot and RelC ps print as OBot and OFacts t ps do, whatever the flag t."
+
+[[rename]]
+old = "is_empty_relc"
+new = "is_empty_order_rel"
+kind = "constant"
+
+[[rename]]
+old = "to_string_relc_regression"
+new = "to_string_order_rel_regression"
+kind = "fact"
+
+# --- Duplicates and unused source-level names removed (2026-10-16) ---
+
+[[rename]]
+old = "sub_kind"
+new = "ik_widens"
+kind = "constant"
+note = "Same equation; cast_ik_congruence and cast_ik_sign test ik_widens."
+
+[[rename]]
+old = "congruence_cast"
+new = ""
+kind = "constant"
+note = "Deleted as unused; cast_cong_ik is the same conversion."
+
+[[rename]]
+old = "ivl_min_max_sound"
+new = "ivl_min_sound"
+kind = "fact"
+note = "Split into ivl_min_sound and ivl_max_sound in Interval_Arithmetic."
+
+[[rename]]
+old = "answer_ivl"
+new = "of_answer_ik"
+kind = "constant"
+note = "operand_ivl reads an answer with of_answer_ik at ivl."
+
+[[rename]]
+old = "run_voblint_config"
+new = "run_voblint_report_contract"
+kind = "fact"
+note = "Its third conclusion."
+
+[[rename]]
+old = "run_voblint_cfg"
+new = "run_voblint_report_contract"
+kind = "fact"
+note = "Its fourth conclusion."
+
+[[rename]]
+old = "edge_global_reads"
+new = "gedge_global_reads"
+kind = "constant"
+note = "The source-level abbreviation was deleted; the generic constant takes the expression's variables as a parameter."
+
+[[rename]]
+old = "edge_global_writes"
+new = "gedge_global_writes"
+kind = "constant"
+note = "As edge_global_reads; the generic constant takes the return slot as a parameter."
+
+[[rename]]
+old = "call_global_reads"
+new = "gcall_global_reads"
+kind = "constant"
+note = "As edge_global_reads."
+
+[[rename]]
+old = "check_projection"
+new = ""
+kind = "constant"
+note = "Deleted as unused; verdict_report is the contextual surface a caller reads."
+
+# --- Generic semantic layer collapsed into core VIMP (2026-10-16) ---
+# Every locale and constant generic in the evaluator, return slot, write conversion and
+# global classifier had one instance (eval, ReturnVar, kind_conv κ, is_global). They are
+# defined directly over var_id and exp; the kind environment κ stays a parameter.
+# Kept generic: gcom, gproc_decl, gptable, gcfg, gedge_action, gcall_action, gspecial_call,
+# the gwf_* predicates and the compiler (surface and core instances), and the key-generic
+# executable store (gdefault_st, glocation, gabs_state).
+
+[[rename]]
+old = "vimp_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; pstep is a direct inductive with the kind environment as a parameter. Facts L.x are now plain x."
+
+[[rename]]
+old = "cfg_edge_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; edge semantics defined directly over core VIMP. Facts L.x are now plain x."
+
+[[rename]]
+old = "cfg_transfer_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; transfers defined directly over core VIMP. Facts L.x are now plain x."
+
+[[rename]]
+old = "cfg_exec_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; cstep is a direct inductive. Facts L.x are now plain x."
+
+[[rename]]
+old = "trace_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; valid_activation_trace is a direct inductive_set. Facts L.x are now plain x."
+
+[[rename]]
+old = "ctx_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; context relation and context-indexed collecting defined directly. Facts L.x are now plain x."
+
+[[rename]]
+old = "collect_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; node_collect defined directly. Facts L.x are now plain x."
+
+[[rename]]
+old = "residual_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; intra_step is a direct inductive. Facts L.x are now plain x."
+
+[[rename]]
+old = "simrel_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; its lemmas are stated directly at pstep and cstep. Facts L.x are now plain x."
+
+[[rename]]
+old = "bridge_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; its lemmas are stated directly at pstep, cstep and valid_activation_trace. Facts L.x are now plain x."
+
+[[rename]]
+old = "mcp_sem"
+new = ""
+kind = "locale"
+note = "Deleted: single instance at eval, ReturnVar, kind_conv κ, is_global; the sound_* predicates take the kind environment directly. Facts L.x are now plain x."
+
+[[rename]]
+old = "vimp"
+new = ""
+kind = "qualifier"
+note = "The global_interpretation vimp (VIMP_Semantics, CFG_Transfer, CFG_Exec, Activation_Trace_Collect, Source_To_Trace) is gone; vimp.x is plain x."
+
+[[rename]]
+old = "geval_query"
+new = "eval_query"
+kind = "qualifier"
+note = "Interpretation of query_algebra at eval_holds."
+
+[[rename]]
+old = "vimp_sem.gpstep"
+new = "pstep"
+kind = "constant"
+note = "Inductive pstep κ Π, notation κ,Π ⊢ c →p c'. Rules pstep.Call, pstep.ReturnSome, ... (formerly vimp_sem.gpstep.Call ...); the instance definition pstep_def is deleted."
+
+[[rename]]
+old = "cfg_exec_sem.gcstep"
+new = "cstep"
+kind = "constant"
+note = "Inductive cstep κ g, notation κ,g ⊢ c →c c'. cstep_def deleted."
+
+[[rename]]
+old = "trace_sem.gvalid_activation_trace"
+new = "valid_activation_trace"
+kind = "constant"
+note = "Inductive set valid_activation_trace κ g S, notation 𝒯. valid_activation_trace_def deleted."
+
+[[rename]]
+old = "ctx_sem.gactivation_collect"
+new = "activation_collect"
+kind = "constant"
+note = "Definition activation_collect κ adm c0 g S, notation 𝒜. The old instance definition activation_collect_def unfolded to the generic constant; it now unfolds to the set."
+
+[[rename]]
+old = "collect_sem.gnode_collect"
+new = "node_collect"
+kind = "constant"
+note = "Definition node_collect κ g S, notation 𝒞."
+
+[[rename]]
+old = "cfg_edge_sem.gspecial_step"
+new = "special_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_edge_sem.gedge_step"
+new = "edge_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_edge_sem.gcfg_intra_step"
+new = "cfg_intra_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gedge_collect"
+new = "edge_collect"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gcombine_collect"
+new = "combine_collect"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gcall_enter"
+new = "call_enter"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "cfg_transfer_sem.gedge_writes"
+new = "edge_writes"
+kind = "constant"
+note = "No parameters beyond the action; the return slot is ReturnVar."
+
+[[rename]]
+old = "gedge_reads"
+new = "edge_reads"
+kind = "constant"
+note = "The expression-variable function is exp_vars."
+
+[[rename]]
+old = "gedge_global_reads"
+new = "edge_global_reads"
+kind = "constant"
+note = "Takes the global classifier only."
+
+[[rename]]
+old = "gedge_global_writes"
+new = "edge_global_writes"
+kind = "constant"
+note = "Takes the global classifier only."
+
+[[rename]]
+old = "gcall_global_reads"
+new = "call_global_reads"
+kind = "constant"
+note = "Takes the global classifier only."
+
+[[rename]]
+old = "trace_sem.gcall_enter_store"
+new = "call_enter_store"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "ctx_sem.gadmits_call_context"
+new = "admits_call_context"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "ctx_sem.gactivation_context_rel"
+new = "activation_context_rel"
+kind = "constant"
+note = "Takes κ first."
+
+[[rename]]
+old = "ctx_sem.gcall_context_total_on"
+new = "call_context_total_on"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "residual_sem.gintra_step"
+new = "intra_step"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "simrel_sem.gret_store"
+new = "ret_store"
+kind = "constant"
+note = "No κ."
+
+[[rename]]
+old = "bridge_sem.gactivation_trace_repr"
+new = "activation_trace_repr"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "bridge_sem.glocated_activation_trace"
+new = "located_activation_trace"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "geval_holds"
+new = "eval_holds"
+kind = "constant"
+note = "No evaluator parameter; evaluates with eval."
+
+[[rename]]
+old = "mcp_sem.gsound_local_spec"
+new = "sound_local_spec"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_skip"
+new = "sound_skip"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_assign"
+new = "sound_assign"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_special"
+new = "sound_special"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_branch"
+new = "sound_branch"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_body"
+new = "sound_body"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_return"
+new = "sound_return"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_event"
+new = "sound_event"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_query"
+new = "sound_query"
+kind = "constant"
+
+[[rename]]
+old = "mcp_sem.gsound_enter"
+new = "sound_enter"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "mcp_sem.gsound_combine"
+new = "sound_combine"
+kind = "constant"
+note = "Takes κ."
+
+[[rename]]
+old = "gkeyed_split_spec"
+new = "keyed_split_spec"
+kind = "constant"
+note = "Drops the expression-variable and return-slot parameters; keeps the global classifier."
+
+[[rename]]
+old = "verdict_holds"
+new = "verdict_holds"
+kind = "constant"
+note = "Drops the evaluator parameter."
+
+[[rename]]
+old = "check_stores"
+new = "check_stores"
+kind = "constant"
+note = "Drops the evaluator parameter."
+
+[[rename]]
+old = "gframe"
+new = "frame"
+kind = "type"
+note = "Datatype over store and var_id option; the surface synonym frame = vname gframe is gone."
+
+[[rename]]
+old = "gcframe"
+new = "cframe"
+kind = "type"
+
+[[rename]]
+old = "gcconf"
+new = "cconf"
+kind = "type"
+
+[[rename]]
+old = "gactivation_trace"
+new = "activation_trace"
+kind = "type"
+note = "No type parameter."
+
+[[rename]]
+old = "gactivation_path"
+new = "activation_path"
+kind = "type"
+
+[[rename]]
+old = "gcontext_policy"
+new = "call_context_policy"
+kind = "type"
+note = "('v,'e,'c) gcontext_policy becomes 'c call_context_policy; context_policy is the CLI datatype."
+
+[[rename]]
+old = "gcall_info"
+new = "call_info"
+kind = "type"
+note = "Record over var_id and exp; the surface synonym call_info is gone."
+
+[[rename]]
+old = "gquery"
+new = "query"
+kind = "type"
+
+[[rename]]
+old = "gchannel"
+new = "channel"
+kind = "type"
+
+[[rename]]
+old = "ganalysis_event"
+new = "analysis_event"
+kind = "type"
+
+[[rename]]
+old = "gman"
+new = "man"
+kind = "type"
+note = "Drops the expression type argument; likewise man_transfer, man_query, man_combine_transfer, man_enter_transfer."
+
+[[rename]]
+old = "gman_transfer"
+new = "man_transfer"
+kind = "type"
+
+[[rename]]
+old = "gman_query"
+new = "man_query"
+kind = "type"
+
+[[rename]]
+old = "gman_combine_transfer"
+new = "man_combine_transfer"
+kind = "type"
+
+[[rename]]
+old = "gman_enter_transfer"
+new = "man_enter_transfer"
+kind = "type"
+
+[[rename]]
+old = "gdg_spec"
+new = "dg_spec"
+kind = "type"
+note = "Drops the variable and expression type arguments."
+
+[[rename]]
+old = "glocal_spec"
+new = "local_spec"
+kind = "type"
+note = "'s local_spec."
+
+[[rename]]
+old = "gcertified_component"
+new = "certified_component"
+kind = "type"
+
+[[rename]]
+old = "gsolved_run"
+new = "solved_run"
+kind = "type"
+note = "('c,'n,'v) solved_run."
+
+[[rename]]
+old = "gactivation_coverage"
+new = "activation_coverage"
+kind = "locale"
+note = "Parameters κ g S cover adm c0."
+
+[[rename]]
+old = "ganalysis_contract"
+new = "analysis_contract"
+kind = "locale"
+note = "Parameters κ S γDG."
+
+[[rename]]
+old = "gdg_context_activation"
+new = "dg_context_activation"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "grouted_context"
+new = "routed_context"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "gdg_analysis_adapter"
+new = "dg_analysis_adapter"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "grouted_analysis"
+new = "routed_analysis"
+kind = "locale"
+note = "Language parameters replaced by κ."
+
+[[rename]]
+old = "gdg_analysis"
+new = "dg_analysis"
+kind = "locale"
+note = "ev rv pconv pglob replaced by one κ; every instance passed eval ReturnVar (λ_. kind_conv (kenv_of ds)) (λ_. is_global)."
+
+[[rename]]
+old = "mcp_registry"
+new = "mcp_registry"
+kind = "locale"
+note = "ev rv pconv pglob replaced by κ."
+
+[[rename]]
+old = "collect_sem.gactivation_collect_sound"
+new = "activation_collect_sound"
+kind = "fact"
+
+[[rename]]
+old = "gactivation_collect_sound_live_unknowns"
+new = "activation_collect_sound_live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.source_run_has_activation_trace"
+new = "compile_prog_run_has_activation_trace"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.source_reaches_node_collect"
+new = ""
+kind = "fact"
+note = "Deleted: unused once out of the locale; source_reaches_node_collect (Source_To_Trace) states it at the elaborated program."
+
+[[rename]]
+old = "ganalysis_contract.gspec_wf"
+new = "analysis_contract.spec_wf"
+kind = "fact"
+
+[[rename]]
+old = "ganalysis_contract.ggammaDG_mono"
+new = "analysis_contract.gammaDG_mono"
+kind = "fact"
+
+[[rename]]
+old = "ganalysis_contract.gstep_sound"
+new = "analysis_contract.step_sound"
+kind = "fact"
+
+[[rename]]
+old = "ganalysis_contract.gcombine_sound"
+new = "analysis_contract.combine_sound"
+kind = "fact"
+
+[[rename]]
+old = "gkeyed_split_contract"
+new = "keyed_split_contract"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.grouting_adequate"
+new = "routed_context.routing_adequate"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.grouting_total"
+new = "routed_context.routing_total"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.ggammaDG_rd"
+new = "dg_analysis_adapter.gammaDG_rd"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gempty_sound"
+new = "dg_analysis_adapter.empty_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gclassify_proved"
+new = "dg_analysis_adapter.classify_proved"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gclassify_refuted"
+new = "dg_analysis_adapter.classify_refuted"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_adapter.gvars_finite"
+new = "dg_analysis_adapter.vars_finite"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gcomp_sound"
+new = "dg_analysis.comp_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.genter_single"
+new = "dg_analysis.enter_single"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_contract"
+new = "dg_analysis.place_contract"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_enter_runs"
+new = "dg_analysis.place_enter_runs"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_enter_deps"
+new = "dg_analysis.place_enter_deps"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_entry_sound"
+new = "dg_analysis.place_entry_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_cmb_bot"
+new = "dg_analysis.place_cmb_bot"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gplace_init"
+new = "dg_analysis.place_init"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gempty_rd"
+new = "dg_analysis.empty_rd"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gempty\\<^sub>V_sound"
+new = "dg_analysis.empty\\<^sub>V_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gseed_ne_buffer_key"
+new = "dg_analysis.seed_ne_buffer_key"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gseed_ne_global_of"
+new = "dg_analysis.seed_ne_global_of"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpentry"
+new = "dg_analysis.pentry"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpcfg_fin_intra"
+new = "dg_analysis.pcfg_fin_intra"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpcfg_fin_calls"
+new = "dg_analysis.pcfg_fin_calls"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gpcfg_calls_unique"
+new = "dg_analysis.pcfg_calls_unique"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.ginit_sound"
+new = "dg_analysis.init_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gbot_state_empty"
+new = "dg_analysis.bot_state_empty"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.gcomb_fwd"
+new = "routed_context.comb_fwd"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns"
+new = "dg_analysis.live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns_cover"
+new = "dg_analysis.live_unknowns_cover"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns_sub"
+new = "dg_analysis.live_unknowns_sub"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.glive_unknowns_of_result"
+new = "dg_analysis.live_unknowns_of_result"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gprog_cfg_finite"
+new = "dg_analysis.prog_cfg_finite"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_dep_closed"
+new = "dg_analysis.sol_vars_dep_closed"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_back_intra"
+new = "dg_analysis.sol_vars_back_intra"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_back_call_site"
+new = "dg_analysis.sol_vars_back_call_site"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_callee_result"
+new = "dg_analysis.sol_vars_callee_result"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gsol_vars_back_reach"
+new = "dg_analysis.sol_vars_back_reach"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.groot_live_key"
+new = "dg_analysis.root_live_key"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.ganalysis_contribs_wf"
+new = "dg_analysis.analysis_contribs_wf"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.ggamma_live_reader_le"
+new = "dg_analysis.gamma_live_reader_le"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.grouted_analysis_from_live_unknowns"
+new = "dg_analysis.routed_analysis_from_live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_activation_collect_sound_of_terminates"
+new = "dg_analysis.entry_state_activation_collect_sound_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_has_context_of_terminates"
+new = "dg_analysis.entry_state_has_context_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_lookup_sound_of_terminates"
+new = "dg_analysis.entry_state_lookup_sound_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_node_collect_eq_Union_of_terminates"
+new = "dg_analysis.entry_state_node_collect_eq_Union_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_result_node_sound"
+new = "dg_analysis.entry_state_result_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gentry_state_routed_analysis_from_live_unknowns"
+new = "dg_analysis.entry_state_routed_analysis_from_live_unknowns"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_activation_collect_sound_of_terminates"
+new = "dg_analysis.fun_route_activation_collect_sound_of_terminates"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_report_proved_sound"
+new = "dg_analysis.fun_route_report_proved_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_report_refuted_sound"
+new = "dg_analysis.fun_route_report_refuted_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_result_node_sound"
+new = "dg_analysis.fun_route_result_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis.gfun_route_state_at_sound"
+new = "dg_analysis.fun_route_state_at_sound"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_whole_stateI"
+new = "dg_analysis_whole_stateI"
+kind = "fact"
+
+[[rename]]
+old = "gdg_analysis_keyedI"
+new = "dg_analysis_keyedI"
+kind = "fact"
+
+[[rename]]
+old = "gclassify_checks_proved_sound"
+new = "classify_checks_proved_sound"
+kind = "fact"
+
+[[rename]]
+old = "gclassify_checks_refuted_sound"
+new = "classify_checks_refuted_sound"
+kind = "fact"
+
+[[rename]]
+old = "answer_check_gsound"
+new = "answer_check_sound"
+kind = "fact"
+
+[[rename]]
+old = "answer_check_gproved"
+new = "answer_check_proved"
+kind = "fact"
+
+[[rename]]
+old = "answer_check_grefuted"
+new = "answer_check_refuted"
+kind = "fact"
+
+[[rename]]
+old = "geval_holds_constD"
+new = "eval_holds_constD"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.Call"
+new = "pstep.Call"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.ReturnSome"
+new = "pstep.ReturnSome"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.RestoreStep"
+new = "pstep.RestoreStep"
+kind = "fact"
+
+[[rename]]
+old = "vimp_sem.gpstep.UnwindAct"
+new = "pstep.UnwindAct"
+kind = "fact"
+
+[[rename]]
+old = "simrel_sem.csim_step"
+new = "csim_step"
+kind = "fact"
+
+[[rename]]
+old = "simrel_sem.source_progress"
+new = "source_progress"
+kind = "fact"
+
+[[rename]]
+old = "simrel_sem.csim_star"
+new = "csim_star"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.cstep_preserves_activation_trace_repr"
+new = "cstep_preserves_activation_trace_repr"
+kind = "fact"
+
+[[rename]]
+old = "mcp_sem.ls_channel_sound"
+new = "ls_channel_sound"
+kind = "fact"
+
+[[rename]]
+old = "mcp_sem.mcp_combine_sound"
+new = "mcp_combine_sound"
+kind = "fact"
+
+[[rename]]
+old = "mcp_sem.dg_spec_of_contract"
+new = "dg_spec_of_contract"
+kind = "fact"
+
+[[rename]]
+old = "cfg_transfer_sem.edge_step_frame"
+new = "edge_step_frame"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_eq_Union_activation_of_fun"
+new = "node_collect_eq_Union_activation_of_fun"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_eq_Union_activation_of_has_context"
+new = "node_collect_eq_Union_activation_of_has_context"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_I"
+new = "node_collect_I"
+kind = "fact"
+
+[[rename]]
+old = "collect_sem.node_collect_E"
+new = "node_collect_E"
+kind = "fact"
+
+[[rename]]
+old = "bridge_sem.source_store_in_activation_collect"
+new = "source_store_in_activation_collect"
+kind = "fact"
+
+[[rename]]
+old = "gactivation_coverage.node_collect_eq_Union_activation_collect"
+new = "activation_coverage.node_collect_eq_Union_activation_collect"
+kind = "fact"
+
+[[rename]]
+old = "gactivation_coverage.node_collect_covered"
+new = "activation_coverage.node_collect_covered"
+kind = "fact"
+
+[[rename]]
+old = "grouted_context.activation_collect_dg_sound"
+new = "routed_context.activation_collect_dg_sound"
+kind = "fact"
+
+[[rename]]
+old = "kind_conv_simps"
+new = "kind_conv_simps"
+kind = "fact"
+note = "No longer [simp] in the semantics; Nonrelational_Domain declares it [simp] for the analyses."
+
+[[rename]]
+old = "combine_env_rv_irrelevant"
+new = "combine_env_rv_irrelevant"
+kind = "fact"
+note = "Lost its premise ¬ glob rv, which holds for ReturnVar."
+
+[[rename]]
+old = "witness_pi"
+new = "witness_pi"
+kind = "constant"
+note = "Now a core program (unit, var_id, exp) gptable; witness_wf states gwf_compile_input exp_vars ReturnVar is_global."

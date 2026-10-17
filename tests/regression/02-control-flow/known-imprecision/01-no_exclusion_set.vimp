@@ -10,7 +10,7 @@
 // guard refines x to Top in every component and (x != 0) stays UNKNOWN.
 // interval and sign alone answer the same.
 fun main() {
-  x = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (x) {
     __voblint_check(x != 0); // UNKNOWN
   }

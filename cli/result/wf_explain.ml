@@ -19,7 +19,7 @@ let special_arity = function
 let rec exp_vars = function
   | C.N _ -> []
   | C.V x -> [ x ]
-  | C.Not a -> exp_vars a
+  | C.Not a | C.Cast (_, a) -> exp_vars a
   | C.Plus (a, b)
   | C.Minus (a, b)
   | C.Times (a, b)

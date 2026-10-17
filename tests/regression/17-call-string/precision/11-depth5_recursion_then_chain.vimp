@@ -11,13 +11,14 @@
 // (a=[0,3]): the collapsed f seed admits every i in [0,2], and its
 // fall-through `return 0` arm is live through Interval's (i != 0) guard
 // keeping the endpoint 0 (see known-imprecision/03 for that mechanism).
-fun h(i) { return 3; }
-fun g(i) { r = h(i); return r; }
-fun f(i) {
+fun i32 h(i32 i) { return 3; }
+fun i32 g(i32 i) { i32 r = h(i); return r; }
+fun i32 f(i32 i) {
+  i32 r;
   if (i == 0) { r = g(2); return r; }
   if (0 < i) { r = f(i - 1); return r; }
   return 0;
 }
 fun main() {
-  a = f(4); __voblint_check(a == 3); // PROVED
+  i32 a = f(4); __voblint_check(a == 3); // PROVED
 }

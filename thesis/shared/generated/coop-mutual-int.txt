@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  -----------------------------------------------------------------
-22:3      pp7    z == 1     UNKNOWN  int: z=signs:≥0; intervals:[0,1]; parities:ℤ; congruences:ℤ
+--------  -----  ---------  -------  ---------------------------------------
+23:3      pp9    z == 1     UNKNOWN  int: z=intervals:[0,1]; congruences:⊤

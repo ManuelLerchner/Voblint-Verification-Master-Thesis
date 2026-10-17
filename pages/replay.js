@@ -50,8 +50,8 @@ function globalName(key) {
 }
 
 /* A node's value in one line: what it says beyond ⊤, cut to the node's width. */
-function shortValue(value) {
-  const said = compactValue(value);
+function shortValue(value, owner) {
+  const said = compactValue(value, owner);
 
   return said.length > VALUE_CHARS ? `${said.slice(0, VALUE_CHARS - 1)}…` : said;
 }
@@ -80,15 +80,21 @@ export function seedLabelOf(bindings) {
   return label || "\u22a4";
 }
 
-function compactValue(value) {
+/*
+ * A trace value is a whole store, each local qualified by its procedure; inside the
+ * box of [owner] its own locals read by their source names.
+ */
+function compactValue(value, owner) {
   if (value === "⊥") {
     return "⊥";
   }
 
+  const own = owner ? `${owner}::` : null;
   const said = value
     .split("; ")
     .flatMap((section) => section.replace(/^[^:=]+: /, "").split(", "))
-    .filter((part) => part !== "⊤" && !part.endsWith("=⊤"));
+    .filter((part) => part !== "⊤" && !part.endsWith("=⊤"))
+    .map((part) => (own && part.startsWith(own) ? part.slice(own.length) : part));
 
   return said.length > 0 ? said.join(", ") : "⊤";
 }
@@ -241,6 +247,7 @@ export function createSolveReplay(deps) {
     const nodeOf = new Map();
     const keyOf = new Map();
     const pointOf = new Map();
+    const ownerOf = new Map();
 
     for (const node of answer.nodes ?? []) {
       const context = node.context.slice(node.context.indexOf(" / ") + 3);
@@ -249,6 +256,7 @@ export function createSolveReplay(deps) {
       nodeOf.set(key, node.id);
       keyOf.set(node.id, key);
       pointOf.set(node.id, node.point);
+      ownerOf.set(node.id, node.context.slice(0, Math.max(0, node.context.indexOf(" / "))));
     }
 
     /* A seed's node stands beside its procedure's entry in its context. */
@@ -381,6 +389,7 @@ export function createSolveReplay(deps) {
       nodeOf,
       keyOf,
       pointOf,
+      ownerOf,
       entryOf,
       edgesBetween,
       step: 0,
@@ -462,7 +471,9 @@ export function createSolveReplay(deps) {
       cy.nodes(".point").forEach((node) => {
         const key = replay.keyOf.get(node.id());
         const seen = state.reached.has(key);
-        const value = seen ? shortValue(state.values.get(key) ?? "⊥") : UNREACHED;
+        const value = seen
+          ? shortValue(state.values.get(key) ?? "⊥", replay.ownerOf.get(node.id()))
+          : UNREACHED;
         const classes = [
           "point",
           status(state, key, finished),
@@ -501,7 +512,7 @@ export function createSolveReplay(deps) {
           ? ""
           : g.value === "⊥"
             ? "⊥"
-            : seedLabelOf(compactValue(g.value).split(", "));
+            : seedLabelOf(compactValue(g.value, key.split("|")[0].slice(2)).split(", "));
         const label = shape === "global" ? `Global  ${value}`.trim() : value;
         const last = drawn.get(node.id());
 

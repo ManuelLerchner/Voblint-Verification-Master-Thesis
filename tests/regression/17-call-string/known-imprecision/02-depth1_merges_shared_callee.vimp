@@ -4,8 +4,10 @@
 // source location regardless of which f activation reaches it. The two
 // activations of g -- one from f(3), one from f(10) -- therefore collapse
 // onto the same routed context and widen together, so g's result, and
-// everything downstream that reads it, loses precision: both x and y come
-// back as [6,+inf) instead of their exact values 6 and 20. The K1/K2
+// everything downstream that reads it, loses precision: g's entry widens to
+// p = [3,2147483647], p + p may then overflow, and under the default
+// assume_top both x and y come back as the full i32 range instead of their
+// exact values 6 and 20. The K1/K2
 // Isabelle witnesses pin the same separation on their solved states.
 // EXPECT-GRAPH-BEGIN
 // clusters:
@@ -38,29 +40,29 @@
 // nodes:
 //   main_pp8_ctx0: pp8 [unknown]
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //       check y == 20
 //   main_pp9_ctx0: pp9
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //   main_exit_main_ctx0: exit_main
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //   main_pp5_ctx0: pp5
 //       interval:
 //         x=⊤
 //         y=⊤
 //   main_pp6_ctx0: pp6
 //       interval:
-//         x=[6,+∞]
+//         x=[-2147483648,2147483647]
 //         y=⊤
 //   main_pp7_ctx0: pp7 [unknown]
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //       check x == 6
 //   main_entry_main_ctx0: entry_main
 //       interval:
@@ -70,19 +72,20 @@
 //       unreachable
 //   g_exit_g_ctx0: exit_g
 //       interval:
-//         p=[3,+∞]
-//   g_pp0_ctx0: pp0
+//         p=[3,2147483647]
+//   g_pp0_ctx0: pp0 [unknown]
 //       interval:
-//         p=[3,+∞]
+//         p=[3,2147483647]
+//       possible signed integer overflow in +: p + p
 //   g_entry_g_ctx0: entry_g
 //       interval:
-//         p=[3,+∞]
+//         p=[3,2147483647]
 //   f_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //   f_exit_f_ctx0: exit_f
 //       interval:
 //         p=[3,3]
-//         t=[6,+∞]
+//         t=[-2147483648,2147483647]
 //   f_pp2_ctx0: pp2
 //       interval:
 //         p=[3,3]
@@ -90,7 +93,7 @@
 //   f_pp3_ctx0: pp3
 //       interval:
 //         p=[3,3]
-//         t=[6,+∞]
+//         t=[-2147483648,2147483647]
 //   f_entry_f_ctx0: entry_f
 //       interval:
 //         p=[3,3]
@@ -100,7 +103,7 @@
 //   f_exit_f_ctx1: exit_f
 //       interval:
 //         p=[10,10]
-//         t=[6,+∞]
+//         t=[-2147483648,2147483647]
 //   f_pp2_ctx1: pp2
 //       interval:
 //         p=[10,10]
@@ -108,7 +111,7 @@
 //   f_pp3_ctx1: pp3
 //       interval:
 //         p=[10,10]
-//         t=[6,+∞]
+//         t=[-2147483648,2147483647]
 //   f_entry_f_ctx1: entry_f
 //       interval:
 //         p=[10,10]
@@ -142,11 +145,11 @@
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-fun g(p) { return p + p; }
-fun f(p) { t = g(p); return t; }
+fun i32 g(i32 p) { return p + p; }
+fun i32 f(i32 p) { i32 t = g(p); return t; }
 fun main() {
-  x = f(3);
-  y = f(10);
+  i32 x = f(3);
+  i32 y = f(10);
   __voblint_check(x == 6); // UNKNOWN
   __voblint_check(y == 20); // UNKNOWN
 }

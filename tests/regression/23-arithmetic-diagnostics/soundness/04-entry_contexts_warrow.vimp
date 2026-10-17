@@ -4,10 +4,10 @@
 // (arithmetic_mixed_contexts_warn_once). 02-entry_contexts.vimp under the
 // default warrow globals rule: one context divides by zero and one does not,
 // so the source operation gets exactly one possible finding.
-fun f(n) {
+fun i32 f(i32 n) {
   return 10 / n; // ARITH: WARN division-by-zero
 }
 fun main() {
-  x = f(0);
-  y = f(2);
+  i32 x = f(0);
+  i32 y = f(2);
 }

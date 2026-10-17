@@ -1,147 +1,80 @@
 # Analyses / Shared
 
-Three sessions sit here, and none of them is an analysis. They are what every
-concrete domain would otherwise each rewrite: how a call site picks a context,
-what a solved system publishes, and the derived operations a non-relational
-domain gets for free. No lattice, no transfer function, no soundness theorem
+Two sessions sit here, and neither is an analysis. They are what every
+concrete domain would otherwise each rewrite: how routed equations are built for a compiled program,
+and what a solved system publishes. No lattice, no transfer function, no soundness theorem
 about any particular abstraction.
 
 `Shared/` is a directory, not a session. It exists to keep one fact visible in
-the tree: these three sit *below* `Sign/`, `Interval/`, `Parity/`,
-`Congruence/`, `Int/` and `Relational/` rather than beside them. A reader
+the tree: these two sit *below* `Nonrelational/`, `Sign/`, `Interval/`, `Parity/`,
+`Congruence/`, `Int/` and `Order/` rather than beside them. A reader
 scanning `src/Analyses/` should not have to open a ROOT to tell a domain from
 the floor under it.
 
 | Session | Directory | Holds |
 | --- | --- | --- |
-| `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete context policies (call-string, entry-state), and key-space finiteness arguments |
-| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `DG_Analysis` assembles one whole analysis --- at any context policy, the context-insensitive unit route included --- from a domain's choices, and `DG_Live_Unknowns` states its endpoints from termination alone |
-| `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
+| `Voblint_Routing` | `Routing/` | compiled routed-equation construction and key-space finiteness arguments for call-string and monovariant key sets |
+| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `DG_Live_Unknowns` states its endpoints from termination alone |
 
 ## Vocabulary
 
 | Term | Meaning |
 | --- | --- |
-| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `sound_arith_ops` (`Abstract_Arithmetic`), `sound_minmax_ops` (`Special_Ops`) and `sound_nonrelational_ops`/`mono_nonrelational_ops` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `sound_refinement` the same way. `Nonrelational_Ops` is the `nonrelational_ops` bundle a domain supplies: its primitive choices, from which one interpretation derives the filters, the branch, the check classifier and the transfer. |
-| non-relational | a domain whose state is one abstract value per variable, independently --- a store of type `vname => 'a` |
-| context policy | how a call site maps to a context: none, the entered abstract value, or a bounded call string |
+| non-relational | a domain whose state is one abstract value per variable, independently --- in `Voblint_Nonrelational` a state of type `var_id ⇒ 'a kd` |
+| context policy | how a call site maps to a context: a call string of bound `k` (`k = 0` is context-insensitive) or the entered abstract state |
 | context space | the candidate contexts a context policy may choose. Its finiteness is separate from the solver's finite stabilized key set. |
 | analysis surface | the published shape of a finished analysis --- the report a caller reads --- independent of which domain produced it |
 
-## Worked example: how a domain uses these
+## Worked example: how an analysis uses these
 
-Sign interprets `Nonrelational/Abstract_Arithmetic` at its own lattice and gets
-the shared expression evaluator and soundness induction;
-`Nonrelational/Nonrelational_Ops` packages that evaluator, backward filter, and top
-value into generic executable procedure entry. Sign's numeric check queries
-remain in `Sign_Numeric_Queries`;
-`Routing/Compiled_Routed_Equations` assembles the common executable equation
-system from the chosen keys, route, specification, graph, and initial state.
-`Result/DG_Result_Construction` turns the solved system into a published table
-and `Result/Analysis_Surface` is what every registration reads it back through,
-at a given context.
+`Routing/Compiled_Routed_Equations` assembles the executable equation system from
+the chosen keys, route, specification, graph and initial state.
+`Result/DG_Result_Construction` turns the solved system into a published table, and
+`Result/Analysis_Surface` is what every instance reads it back through, at a given
+context.
 
-Above those, `Result/DG_Analysis`'s `dg_analysis` is what the
-CLI's combined registrations interpret at the routed policies: `mcp_cs_rule`
-at the call-string routing pair and `mcp_es_rule` at the entry-state one
-(`Voblint_CLI.MCP_Analyses`), each with Sign among the active analyses. That
-locale owns the equation system, the solve, the covered keys, the reader, the
-result table, the contextual report and the activation-indexed soundness
-endpoints, so a policy costs an interpretation rather than a pipeline. The
-context-insensitive route is the same locale at the unit route, local to a
-domain: `sign_rule` is a `global_interpretation` of `dg_analysis_exec`
-in Sign's own generated theory, `Sign_Analyses`. Every registration takes the global update rule as a
-parameter, and the combined ones take the activation list besides. Sign
-contributes the lattice and the transfer functions. Every other piece of those
-sentences is from here.
+Above those, `Result/DG_Analysis`'s locale `dg_analysis` owns the equation system,
+the solve, the covered keys, the reader, the result table, the contextual report and
+the activation-indexed soundness endpoints, so a context policy costs an
+interpretation rather than a pipeline. `Voblint_Nonrelational` interprets it once per
+policy for one domain (`nonrel`, `nonrel_es`); `Voblint_CLI` interprets it for the
+combined state of the activated analyses (`mcp_cs`, `mcp_es`, and with
+flow-insensitive program globals `mcp_split`, `mcp_split_es`). Every instance takes
+the global update rule as a parameter. The analysis contributes its lattice and
+transfer; every other piece is from here.
 
-## Why three sessions and not one
+## Why two sessions and not one
 
-The groups own distinct responsibilities: routing over compiled programs,
-publication of solved results, and pointwise non-relational reuse. One import edge
-crosses them: `DG_Analysis` imports `Compiled_Routed_Equations` and
-`Entry_State_Routed_Context` from `Routing/`. `Nonrelational/` imports nothing from
-either. Keeping those names explicit prevents shared
-code from becoming an undifferentiated analysis base; CLI-only dispatch and
-`run_voblint` stay beside their consumers in `Voblint_CLI`.
+The groups own distinct responsibilities: routing over compiled programs and
+publication of solved results. One import edge crosses them: `DG_Analysis`
+imports `Compiled_Routed_Equations` from `Routing/`. Keeping those names explicit prevents shared code from becoming an
+undifferentiated analysis base; CLI-only dispatch and `run_voblint` stay beside
+their consumers in `Voblint_CLI`.
 
 ## Why they are chained
 
-`Voblint_Routing` is parented on `Voblint_Exec`, and
-`Voblint_Routing <- Voblint_Result <- Voblint_Nonrelational` is only half a
-dependency: `Result` needs `Routing`, but `Nonrelational` needs neither. Isabelle
-gives a session one parent and one inherited heap: theories from an ancestor come
-from that heap, theories from a merely *listed* session are re-elaborated in the
-importer. Siblings that each domain lists would re-elaborate two of the three in
-all five pointwise domain sessions ---
-`Exec_Backward` alone is around 680 lines, five times over. Linearising is the
-price of elaborating once.
-
-Read the chain as increasing commitment: program shape (`Routing`), then
-publication (`Result`), then store shape (`Nonrelational`). It does not claim
-`Nonrelational` needs `Result`.
-
-## Why `Nonrelational` is last, and what that buys
-
-`Voblint_Analysis_Relational` is parented on `Voblint_Exec`, branching off
-*below* this whole chain. That is deliberate and it is the load-bearing part of
-the layout.
-
-All five theories in `Nonrelational/` fix a pointwise store --- `ev :: exp =>
-(vname => 'a) => 'a` in `Abstract_Arithmetic` and `Special_Ops`, `n_aval` in
-`Nonrelational_Ops`, `'a abs_state` throughout `Nonrelational_Transfer`, an explicit
-`gs :: vname => bool` classifier throughout `Exec_Backward`. `Rel_Order_Domain`
-exists to show that nothing below the domain layer assumes that structure, and
-it makes the claim by running an order carrier that is not an `abs_state`
-through the same generator, spine and solver.
-
-The boundary is enforced by the ROOT graph. `Rel_Order_Domain` imports only
-`Voblint_Framework.DG_Spec_Sound`, `DG_Indexed_Generator` and `State_Restriction`
---- nothing from any of these three sessions --- so parenting it on
-`Voblint_Exec` puts `Nonrelational/` out of reach.
-
-Keep the scope honest. This is a *reachability* guarantee about one session, not
-a proof that relational code is free of pointwise assumptions. A shared theory
-elsewhere that quietly assumed a `vname => 'a` state would still slip through.
-What makes it mean something is the criterion:
-
-> A theory belongs in `Nonrelational/` exactly when it fixes a `vname => 'a`
-> store.
-
-One that does not --- `Analysis_Surface`, generic in `'a` with no store at all
---- belongs elsewhere, and lives in `Result/`.
+`Voblint_Routing` is parented on `Voblint_Exec`, and `Voblint_Result` on
+`Voblint_Routing`, because `Result` needs `Routing`. The domain sessions are
+parented on `Voblint_Nonrelational`, itself parented on `Voblint_Result`, so they
+read both from one inherited heap instead
+of re-elaborating them.
 
 ## Why none of this is in a core session
-
-Two different reasons, and only the first is a hard constraint.
 
 `Voblint_Framework` is `Voblint_CFG` plus `Domain` and `Solver`. It sees neither
 the compiler nor the executable carrier. `Routing/` and `Analysis_Surface` need
 `Voblint_Compile` because a context policy is about a *compiled* program;
-`Nonrelational_Ops`, `Exec_Backward` and `DG_Result_Construction` need `Voblint_Exec`.
-None of them could move down even if we wanted it.
-
-`Abstract_Arithmetic` (needs only `Domain` and `VIMP`) and `Special_Ops` (only
-`Framework`) could. They must not: putting a pointwise expression evaluator in
-`Voblint_Framework` would make the framework assume one value per variable,
-which is exactly the assumption `Rel_Order_Domain` is there to refute. Framework
-stays true for an arbitrary carrier and an arbitrary CFG; this layer is where a
-program becomes compiled and a store becomes pointwise, but not yet where a
-value becomes a sign or an interval.
+`DG_Result_Construction` needs `Voblint_Exec`. None of them could move down.
 
 ## Reading order
 
-`Routing/Compiled_Routed_Equations` first for the executable construction,
-then `Call_String_Routed_Context`, the policy whose route never reads the state;
-`Entry_State_Routed_Context` reads as a variation on it. Then
+`Routing/Compiled_Routed_Equations` first for the executable construction. Then
 `Result/DG_Result_Construction` for what a solve turns into,
 `Result/Analysis_Surface` for how a caller reads that back, and
 `Result/DG_Analysis` for the assembly that puts all of it together ---
 its `dg_pipeline` is the construction with no correctness assumptions and
 `dg_analysis` the same objects under the domain and solver contracts.
-`Nonrelational/` is
-reference material a domain author reaches for rather than a narrative;
-`Abstract_Arithmetic` is the one to read first if you are adding a domain.
+`Result/DG_Live_Unknowns` states the endpoints from termination alone.
 
 `Routing/Context_Space_Finite` is cited by nothing, deliberately. It bounds the
 candidate space a call-string or monovariant key set is drawn from, before any

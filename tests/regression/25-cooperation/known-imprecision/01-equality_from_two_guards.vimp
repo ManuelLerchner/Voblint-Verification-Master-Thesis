@@ -16,11 +16,11 @@
 // --analysis interval,order runs both
 // (precision/03-equality_asked_of_order); this case pins the baseline.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (x <= y) {
     if (y <= x) {
-      z = (x == y);
+      i32 z = (x == y);
       __voblint_check(z == 1); // UNKNOWN
     }
   }

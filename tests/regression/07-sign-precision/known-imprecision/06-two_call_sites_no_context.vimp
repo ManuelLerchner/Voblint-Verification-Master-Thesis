@@ -1,0 +1,19 @@
+// PARAM: --analysis sign --globals join
+// Source: Example_Sign_Report_Regression (sign_two_call_sites_result).
+//
+// One callee, two call sites, no context. Both arguments are Positive, so
+// the shared entry state is Positive, and concretely a = 9 and b = 16. n * n
+// is Top all the same: typed Sign has no magnitude, so it cannot exclude
+// i32 wraparound (n * n is negative for n = 46341). The Interval analogue
+// (03-procedures/known-imprecision/01-two_call_sites_same_procedure.vimp)
+// loses at the join instead; 11-graph-snapshot/10-entry_state_sign_own_domain.vimp
+// is the same program under --context entry-state.
+fun i32 square(i32 n) {
+  return n * n;
+}
+fun main() {
+  i32 a = square(3);
+  i32 b = square(4);
+  __voblint_check(0 < a); // UNKNOWN
+  __voblint_check(0 < b); // UNKNOWN
+}

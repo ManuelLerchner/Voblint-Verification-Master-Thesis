@@ -21,7 +21,7 @@ text \<open>
 \<close>
 
 lemma compile_prog_proc_frag_sub:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps" and decl: "\<Pi> q = Some d"
+  assumes wf: "gwf_compile_input vars rv \<G> \<Pi> ps" and decl: "\<Pi> q = Some d"
   obtains m m' Ep Kp where
     "compile_proc \<Pi> q d m = (m', Ep, Kp)"
     "(FunctionEntry q, EA_Body q, Statement m) \<in> intra (compile_prog \<Pi> ps)"
@@ -55,7 +55,6 @@ proof -
   qed
 qed
 
-
 subsection \<open>Call targets are declared\<close>
 
 text \<open>
@@ -64,7 +63,7 @@ text \<open>
 \<close>
 
 lemma compile_calls_target_declared:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> wf_source_com \<Pi> c
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> gwf_source_com vars rv \<Pi> c
    \<Longrightarrow> (u, ca, FunctionEntry q, k') \<in> K \<Longrightarrow> \<exists>d. \<Pi> q = Some d"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
@@ -92,7 +91,7 @@ next
 qed (auto split: option.splits)
 
 lemma compile_prog_calls_target_declared:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv \<G> \<Pi> ps"
     and e: "(u, ca, FunctionEntry q, k) \<in> calls (compile_prog \<Pi> ps)"
   shows "\<exists>d. \<Pi> q = Some d"
 proof -
@@ -116,8 +115,8 @@ proof -
         cb: "compile \<Pi> r (body decl) (Statement (m + csize (body decl))) m
                = (m + csize (body decl), Statement m, Eb, Kp)"
       by (rule compile_procE)
-    have "wf_source_com \<Pi> (body decl)"
-      using wf_compile_inputD(5)[OF wf decl] by (simp add: wf_proc_decl_def)
+    have "gwf_source_com vars rv \<Pi> (body decl)"
+      using wf_compile_inputD(5)[OF wf decl] by (simp add: gwf_proc_decl_def)
     from compile_calls_target_declared[OF cb this eK] show ?thesis .
   next
     case M
@@ -334,8 +333,8 @@ text \<open>
 \<close>
 
 definition proc_nodes ::
-  "(cfg_node \<times> edge_action \<times> cfg_node) set
-   \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set \<Rightarrow> cfg_node set"
+  "(cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+   \<Rightarrow> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set \<Rightarrow> cfg_node set"
 where
   "proc_nodes E K =
      {u. \<exists>a v. (u, a, v) \<in> E} \<union> {v. \<exists>u a. (u, a, v) \<in> E}
@@ -383,7 +382,7 @@ lemma proc_nodes_pfn:
   using x compile_proc_intra_pfn[OF cp] compile_proc_calls_pfn[OF cp]
   unfolding proc_nodes_def by blast
 
-definition prog_node :: "'a ptable \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> cfg_node \<Rightarrow> bool" where
+definition prog_node :: "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "prog_node \<Pi> ps q x \<longleftrightarrow>
      (\<exists>d m m' Ep Kp. \<Pi> q = Some d \<and> compile_proc \<Pi> q d m = (m', Ep, Kp)
         \<and> (FunctionEntry q, EA_Body q, Statement m) \<in> intra (compile_prog \<Pi> ps)
@@ -391,7 +390,7 @@ definition prog_node :: "'a ptable \<Rightarrow> pname list \<Rightarrow> pname 
         \<and> x \<in> proc_nodes Ep Kp)"
 
 lemma prog_node_entry:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps" and decl: "\<Pi> q = Some d"
+  assumes wf: "gwf_compile_input vars rv \<G> \<Pi> ps" and decl: "\<Pi> q = Some d"
   shows "prog_node \<Pi> ps q (FunctionEntry q)"
 proof -
   from compile_prog_proc_frag_sub[OF wf decl] obtain m m' Ep Kp where
@@ -424,7 +423,7 @@ lemma prog_node_reaches:
   unfolding prog_node_def using compile_proc_node_reaches by auto
 
 lemma prog_node_intra:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv \<G> \<Pi> ps"
     and u: "prog_node \<Pi> ps q u" and e: "(u, a, v) \<in> intra (compile_prog \<Pi> ps)"
   shows "prog_node \<Pi> ps q v"
 proof -
@@ -441,7 +440,7 @@ proof -
 qed
 
 lemma prog_node_calls:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv \<G> \<Pi> ps"
     and u: "prog_node \<Pi> ps q u" and e: "(u, ca, ce, k) \<in> calls (compile_prog \<Pi> ps)"
   shows "prog_node \<Pi> ps q k"
 proof -
@@ -458,12 +457,12 @@ proof -
 qed
 
 lemma prog_node_main_entry:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv \<G> \<Pi> ps"
   shows "prog_node \<Pi> ps prog_main_name (cfg_entry (compile_prog \<Pi> ps))"
   using prog_node_entry[OF wf wf_compile_inputD(2)[OF wf]] by simp
 
 lemma prog_node_callee_entry:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv \<G> \<Pi> ps"
     and e: "(u, ca, FunctionEntry q, k) \<in> calls (compile_prog \<Pi> ps)"
   shows "prog_node \<Pi> ps q (FunctionEntry q)"
   using compile_prog_calls_target_declared[OF wf e] prog_node_entry[OF wf] by blast

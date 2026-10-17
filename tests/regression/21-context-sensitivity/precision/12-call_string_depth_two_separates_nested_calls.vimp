@@ -1,0 +1,18 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// g is called only from f, and f from two sites in main. A call string of
+// length 2 keeps the two activations of g apart ([f-site, main-site]), so
+// each returns its own argument; length 1 merges them at f's one call site
+// (known-imprecision/05-call_string_depth_one_merges_nested_calls.vimp).
+fun i32 g(i32 p) {
+  return p;
+}
+fun i32 f(i32 p) {
+  i32 t = g(p);
+  return t;
+}
+fun main() {
+  i32 x = f(3);
+  i32 y = f(-10);
+  __voblint_check(x > 0); // PROVED
+  __voblint_check(y < 0); // PROVED
+}

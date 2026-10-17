@@ -85,10 +85,10 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-fun f(n) {
+fun i32 f(i32 n) {
   return 10 / n; // ARITH: WARN division-by-zero
 }
 fun main() {
-  x = f(0);
-  y = f(2);
+  i32 x = f(0);
+  i32 y = f(2);
 }

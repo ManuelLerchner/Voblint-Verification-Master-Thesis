@@ -1,16 +1,14 @@
 theory Check_Answer
-  imports Abstract_Checks Contextual_Check_Report
+  imports Contextual_Check_Report
 begin
 
 section \<open>A domain's answer to the value of an expression\<close>
 
 text \<open>
-  A domain with a check decision procedure answers \<open>EvalInt e\<close> for every
-  comparison or logical operator \<open>e\<close>: such an expression evaluates to \<open>0\<close> or
-  \<open>1\<close>, so a decided \<^const>\<open>sound_check_query.check_query\<close> is the
-  exact integer, and an undecided one is the interval \<open>[0, 1]\<close>. Other
-  expressions it declines with \<open>\<top>\<close>. A check is then classified from this
-  answer exactly as the domain's own \<open>classify_check\<close> classified it.
+  A domain that decides a comparison or logical operator \<open>e\<close> three-valuedly
+  answers \<open>EvalInt e\<close> with \<open>bool_answer\<close>: such an expression evaluates to
+  \<open>0\<close> or \<open>1\<close>, so a decided truth value is the exact integer, and an undecided
+  one is the interval \<open>[0, 1]\<close>.
 \<close>
 
 definition bool_answer :: "bool option \<Rightarrow> answer" where
@@ -19,70 +17,12 @@ definition bool_answer :: "bool option \<Rightarrow> answer" where
         Some b \<Rightarrow> answer_of_int (if b then 1 else 0)
       | None \<Rightarrow> answer_of_ivl (Ivl (Fin 0) (Fin 1)))"
 
-lemma classify_answer_of_int:
-  "classify_answer (answer_of_int n) =
-     Decided (if n = 1 then Check_Proved else if n = 0 then Check_Refuted else Check_Unknown)"
-  using answer_const_of_int[of n] unfolding answer_of_int_def by simp
-
-lemma answer_const_bool_range: "answer_const (answer_of_ivl (Ivl (Fin 0) (Fin 1))) = None"
-proof -
-  have "congruence_constant (\<top> :: congruence) = None"
-    by (cases "congruence_constant (\<top> :: congruence)")
-       (auto dest!: gamma_congruence_constant simp: set_eq_iff, presburger)
-  then show ?thesis
-    by (simp add: answer_of_ivl_def int_dom_constant_def top_int_dom_ext_def top_sign_def)
-qed
-
-lemma classify_bool_answer:
-  "classify_answer (bool_answer r) =
-     Decided (case r of Some True \<Rightarrow> Check_Proved | Some False \<Rightarrow> Check_Refuted
-                      | None \<Rightarrow> Check_Unknown)"
-proof (cases r)
-  case None
-  then show ?thesis
-    using answer_const_bool_range by (simp add: bool_answer_def answer_of_ivl_def)
-qed (auto simp: bool_answer_def classify_answer_of_int)
-
-context sound_check_query
-begin
-
-fun eval_answer :: "'d \<Rightarrow> query \<Rightarrow> answer" where
-  "eval_answer d (EvalInt e) = (if bool_valued e then bool_answer (check_query e d) else \<top>)"
-
-lemma eval_answer_sound:
-  assumes mem: "s \<in> \<gamma>\<^sub>S d"
-  shows "eval_holds q (eval_answer d q) s"
-proof (cases q)
-  case (EvalInt e)
-  show ?thesis
-  proof (cases "bool_valued e")
-    case True
-    have v: "\<lbrakk>e\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) then 1 else 0)"
-      by (rule aval_bool_valued[OF True])
-    show ?thesis
-    proof (cases "check_query e d")
-      case None
-      then show ?thesis
-        using EvalInt True v by (simp add: bool_answer_def split: if_splits)
-    next
-      case (Some b)
-      have "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = b"
-        by (rule check_query_sound[OF mem Some])
-      then show ?thesis
-        using EvalInt True v Some by (simp add: bool_answer_def split: if_splits)
-    qed
-  qed (simp add: EvalInt)
-qed
-
-lemma check_query_check_truth_exp: "check_query (check_truth_exp c) d = check_query c d"
-  by (cases c) (simp_all add: check_truth_exp_def truthy_query_def)
-
-theorem classify_eval_answer:
-  "classify_answer (eval_answer d (check_query_of c)) = Decided (classify_check c d)"
-  by (simp add: check_query_check_truth_exp classify_bool_answer classify_check_def
-      split: option.splits bool.splits)
-
-end
+lemma classify_answer_gamma:
+  "a \<noteq> QBot \<Longrightarrow> classify_answer a =
+     Decided (if 0 \<notin> gamma_answer a then Check_Proved
+              else if 1 \<notin> gamma_answer a then Check_Refuted else Check_Unknown)"
+  using answer_excludes_iff[of 0 a] answer_excludes_iff[of 1 a]
+  by (cases a) (auto simp del: answer_excludes.simps)
 
 section \<open>Deciding a check from an answer\<close>
 
@@ -95,26 +35,29 @@ text \<open>
   itself is \<^const>\<open>Bot\<close>, never from the answer to its query.
 \<close>
 
-definition answer_check :: "('v \<Rightarrow> query \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'v \<Rightarrow> check_result" where
-  "answer_check q c v =
-     (case classify_answer (q v (check_query_of c)) of Decided r \<Rightarrow> r | _ \<Rightarrow> Check_Unknown)"
+text \<open>
+  The question is the check's truth value, which a language spells with its own
+  expressions: \<open>tx c\<close> evaluates to \<open>1\<close> where \<open>c\<close> holds and to \<open>0\<close> elsewhere.
+\<close>
 
-lemma answer_check_proved:
-  assumes "answer_check q c v = Check_Proved"
-    and "eval_holds (check_query_of c) (q v (check_query_of c)) s"
-  shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using assms classify_answer_proved
-  by (auto simp: answer_check_def split: lifted.splits)
+definition answer_check ::
+    "(exp \<Rightarrow> exp) \<Rightarrow> ('v \<Rightarrow> query \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'v \<Rightarrow> check_result" where
+  "answer_check tx q c v =
+     (case classify_answer (q v (EvalInt (tx c))) of Decided r \<Rightarrow> r | _ \<Rightarrow> Check_Unknown)"
 
-lemma answer_check_refuted:
-  assumes "answer_check q c v = Check_Refuted"
-    and "eval_holds (check_query_of c) (q v (check_query_of c)) s"
-  shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using assms classify_answer_refuted
-  by (auto simp: answer_check_def split: lifted.splits)
-
-lemma (in sound_check_query) answer_check_eval_answer:
-  "answer_check eval_answer = classify_check"
-  by (simp add: fun_eq_iff answer_check_def classify_eval_answer del: eval_answer.simps)
+lemma answer_check_sound:
+  assumes truth: "eval (tx c) s = (if truthy (eval c s) then 1 else 0)"
+    and holds: "eval_holds (EvalInt (tx c)) (q v (EvalInt (tx c))) s"
+  shows answer_check_proved: "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (eval c s)"
+    and answer_check_refuted: "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
+proof -
+  let ?a = "q v (EvalInt (tx c))"
+  have val: "(if truthy (eval c s) then 1 else 0) \<in> gamma_answer ?a"
+    using holds truth by simp
+  then have "?a \<noteq> QBot" by auto
+  then show "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (eval c s)"
+    and "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
+    using val by (auto simp: answer_check_def classify_answer_gamma split: if_splits)
+qed
 
 end

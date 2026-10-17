@@ -7,12 +7,12 @@
 // 02-counter_widened_by_call.vimp for the properly declared global counter
 // in this same program, which the
 // repeated call widens.
-global counter;
+global i32 counter;
 fun p() {
   counter = counter + 1;
 }
 fun main() {
-  Glocal = 1;
+  i32 Glocal = 1;
   p();
   p();
   __voblint_check(Glocal == 1); // PROVED

@@ -6,18 +6,19 @@
 // 0, so i = 1 and i = -1 are both executions; likewise x inside if (!!x).
 // a and b are 8 or 9 depending on the nondet z. Every check has a
 // satisfying and a violating run, so UNKNOWN is the only sound verdict --
-// refining if (i) to [1,+inf] would be a soundness bug, and this fixture is
+// refining if (i) to [1,2147483647] would be a soundness bug, and this fixture is
 // the witness against it.
 fun main() {
-  i = __voblint_nondet_int();
-  x = __voblint_nondet_int();
-  z = __voblint_nondet_int();
+  i32 i = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
   if (i) {
     __voblint_check(i >= 1); // UNKNOWN
   }
   if (!!x) {
     __voblint_check(x == 1); // UNKNOWN
   }
+  i32 a, b;
   if (z != 0) {
     a = 8;
     b = 9;

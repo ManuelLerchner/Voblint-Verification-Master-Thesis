@@ -3,7 +3,7 @@
 // own context, so p(1) and p(2) never share a FunctionEntry seed and the
 // update rule has nothing to widen across origins: both activations stay
 // exact. Locks in that the combination is routed at all.
-fun p(n) {
+fun p(i32 n) {
   __voblint_check(n < 10); // PROVED
 }
 fun main() {

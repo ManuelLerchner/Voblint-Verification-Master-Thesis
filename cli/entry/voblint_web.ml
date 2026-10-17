@@ -16,13 +16,16 @@
        context,
        context_depth,
        int_refinement,
+       placement,
+       settings,
        source,
        trace
      )
 
    Examples:
 
-     Voblint_run("interval", "warrow", "none", 0, "fixpoint", source, "off")
+     Voblint_run("interval", "warrow", "none", 0, "fixpoint", "flow-sensitive",
+       "", source, "off")
 
      Voblint_run(
        "int",
@@ -30,11 +33,17 @@
        "call-string",
        1,
        "once",
+       "flow-sensitive",
+       "sem.int.signed_overflow=assume_wraparound",
        source,
        "verbose"
      )
 
    [context_depth] is ignored unless [context = "call-string"].
+
+   [settings] are the options of Analysis_request.option_specs, as
+   "PATH=VALUE" pairs separated by ";", the browser's form of the CLI's
+   --set PATH VALUE. An empty string keeps every default.
 
    [int_refinement] is how the components of int refine each other: "never",
    "once" or "fixpoint". It is ignored unless [analysis] names int.
@@ -87,15 +96,35 @@ let depth_of mode (depth : Js.number_t) =
   then Ok (Some (int_of_float depth))
   else Error "Call-string depth must be a non-negative integer"
 
+(* "PATH=VALUE;PATH=VALUE" into the CLI's --set pairs. *)
+let settings_of_string s =
+  List.fold_right
+    (fun item acc ->
+      let ( let* ) = Result.bind in
+      let* pairs = acc in
+      if item = "" then Ok pairs
+      else
+        match String.index_opt item '=' with
+        | Some i ->
+            Ok
+              (( String.sub item 0 i,
+                 String.sub item (i + 1) (String.length item - i - 1) )
+              :: pairs)
+        | None -> Error ("Malformed option setting: " ^ item))
+    (String.split_on_char ';' s)
+    (Ok [])
+
 (* The page always sends a refinement; it is a request for int only when int
    is selected. A comma list is kept exactly as given, and no names at all is
    the empty list: run_voblint alone decides whether it is a valid
    activation. The checks are the CLI's, in [Analysis_request.resolve]. *)
-let resolve ~analyses ~refinement ~globals ~context ~depth ~placement =
+let resolve ~analyses ~refinement ~globals ~context ~depth ~placement ~settings
+    =
   let names = if analyses = "" then [] else String.split_on_char ',' analyses in
   let ( let* ) = Result.bind in
   let* globals_rule, narrow_bound = split_globals globals in
   let* depth = depth_of context depth in
+  let* settings = settings_of_string settings in
   let request : Analysis_request.request =
     {
       analyses = Some names;
@@ -105,11 +134,18 @@ let resolve ~analyses ~refinement ~globals ~context ~depth ~placement =
       context;
       depth;
       program_globals = placement;
+      settings;
     }
   in
   match Analysis_request.resolve request with
-  | Ok { domains; rule; mode; placement } ->
-      Ok (Option.value domains ~default:[], rule, mode, placement)
+  | Ok { domains; rule; mode; placement; sem } ->
+      Ok (Option.value domains ~default:[], rule, mode, placement, sem)
+  | Error (Analysis_request.Unknown_option path) ->
+      Error ("Unknown option: " ^ path)
+  | Error (Analysis_request.Invalid_option_value (spec, value)) ->
+      Error
+        (Printf.sprintf "Unknown value for %s: %s" spec.Analysis_request.path
+           value)
   | Error (Analysis_request.Unknown_refinement name) ->
       Error ("Unknown int refinement: " ^ name)
   | Error (Analysis_request.Unknown_analysis name) ->
@@ -218,7 +254,7 @@ let stop_live () =
   Solver_trace_hook.listener := fun _ _ -> ()
 
 let run analysis_js globals_js context_js context_depth refinement_js
-    placement_js source_js trace_js =
+    placement_js settings_js source_js trace_js =
   let analysis_name = Js.to_string analysis_js in
 
   let refinement_name = Js.to_string refinement_js in
@@ -228,6 +264,8 @@ let run analysis_js globals_js context_js context_depth refinement_js
   let context_name = Js.to_string context_js in
 
   let placement_name = Js.to_string placement_js in
+
+  let settings = Js.to_string settings_js in
 
   let source = Js.to_string source_js in
 
@@ -245,39 +283,40 @@ let run analysis_js globals_js context_js context_depth refinement_js
       ( trace,
         resolve ~analyses:analysis_name ~refinement:refinement_name
           ~globals:globals_name ~context:context_name ~depth:context_depth
-          ~placement:placement_name )
+          ~placement:placement_name ~settings )
     with
     | Error message, _ | _, Error message -> Render_json.error_json message
-    | Ok trace, Ok (domains, globals, context, placement) -> (
+    | Ok trace, Ok (domains, globals, context, placement, sem) -> (
         try
-          let program, stmt_positions, header_positions =
+          let program, decls, stmt_positions, header_positions =
             Vimp_frontend.program "browser.vimp" source
+          in
+          let conf =
+            Analysis_request.conf ~domains ~rule:globals ~context ~placement
+              ~sem
           in
           (* The call as run_voblint receives it, for a page that cancels the run
                  before an answer exists. *)
           post "Voblint_run_input"
-            (Render_json.run_voblint_input_json ~domains ~globals ~ctx:context
-               ~program_globals:placement program);
+            (Render_json.run_voblint_input_json ~conf ~decls program);
           if trace = Some (Solver_trace.Text, true) then
             stream_live ~source:(source, stmt_positions) ~domains
               ~globals:globals_name ~context;
           let analysis_start = now_ms () in
           let answer =
             Fun.protect ~finally:stop_live (fun () ->
-                Analysis_request.analyse ~analyses:domains ~globals ~context
-                  ~program_globals:placement program)
+                Analysis_request.analyse ~conf ~decls program)
           in
           let analysis_ms = now_ms () -. analysis_start in
-          let raw =
-            Render_json.run_voblint_json ~domains ~globals ~ctx:context
-              ~program_globals:placement program answer
-          in
+          let raw = Render_json.run_voblint_json ~conf ~decls program answer in
           match answer with
           | C.Invalid_Activation ->
               Render_json.error_json ~raw
                 "Select at least one analysis, each at most once"
           | C.No_Answer ->
-              Render_json.error_json ~raw "The solver returned no answer"
+              Render_json.error_json ~raw
+                "No answer: the solver did not finish, or nested analysis \
+                 queries exceeded their depth bound"
           | C.Malformed_Program ->
               let message =
                 match Wf_explain.explain program with
@@ -312,4 +351,4 @@ let run analysis_js globals_js context_js context_depth refinement_js
  *)
 let () =
   Js.Unsafe.set Js.Unsafe.global (Js.string "Voblint_run")
-    (Js.Unsafe.callback_with_arity 8 run)
+    (Js.Unsafe.callback_with_arity 9 run)

@@ -29,8 +29,8 @@ text \<open>\<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> h
   remains is performed by \<open>cstep\<close> popping a frame, not by any fragment node.\<close>
 
 inductive control_at ::
-  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> bool"
-  for \<Pi> :: "'a ptable" and p :: pname
+  "('a, var_id, exp) gptable \<Rightarrow> pname \<Rightarrow> ('a, var_id, exp) gcom \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> ('a, var_id, exp) gcom \<Rightarrow> cfg_node \<Rightarrow> bool"
+  for \<Pi> :: "('a, var_id, exp) gptable" and p :: pname
 where
   Skip [intro]:
     "control_at \<Pi> p (SKIP i) k n (SKIP i) (Statement n)"
@@ -108,10 +108,12 @@ text \<open>A completed residual is at the continuation already, except for a so
   whose own node still carries one store-preserving \<^const>\<open>EA_Nop\<close> edge to it: both
   branches of a conditional are compiled with the same continuation, so a completed branch
   is at \<open>k\<close> directly.\<close>
+
 lemma compile_control_at_SKIP_exit_path:
   "control_at \<Pi> p c0 k n (SKIP i) v \<Longrightarrow> compile \<Pi> p c0 k n = (n', en, E, K)
-   \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> intra_path g (v, s) (k, s)"
-proof (induction c0 k n "(SKIP i) :: 'a acom" v arbitrary: n' en E K rule: control_at.induct)
+   \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> star (cfg_intra_step \<kappa> g) (v, s) (k, s)"
+proof (induction c0 k n "(SKIP i) :: ('a, var_id, exp) gcom" v arbitrary: n' en E K rule:
+  control_at.induct)
   case (Skip k n)
   then have "(Statement n, EA_Nop, k) \<in> intra g" by auto
   then show ?case by (rule intra_path_nop)
@@ -136,6 +138,7 @@ next
     by (rule compile_If_rightE[OF _ IfRight.hyps(3)]) blast
   with IfRight.prems(2) show ?case by (intro IfRight.hyps(2)[OF c2]) blast
 qed simp_all
+
 
 subsection \<open>Located residuals remain source commands\<close>
 

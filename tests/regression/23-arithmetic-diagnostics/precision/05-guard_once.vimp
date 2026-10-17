@@ -2,6 +2,7 @@
 // EXPECT-ARITHMETIC
 // The two outgoing condition edges represent one source expression.
 fun main() {
+  i32 x;
   if (10 / 0) { // ARITH: ERROR division-by-zero
     x = 1;
   } else {

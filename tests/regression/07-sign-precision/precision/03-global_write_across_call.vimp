@@ -15,14 +15,14 @@
 // See 04-intervening_write_preserves_local.vimp for the same routing
 // property isolated without any call machinery at all.
 
-global g;
-fun foo() {
+global i32 g;
+fun i32 foo() {
   g = 5;
   return 2;
 }
 fun main() {
-  x = 1;
-  y = foo();
+  i32 x = 1;
+  i32 y = foo();
   __voblint_check(0 < x); // PROVED
   __voblint_check(0 < g); // PROVED
   __voblint_check(0 < y);  // PROVED

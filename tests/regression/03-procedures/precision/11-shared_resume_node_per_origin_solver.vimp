@@ -8,11 +8,12 @@
 // 09 pins the default rule; this pins the update rule the mechanism actually
 // names, so a regression in the aggregation cannot hide behind whichever rule
 // the default happens to select.
-fun f(n) {
+fun i32 f(i32 n) {
   return n;
 }
 fun main() {
-  x = 5;
+  i32 x = 5;
+  i32 a;
   if (x < 2) {
     a = f(1);
   } else {

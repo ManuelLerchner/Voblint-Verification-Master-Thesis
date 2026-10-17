@@ -5,10 +5,11 @@ begin
 section \<open>Expression evaluation\<close>
 
 text \<open>
-  \<open>aval\<close> evaluates an expression in a store.  Every VIMP expression is integer-valued, so
-  there is no separate Boolean type. Conditions use C-style truthiness (non-zero),
-  while comparisons and logical operators yield \<open>1\<close> or \<open>0\<close>.  Evaluation is total and has no
-  effects, which is why a guard can be re-evaluated freely by the transfer functions.
+  The integer operations every VIMP evaluator shares. Every VIMP expression is
+  integer-valued, so there is no separate Boolean type. Conditions use C-style truthiness
+  (non-zero), while comparisons and logical operators yield \<open>1\<close> or \<open>0\<close>.  Evaluation is
+  total and has no effects, which is why a guard can be re-evaluated freely by the
+  transfer functions.
 \<close>
 
 text \<open>Division and remainder truncate toward zero for non-zero divisors.
@@ -101,73 +102,13 @@ lemma c_div_neg_dividend:
 definition truthy :: "int \<Rightarrow> bool" where
   [simp]: "truthy n \<longleftrightarrow> n \<noteq> 0"
 
-fun aval :: "exp \<Rightarrow> store \<Rightarrow> int" ("\<lbrakk>_\<rbrakk>\<^sub>e") where
-    "\<lbrakk>N n\<rbrakk>\<^sub>e     s  = n"
-  | "\<lbrakk>V x\<rbrakk>\<^sub>e     s  = s x"
-  | "\<lbrakk>Plus  a b\<rbrakk>\<^sub>e s  = \<lbrakk>a\<rbrakk>\<^sub>e s + \<lbrakk>b\<rbrakk>\<^sub>e s"
-  | "\<lbrakk>Minus a b\<rbrakk>\<^sub>e s  = \<lbrakk>a\<rbrakk>\<^sub>e s - \<lbrakk>b\<rbrakk>\<^sub>e s"
-  | "\<lbrakk>Times a b\<rbrakk>\<^sub>e s  = \<lbrakk>a\<rbrakk>\<^sub>e s * \<lbrakk>b\<rbrakk>\<^sub>e s"
-  | "\<lbrakk>Div a b\<rbrakk>\<^sub>e s = c_div (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  | "\<lbrakk>Mod a b\<rbrakk>\<^sub>e s = c_mod (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  | "\<lbrakk>Less a b\<rbrakk>\<^sub>e  s  = (if \<lbrakk>a\<rbrakk>\<^sub>e s < \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
-  | "\<lbrakk>LessEq a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
-  | "\<lbrakk>Greater a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s > \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
-  | "\<lbrakk>GreaterEq a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s \<ge> \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
-  | "\<lbrakk>NotEq a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s \<noteq> \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
-  | "\<lbrakk>Eq   a b\<rbrakk>\<^sub>e  s  = (if \<lbrakk>a\<rbrakk>\<^sub>e s = \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
-  | "\<lbrakk>Not b\<rbrakk>\<^sub>e     s  = (if truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) then 0 else 1)"
-  | "\<lbrakk>And b1 b2\<rbrakk>\<^sub>e s  = (if truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<and> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) then 1 else 0)"
-  | "\<lbrakk>Or  b1 b2\<rbrakk>\<^sub>e s  = (if truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) then 1 else 0)"
-
-text \<open>
-  \<open>truthy\<close> of a compiled comparison or Boolean expression restated in plain
-  Boolean form, so a caller never has to re-derive it from \<open>aval.simps\<close> and
-  \<open>truthy\<close>'s own \<open>\<noteq> 0\<close> encoding through an explicit \<open>if\<close>-split.
-\<close>
-
-lemma truthy_aval_Less [simp]:
-  "truthy (\<lbrakk>Less a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s < \<lbrakk>b\<rbrakk>\<^sub>e s"
-  by simp
-
-lemma truthy_aval_LessEq [simp]:
-  "truthy (\<lbrakk>LessEq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
-  by simp
-
-lemma truthy_aval_Greater [simp]:
-  "truthy (\<lbrakk>Greater a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s > \<lbrakk>b\<rbrakk>\<^sub>e s"
-  by simp
-
-lemma truthy_aval_GreaterEq [simp]:
-  "truthy (\<lbrakk>GreaterEq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<ge> \<lbrakk>b\<rbrakk>\<^sub>e s"
-  by simp
-
-lemma truthy_aval_NotEq [simp]:
-  "truthy (\<lbrakk>NotEq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<noteq> \<lbrakk>b\<rbrakk>\<^sub>e s"
-  by simp
-
-lemma truthy_aval_Eq [simp]:
-  "truthy (\<lbrakk>Eq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s = \<lbrakk>b\<rbrakk>\<^sub>e s"
-  by simp
-
-lemma truthy_aval_Not [simp]:
-  "truthy (\<lbrakk>Not b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  by simp
-
-lemma truthy_aval_And [simp]:
-  "truthy (\<lbrakk>And b1 b2\<rbrakk>\<^sub>e s) \<longleftrightarrow> truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<and> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s)"
-  by simp
-
-lemma truthy_aval_Or [simp]:
-  "truthy (\<lbrakk>Or b1 b2\<rbrakk>\<^sub>e s) \<longleftrightarrow> truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s)"
-  by simp
-
 subsection \<open>Finite expression footprints\<close>
 
 text \<open>The variables an expression mentions. A transfer that evaluates the
   expression needs no other variable, which is what lets a keyed analysis read
   only the globals an edge mentions.\<close>
 
-fun exp_vnames :: "exp \<Rightarrow> vname set" where
+fun exp_vnames :: "src_exp \<Rightarrow> vname set" where
   "exp_vnames (N _) = {}"
 | "exp_vnames (V x) = {x}"
 | "exp_vnames (Plus a b) = exp_vnames a \<union> exp_vnames b"
@@ -184,8 +125,32 @@ fun exp_vnames :: "exp \<Rightarrow> vname set" where
 | "exp_vnames (Not b) = exp_vnames b"
 | "exp_vnames (And b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
 | "exp_vnames (Or b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
+| "exp_vnames (Cast _ a) = exp_vnames a"
 
 lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
   by (induction a) auto
+
+text \<open>Every literal of an expression fits \<^const>\<open>I64\<close>. C gives an unsuffixed
+  decimal constant no type beyond it (ISO/IEC 9899 6.4.4.1p5), so a well-formed program
+  writes no other.\<close>
+
+fun lits_fit :: "src_exp \<Rightarrow> bool" where
+  "lits_fit (N n) \<longleftrightarrow> ik_min I64 \<le> n \<and> n \<le> ik_max I64"
+| "lits_fit (V _) \<longleftrightarrow> True"
+| "lits_fit (Plus a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Minus a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Times a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Div a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Mod a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Less a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (LessEq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Greater a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (GreaterEq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (NotEq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Eq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Not a) \<longleftrightarrow> lits_fit a"
+| "lits_fit (And a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Or a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Cast _ a) \<longleftrightarrow> lits_fit a"
 
 end

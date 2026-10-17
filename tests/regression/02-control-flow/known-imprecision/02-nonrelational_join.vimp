@@ -6,7 +6,8 @@
 // b = 9. An interval domain has no way to relate two variables, so
 // (a != b) over [8,9] x [8,9] is UNKNOWN. int agrees.
 fun main() {
-  z = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
+  i32 a, b;
   if (z != 0) {
     a = 8;
     b = 9;

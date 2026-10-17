@@ -5,7 +5,7 @@
     "globals": "warrow",
     "image": "clamp.png",
     "program": "clamp.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=dY_NCoMwEITveYo5SaSBxkNPmr5KUKsYqjFIFKH47t0afy71Ena_mZ3s1qNF2ead47NA2ws0JsaHAaYGn5ERCz0wVH4cLIGU2uWwPI-Rw9KY3bKBOWULYzX91eXG8mD3UNB66ovWWK9tb1-V11Ty-DftSA2LeQEpkEi58nOibKryzSUyReYoooeqK5ujPa81pfAIWo41Q-IO4jckKy1O6tLt8j1xO_1vaMhc6Pgv",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=dVBBCoMwELz7ijlJpEJjS082_UpQqxiqMUgsQvHv3ZoYL_WS7M7MzizbTBrqekHVFb1hv2pOV6Ab3N-qBJ8IUA3YjDvhrgfG2k6jJiCndgmSRxgJklZtEg_MebREUUPZfaE08wmUZiEg5XsoO6Wt1IN-1lZSyZLcKwwp3LI2BU-Rcb5y-1TV1tWLcdwFieOYHqqOZIb2PeaEwI2H6AKrD8cZxJ2QBabcGZP7S2zO_hR_zZ33Qsf4Ag",
     "why": "Every answer kind in one run of a clamp function, each shown inline at its line: Figure 1.2."
   },
   "contexts": {
@@ -14,7 +14,7 @@
     "globals": "warrow",
     "image": "contexts.png",
     "program": "contexts.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKklgsA",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU8g0NlJIKs0t0AAx8jQVqrkUFIpSS0qL8hTyFLQVDK25arm40oAKcxMz8zQg8iCliQq2EH2mmtZQoSSYkAlYKD6-LD8pJzOvJD45IzU5WwOow1bBDKtUEkgKZFAtFwA",
     "why": "The running example without and with entry-state contexts: per-context values inline and one graph box per context of bump; also the program listing of the program-to-equations figure."
   },
   "division-definite": {
@@ -23,7 +23,7 @@
     "globals": "warrow",
     "image": "division-definite.png",
     "program": "division-definite.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVTCwBnILS_NLMlPzSoB8cwV9mCxIpigVpCsltQgspYosFR9flp-Uk5lXEp-ckZqcrYEwBGiqJjYVSIYBTQMqqeUCAA",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQyDQ2UkjJLMsszi9SsFUwsIYKFZbml2Sm5pUAxcwV9GEqYLJFqSATUlKLwNKqyNLx8WX5STmZeSXxyRmpydkaCIOApmtiU4FkGNA0oJJaLgA",
     "why": "A divisor that is zero in every live context: two errors while both checks still prove."
   },
   "division-possible": {
@@ -32,7 +32,7 @@
     "globals": "warrow",
     "image": "division-possible.png",
     "program": "division-possible.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVYiPL8tPysnMK4nPy89LSS2JBzI1NK2BagpL80syU_NKgIrMFfRhWkAyCD3JGanJ2Row0xRtFQyAWmu5AA",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQyDQ2UkjJLMsszi9SsFWIjy_LT8rJzCuJz8vPS0ktiQcyNTStoeoKS_NLMlPzSoAKzRX0YdpAsgh9yRmpydkaMBMVbRUMgNpruQA",
     "why": "A divisor the state cannot exclude from being zero: a warning and an UNKNOWN check."
   },
   "int-refinement": {
@@ -41,8 +41,8 @@
     "globals": "warrow",
     "image": "int-refinement.png",
     "program": "int-refinement.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=int&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQyExT0KhU0FYwVLC1VTCGiCkoVCjYKhhag5nx8WX5STmZeSXxyRmpydlAxUCFRpogyVqF1JziVCQtBmBRrlouAA",
-    "why": "The product domain proving y == 2 where sign, interval and parity each answer UNKNOWN."
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=int&globals=warrow&context=none#code=TY3LDkAwFET3vmKW7c4jVviWhqpocLvwSBPx7y4q7CYz52S6lTDVloTEHgE2S6FRQanNNaOlRZGj1iyKo5BFIPwdOgiNEvFjAp695FoOmHE2vza_2-Ck7PjX-X50b_QgmGZcPvwRnQ",
+    "why": "The product Int proving x == 5 where Interval alone, Congruence alone and Int without refinement each answer UNKNOWN."
   },
   "overview": {
     "analysis": "interval,order",
@@ -51,7 +51,7 @@
     "image": "overview.png",
     "k": "1",
     "program": "overview.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval%2Corder&globals=warrow&context=call-string&k=1#code=fVFNT-MwEL3nVzxxSrWBpJQVgtCVVoK9bUEVC8fKSd3EqrGL47Qpq_53xknNR_g4JPK8efPmzUwc469ec9iSI69NpU2EkgDTIhmbF7yKkEuRL1ukMGxVHgVxjNuSK1izPUchdcZkhYN7ZozeYEXV2ohCqAMqZVIeVtYIVWDOV7bEcnxMsFaWNxYTrfhRECxqheqBqNyELEI2wP8AEAuEDBdjHwNSYwyW0nsHLiv-Fs5amD7DbW0UgWmw66QfmFBhp9EQczZb60wKZWdKqzm3M3qGA1e-_SZL6UdKD5MEMZo2VhR726MIp62GB84inHRlbo7GzbH1czhk65DGI8ATiRFt7GjpHtsQ1vjg1Vhe8nwZPjnucJCCrnEzvb67uvyCuNmL9oi7dl_0y7_difOa4AK5t1oTPelMrduFfLiHYxy_oYwSf5u-tdotYf3OmmvpO2xKITlCQe1HL7ujpMAPDFPvvy8q3Lyj3rx9knKk0440vfrz73bfeuHa_cJP3-5T8aSrm1zf_55OWhu74Bk",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval%2Corder&globals=warrow&context=call-string&k=1#code=hZFfb5swFMXf-RRHfSIaKyRsqjaaSpXWvS2dom59jIA4YIXamTGEdMp377XBbca29sHS1c_nnvsvDPFNtgy6ZMgbVUsVoCSgLMnSdcHqAHnF860lhUp35bkXhrgrmYBWh88oKpmlVY2z-1QpuceOsqXiBRdnlJpW1ftaKy4KrNlOl9jOZ4Sl0KzTWEjBzj1v0wjweIb6geRM-SZOA4uyCX57sGElExNt4Ke4nLsfEMccqfk7glU1O8WZxfQU040S1uPYF3xIufBf3DtSr1atzCou9EpIsWZ6RaE_SQbF4RXFIPlFkmkUIUT3zAQxN1gc4ML6OfApwIchnebqzFwHN5chB0M6R3rDRzIk6dxIkxO-J9458NJoXrJ86z8a_XSSgG73fXn78-bLf4T7wXgkPNo9DiPlb-6qCdC6a0W4RO5GaCg16pts7bL-uptRzE4kceRuOG61Mctp_2h1KM9dlX3JKwafUwvx817pk-MdpombaWzMzQ7i0Q7GImFEF71oefP1x91QfmPKXeGjK_dP86jPW9zeXy8Xto2j9wQ",
     "why": "PROVED, REFUTED and DEAD checks, an arithmetic warning, and one graph box per procedure and context, in one run."
   },
   "solve-replay-still": {
@@ -60,7 +60,7 @@
     "globals": "warrow",
     "image": "solve-replay-still.png",
     "program": "solve-replay-still.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKklgsA",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU8g0NlJIKs0t0AAx8jQVqrkUFIpSS0qL8hTyFLQVDK25arm40oAKcxMz8zQg8iCliQq2EH2mmtZQoSSYkAlYKD6-LD8pJzOvJD45IzU5WwOow1bBDKtUEkgKZFAtFwA",
     "why": "One step of the solve replay: the first call into a context reads its callee's seed, with the graph and the trace line beside it."
   },
   "while-loop": {
@@ -69,7 +69,7 @@
     "globals": "warrow",
     "image": "while-loop.png",
     "program": "while-loop.vimp",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQqFCwVTCwBjLKMzJzUhU0KhRsFAwNIHIQ2QoFbQVDkIpaII6PL8tPysnMK4lPzkhNztYwACqv0LTmquUCAA",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQyDQ2UqhQsFUwsAZyyjMyc1IVNCoUbBQMDSDyCmDZCgVtBUOQilogjo8vy0_KycwriU_OSE3O1jAAKq_QtOaq5QIA",
     "why": "One run in three views: the PROVED check in the source, the state inspector at the check, and the solved graph."
   }
 }

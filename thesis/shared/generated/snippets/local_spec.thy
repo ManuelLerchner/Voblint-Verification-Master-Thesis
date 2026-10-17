@@ -2,8 +2,8 @@
 record 's local_spec =
   ls_query :: "channel \<Rightarrow> 's \<Rightarrow> channel"
   ls_skip :: "channel \<Rightarrow> 's \<Rightarrow> 's"
-  ls_assign :: "channel \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's"
-  ls_special :: "channel \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 's \<Rightarrow> 's"
+  ls_assign :: "channel \<Rightarrow> var_id \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's"
+  ls_special :: "channel \<Rightarrow> exp gspecial_call \<Rightarrow> var_id \<Rightarrow> 's \<Rightarrow> 's"
   ls_branch :: "channel \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's"
   ls_body :: "channel \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
   ls_return :: "channel \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"

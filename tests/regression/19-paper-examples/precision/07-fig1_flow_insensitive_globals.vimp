@@ -11,12 +11,16 @@
 //   Example 1: [g] collects 1, -17 and 42 and joins them to [-17,42]. The
 //   summary still proves g < 43, which rules out the error, but not g == 42.
 //   Example 3: [h] collects 0 and h + 1. A flow-insensitive analysis cannot
-//   tell how often f's first line runs, so h widens to [0,+inf]: 0 <= h
-//   holds, h == 1 is lost.
+//   tell how often f's first line runs, so h widens to its kind's maximum.
+//   At the machine kind i32 the next h + 1 may overflow, which Goblint's
+//   default assume_top reads as any i32 value: 0 <= h is lost along with
+//   h == 1, and the overflow is reported at line 25. The paper's [0,+inf]
+//   is the mathematical-integer reading.
 //
-// With --globals join or per-origin, [h] keeps growing by one and the solve
-// does not terminate; a widening rule is needed (cases 02 and 03).
-global g, h;
+// With --globals join or per-origin, [h] grows by one per round and the
+// solve gave no answer within 10 s (measured for join); a widening rule is
+// needed (cases 02 and 03).
+global i32 g, h;
 fun f() {
   h = h + 1;
   g = 42;
@@ -29,5 +33,5 @@ fun main() {
   __voblint_check(g == 42);   // UNKNOWN
   __voblint_check(h == 1);    // UNKNOWN
   __voblint_check(g < 43);    // PROVED
-  __voblint_check(0 <= h);    // PROVED
+  __voblint_check(0 <= h);    // UNKNOWN
 }

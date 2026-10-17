@@ -28,3 +28,7 @@ eles = "eles"
 gam = "gam"
 # First-name fragment of Ondřej Lhoták, written Ond{\v{r}}ej in BibTeX.
 Ond = "Ond"
+# lits_fit in VIMP_Expr.thy: every literal of an expression fits I64.
+lits = "lits"
+# gret_store, the retired generic return-store update, recorded in theorem-migration.toml.
+gret = "gret"

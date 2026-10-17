@@ -155,10 +155,19 @@ def _decl(row: dict) -> dict:
 
 
 def check_binds(symbol: str, row: dict) -> None:
-    """A variable convention: the declaration binds `symbol` in a `for` clause."""
+    """A variable convention: the declaration binds `symbol` in a `for` clause.
+
+    A constant defined as the instance of a generic locale constant binds it in the
+    `global_interpretation` that rewrites the locale constant to it, right after
+    the definition."""
     lines = (REPO / row["path"]).read_text().splitlines()[row["line"] - 1 :]
     head = "\n".join(lines[:20]).split("where", 1)[0]
-    if not re.search(r"\bfor\s+" + re.escape(symbol) + r"(?![A-Za-z0-9_'])", head):
+    binder = r"\bfor\s+" + re.escape(symbol) + r"(?![A-Za-z0-9_'])"
+    rest = "\n".join(lines[:20])
+    interp = re.search(r"global_interpretation(.*?)\n\s*by\b", rest, re.S)
+    if interp and re.search(binder, interp[1]):
+        return
+    if not re.search(binder, head):
         raise NotationError(
             f"{row['key']}: expected `for {symbol}` in its declaration at "
             f"{row['path']}:{row['line']}"

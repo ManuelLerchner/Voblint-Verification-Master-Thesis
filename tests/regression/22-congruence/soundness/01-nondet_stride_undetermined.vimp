@@ -9,7 +9,7 @@
 // fixed and still comes back UNKNOWN. Same abstract value for x, different
 // reason for the same verdict.
 fun main() {
-  n = __voblint_nondet_int();
-  x = 2 * n;
+  i32 n = __voblint_nondet_int();
+  i32 x = 2 * n;
   __voblint_check(x == 0); // UNKNOWN
 }

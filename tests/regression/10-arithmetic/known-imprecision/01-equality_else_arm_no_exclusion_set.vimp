@@ -5,12 +5,12 @@
 // y == z is concretely false and (y != z) concretely true (Goblint: FAIL,
 // bare, through the enums domain's exclusion set). The false arm of an
 // equality guard removes the single point 3 from z, and an interval is convex:
-// [-inf,+inf] minus {3} is still [-inf,+inf]. With z unchanged, the equality
+// the full i32 range minus {3} is still the full i32 range. With z unchanged, the equality
 // against y = [3,3] is UNKNOWN in both polarities. int agrees: none of sign,
 // parity or congruence can exclude a single point either.
 fun main() {
-  z = __voblint_nondet_int();
-  y = 3;
+  i32 z = __voblint_nondet_int();
+  i32 y = 3;
   if (z != 3) {
     __voblint_check(y == z); // UNKNOWN
     __voblint_check(y != z); // UNKNOWN

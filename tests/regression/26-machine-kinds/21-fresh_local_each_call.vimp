@@ -1,0 +1,21 @@
+// PARAM: --analysis interval --context call-string --context-depth 1
+// A local without an initializer starts at an arbitrary value of its kind on
+// every activation. The first call leaves x at 5; the second call does not see
+// that value, and neither call sees the zero a call entry writes.
+fun i32 f(i32 k) {
+  i8 x;
+  __voblint_check(x <= 127); // PROVED
+  __voblint_check(x >= -128); // PROVED
+  __voblint_check(x == 0); // UNKNOWN
+  __voblint_check(x == 5); // UNKNOWN
+  x = 5;
+  return x + k;
+}
+fun main() {
+  i32 a;
+  i32 b;
+  a = f(1);
+  b = f(2);
+  __voblint_check(a == 6); // PROVED
+  __voblint_check(b == 7); // PROVED
+}

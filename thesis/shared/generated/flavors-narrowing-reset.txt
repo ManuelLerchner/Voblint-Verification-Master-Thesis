@@ -1,0 +1,9 @@
+tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------------------------
+14:5      pp6    i <= 9     PROVED   interval: i=[-2147483646,9]

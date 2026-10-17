@@ -1,0 +1,10 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. In C the inner `x` is in scope
+// in its own initializer, so `x + 1` reads the indeterminate inner `x`, not the
+// outer one. The frontend rejects that read instead of choosing a value for it.
+fun main() {
+  i32 x = 1;
+  {
+    i8 x = x + 1;
+  }
+}

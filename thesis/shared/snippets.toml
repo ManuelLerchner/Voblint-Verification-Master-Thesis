@@ -14,9 +14,6 @@ why = "Chapter 5, a non-relational state: the pointwise concretization of a stat
 [snippets.sound_numeric_queries]
 why = "Chapter 5, the soundness condition of the comparison queries a check asks."
 
-[snippets.sound_check_query]
-why = "Chapter 5, the query figure: checks combine the queries with forward evaluation."
-
 [snippets.widening]
 why = "Background, Isabelle mechanisms: a type class, the solver's widening operator and its laws."
 
@@ -26,7 +23,7 @@ why = "Background, Isabelle mechanisms: a small locale with one parameter and th
 [snippets.pstep]
 why = "Chapter 3, source execution: every rule of the VIMP small-step semantics."
 
-[snippets.cfg]
+[snippets.gcfg]
 why = "Chapter 3, the control-flow-graph record: local edges, call edges, entry and checks."
 
 [snippets.compile_proc]
@@ -42,6 +39,7 @@ why = "Chapter 3, the source-to-graph simulation relation: its three constructor
 why = "Background, Isabelle mechanisms: an inductive set, the unknowns a query transitively depends on."
 
 [snippets.default_st]
+name = "gdefault_st"
 why = "Background, Isabelle mechanisms: a quotient type, finite abstract states up to readback."
 proof = true
 
@@ -49,19 +47,24 @@ proof = true
 why = "The creating caller of a trace (traces chapter)."
 
 [snippets.valid_activation_trace]
+name = "valid_activation_trace"
 why = "The four rules of valid activation traces (traces chapter)."
 
 [snippets.node_collect]
+name = "node_collect"
 why = "The context-insensitive collecting semantics (traces chapter)."
 
 [snippets.activation_collect]
+name = "activation_collect"
 why = "The context-indexed collecting semantics (traces chapter)."
 
 [snippets.dg_spec]
+name = "dg_spec"
 file = "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy"
 why = "Chapter 6, the contract section: the record of operations an analysis supplies."
 
 [snippets.eval_holds]
+name = "eval_holds"
 file = "src/Abstract_Interpreter/Framework/Cooperation/Analysis_Query.thy"
 why = "Chapter 7, when an answer to an EvalInt query holds at a store."
 
@@ -70,6 +73,7 @@ file = "src/Abstract_Interpreter/Framework/Cooperation/Analysis_Query.thy"
 why = "Chapter 7, a channel holds at a store when each of its answers holds there."
 
 [snippets.local_spec]
+name = "local_spec"
 file = "src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy"
 why = "Chapter 7, the local specification: every operation takes a channel as its first argument."
 
@@ -90,10 +94,12 @@ file = "vendor/td-verification/Basics_side.thy"
 why = "Chapter 8, the solver interface the equations are encoded into."
 
 [snippets.man]
+name = "man"
 file = "src/Abstract_Interpreter/Framework/Spec/DG_Manager.thy"
 why = "Chapter 6, shared facts: the manager a transfer receives, its reads, publications and queries."
 
 [snippets.man_transfer]
+name = "man_transfer"
 file = "src/Abstract_Interpreter/Framework/Spec/DG_Manager.thy"
 why = "Chapter 6, shared facts: a transfer maps a manager to a program yielding the next local value."
 
@@ -116,9 +122,6 @@ why = "Results chapter: the claim one verdict makes about a store."
 [snippets.check_stores]
 why = "Results chapter: the stores one check's verdict admits."
 
-[snippets.verdict_stores]
-why = "Results chapter: the verdict set, the stores every definite verdict at a node admits."
-
 # Theorems shown with proved(...): the statement as the theory states it, cut
 # before the proof. Each is also listed in facts.toml, which checks that the
 # built session proves a fact of this name in the theory the text came from.
@@ -135,13 +138,14 @@ why = "Results chapter: the contract of an analysed report."
 [snippets.run_voblint_check_sound]
 why = "Main-statements appendix: the check-verdict endpoint."
 
-[snippets.run_voblint_arithmetic_intra_safe]
-why = "Results chapter: at a node without a diagnostic, no collected store divides by zero."
+[snippets.run_voblint_arithmetic_safe]
+why = "Results chapter: at a node without a diagnostic, no arithmetic obligation fails at a reaching store."
 
-[snippets.run_voblint_dead_check_unreached]
+[snippets.run_voblint_dead_unreached]
 why = "Main-statements appendix: the unreachability endpoint."
 
 [snippets.source_run_has_activation_trace]
+name = "compile_prog_run_has_activation_trace"
 why = "Main-statements appendix: every source run is represented by a valid trace."
 
 [snippets.csim_step]
@@ -153,34 +157,41 @@ why = "Chapter 3, adequacy: a well-formed program never gets stuck before it fin
 [snippets.csim_star]
 why = "Main-statements appendix: the compiled graph simulates every source run."
 
+[snippets.eval_elaborate]
+why = "Section 3.2: elaboration agrees with the direct reading src_eval on stores within their kinds."
+
 [snippets.activation_collect_sound]
+name = "activation_collect_sound"
 why = "Main-statements appendix: the local obligations bound the context-indexed collecting semantics."
 
 [snippets.activation_collect_dg_sound]
 why = "Main-statements appendix: a solved D/G table bounds the collecting semantics."
 
-[snippets.node_collect_semantic_postfix]
-why = "Figure gallery: the theorem-statement example."
-
 [snippets.combine_env]
 why = "Figure gallery example."
 
 [snippets.analysis_contract]
+name = "analysis_contract"
 why = "Chapter 6, the analysis contract."
 
 [snippets.activation_trace]
+name = "activation_trace"
 why = "Chapter 4, the activation trace datatype."
 
 [snippets.context_policy]
+name = "call_context_policy"
 why = "Chapter 4, the type of a call-context relation."
 
 [snippets.activation_context_rel]
+name = "activation_context_rel"
 why = "Chapter 4, which contexts a trace may carry."
 
 [snippets.call_context_total_on]
+name = "call_context_total_on"
 why = "Chapter 4, conditional totality of a call-context relation."
 
 [snippets.activation_coverage]
+name = "activation_coverage"
 why = "Chapter 4, the coverage contract: five local obligations."
 
 [snippets.return_at_caller_context_unsound]
@@ -189,10 +200,8 @@ why = "Chapter 4, reading the result at the caller context is unsound."
 [snippets.total_dropped_unsound]
 why = "Chapter 4, dropping TOTAL is unsound."
 
-[snippets.ov_empty_continuation_bot]
-why = "Chapter 4, an analysis without paired entry coverage declares an executed point unreachable."
-
 [snippets.source_reaches_node_collect]
+name = "Source_To_Trace.source_reaches_node_collect"
 why = "Chapter 4, source-reachable stores are collected."
 
 [snippets.node_collect_eq_Union_activation_collect]
@@ -202,24 +211,18 @@ why = "Chapter 4, under the whole contract the buckets recover the collection."
 why = "Chapter 4, the claims of all contexts contain the collection."
 
 [snippets.activation_path]
+name = "activation_path"
 why = "Chapter 4, an activation path: a list of node-store pairs."
 
 [snippets.stack_repr]
 why = "Chapter 4, a frame stack matches a trace caller chain."
 
 [snippets.activation_trace_repr]
+name = "activation_trace_repr"
 why = "Chapter 4, a valid trace represents a graph configuration."
 
 [snippets.cstep_preserves_activation_trace_repr]
 why = "Chapter 4, a graph step keeps a representing trace."
-
-[snippets.bfilter_sound]
-why = "Chapter 5, the guard filter drops no store that passes the guard."
-file = "src/Abstract_Interpreter/Domain/Eval/Backward_Domain.thy"
-
-[snippets.relc_branch_step_sound]
-why = "Chapter 5, the relational guard refinement drops no store that passes the guard."
-file = "src/Analyses/Relational/Rel_Order_Domain.thy"
 
 [snippets.semilattice_sup]
 why = "Chapter 5, the join laws executable_domain inherits from HOL."
@@ -268,20 +271,15 @@ file = "~~/src/HOL/Orderings.thy"
 why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
 file = "~~/src/HOL/Orderings.thy"
 
-[snippets.sound_refinement]
-why = "Chapter 5, the domain interface: intersection, forward evaluation, truth test and inverse operators."
-
 [snippets.sound_inverse_ops]
 why = "Chapter 5, the inverse operators and their soundness laws, a parent of sound_refinement."
 
-
-[snippets.sound_evaluator]
-why = "Chapter 5, the forward evaluator every expression-level interface of a domain shares."
 
 [snippets.sound_truth_test]
 why = "Chapter 5, the truth test every expression-level interface of a domain shares."
 
 [snippets.sound_local_spec]
+name = "sound_local_spec"
 why = "Chapter 7, the obligation of one cooperating analysis, stated against every sound channel."
 
 [snippets.ls_channel_sound]
@@ -290,10 +288,10 @@ why = "Chapter 7, the channel the framework supplies holds at every store of the
 [snippets.mcp_combine_sound]
 why = "Chapter 7, soundness of the combination of independent components."
 
-[snippets.relc_executable_domain]
+[snippets.order_rel_executable_domain]
 why = "Chapter 5, Figure 5.2: the relational carrier stops at executable_domain."
-name = "relc :: executable_domain"
-file = "src/Abstract_Interpreter/Domain/Relational/Order_Lattice.thy"
+name = "order_rel :: executable_domain"
+file = "src/Analyses/Order/Order_Analysis.thy"
 
 [snippets.sign_numeric_domain]
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
@@ -320,37 +318,50 @@ why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
 name = "int_dom_ext :: numeric_domain"
 file = "src/Analyses/Int/Int_Warrowing.thy"
 
-[snippets.sound_minmax_ops]
-why = "Chapter 5, Figure 5.2: the soundness laws of the min and max operations."
-
-[snippets.sound_nonrelational_ops]
-why = "Chapter 5, Figure 5.2: the certificate for one non-relational operations bundle, the interface a domain implements."
-
-[snippets.sign_tf]
-why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
-file = "src/Analyses/Sign/Sign_Transfer.thy"
-
-[snippets.ivl_tf]
-why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
-file = "src/Analyses/Interval/Interval_Transfer.thy"
-
-[snippets.parity_tf]
-why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
-file = "src/Analyses/Parity/Parity_Transfer.thy"
-
-[snippets.congruence_tf]
-why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
-file = "src/Analyses/Congruence/Congruence_Transfer.thy"
-
-[snippets.int_tf]
-why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
-file = "src/Analyses/Int/Int_Transfer.thy"
-
-[snippets.mono_nonrelational_ops]
-why = "Chapter 5, Figure 5.2: the monotone strengthening of the bundle certificate, which an M-marked interpretation proves."
-
-[snippets.update_rules_example]
-why = "Solving chapter, update-rule figure: the value each rule computes after each contribution."
-
 [snippets.routed_node_rhs_parts]
 why = "Chapter 8, interprocedural equations: a node's right-hand side as the join of its initial value, edge, call and seed parts."
+
+[snippets.ik_domain]
+why = "Chapter 5, the domain interface: a numeric domain that reads machine kinds."
+
+[snippets.kind_int_domain]
+why = "Chapter 5, the domain interface: the kind-aware operations a non-relational analysis needs, and their soundness laws."
+
+[snippets.kd_numeric_domain]
+why = "Chapter 5, domain tree: values tagged with their machine kind."
+name = "kd :: numeric_domain"
+file = "src/Abstract_Interpreter/Domain/Lattice/Kind_Lifted.thy"
+
+[snippets.int_tuple_numeric_domain]
+why = "Chapter 5, domain tree: the Int product as a numeric domain."
+name = "int_tuple :: numeric_domain"
+file = "src/Analyses/Int/Int_Tuple_Kind.thy"
+
+[snippets.sign_kind_int_domain]
+why = "Chapter 5, domain tree: a carrier implementing kind_int_domain."
+name = "sign :: kind_int_domain"
+file = "src/Analyses/Sign/Sign_Kind.thy"
+
+[snippets.ivl_kind_int_domain]
+why = "Chapter 5, domain tree: a carrier implementing kind_int_domain."
+name = "ivl :: kind_int_domain"
+file = "src/Analyses/Interval/Interval_Kind.thy"
+
+[snippets.parity_kind_int_domain]
+why = "Chapter 5, domain tree: a carrier implementing kind_int_domain."
+name = "parity :: kind_int_domain"
+file = "src/Analyses/Parity/Parity_Kind.thy"
+
+[snippets.congruence_kind_int_domain]
+why = "Chapter 5, domain tree: a carrier implementing kind_int_domain."
+name = "congruence :: kind_int_domain"
+file = "src/Analyses/Congruence/Congruence_Kind.thy"
+
+[snippets.int_tuple_kind_int_domain]
+why = "Chapter 5, domain tree: the Int product implementing kind_int_domain."
+name = "int_tuple :: kind_int_domain"
+file = "src/Analyses/Int/Int_Tuple_Kind.thy"
+
+[snippets.nonrel_refine_sound]
+why = "Chapter 5, the guard refinement drops no store that passes the guard."
+file = "src/Analyses/Nonrelational/Nonrelational_Transfer.thy"

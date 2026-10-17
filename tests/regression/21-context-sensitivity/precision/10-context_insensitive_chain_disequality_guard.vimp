@@ -1,0 +1,37 @@
+// PARAM: --analysis interval --context none
+// Adapted from Goblint tests/regression/85-narrow_globs/07-ctxt-widen.c
+// (ana.context.gas_value 0, i.e. context-insensitive, with
+// solvers.td3.narrow-globs enabled, which lets Goblint prove all seven).
+// Same program as precision/04-function_chain_self_recursive_tail.vimp;
+// every concrete result is 3. Under --context none each procedure has one
+// activation shared by all its call sites, so h's entry is seeded by the
+// join of every argument reaching it: i=[0,2147483646] (the upper bound
+// widened, the lower bound 0 kept). The else edge of i == 0 moves the
+// lower bound past 0, so the following (i <= 0) arm is dead, its
+// fall-through `return 13` never contributes, and every result is [3,3].
+// Voblint needs no counterpart of narrow-globs here because the lower
+// bound of the seed survives widening.
+fun i32 h(i32 i) {
+  if (i == 0) { return 3; }
+  if (0 < i) { i32 r = h(i - 1); return r; }
+  return 13;
+}
+fun i32 g(i32 i) {
+  if (i == 0) { return 2; }
+  if (0 < i) { i32 r = h(i - 1); return r; }
+  return 12;
+}
+fun i32 f(i32 i) {
+  if (i == 0) { return 1; }
+  if (0 < i) { i32 r = g(i - 1); return r; }
+  return 11;
+}
+fun main() {
+  i32 a = f(11); __voblint_check(a == 3);  // PROVED
+  i32 b = g(12); __voblint_check(b == 3);  // PROVED
+  i32 c = g(20); __voblint_check(c == 3);  // PROVED
+  i32 d = f(20); __voblint_check(d == 3);  // PROVED
+  i32 e = h(40); __voblint_check(e == 3);  // PROVED
+  i32 x = h(300); __voblint_check(x == 3); // PROVED
+  i32 y = f(300); __voblint_check(y == 3);  // PROVED
+}

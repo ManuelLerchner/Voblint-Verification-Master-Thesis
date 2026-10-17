@@ -28,7 +28,9 @@ text \<open>The ordinary incoming transitions of a node: an intra edge is a tota
   at every node --- including the \<^term>\<open>EA_Ret e p\<close> edges into \<^term>\<open>FunctionResult p\<close>, by
   which return values are summarised as ordinary predecessor folding.\<close>
 
-definition intra_predecessors :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) set" where
+definition intra_predecessors ::
+  "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gedge_action) set"
+    where
   "intra_predecessors g v = {(u, a). (u, a, v) \<in> intra g}"
 
 lemma intra_predecessors_iff [simp]:
@@ -40,13 +42,14 @@ lemma finite_intra_predecessors [intro]:
   shows "finite (intra_predecessors g v)"
 proof -
   have "intra_predecessors g v
-          \<subseteq> (\<lambda>e :: cfg_node \<times> edge_action \<times> cfg_node. (fst e, fst (snd e))) ` intra g"
+          \<subseteq> (\<lambda>e :: cfg_node \<times> _ \<times> cfg_node. (fst e, fst (snd e))) ` intra g"
     unfolding intra_predecessors_def by force
   then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
 definition intra_predecessor_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> edge_action) list" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gedge_action) list"
+      where
   "intra_predecessor_list g v =
      map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_intra_list g))"
 
@@ -63,7 +66,9 @@ text \<open>The call tuples whose callee entry is the queried node \<open>v\<clo
   entry contribution is the caller state routed through the call action's parameter
   binding, which is what an analysis's entry operation computes.\<close>
 
-definition entry_calls :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) set" where
+definition entry_calls ::
+  "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action) set"
+    where
   "entry_calls g v = {(c, ca). \<exists>k. (c, ca, v, k) \<in> calls g}"
 
 lemma entry_calls_iff [simp]:
@@ -75,12 +80,14 @@ lemma finite_entry_calls [intro]:
   shows "finite (entry_calls g v)"
 proof -
   have "entry_calls g v
-          \<subseteq> (\<lambda>e :: cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node. (fst e, fst (snd e))) ` calls g"
+          \<subseteq> (\<lambda>e :: cfg_node \<times> _ \<times> cfg_node \<times> cfg_node. (fst e, fst (snd e))) ` calls g"
     unfolding entry_calls_def by force
   then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
-definition entry_call_list :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
+definition entry_call_list ::
+  "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action) list"
+    where
   "entry_call_list g v =
      map (\<lambda>(c, ca, ce, k). (c, ca)) (filter (\<lambda>(c, ca, ce, k). ce = v) (cfg_calls_list g))"
 
@@ -99,7 +106,8 @@ text \<open>The call tuples whose call site is the queried node \<open>v\<close>
   continuation-indexed enumerations below do not expose.\<close>
 
 definition call_successors ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> cfg_node) set"
+      where
   "call_successors g v = {(ce, ca, k). (v, ca, ce, k) \<in> calls g}"
 
 lemma call_successors_iff [simp]:
@@ -117,7 +125,8 @@ proof -
 qed
 
 definition call_successor_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) list" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> cfg_node) list"
+      where
   "call_successor_list g v =
      map (\<lambda>(c, ca, ce, k). (ce, ca, k)) (filter (\<lambda>(c, ca, ce, k). c = v) (cfg_calls_list g))"
 
@@ -126,7 +135,6 @@ lemma set_call_successor_list [simp]:
   shows "set (call_successor_list g v) = call_successors g v"
   unfolding call_successor_list_def call_successors_def
   using set_cfg_calls_list[OF assms] by (force simp: image_iff)
-
 
 subsection \<open>Call targets at a continuation\<close>
 
@@ -148,7 +156,8 @@ text \<open>
 \<close>
 
 definition call_targets ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> pname) set" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> pname) set"
+      where
   "call_targets g v = {(c, ca, p). (c, ca, FunctionEntry p, v) \<in> calls g}"
 
 lemma call_targets_iff [simp]:
@@ -156,14 +165,15 @@ lemma call_targets_iff [simp]:
   by (simp add: call_targets_def)
 
 fun call_target_at ::
-    "cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node)
-       \<Rightarrow> (cfg_node \<times> call_action \<times> pname) option" where
+    "cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> cfg_node \<times> cfg_node)
+       \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> pname) option" where
   "call_target_at v (c, ca, FunctionEntry p, k) =
      (if k = v then Some (c, ca, p) else None)"
 | "call_target_at v _ = None"
 
 definition call_target_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> pname) list" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> pname) list"
+      where
   "call_target_list g v = List.map_filter (call_target_at v) (cfg_calls_list g)"
 
 lemma set_map_filter_call_target_at:
@@ -229,7 +239,6 @@ lemma call_target_list_iff:
            \<longleftrightarrow> (c, ca, FunctionEntry p, v) \<in> calls g"
   by (simp add: set_call_target_list[OF assms])
 
-
 subsection \<open>Return enumeration\<close>
 
 text \<open>The return edges, as an image of \<^const>\<open>call_targets\<close> that keeps the triggering
@@ -247,7 +256,8 @@ text \<open>The return edges, as an image of \<^const>\<open>call_targets\<close
   unique, so there is no well-defined downstream lookup that could recover it instead.\<close>
 
 definition return_call_actions ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> cfg_node) set"
+      where
   "return_call_actions g v =
      (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) ` call_targets g v"
 
@@ -262,7 +272,8 @@ lemma finite_return_call_actions [intro]:
   using finite_call_targets[OF assms] by (simp add: return_call_actions_def)
 
 definition return_call_action_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) list" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> cfg_node) list"
+      where
   "return_call_action_list g v =
      map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
 
@@ -294,7 +305,8 @@ text \<open>
 \<close>
 
 definition call_site_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action) list"
+      where
   "call_site_list g v = remdups (map (\<lambda>(c, ca, p). (c, ca)) (call_target_list g v))"
 
 lemma distinct_call_site_list [simp]:
@@ -309,7 +321,8 @@ lemma set_call_site_list [simp]:
   by (force simp: set_call_target_list[OF assms] call_targets_def image_iff)
 
 definition static_targets ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> pname list" where
+    "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pname list"
+      where
   "static_targets g v cc ca =
      map (\<lambda>(c, a, p). p)
        (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (call_target_list g v))"
@@ -345,7 +358,8 @@ proof -
 qed
 
 definition static_resolve ::
-  "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> pname list" where
+  "(var_id, exp) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'd \<Rightarrow> pname list"
+    where
   "static_resolve g v cc ca d = static_targets g v cc ca"
 
 lemma static_resolve_iff [simp]:
@@ -376,7 +390,7 @@ text \<open>
   analysis instance and the executable pipeline cite it under this name.
 \<close>
 
-definition vars_cover :: "cfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool" where
+definition vars_cover :: "(var_id, exp) gcfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool" where
   "vars_cover g vars \<longleftrightarrow>
      (cfg_entry g, ()) \<in> vars
    \<and> (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow> (v, ()) \<in> vars)
@@ -424,12 +438,12 @@ text \<open>
   should carry.
 \<close>
 
-definition vars_cover_exec :: "cfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool" where
+definition vars_cover_exec :: "(var_id, exp) gcfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool"
+  where
   "vars_cover_exec g vars \<longleftrightarrow>
      (cfg_entry g, ()) \<in> vars
    \<and> list_all (\<lambda>(u, a, v). (v, ()) \<in> vars) (cfg_intra_list g)
    \<and> list_all (\<lambda>(c, ca, ce, k). (ce, ()) \<in> vars \<and> (k, ()) \<in> vars) (cfg_calls_list g)"
-
 
 subsection \<open>Coverage when the unknowns carry a context\<close>
 
@@ -454,7 +468,7 @@ text \<open>
 \<close>
 
 definition ctx_vars_cover ::
-    "cfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c) \<Rightarrow> 'c
+    "(var_id, exp) gcfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pname \<Rightarrow> 'c) \<Rightarrow> 'c
        \<Rightarrow> (cfg_node \<times> 'c) set \<Rightarrow> bool" where
   "ctx_vars_cover g succ_ctx rc vars \<longleftrightarrow>
      (cfg_entry g, rc) \<in> vars
@@ -511,7 +525,7 @@ text \<open>
 \<close>
 
 definition ctx_vars_cover_exec ::
-    "cfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c) \<Rightarrow> 'c
+    "(var_id, exp) gcfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pname \<Rightarrow> 'c) \<Rightarrow> 'c
        \<Rightarrow> (cfg_node \<times> 'c) set \<Rightarrow> bool" where
   "ctx_vars_cover_exec g succ_ctx rc vs \<longleftrightarrow>
      (cfg_entry g, rc) \<in> vs
@@ -551,7 +565,6 @@ next
     by (fastforce simp: list_all_iff set_cfg_calls_list [OF finC])
 qed
 
-
 subsection \<open>Coverage along live dependencies\<close>
 
 text \<open>
@@ -572,7 +585,7 @@ text \<open>
 \<close>
 
 definition ctx_vars_cover_live ::
-    "cfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)
+    "(var_id, exp) gcfg \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pname \<Rightarrow> 'c option)
        \<Rightarrow> 'c \<Rightarrow> (cfg_node \<times> 'c) set \<Rightarrow> bool" where
   "ctx_vars_cover_live g live succ rc vars \<longleftrightarrow>
      (cfg_entry g, rc) \<in> vars

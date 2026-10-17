@@ -206,6 +206,23 @@
               </div>
 
               <div class="control-group">
+                <label for="signed-overflow-select">Signed overflow</label>
+                <select
+                  id="signed-overflow-select"
+                  data-option="sem.int.signed_overflow"
+                  aria-describedby="signed-overflow-help"
+                >
+                  <option value="assume_top" selected>Top (Goblint default)</option>
+                  <option value="assume_wraparound">Wraparound</option>
+                </select>
+                <span id="signed-overflow-help" class="visually-hidden">
+                  How the integer domains treat a possible signed overflow: the kind's top,
+                  Goblint's default sem.int.signed_overflow, or wraparound, as the concrete
+                  semantics computes it. Unsigned kinds wrap under both.
+                </span>
+              </div>
+
+              <div class="control-group">
                 <label for="context-select">Context sensitivity</label>
                 <select id="context-select">
                   <option value="none">None</option>
@@ -324,8 +341,8 @@
             <span><span class="lg-badge dead">∅ DEAD</span>no context reaches it</span>
           </div>
           <div class="legend-row" aria-label="Arithmetic">
-            <span><span class="lg-badge warning">⚠ WARNING</span>a divisor may be zero</span>
-            <span><span class="lg-badge error">✗ ERROR</span>a divisor is zero in every live context</span>
+            <span><span class="lg-badge warning">⚠ WARNING</span>a divisor may be zero, or a signed operation may overflow</span>
+            <span><span class="lg-badge error">✗ ERROR</span>the divisor is zero, or the signed result overflows, at every reaching store</span>
           </div>
           <div class="legend-row" aria-label="Value hints">
             <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return; <code>⇢</code> a write to a flow-insensitive global, <code>final</code> that global's final value</span>
@@ -346,7 +363,7 @@
           </summary>
 
           <p class="raw-result-note">
-            The call exactly as the Isabelle-generated <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> received
+            The call exactly as the Isabelle-generated <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint%7Cconst"><code>run_voblint</code></a> received
             it, and the answer it returned after <a href="Voblint/Voblint_CLI/Analysis_Render.html#Analysis_Render.render_report%7Cconst"><code>render_report</code></a>, the generated
             projection that turns each state into text, serialized field by field with
             Isabelle's own field and constructor names. Each abstract value is rendered by

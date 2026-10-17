@@ -164,7 +164,7 @@ Share button's output. A fragment without a `fun` is opened as the body of
 ```typst
 #listing(lang: "c", ```...```)                          // playground defaults
 #listing(lang: "c", ctx: "none", ```...```)             // interval, warrow, no contexts
-#listing(lang: "c", claim: "dom-crt-congruence", ```...```) // the claim's fixture and settings
+#listing(lang: "c", claim: "dom-meet-congruence", ```...```) // the claim's fixture and settings
 ```
 
 `tools/vimp_listings.py --check` queries the compiled document for every

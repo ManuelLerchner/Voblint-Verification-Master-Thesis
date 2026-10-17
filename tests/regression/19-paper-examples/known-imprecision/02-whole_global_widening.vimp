@@ -17,9 +17,10 @@
 // Flow-insensitively (precision/07-fig1_flow_insensitive_globals.vimp) g
 // starts from its initial 0, not 1, and warrowing narrows it back to
 // [-17,42]. The chain is therefore staged on a procedure's FunctionEntry
-// seed, side-effected once per call site. Three call sites contribute the paper's own three values, in the
-// paper's order, and Apinis warrowing walks the identical chain to
-// [-inf,+inf] -- so x < 43 comes back UNKNOWN even though x is concretely
+// seed, side-effected once per call site. Three call sites contribute the
+// paper's own three values, in the paper's order, and Apinis warrowing walks
+// the identical chain, with the i32 limits in place of -inf and +inf, to the
+// full i32 range -- so x < 43 comes back UNKNOWN even though x is concretely
 // one of 1, -17, 42.
 //
 // Mechanism, stated as the convention requires: the update rule widens the
@@ -29,7 +30,7 @@
 // before widening. 03-per_origin_widening.vimp is the same program under
 // the update rule that fixes exactly this.
 
-fun f(x) {
+fun f(i32 x) {
   __voblint_check(x < 43); // UNKNOWN
 }
 fun main() {

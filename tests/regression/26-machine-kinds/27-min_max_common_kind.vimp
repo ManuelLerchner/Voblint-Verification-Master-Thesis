@@ -1,0 +1,28 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// min and max compare their arguments at the usual arithmetic conversion of the
+// two, as the C macro (a) < (b) ? (a) : (b) does. With a at u32, b = -1 converts
+// to 4294967295 first, so min(a, b) is 4294967295 and max(c, d) is 4294967295,
+// not -1 and 1; i64 destinations keep the difference visible. Both conversions
+// of -1 to u32 are definite. u8 and i8 arguments are promoted to i32, where -1
+// stays -1; storing it to a u8 wraps to 255.
+fun main() {
+  u32 a = 4294967295;
+  i32 b = -1;
+  i32 c = -1;
+  u32 d = 1;
+  u8 p = 200;
+  i8 q = -1;
+  i64 m;
+  i64 h;
+  i32 r;
+  u8 n;
+  m = min(a, b); // ARITH: ERROR conversion-overflow
+  h = max(c, d); // ARITH: ERROR conversion-overflow
+  r = min(p, q); // ARITH: NONE
+  n = min(p, q); // ARITH: ERROR conversion-overflow
+  __voblint_check(m == 4294967295); // PROVED
+  __voblint_check(h == 4294967295); // PROVED
+  __voblint_check(r == -1); // PROVED
+  __voblint_check(n == 255); // PROVED
+}

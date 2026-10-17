@@ -3,11 +3,11 @@
 // Product reduction combines them into the singleton 1. Neither component
 // alone establishes r == 1 after this remainder operation.
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (0 <= n && n <= 20) {
-    dividend = n * 6 + 1;
-    q = dividend / 6;
-    r = dividend % 6;
+    i32 dividend = n * 6 + 1;
+    i32 q = dividend / 6;
+    i32 r = dividend % 6;
     __voblint_check(q >= 0); // PROVED
     __voblint_check(q <= 20); // PROVED
     __voblint_check(r == 1); // PROVED

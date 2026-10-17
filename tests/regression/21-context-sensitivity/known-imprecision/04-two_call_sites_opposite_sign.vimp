@@ -1,0 +1,18 @@
+// PARAM: --analysis sign --context entry-state
+// f is called twice from main with a positive and a negative literal
+// argument. Sign's own entry-state routing keys the two activations of f
+// by their entered p, so they stay two distinct contexts ([SPos] and
+// [SNeg]) at f's single FunctionEntry node rather than joining into one
+// shared summary. Concretely x = 6 and y = -20, yet both checks are
+// UNKNOWN: typed Sign has no magnitude, so it cannot exclude i32
+// wraparound of p + p for same-sign p, and each context returns Top.
+fun i32 f(i32 p) {
+  i32 t = p + p;
+  return t;
+}
+fun main() {
+  i32 x = f(3);
+  i32 y = f(-10);
+  __voblint_check(0 < x); // UNKNOWN
+  __voblint_check(y < 0); // UNKNOWN
+}

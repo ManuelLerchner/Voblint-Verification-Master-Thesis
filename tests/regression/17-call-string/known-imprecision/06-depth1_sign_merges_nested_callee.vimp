@@ -8,11 +8,11 @@
 // entry joins Positive with Negative to Top and both results come back Top.
 // ../precision/05-callstring_graph_sign.vimp is the same program at depth 2,
 // where both checks are PROVED.
-fun g(p) { return p + p; }
-fun f(p) { t = g(p); return t; }
+fun i32 g(i32 p) { return p + p; }
+fun i32 f(i32 p) { i32 t = g(p); return t; }
 fun main() {
-  x = f(3);
-  y = f(-10);
+  i32 x = f(3);
+  i32 y = f(-10);
   __voblint_check(0 < x); // UNKNOWN
   __voblint_check(y < 0); // UNKNOWN
 }

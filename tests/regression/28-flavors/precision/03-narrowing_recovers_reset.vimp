@@ -1,0 +1,16 @@
+// PARAM: --analysis interval
+// Narrowing works (Monniaux, ETAPS 2024): i counts up and resets at 10, so i <= 9
+// holds after the reset. Widening sends the upper bound to the i32 limit, where
+// i + 1 may overflow, which also loses the lower bound; narrowing brings the upper
+// bound back to 9, so the check is proved over i = [-2147483646, 9] rather than
+// the [0, 9] the unbounded analysis of the tutorial finds.
+fun main() {
+  i32 i = 0;
+  while (1) {
+    i = i + 1;
+    if (i >= 10) {
+      i = 0;
+    }
+    __voblint_check(i <= 9);  // PROVED
+  }
+}

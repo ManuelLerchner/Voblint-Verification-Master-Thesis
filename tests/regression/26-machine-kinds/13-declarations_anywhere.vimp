@@ -1,0 +1,15 @@
+// PARAM: --analysis interval
+// A declaration may follow statements, as in C99. Its declarators run where they
+// are written: `y` reads `x` after the increment, and `z` holds an arbitrary i8
+// value only from its own declaration on.
+fun main() {
+  i32 x = 1;
+  x = x + 1;
+  i32 y = x;
+  __voblint_check(y == 2); // PROVED
+  y = 5;
+  i8 z;
+  __voblint_check(z <= 127); // PROVED
+  __voblint_check(z == 0); // UNKNOWN
+  __voblint_check(y == 5); // PROVED
+}

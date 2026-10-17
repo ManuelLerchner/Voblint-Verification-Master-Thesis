@@ -3,6 +3,6 @@
 // rule instead of join -- confirms --globals warrow reproduces the plain
 // default CLI invocation's verdict.
 fun main() {
-  x = 5;
+  i32 x = 5;
   __voblint_check(0 < x); // PROVED
 }

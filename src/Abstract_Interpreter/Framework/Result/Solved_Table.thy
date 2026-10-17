@@ -44,18 +44,6 @@ text \<open>
   rewriting that leaves reachability alone).
 \<close>
 
-text \<open>
-  A point of an abstract-store table concretizes through the reachability
-  lift: \<^const>\<open>Bot\<close> to nothing, a \<^const>\<open>Lifted\<close> store to its concretization.
-  It is the lift at \<^const>\<open>gamma_state\<close>, so a result generic in its published
-  value reads back to exactly this at an abstract-store instance.
-\<close>
-
-lemma gamma_state_of_reachable_env [simp]:
-  "\<gamma> (case p of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st) = \<gamma>\<^sub>\<bottom> p"
-  for p :: "'a::numeric_domain abs_state lifted"
-  by (cases p) simp_all
-
 subsection \<open>The result table\<close>
 
 text \<open>
@@ -242,29 +230,5 @@ lemma wf_solved_table_LiftedD [dest]:
   "\<lbrakk>wf_solved_table empty_pred r; lookup_table r v ctx = Lifted st\<rbrakk>
      \<Longrightarrow> \<not> empty_pred st"
   unfolding wf_solved_table_def by blast
-
-lemma finite_table_contexts:
-  assumes "finite_solved_table r"
-  shows "finite (table_contexts r v)"
-  using assms unfolding finite_solved_table_def table_contexts_def by simp
-
-text \<open>What canonicality buys: on a well-formed result the structural
-  reading and the concrete one coincide, provided the supplied predicate is
-  the exact emptiness test its adapters use.\<close>
-
-lemma wf_solved_table_gamma_point_eq_empty_iff:
-  fixes r :: "('ctx, 'a::numeric_domain abs_state) solved_table"
-    and empty_pred :: "'a abs_state \<Rightarrow> bool"
-  assumes wf: "wf_solved_table empty_pred r"
-    and exact: "\<And>st. empty_pred st \<longleftrightarrow> \<gamma> st = {}"
-  shows "\<gamma>\<^sub>\<bottom> (lookup_table r v ctx) = {} \<longleftrightarrow> lookup_table r v ctx = Bot"
-proof (cases "lookup_table r v ctx")
-  case Bot
-  then show ?thesis by simp
-next
-  case (Lifted st)
-  have "\<not> empty_pred st" using wf Lifted by blast
-  with exact Lifted show ?thesis by simp
-qed
 
 end

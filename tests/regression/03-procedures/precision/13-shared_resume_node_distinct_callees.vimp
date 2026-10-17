@@ -7,14 +7,15 @@
 //
 // The complement of 09: 09 pins that two writes to one key become one write,
 // this pins that two writes to two keys stay two writes.
-fun f(n) {
+fun i32 f(i32 n) {
   return n;
 }
-fun g(n) {
+fun i32 g(i32 n) {
   return n + 1;
 }
 fun main() {
-  x = 5;
+  i32 x = 5;
+  i32 a;
   if (x < 2) {
     a = f(1);
   } else {

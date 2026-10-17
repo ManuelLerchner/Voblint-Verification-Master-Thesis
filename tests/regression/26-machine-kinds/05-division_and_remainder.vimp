@@ -1,0 +1,18 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// Signed division truncates toward zero. INT_MIN / -1 overflows, which C
+// leaves undefined; here it wraps back to INT_MIN.
+//
+// Run under --signed-overflow assume_wraparound: the checks pin wrapped
+// values. Under the default assume_top a signed result or conversion outside
+// its kind gives Interval the kind's top (27-signed-overflow/known-
+// imprecision/01).
+fun main() {
+  i32 x;
+  i32 y;
+  x = -2147483648;
+  y = x / -1; // ARITH: ERROR signed-overflow
+  __voblint_check(y == -2147483648); // PROVED
+  __voblint_check(-7 / 2 == -3); // PROVED
+  __voblint_check(-7 % 2 == -1); // PROVED
+}

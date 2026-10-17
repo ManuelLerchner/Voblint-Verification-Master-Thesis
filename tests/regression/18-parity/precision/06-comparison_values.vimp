@@ -6,12 +6,12 @@
 // answers, not regressions: n is unconstrained, so each comparison is true on
 // some runs and false on others.
 fun main() {
-  n = __voblint_nondet_int();
-  x = 2 * n;
-  le = x <= 1;
-  gt = x > 1;
-  ge = x >= 1;
-  ne = x != 1;
+  i32 n = __voblint_nondet_int();
+  i32 x = 2 * n;
+  i32 le = x <= 1;
+  i32 gt = x > 1;
+  i32 ge = x >= 1;
+  i32 ne = x != 1;
   __voblint_check(ne != 0); // PROVED
   __voblint_check(le != 0); // UNKNOWN
   __voblint_check(gt != 0); // UNKNOWN

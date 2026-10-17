@@ -8,11 +8,11 @@
 //
 // Concretely x is 1 at main's check and 2 at f's (x is local to each).
 fun main() {
-  x = 1;
+  i32 x = 1;
   __voblint_check(x == 1); // PROVED
   f();
 }
 fun f() {
-  x = 2;
+  i32 x = 2;
   __voblint_check(x == 1); // REFUTED
 }

@@ -7,7 +7,7 @@
 // case that has neither, and it pins that having a global at all costs no
 // precision.
 
-global g;
+global i32 g;
 fun main() {
   g = 1;
   __voblint_check(0 < g); // PROVED

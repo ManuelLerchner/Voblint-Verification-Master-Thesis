@@ -10,7 +10,8 @@
 // 03-equality_asked_of_order. The same run is pinned in Isabelle by
 // order_asks_needs_both (src/Examples/CLI/Example_Order_Asks_Interval.thy).
 fun main() {
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 x, y;
   if (0 < c) {
     x = 0;
     y = 10;

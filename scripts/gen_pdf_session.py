@@ -127,7 +127,7 @@ def presentation(sessions, include_examples=False):
         for theory in session["theories"]:
             if not theory["path"].startswith("src/Examples/"):
                 core.append(theory)
-            elif theory["name"] == "Example_End_To_End_Certificate":
+            elif theory["name"] == "Example_Non_Vacuity":
                 certificate.append({**session, "theories": [theory], "appendix": True})
         if core:
             selected.append({**session, "theories": core})

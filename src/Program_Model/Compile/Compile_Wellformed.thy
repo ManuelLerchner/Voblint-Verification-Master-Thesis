@@ -393,8 +393,8 @@ text \<open>The \<open>Statement\<close> indices a compiled fragment touches.  S
   index, and is empty when the continuation is not a \<open>Statement\<close> node.\<close>
 
 definition frag_stmts ::
-  "(cfg_node \<times> edge_action \<times> cfg_node) set
-   \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set \<Rightarrow> nat set"
+  "(cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+   \<Rightarrow> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set \<Rightarrow> nat set"
 where
   "frag_stmts E K =
      {j. \<exists>a v. (Statement j, a, v) \<in> E} \<union> {j. \<exists>u a. (u, a, Statement j) \<in> E}
@@ -480,14 +480,10 @@ next
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
   have i1: "n1 = Suc n + csize c" using compile_next_id[OF c1] .
   have r1: "frag_stmts E1 K1 \<subseteq> {Suc n..<n1} \<union> {n}" using While.IH[OF c1] by simp
-  have guard: "frag_stmts {(Statement n, EA_Assume b, en1),
-                           (Statement n, EA_AssumeNot b, k)} {} \<subseteq> {n..<n1} \<union> kstmt k"
-    using e1 i1 csize_pos[of c] by (auto simp: frag_stmts_def)
-  have dec: "frag_stmts E K
-               = frag_stmts {(Statement n, EA_Assume b, en1),
-                             (Statement n, EA_AssumeNot b, k)} {} \<union> frag_stmts E1 K1"
-    unfolding E K by (rule frag_stmts_Un)
-  show ?case unfolding n' dec using guard r1 i1 csize_pos[of c] by force
+  have sub: "frag_stmts E K \<subseteq> frag_stmts E1 K1 \<union> {n} \<union> kstmt en1 \<union> kstmt k"
+    unfolding E K frag_stmts_def by auto
+  show ?case
+    using sub r1 e1 i1 csize_pos[of c] unfolding n' by fastforce
 qed (auto simp: frag_stmts_def split: option.splits)
 
 subsection \<open>Finiteness\<close>

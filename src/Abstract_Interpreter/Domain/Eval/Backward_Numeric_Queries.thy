@@ -13,9 +13,8 @@ text \<open>
   a sound entailment/refutation test, though an imprecise inverse may still
   answer "unknown" even when the relation is already concrete-semantically
   fixed. The four judgments need the inverse operators and nothing about
-  states, so they are defined in @{locale sound_inverse_ops}'s own context; every
-  @{locale sound_refinement} interpretation extends it and gets them with no
-  restated proof obligation. Turning the four into the
+  states, so they are defined in @{locale sound_inverse_ops}'s own context.
+  Turning the four into the
   two queries a caller asks for is not backward-specific and is not done
   here: this file ends by interpreting
   \<^locale>\<open>numeric_query_judgments\<close> at them, so every
@@ -28,10 +27,8 @@ text \<open>
   representations. \<open>less_true\<close>/\<open>less_false\<close>/\<open>eq_true\<close>/\<open>eq_false\<close> stay implementation
   judgments, not the public interface \<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>
   gives: a caller after the generic default wants \<open>less\<close>/\<open>eq\<close>; these four
-  remain named and proved because \<open>Sign_Backward\<close> and \<open>Int_Classify\<close> cite
-  them directly off a concrete @{locale sound_refinement} interpretation to
-  state that a domain's own sharper, hand-tuned query agrees with this
-  generic default.
+  remain named and proved so that a domain can state that its own sharper,
+  hand-tuned query agrees with this generic default.
 \<close>
 
 context sound_inverse_ops

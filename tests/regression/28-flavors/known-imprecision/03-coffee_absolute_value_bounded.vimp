@@ -1,0 +1,19 @@
+// PARAM: --analysis interval
+// The bounded variant from the same tutorial: x in [-1000, 2000], y = |x| in
+// [0, 2000]. The test y >= 1 refines y to [1, 2000] but leaves x at [-1000, 2000],
+// since an interval holds no relation between x and y, so x != 0 stays open
+// although it holds in every run.
+fun main() {
+  i32 x;
+  i32 y = 0;
+  if (-1000 <= x && x <= 2000) {
+    if (x < 0) {
+      y = -x;
+    } else {
+      y = x;
+    }
+    if (y >= 1) {
+      __voblint_check(x != 0);  // UNKNOWN
+    }
+  }
+}

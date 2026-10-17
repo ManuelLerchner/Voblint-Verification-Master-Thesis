@@ -1,9 +1,0 @@
-chapter Voblint
-
-session Voblint_Examples_Int in "." = "Voblint_Analysis_Int" +
-  description "int_dom: a certified run of the reduced product under each refinement mode"
-  sessions
-    "Voblint_Examples_CFG"
-  theories
-    Exec_Int_DG_Run
-    Int_Regression

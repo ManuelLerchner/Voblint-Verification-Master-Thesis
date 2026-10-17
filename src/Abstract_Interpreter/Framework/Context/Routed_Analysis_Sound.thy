@@ -1,5 +1,5 @@
 theory Routed_Analysis_Sound
-  imports DG_Analysis_Adapter Routed_Context_Unit
+  imports DG_Analysis_Adapter
 begin
 
 section \<open>Reading a solved routed system as an analysis result\<close>
@@ -66,23 +66,23 @@ text \<open>
 \<close>
 
 locale routed_analysis =
-  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0
-    "solved_local_reader vars sigma" seed is_bot
+  dg_analysis_adapter \<kappa> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma
+    vars x0 "solved_local_reader vars sigma" seed is_bot
     "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
     adm rd \<gamma>\<^sub>V empty\<^sub>V classify
-  for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
+  for \<kappa> :: kenv
+    and S ::
+      "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
     and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c"
     and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
-    and adm :: "'c context_policy"
+    and adm :: "'c call_context_policy"
     and rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"

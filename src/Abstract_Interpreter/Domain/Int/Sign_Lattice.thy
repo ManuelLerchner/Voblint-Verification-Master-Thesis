@@ -204,8 +204,7 @@ subsection \<open>Meet\<close>
 
 text \<open>
   The sign meet is exact: it concretizes to the intersection of its operands.
-  As a @{class semilattice_inf} instance it gives @{text \<open>inf_mono\<close>} for free,
-  which the monotonicity proof of @{text bfilter} needs.
+  As a @{class semilattice_inf} instance it gives @{text \<open>inf_mono\<close>} for free.
 \<close>
 
 instantiation sign :: inf begin
@@ -239,10 +238,6 @@ end
 lemma gamma_inf_sign [simp]:
   "gamma_sign (a \<sqinter> b) = gamma_sign a \<inter> gamma_sign b"
   by (cases a; cases b) auto
-
-lemma inf_sign_sound:
-  "n \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> n \<in> gamma_sign (a \<sqinter> b)"
-  by simp
 
 instance sign :: semilattice_inf
 proof intro_classes

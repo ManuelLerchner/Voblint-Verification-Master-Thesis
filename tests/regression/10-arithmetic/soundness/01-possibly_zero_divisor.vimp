@@ -2,10 +2,10 @@
 // Each equality holds for one feasible divisor and fails for the other.
 // Dropping the totalized zero case would incorrectly decide these checks.
 fun main() {
-  d = __voblint_nondet_int();
+  i32 d = __voblint_nondet_int();
   if (0 <= d && d <= 1) {
-    q = 7 / d;
-    r = 7 % d;
+    i32 q = 7 / d;
+    i32 r = 7 % d;
     __voblint_check(q == 0); // UNKNOWN
     __voblint_check(q == 7); // UNKNOWN
     __voblint_check(r == 0); // UNKNOWN

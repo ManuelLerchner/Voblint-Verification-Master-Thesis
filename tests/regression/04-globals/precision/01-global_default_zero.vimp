@@ -1,9 +1,9 @@
 // PARAM: --analysis sign
 // A declared global's value before any write is its documented
 // Goblint-style zero-initialized default (cinit_sign_st), read back
-// exactly -- see also 02-global_var.vimp (Interval), which locks in a
-// declared global's value after it is actually written.
-global g;
+// exactly -- see also 04-global_written_constant.vimp (Interval), which locks
+// in a declared global's value after it is actually written.
+global i32 g;
 fun main() {
   __voblint_check(g == 0); // PROVED
 }

@@ -1,0 +1,17 @@
+// PARAM: --analysis sign
+// x is unconstrained after __voblint_nondet_int(). The then-arm assigns a
+// positive x to y. The else-arm negates a non-positive x, which is
+// non-negative except at x = INT_MIN, where - x wraps back to INT_MIN. So
+// y >= 0 holds in every run but that one, and UNKNOWN is the only sound
+// answer.
+fun main() {
+  i32 x = 0;
+  x = __voblint_nondet_int();
+  i32 y;
+  if (0 < x) {
+    y = x;
+  } else {
+    y = - x;
+  }
+  __voblint_check(y >= 0); // UNKNOWN
+}

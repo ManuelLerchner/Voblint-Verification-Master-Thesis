@@ -1,0 +1,30 @@
+// PARAM: --analysis congruence
+// What standalone Congruence still decides under the default assume_top.
+// Concretely d = -3, r = 1, q = 6, a = 4 and g = 4.
+//
+// A difference of two constants that lies in range keeps its singleton
+// (cong_arith_ik), here 7 - 10 in main and g - 1 in dec, read back through
+// the combine edge. A remainder of in-range operands and a quotient by a
+// divisor that excludes -1 cannot leave the kind, so they keep their class
+// under every policy: the guard pins n to 13, and 13 % 6 and 13 / 2 stay
+// singletons, as does 12 / 3 returned from third. The + and * cases that
+// assume_top loses are in ../known-imprecision/06.
+global i32 g;
+fun i32 third(i32 p) { return p / 3; }
+fun dec() { g = g - 1; }
+fun main() {
+  i32 d = 7 - 10;
+  __voblint_check(d == -3); // PROVED
+  i32 n = __voblint_nondet_int();
+  if (n == 13) {
+    i32 r = n % 6;
+    __voblint_check(r == 1); // PROVED
+    i32 q = n / 2;
+    __voblint_check(q == 6); // PROVED
+  }
+  i32 a = third(12);
+  __voblint_check(a == 4); // PROVED
+  g = 5;
+  dec();
+  __voblint_check(g == 4); // PROVED
+}

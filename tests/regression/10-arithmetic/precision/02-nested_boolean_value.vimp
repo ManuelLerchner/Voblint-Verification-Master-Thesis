@@ -9,6 +9,6 @@
 // top-level branch/assume gate (branch_lifted's own case split, exercised
 // separately by the 06-reachability fixtures).
 fun main() {
-  x = 0 - 1;
+  i32 x = 0 - 1;
   __voblint_check((x < 0) == 1); // PROVED
 }

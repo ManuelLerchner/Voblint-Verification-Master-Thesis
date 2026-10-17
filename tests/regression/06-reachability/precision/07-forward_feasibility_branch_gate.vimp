@@ -8,7 +8,7 @@
 // Some False -- and contradicts the selected polarity, so the then-branch has
 // no successor at all and its check is reported DEAD.
 fun main() {
-  x = 5;
+  i32 x = 5;
   if ((x < 0) == 1) {
     __voblint_check(false); // NOWARN (unreachable)
   } else {

@@ -1,0 +1,11 @@
+tests/regression/28-flavors/known-imprecision/01-vanilla_sign_sum_may_wrap.vimp [sign]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+9:7       pp2    WARNING   possible signed integer overflow in +: x + y
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----------
+10:3      pp3    z < 0      UNKNOWN  sign: z=⊤

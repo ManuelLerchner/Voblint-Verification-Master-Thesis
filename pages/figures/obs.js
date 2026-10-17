@@ -1,6 +1,6 @@
 {
   /*
-   * What each observer of `activation_trace` reads, shown against one activation of the run above.
+   * What each observer of `gactivation_trace` reads, shown against one activation of the run above.
    * `t` is whichever box the reader picks; the table says what the six answers are for
    * each of them, since the shapes differ: a callee that has returned nothing yet is a
    * `Call`, one that has is a `Resume`, and `main` is a `Resume` around its `Root` prefix.
@@ -74,7 +74,7 @@
     caller:
       "caller_of (Root _) = None | caller_of (Call c _) = Some c | caller_of (Resume cur _ _) = caller_of cur",
     callee:
-      "Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace) activation_path",
+      "Resume (activation_trace_current: 'v gactivation_trace) (activation_trace_callee: 'v gactivation_trace) 'v gactivation_path",
   };
 
   const LINKS = {
@@ -83,13 +83,13 @@
     sinknode: "sink_node%7Cconst",
     sinkstore: "sink_store%7Cconst",
     caller: "caller_of%7Cconst",
-    callee: "activation_trace%7Ctype",
+    callee: "gactivation_trace.activation_trace_callee%7Cconst",
   };
 
   const answer = (key, id) => {
     const a = ACTS[id];
     if (key === "path") {
-      return `\`path_of t\` is whichever \`activation_path\` the constructor carries, here ${a.steps} \`(node, store)\` pairs. Only this activation's own steps are on it.`;
+      return `\`path_of t\` is whichever \`gactivation_path\` the constructor carries, here ${a.steps} \`(node, store)\` pairs. Only this activation's own steps are on it.`;
     }
     if (key === "entry") {
       return `\`entry_store t\` is \`${a.entry}\`, the store at the head of the trace, as \`${a.name}\` was entered.`;

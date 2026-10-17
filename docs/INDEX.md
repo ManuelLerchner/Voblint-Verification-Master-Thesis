@@ -27,8 +27,6 @@ These documents describe the supported architecture and its verification.
   — what is proved, what is generated, and what is handwritten.
 - [Activation trace semantics](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) —
   why `valid_activation_trace` is the concrete foundation and how contexts project from it.
-- [Analysis registration generation](ANALYSIS_ASSEMBLY_GENERATION.md) — the
-  `manifests/analyses.yaml` registry and what it generates.
 - [HTML result viewer](HTML_REPORT.md) — `voblint --html` output and
   `pixi run html-report-serve`.
 
@@ -42,8 +40,6 @@ match the tree.
 - [CFG compiler continuation redesign](CFG_COMPILER_CONTINUATION_REDESIGN.md)
 - [DG interface validation against Goblint](GOBLINT_DG_INTERFACE_VALIDATION.md)
 - [Backward-filter sharing measurement](BACKWARD_FILTER_SHARING_MEASUREMENT.md)
-- [M4 semantic baseline](M4_SEMANTIC_BASELINE.md) — observable results the
-  interval and global-across-call witnesses pin.
 
 ## Work and verification
 
@@ -82,6 +78,10 @@ maintained against the current tree.
 
 Recent archived records:
 
+- [Typed analyzer plan](history/TYPED_CFG_PLAN.md), [machine integers](history/TYPED_IR.md)
+  and [typed reuse inventory](history/TYPED_REUSE_INVENTORY.md): how the machine-integer
+  language replaced the mathematical one
+- [M4 semantic baseline](history/M4_SEMANTIC_BASELINE.md)
 - [Export-surface audit](history/EXPORT_SURFACE_AUDIT.md)
 - [Cleanup migration plan](history/CLEANUP_MIGRATION_PLAN.md)
 - [Post-deletion cleanup queue](history/POST_DELETION_CLEANUP_QUEUE.md)

@@ -1,5 +1,9 @@
 # CFG compiler redesign: continuation-passing fragments
 
+Status: historical. The compiler now lives in `Voblint_Compile`
+(`VIMP_Proc_to_CFG.thy`) and compiles the elaborated program (`elab_cfg`); the
+names below predate Stage 7 and the M7 rename (`docs/theorem-migration.toml`).
+
 Review of the `compile` / `compile_prog` pipeline in `src/Program_Model/CFG/`, with a
 concrete migration plan. Written against the working tree at
 `factorial-example-compilation-test` (`aa0f9d4d`).

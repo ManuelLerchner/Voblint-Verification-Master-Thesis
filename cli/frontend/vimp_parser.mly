@@ -14,13 +14,21 @@ let source_label p =
   ( Voblint.nat_of_integer (Z.of_int line),
     Voblint.nat_of_integer (Z.of_int column) )
 
-(* A function_decl's action builds (name, formals, body); closing the bucket
-   here keeps the name, its header and its positions together without a second
-   traversal. *)
-let close_definition header_start header_end ((name, formals, body) as decl) =
+(* A function_decl's action builds its Vimp_typing.definition; closing the
+   bucket here keeps the name, its header and its positions together without a
+   second traversal. *)
+let close_definition header_start header_end ((name, _, _, _, _) as decl) =
   Vimp_positions.close name header_start header_end;
-  ignore formals; ignore body;
   decl
+
+(* The current procedure's declared locals with their kinds, in source order. *)
+let local_kinds : (string * Voblint.ikind) list ref = ref []
+
+let declare_locals k ds =
+  local_kinds := !local_kinds @ List.map (fun (id, _) -> (id, k)) ds;
+  match List.map snd ds with
+  | c :: cs -> List.fold_left (fun acc c -> Voblint.Seq (acc, c)) c cs
+  | [] -> assert false
 %}
 
 %token <string> IDENT
@@ -35,6 +43,14 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 %token WHILE
 %token BOOL_TRUE
 %token BOOL_FALSE
+%token KW_I8
+%token KW_U8
+%token KW_I16
+%token KW_U16
+%token KW_I32
+%token KW_U32
+%token KW_I64
+%token KW_U64
 %token ASSIGN
 %token PLUS
 %token MINUS
@@ -66,18 +82,26 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 %left STAR SLASH PERCENT
 %right NOT UMINUS
 
-%type <Voblint.exp> exp
-%type <(unit, string, Voblint.exp) Voblint.gcom> stmt
-%type <(unit, string, Voblint.exp) Voblint.gcom> if_stmt
-%type <(unit, string, Voblint.exp) Voblint.gcom> stmts
-%type <(unit, string, Voblint.exp) Voblint.gcom> stmts_opt
-%type <Voblint.exp list> actuals
-%type <string list> formals
+%type <Voblint.src_exp> exp
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> stmt
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> if_stmt
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> stmts
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> stmts_opt
+%type <Voblint.src_exp list> actuals
 %type <string list> ids
-%type <string list> globals_decl
-%type <string list> globals_opt
-%type <string * string list * (unit, string, Voblint.exp) Voblint.gcom> function_decl
-%type <(string * string list * (unit, string, Voblint.exp) Voblint.gcom) list> function_decl_star
+%type <Voblint.ikind> kind
+%type <Vimp_typing.global_line> global_line
+%type <Vimp_typing.global_line list> global_line_star
+%type <Vimp_typing.formal> tformal
+%type <Vimp_typing.formal list> tformals
+%type <string * (unit, string, Voblint.src_exp) Voblint.gcom> init_decl
+%type <(string * (unit, string, Voblint.src_exp) Voblint.gcom) list> init_decls
+%type <string * string> decl_name
+%type <unit> block_open
+%type <unit> block_close
+%type <string * Vimp_typing.formal list * Voblint.ikind option * Lexing.position * Lexing.position> fun_head
+%type <Vimp_typing.definition> function_decl
+%type <Vimp_typing.definition list> function_decl_star
 
 %start <unit Voblint.imp_prog_ext> program
 %%
@@ -85,13 +109,13 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 (* exp: *)
 exp:
   | v0 = IDENT
-      { Voblint.V v0 }
+      { let v0 = Vimp_scope.resolve $startpos(v0) v0 in Voblint.V v0 }
   | v0 = INT
-      { Voblint.N (Voblint.Int_of_integer v0) }
+      { Voblint.N (Voblint.Int_of_integer (Vimp_scope.literal $startpos v0)) }
   | v0 = MINUS v1 = exp %prec UMINUS
       { match v1 with
       | Voblint.N (Voblint.Int_of_integer z) ->
-        Voblint.N (Voblint.Int_of_integer (Z.neg z))
+        Voblint.N (Voblint.Int_of_integer (Vimp_scope.literal $startpos (Z.neg z)))
       | _ ->
         Voblint.Minus
           (Voblint.N (Voblint.Int_of_integer Z.zero), v1) }
@@ -129,12 +153,32 @@ exp:
       { Voblint.Or (v0, v2) }
   | v0 = LPAREN v1 = exp v2 = RPAREN
       { v1 }
+  | v0 = LPAREN v1 = kind v2 = RPAREN v3 = exp %prec UMINUS
+      { Voblint.Cast (v1, v3) }
+(* kind: *)
+kind:
+  | v0 = KW_I8
+      { Voblint.I8 }
+  | v0 = KW_U8
+      { Voblint.U8 }
+  | v0 = KW_I16
+      { Voblint.I16 }
+  | v0 = KW_U16
+      { Voblint.U16 }
+  | v0 = KW_I32
+      { Voblint.I32 }
+  | v0 = KW_U32
+      { Voblint.U32 }
+  | v0 = KW_I64
+      { Voblint.I64 }
+  | v0 = KW_U64
+      { Voblint.U64 }
 (* stmt: *)
 stmt:
   | v0 = SKIP v1 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.SKIP ()) }
   | v0 = IDENT v1 = ASSIGN v2 = exp v3 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Assign ((), v0, v2)) }
+      { let v0 = Vimp_scope.resolve $startpos(v0) v0 in record_stmt_pos $startpos $endpos (Voblint.Assign ((), v0, v2)) }
   | v0 = RETURN v1 = exp v2 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.Return ((), (Some v1))) }
   | v0 = RETURN v1 = SEMI
@@ -143,19 +187,23 @@ stmt:
       { record_stmt_pos $startpos $endpos (Voblint.Check ((), (source_label $startpos), v2)) }
   | v0 = if_stmt
       { v0 }
-  | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
+  | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close
       { record_stmt_pos $startpos $endpos (Voblint.While ((), v2, v5)) }
   | v0 = IDENT v1 = LPAREN v2 = actuals v3 = RPAREN v4 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.Call ((), None, v0, v2)) }
   | v0 = IDENT v1 = ASSIGN v2 = IDENT v3 = LPAREN v4 = actuals v5 = RPAREN v6 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Call ((), (Some v0), v2, v4)) }
+      { let v0 = Vimp_scope.resolve $startpos(v0) v0 in record_stmt_pos $startpos $endpos (Voblint.Call ((), (Some v0), v2, v4)) }
+  | k = kind ds = init_decls SEMI
+      { declare_locals k ds }
+  | block_open b = stmts_opt block_close
+      { b }
 (* if_stmt: *)
 if_stmt:
-  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = LBRACE v9 = stmts_opt v10 = RBRACE
+  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close v7 = ELSE v8 = block_open v9 = stmts_opt v10 = block_close
       { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, v9)) }
-  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
+  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close
       { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, (record_stmt_pos $endpos $endpos (Voblint.SKIP ())))) }
-  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = if_stmt
+  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close v7 = ELSE v8 = if_stmt
       { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, v8)) }
 (* stmts: *)
 stmts:
@@ -177,48 +225,105 @@ actuals:
       { [x] }
   | xs = actuals COMMA x = exp
       { xs @ [x] }
-(* formals: *)
-formals:
-  | (* empty *)
-      { [] }
-  | x = IDENT
-      { [x] }
-  | xs = formals COMMA x = IDENT
-      { xs @ [x] }
 (* ids: *)
 ids:
   | x = IDENT
       { [x] }
   | xs = ids COMMA x = IDENT
       { xs @ [x] }
-(* globals_decl: *)
-globals_decl:
-  | v0 = GLOBAL v1 = ids v2 = SEMI
-      { v1 }
-(* function_decl: *)
-function_decl:
-  | v0 = FUN v1 = IDENT v2 = LPAREN v3 = formals v4 = RPAREN v5 = LBRACE v6 = stmts_opt v7 = RBRACE
-      { close_definition $startpos $endpos(v4) ((v1, v3, v6)) }
 (* program: *)
 program:
-  | g = globals_opt fs = function_decl_star EOF
-      { let mains, procs = List.partition (fun (n, _, _) -> n = "main") fs in
-        let main_body =
-          match mains with
-          | [ (_, [], b) ] -> b
-          | [ (_, _ :: _, _) ] -> failwith "'main' must have no formals"
-          | [] -> failwith "missing 'fun main() { ... }'"
-          | _ -> failwith "more than one 'fun main()'"
-        in
-        Voblint.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint.Gproc_decl_ext (formals, b, ()))) procs)
-          main_body g }
+  | gs = global_line_star fs = function_decl_star EOF
+      { Vimp_typing.program gs fs }
 
-globals_opt:
+global_line_star:
   | (* empty *)
       { [] }
-  | gs = globals_decl
-      { gs }
+  | g = global_line gs = global_line_star
+      { g :: gs }
+
+(* Every global and formal declares its kind. The kindless forms parse only to
+   say so. *)
+global_line:
+  | GLOBAL xs = ids SEMI
+      { Vimp_scope.fail_at $startpos(xs)
+          "global '%s' needs a kind, as in 'global i32 %s;'" (List.hd xs) (List.hd xs) }
+  | GLOBAL k = kind xs = ids SEMI
+      { Vimp_scope.add_globals $startpos(xs) xs; (xs, k) }
+
+tformal:
+  | x = IDENT
+      { Vimp_scope.fail_at $startpos(x) "formal '%s' needs a kind, as in 'i32 %s'" x x }
+  | k = kind x = IDENT
+      { Vimp_scope.add_formal $startpos(x) x; (x, k) }
+
+tformals:
+  | (* empty *)
+      { [] }
+  | f = tformal
+      { [f] }
+  | fs = tformals COMMA f = tformal
+      { fs @ [f] }
+
+(* A local declaration starts its variable at an arbitrary value of its kind,
+   written out as a library call so the semantics, not the parser, says what
+   that value may be. An initializer, as in C's `i8 x = 2;`, is an assignment
+   instead, converted to the variable's kind as any assignment is; a call
+   initializer, `i8 x = f(n);`, is the call with x as its destination. Each
+   declarator is one statement at its own position, executed where it is
+   written, so a declaration in a loop body starts its variable afresh on
+   every iteration. The declarator's name is in scope from the declarator on,
+   as in C, so its initializer would read the variable it declares; that read
+   is rejected rather than given a value C leaves indeterminate. *)
+decl_name:
+  | x = IDENT
+      { (x, Vimp_scope.declare $startpos(x) x) }
+
+init_decl:
+  | d = decl_name
+      { let _, id = d in
+        (id,
+         record_stmt_pos $startpos $endpos
+           (Voblint.Call ((), Some id, "__voblint_nondet_int", []))) }
+  | d = decl_name ASSIGN e = exp
+      { let x, id = d in
+        if List.mem id (Vimp_typing.exp_vars [] e) then
+          Vimp_scope.fail_at $startpos(e) "the initializer of '%s' reads '%s' itself" x x;
+        (id, record_stmt_pos $startpos $endpos (Voblint.Assign ((), id, e))) }
+  | d = decl_name ASSIGN f = IDENT LPAREN es = actuals RPAREN
+      { let x, id = d in
+        if List.exists (fun e -> List.mem id (Vimp_typing.exp_vars [] e)) es then
+          Vimp_scope.fail_at $startpos(es) "the initializer of '%s' reads '%s' itself" x x;
+        (id, record_stmt_pos $startpos $endpos (Voblint.Call ((), Some id, f, es))) }
+
+init_decls:
+  | d = init_decl
+      { [d] }
+  | ds = init_decls COMMA d = init_decl
+      { ds @ [d] }
+
+block_open:
+  | LBRACE
+      { Vimp_scope.push () }
+
+block_close:
+  | RBRACE
+      { Vimp_scope.pop () }
+
+(* Every declaration in a body is one of the procedure's locals, as CIL's
+   fundec.slocals collects them, under the name Vimp_scope gave it. *)
+fun_head:
+  | FUN rk = option(kind) name = IDENT LPAREN fs = tformals rp = RPAREN LBRACE
+      { Vimp_scope.enter_proc name;
+        local_kinds := [];
+        (name, fs, rk, $startpos, $endpos(rp)) }
+
+function_decl:
+  | h = fun_head b = stmts_opt RBRACE
+      { let name, fs, rk, p, q = h in
+        Vimp_scope.close_proc ();
+        Vimp_typing.check_header p name fs rk b;
+        close_definition p q (name, fs, rk, !local_kinds, b) }
 
 function_decl_star:
   | (* empty *)

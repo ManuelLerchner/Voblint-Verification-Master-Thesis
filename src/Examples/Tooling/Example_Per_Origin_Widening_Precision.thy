@@ -1,6 +1,7 @@
 theory Example_Per_Origin_Widening_Precision
   imports
-    "Voblint_Analysis_Interval.Interval_Exec"
+    "Voblint_Solver.Globals_Rule"
+    "Voblint_Analysis_Interval.Interval_Warrowing"
 begin
 
 section \<open>Per-origin widening keeps a precision the joined-then-widened slot loses\<close>

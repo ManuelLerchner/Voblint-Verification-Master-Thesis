@@ -49,23 +49,6 @@ forms = [{ const = "gamma", class = "numeric_domain", args = ["a"] }]
 
 [[entry]]
 group = "operator"
-reads = "the value of _e_ in _s_"
-meaning = "the integer expression _e_ evaluates to in store _s_"
-forms = [{ const = "aval", args = ["e", "s"] }]
-
-[[entry]]
-group = "operator"
-reads = "the abstract value of _e_ in _d_"
-meaning = 'the abstract value an evaluator computes for expression _e_ in abstract state _d_; it contains the concrete value whenever the store lies in {\<gamma> d}'
-forms = [
-  { const = "aval_abs", parameter_of = "sound_evaluator", args = [
-    "e",
-    "d",
-  ] },
-]
-
-[[entry]]
-group = "operator"
 reads = "the abstract transfer of action _a_ in component _c_"
 meaning = "the state component _c_ computes from _d_ at an edge with action _a_, asking its own channel; for a sound component it covers every store the edge produces from a store _d_ describes"
 forms = [{ const = "abs_step", args = ["a", "c"] }]
@@ -79,16 +62,16 @@ forms = [{ const = "gamma_S", args = ["d"] }]
 [[entry]]
 group = "operator"
 reads = "_c_ steps to _c′_"
-meaning = "one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure"
+meaning = "one small step of a core VIMP configuration (command, store, frame stack) under kind environment _κ_ and procedure table _Π_; every value it writes is converted to its destination's kind; the starred arrow is its reflexive-transitive closure"
 forms = [
   { const = "pstep", args = [
-    '\<G>',
+    '\<kappa>',
     '\<Pi>',
     "c",
     "c'",
   ] },
   { const = "psteps", args = [
-    '\<G>',
+    '\<kappa>',
     '\<Pi>',
     "c",
     "c'",
@@ -98,16 +81,16 @@ forms = [
 [[entry]]
 group = "operator"
 reads = "_c_ steps to _c′_ in _g_"
-meaning = "one step of a graph configuration (node, store, frame stack) in control-flow graph _g_; the starred arrow is its reflexive-transitive closure"
+meaning = "one step of a graph configuration (node, store, frame stack) in control-flow graph _g_ under kind environment _κ_; the starred arrow is its reflexive-transitive closure"
 forms = [
   { const = "cstep", args = [
-    '\<G>',
+    '\<kappa>',
     "g",
     "c",
     "c'",
   ] },
   { const = "csteps", args = [
-    '\<G>',
+    '\<kappa>',
     "g",
     "c",
     "c'",
@@ -119,12 +102,6 @@ group = "operator"
 reads = "_c_ is matched with _c′_"
 meaning = "the compiler's simulation relation between a source configuration _c_ whose outermost activation runs procedure _p_ and a configuration _c′_ of the compiled graph _g_"
 forms = [{ const = "csim", args = ['\<Pi>', "g", "p", "c", "c'"] }]
-
-[[entry]]
-group = "operator"
-reads = "from _s₀_, _c_ is observed at node _v_ in _p_"
-meaning = "some run of the elaboration of program _p_ from store _s₀_ reaches an annotated configuration that erases to _c_, names node _v_ of the compiled graph and is related to _v_ by the simulation; a configuration reachable along two paths can be observed at two nodes"
-forms = [{ const = "at_node", args = ["p", "s0", "c", "v"] }]
 
 [[entry]]
 group = "operator"
@@ -172,19 +149,6 @@ forms = [
 
 [[entry]]
 group = "operator"
-reads = "the abstract return of _σe_ into _σc_"
-meaning = "the abstract counterpart of the concrete return on abstract states: caller locals, callee globals, and the callee's result written to the destination"
-forms = [
-  { const = "combine_collect_abs", args = [
-    '\<G>',
-    "dst",
-    '\<sigma>c',
-    '\<sigma>e',
-  ] },
-]
-
-[[entry]]
-group = "operator"
 reads = "the computed callee context"
 meaning = "the routing policy's abstract context function: the callee context the equations compute from an abstract entry value"
 forms = [{ const = "route", parameter_of = "routed_context" }]
@@ -206,25 +170,23 @@ forms = [
 
 [[entry]]
 group = "operator"
-reads = "the globals classifier"
-meaning = "the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter"
-symbol = '\<G>'
-const = "declared_global"
+reads = "the kind environment"
+meaning = "the machine kind of every variable identity; a program supplies it from its kind declarations, an undeclared identity being {I32}, and the theorems take it as a parameter"
+symbol = '\<kappa>'
+const = "kenv_of"
 bound_in = ["pstep", "cstep"]
 
 [[entry]]
 group = "set"
 reads = "the valid activation traces of _g_ from _S_"
 meaning = "the activation traces of graph _g_ from initial stores _S_"
-forms = [{ const = "valid_activation_trace", args = ['\<G>', "g", "S"] }]
-local = { locale = "activation_coverage", const = "traces", args = [] }
+forms = [{ const = "valid_activation_trace", args = ['\<kappa>', "g", "S"] }]
 
 [[entry]]
 group = "set"
 reads = "the stores collected at _v_"
 meaning = "the stores valid activation traces reach at node _v_"
-forms = [{ const = "node_collect", args = ['\<G>', "g", "S", "v"] }]
-local = { locale = "activation_coverage", const = "collect", args = ["v"] }
+forms = [{ const = "node_collect", args = ['\<kappa>', "g", "S", "v"] }]
 
 [[entry]]
 group = "set"
@@ -232,7 +194,7 @@ reads = "the stores collected at _v_ in context _c_"
 meaning = "the stores valid activation traces carrying context _c_ reach at node _v_; _adm_ admits callee contexts and the root runs in _c₀_"
 forms = [
   { const = "activation_collect", args = [
-    '\<G>',
+    '\<kappa>',
     "adm",
     "c₀",
     "g",
@@ -241,19 +203,6 @@ forms = [
     "c",
   ] },
 ]
-local = { locale = "activation_coverage", const = "buckets", args = ["v", "c"] }
-
-[[entry]]
-group = "set"
-reads = "the stores report _res_ describes at _v_"
-meaning = "the stores some state the analysis report holds at point _v_, under any of its contexts, describes"
-forms = [{ const = "report_sem", args = ["res", "v"] }]
-
-[[entry]]
-group = "set"
-reads = "the stores the verdicts of _res_ at _v_ hold in"
-meaning = "the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false"
-forms = [{ const = "verdict_stores", args = ["res", "v"] }]
 
 [[entry]]
 group = "shorthand"

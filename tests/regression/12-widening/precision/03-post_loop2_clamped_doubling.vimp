@@ -5,16 +5,16 @@
 // expects both bounds only under solvers.td3.widen_gas 5 together with
 // exp.no-narrow.
 //
-// Voblint proves both by narrowing alone: the head widens a to
-// [-inf,+inf], narrowing brings it back to [-16,20] because the guard
+// Voblint proves both by narrowing alone: the head widens a to the full
+// i32 range, narrowing brings it back to [-16,20] because the guard
 // admits only [-9,9] into the body and doubling that range gives
 // [-16,20] (measured at the head and at both checks). The clamp is two
 // assignments because a special call cannot nest inside another call.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 fun main() {
-  u = __voblint_nondet_int();
-  t = min(9, u);
-  a = max(-9, t);
+  i32 u = __voblint_nondet_int();
+  i32 t = min(9, u);
+  i32 a = max(-9, t);
   while (-10 < a && a < 10) {
     a = -2 * (a - 1);
   }

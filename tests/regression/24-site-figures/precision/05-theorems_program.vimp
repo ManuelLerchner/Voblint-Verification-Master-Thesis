@@ -17,31 +17,31 @@
 // nodes:
 //   main_pp1_ctx0: pp1
 //       interval:
-//         n=⊤
+//         n=[-2147483648,2147483647]
 //         q=⊤
 //   main_pp2_ctx0: pp2
 //       interval:
-//         n=[1,+∞]
+//         n=[1,2147483647]
 //         q=⊤
 //   main_pp3_ctx0: pp3 [proved]
 //       interval:
-//         n=[1,+∞]
-//         q=⊤
+//         n=[1,2147483647]
+//         q=[0,10]
 //       check n >= 1
 //   main_pp4_ctx0: pp4
 //       interval:
-//         n=[-∞,0]
+//         n=[-2147483648,0]
 //         q=⊤
 //   main_pp5_ctx0: pp5 [unreachable]
 //       unreachable
 //       check n == 0 [dead]
 //   main_pp7_ctx0: pp7
 //       interval:
-//         n=⊤
+//         n=[-2147483648,2147483647]
 //         q=⊤
 //   main_exit_main_ctx0: exit_main
 //       interval:
-//         n=⊤
+//         n=[-2147483648,2147483647]
 //         q=⊤
 //   main_pp0_ctx0: pp0
 //       interval:
@@ -66,9 +66,9 @@
 // EXPECT-GRAPH-END
 
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (n > 0) {
-    q = 10 / n;
+    i32 q = 10 / n;
     __voblint_check(n >= 1); // PROVED
   } else {
     if (n > 5) {

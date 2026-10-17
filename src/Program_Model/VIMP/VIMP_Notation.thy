@@ -5,7 +5,7 @@ begin
 section \<open>Concrete syntax\<close>
 
 text \<open>
-  The \<open>imp \<lbrakk> ... \<rbrakk>\<close> quotation produces an \<^typ>\<open>VIMP_Proc.com\<close> without
+  The \<open>imp \<lbrakk> ... \<rbrakk>\<close> quotation produces an \<^typ>\<open>VIMP_Proc.src_com\<close> without
   HOL string quotes or qualified constructor names.  The \<open>imp\<close> keyword distinguishes
   command quotation from Pure premises; whole programs use the explicit \<open>program\<close> prefix.
 
@@ -43,7 +43,7 @@ text \<open>
 nonterminal imp2_funcs
 
 syntax
-  "_IMP2"        :: "imp2_stmts_opt \<Rightarrow> VIMP_Proc.com"        ("imp \<lbrakk> _ \<rbrakk>" [0] 1000)
+  "_IMP2"        :: "imp2_stmts_opt \<Rightarrow> VIMP_Proc.src_com"        ("imp \<lbrakk> _ \<rbrakk>" [0] 1000)
 
   "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }" [0] 1000)
   "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { global _ ; _ }" [0, 0] 1000)
@@ -166,8 +166,8 @@ lemma "imp \<lbrakk> if (x < 10) { x = 0; } else { x = 1; } \<rbrakk>
   = gcom.If () (Less (V STR ''x'') (N 10)) (Assign () STR ''x'' (N 0))
     (Assign () STR ''x'' (N 1))"
   by eval
-lemma "(imp \<lbrakk> __voblint_check(!(x == 0)); \<rbrakk> :: com)
-  = Check () (0, 0) (exp.Not (exp.Eq (V STR ''x'') (N 0)))"
+lemma "(imp \<lbrakk> __voblint_check(!(x == 0)); \<rbrakk> :: src_com)
+  = Check () (0, 0) (src_exp.Not (src_exp.Eq (V STR ''x'') (N 0)))"
   by eval
 lemma "(program { global Gx; fun ping() { Gx = Gx + 1; } fun main() { ping(); } } :: imp_prog)
   = \<lparr>proc_rep =

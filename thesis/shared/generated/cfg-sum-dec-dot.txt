@@ -6,29 +6,29 @@ digraph AnalysisCFG {
     label="dec / unit";
     style=rounded; color=gray70; penwidth=1;
     dec_pp1_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp1\nunreachable",tooltip="pp1\nunreachable"];
-    dec_exit_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_dec",tooltip="exit_dec\ninterval:\n  x=[-∞,2]"];
-    dec_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  x=[-∞,2]"];
-    dec_entry_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_dec",tooltip="entry_dec\ninterval:\n  x=[-∞,2]"];
+    dec_exit_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_dec",tooltip="exit_dec\ninterval:\n  x=[-2147483648,2147483647]"];
+    dec_pp0_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp0\npossible signed integer overflow in -: x - 1",tooltip="pp0\ninterval:\n  x=[-2147483648,2147483647]\npossible signed integer overflow in -: x - 1"];
+    dec_entry_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_dec",tooltip="entry_dec\ninterval:\n  x=[-2147483648,2147483647]"];
   }
   subgraph cluster_ctx_1 {
     label="sum / unit";
     style=rounded; color=gray70; penwidth=1;
-    sum_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\ninterval:\n  n=[-∞,0]\n  m=⊤\n  r=⊤"];
+    sum_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\ninterval:\n  n=[-2147483648,0]\n  m=⊤\n  r=⊤"];
     sum_pp8_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp8\nunreachable",tooltip="pp8\nunreachable"];
-    sum_exit_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_sum",tooltip="exit_sum\ninterval:\n  n=[-∞,2]\n  m=⊤\n  r=⊤"];
-    sum_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\ninterval:\n  n=[-∞,2]\n  m=⊤\n  r=⊤"];
-    sum_pp5_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\ninterval:\n  n=[1,2]\n  m=⊤\n  r=⊤"];
-    sum_pp6_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\ninterval:\n  n=[1,2]\n  m=[-∞,1]\n  r=⊤"];
-    sum_pp7_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp7",tooltip="pp7\ninterval:\n  n=[1,2]\n  m=[-∞,1]\n  r=[0,+∞]"];
-    sum_entry_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_sum",tooltip="entry_sum\ninterval:\n  n=[-∞,2]\n  m=⊤\n  r=⊤"];
+    sum_exit_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_sum",tooltip="exit_sum\ninterval:\n  n=[-2147483648,2147483647]\n  m=⊤\n  r=⊤"];
+    sum_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\ninterval:\n  n=[-2147483648,2147483647]\n  m=⊤\n  r=⊤"];
+    sum_pp5_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\ninterval:\n  n=[1,2147483647]\n  m=⊤\n  r=⊤"];
+    sum_pp6_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\ninterval:\n  n=[1,2147483647]\n  m=[-2147483648,2147483647]\n  r=⊤"];
+    sum_pp7_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp7\npossible signed integer overflow in +: r + n",tooltip="pp7\ninterval:\n  n=[1,2147483647]\n  m=[-2147483648,2147483647]\n  r=[-2147483648,2147483647]\npossible signed integer overflow in +: r + n"];
+    sum_entry_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_sum",tooltip="entry_sum\ninterval:\n  n=[-2147483648,2147483647]\n  m=⊤\n  r=⊤"];
   }
   subgraph cluster_ctx_2 {
     label="main / unit";
     style=rounded; color=gray70; penwidth=1;
-    main_pp11_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp11",tooltip="pp11\ninterval:\n  x=[0,+∞]"];
-    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\ninterval:\n  x=[0,+∞]"];
+    main_pp11_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp11",tooltip="pp11\ninterval:\n  x=[-2147483648,2147483647]"];
+    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\ninterval:\n  x=[-2147483648,2147483647]"];
     main_pp9_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp9",tooltip="pp9\ninterval:\n  x=⊤"];
-    main_pp10_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp10\ncheck x == 3",tooltip="pp10\ninterval:\n  x=[0,+∞]\ncheck x == 3"];
+    main_pp10_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp10\ncheck x == 3",tooltip="pp10\ninterval:\n  x=[-2147483648,2147483647]\ncheck x == 3"];
     main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\ninterval:\n  x=⊤"];
   }
   dec_pp0_ctx0 -> dec_exit_dec_ctx0 [weight=20,label="return x - 1"];
@@ -53,3 +53,5 @@ digraph AnalysisCFG {
   sum_exit_sum_ctx0 -> main_pp10_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / x := sum(2)"];
   main_pp9_ctx0 -> main_pp10_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
 }
+tests/regression/24-site-figures/precision/46-sum_dec_cfgmap.vimp:238:3: warning: possible signed integer overflow in -: x - 1 [interval]
+tests/regression/24-site-figures/precision/46-sum_dec_cfgmap.vimp:245:3: warning: possible signed integer overflow in +: r + n [interval]

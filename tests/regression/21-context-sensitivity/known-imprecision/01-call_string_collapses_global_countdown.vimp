@@ -4,14 +4,14 @@
 // string. The concrete m after each call is 0. Levels deeper than the
 // bound share one truncated key, so their callee-entry seed is the join
 // of every argument that reaches it from the three call chains;
-// --graph-snapshot shows that collapsed context entered with i=[0,+inf]
-// (warrowing widens the accumulating seed). Its body writes m := i - 1
+// --graph-snapshot shows that collapsed context entered with
+// i=[0,2147483646] (warrowing widens the accumulating seed). Its body writes m := i - 1
 // from that range, so the m the caller reads back after the call is
-// [0,+inf] and never the singleton 0. Depth 10 fits the o(5) and o(8)
+// [0,2147483646] and never the singleton 0. Depth 10 fits the o(5) and o(8)
 // chains (6 and 9 sites) and proves those two; o(25) stays UNKNOWN at any
 // depth below 26.
-global m;
-fun o(i) {
+global i32 m;
+fun i32 o(i32 i) {
   if (0 < i) { i = i - 1; m = i; o(i); }
   return 0;
 }

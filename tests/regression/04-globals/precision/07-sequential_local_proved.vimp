@@ -5,7 +5,7 @@
 // value reaches the check with no join against the first -- identical
 // result to the global version, since no call ever crosses x in either.
 fun main() {
-  x = 0;
+  i32 x = 0;
   x = 1;
   __voblint_check(x == 1); // PROVED
 }

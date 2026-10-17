@@ -15,12 +15,12 @@
 // --analysis sign both decide this program (../precision/01, ../precision/
 // 02) from order information Congruence does not have.
 fun main() {
-  x = 3;
-  y = 7;
-  z = min(x, y);
-  w = max(x, y);
+  i32 x = 3;
+  i32 y = 7;
+  i32 z = min(x, y);
+  i32 w = max(x, y);
   __voblint_check(z == 3); // UNKNOWN
   __voblint_check(w == 7); // UNKNOWN
-  v = min(x, x);
+  i32 v = min(x, x);
   __voblint_check(v == 3); // PROVED
 }

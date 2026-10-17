@@ -6,44 +6,46 @@
    * lights what it rests on directly and, lighter, everything below that in turn.
    */
   const strataLabel = (name) =>
-    name === "TD" ? "TD" : name.replace("Voblint_Analysis_", "").replace("Voblint_", "");
+    name === "TD"
+      ? "TD"
+      : name.replace("Voblint_Analysis_", "").replace("Voblint_", "").replace("_", " ");
 
   const STRATA_DESC = {
     TD: "The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree.",
     Voblint_VIMP:
-      "The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving.",
+      "The source language: syntax of surface VIMP, the eight machine kinds and their wraparound, variable identities, core VIMP's expressions and commands with the evaluation eval, the elaboration from surface VIMP, and the generic small-step semantics gpstep with calls, frames and returns. Core VIMP's step pstep instantiates it, and the initial stores are fixed here. Also the generated grammar. Parented on HOL-Library, using HOL-IMP and Deriving.",
     Voblint_CFG:
-      "The graph model: nodes, intra and call edges, graph execution cstep, activation traces and the collecting semantics node_collect. It never mentions the compiler.",
+      "The graph model: nodes, intra and call edges, graph execution, activation traces and the collecting semantics, each generic in the evaluator. It never mentions the compiler.",
     Voblint_Domain:
-      "What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering.",
+      "What an abstract value is: sound-domain classes with concretization, the lattices of the numeric domains, the dead-code lift, pointwise states and backward filtering.",
     Voblint_Solver:
       "The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG.",
     Voblint_Compile:
-      "The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces.",
+      "The compiler to a CFG and its correctness: structural invariants, the forward simulation csim_step, the bridge from source runs to traces, and the invariant that the elaborated graph's traces keep every variable within its kind.",
     Voblint_Framework:
       "The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.",
     Voblint_Exec:
       "The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over.",
     Voblint_Routing:
-      "Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework.",
-    Voblint_Analysis_Relational:
-      "The Order analysis is selectable in the CLI and browser alongside the five numeric analyses. It supplies its local specification directly, without the non-relational operation bundles. Its lower layer reflects that shorter dependency chain; CLI imports it directly.",
+      "The equations of a compiled program under a context policy, and the finiteness arguments for its context-key spaces.",
     Voblint_Result:
-      "The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound.",
+      "The output end: what a solved routed system publishes, and the domain-free soundness endpoints that carry a source run into the result table.",
     Voblint_Nonrelational:
-      "What a per-variable domain reuses: the bundle of value operations it supplies, the certificate that bundle is checked against once, and everything built from it: transfers, guard filtering, procedure entry, the check classifier and their executable versions.",
+      "What a per-variable domain reuses: the class kind_int_domain of value operations per kind, and everything built from it once: transfers, guard refinement, procedure entry, the check classifier, their executable versions and the analysis run by the shared D/G pipeline, with their soundness.",
     Voblint_Analysis_Sign:
-      "The sign domain, its bundle of value operations, and the certificate the shared machinery builds on.",
+      "The Sign domain: the sign lattice's arithmetic and backward operations with their soundness, and the Sign analysis on machine kinds, an instance of kind_int_domain.",
     Voblint_Analysis_Interval:
-      "The interval domain with widening and narrowing, its bundle of value operations, and the certificate the shared machinery builds on.",
+      "The Interval domain: arithmetic, widening and narrowing with their soundness, and the Interval analysis on machine kinds, with wraparound or the kind's top on signed overflow and widening bounded by the kind's range.",
     Voblint_Analysis_Parity:
-      "The parity domain, its bundle of value operations, and the certificate the shared machinery builds on.",
+      "The Parity domain: the parity lattice's arithmetic with its soundness, and the Parity analysis on machine kinds, an instance of kind_int_domain.",
     Voblint_Analysis_Congruence:
-      "The congruence domain, its bundle of value operations, and the certificate the shared machinery builds on.",
+      "The Congruence domain: arithmetic, including the remainder, with its soundness, and the Congruence analysis on machine kinds, with classes normalized modulo the kind's width.",
     Voblint_Analysis_Int:
-      "The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them.",
+      "The refinement modes and reduction machinery of the Int product, and Int on machine kinds: the reduced product of Interval and Congruence, after Goblint's IntDomTuple.",
+    Voblint_Analysis_Order:
+      "The relational Order analysis over variable identities. It supplies its local specification directly, without the class, and answers comparisons to the other analyses.",
     Voblint_CLI:
-      "run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser. This session assembles their cooperating local specifications and proves the source-level soundness results.",
+      "The selected analyses run as one combined state under every global update rule and context policy, with its soundness for any distinct, nonempty selection. run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser, with the arithmetic diagnostics, and proves the source-level soundness results.",
     Voblint_Codegen:
       "The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS.",
   };
@@ -59,14 +61,14 @@
     Voblint_Framework: "framework",
     Voblint_Exec: "executable carrier",
     Voblint_Routing: "routing",
-    Voblint_Analysis_Relational: "order analysis",
     Voblint_Result: "result",
-    Voblint_Nonrelational: "non-relational analysis builder",
-    Voblint_Analysis_Sign: "value domains (operation bundles)",
-    Voblint_Analysis_Interval: "value domains (operation bundles)",
-    Voblint_Analysis_Parity: "value domains (operation bundles)",
-    Voblint_Analysis_Congruence: "value domains (operation bundles)",
+    Voblint_Nonrelational: "per-variable analysis builder",
+    Voblint_Analysis_Sign: "analyses",
+    Voblint_Analysis_Interval: "analyses",
+    Voblint_Analysis_Parity: "analyses",
+    Voblint_Analysis_Congruence: "analyses",
     Voblint_Analysis_Int: "Int product",
+    Voblint_Analysis_Order: "analyses",
     Voblint_CLI: "entry point",
     Voblint_Codegen: "code export",
   };
@@ -146,7 +148,7 @@
           label:
             s.name === "Voblint_CLI"
               ? "CLI · five numeric analyses + Order"
-              : s.name === "Voblint_Analysis_Relational"
+              : s.name === "Voblint_Analysis_Order"
                 ? "Order (relational)"
                 : strataLabel(s.name),
           href: s.name === "TD" ? "Unsorted/TD/index.html" : `Voblint/${s.name}/index.html`,

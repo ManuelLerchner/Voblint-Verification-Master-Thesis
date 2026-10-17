@@ -1,11 +1,14 @@
 tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp [congruence]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  -------------------------------------------------
+9:9       pp2    WARNING   possible signed integer overflow in *: 12 * n
+9:9       pp2    WARNING   possible signed integer overflow in +: 12 * n + 3
 
 Assertion checks
 Location  Point  Condition   Verdict  State
---------  -----  ----------  -------  --------------------
-11:5      pp4    r == 1      UNKNOWN  congruence: r=1+4ℤ
-12:5      pp5    r > 0       UNKNOWN  congruence: r=1+4ℤ
-13:5      pp6    r % 2 == 1  UNKNOWN  congruence: r=1+4ℤ
+--------  -----  ----------  -------  -----------------
+11:5      pp4    r == 1      UNKNOWN  congruence: r=⊤
+12:5      pp5    r > 0       UNKNOWN  congruence: r=⊤
+13:5      pp6    r % 2 == 1  UNKNOWN  congruence: r=⊤

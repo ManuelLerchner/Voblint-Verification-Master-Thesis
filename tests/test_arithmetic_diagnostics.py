@@ -58,7 +58,7 @@ def run_program(tmp_path, source, *args, analysis="interval"):
 @pytest.mark.parametrize("operator, noun", [("/", "division"), ("%", "remainder")])
 def test_zero_divisor_uses_domain_precision(tmp_path, analysis, operator, noun):
     _, findings = run_program(
-        tmp_path, f"fun main() {{ x = 10 {operator} 0; }}\n", analysis=analysis
+        tmp_path, f"fun main() {{ i32 x = 10 {operator} 0; }}\n", analysis=analysis
     )
     assert len(findings) == 1
     # Parity represents zero as Even, which includes nonzero integers.
@@ -73,7 +73,7 @@ def test_zero_divisor_uses_domain_precision(tmp_path, analysis, operator, noun):
 def test_unknown_divisor_warns(tmp_path, analysis):
     _, findings = run_program(
         tmp_path,
-        "fun main() { y = __voblint_nondet_int(); x = 10 / y; }\n",
+        "fun main() { i32 y = __voblint_nondet_int(); i32 x = 10 / y; }\n",
         analysis=analysis,
     )
     assert len(findings) == 1
@@ -86,7 +86,7 @@ def test_unknown_divisor_warns(tmp_path, analysis):
 def test_nonzero_divisor_is_silent(tmp_path, analysis):
     _, findings = run_program(
         tmp_path,
-        "fun main() { y = 3; x = 10 / y; z = 10 % y; }\n",
+        "fun main() { i32 y = 3; i32 x = 10 / y; i32 z = 10 % y; }\n",
         analysis=analysis,
     )
     assert findings == []
@@ -94,7 +94,7 @@ def test_nonzero_divisor_is_silent(tmp_path, analysis):
 
 def test_unreachable_operation_is_silent(tmp_path):
     _, findings = run_program(
-        tmp_path, "fun main() { if (0) { x = 10 / 0; } else { x = 1; } }\n"
+        tmp_path, "fun main() { i32 x; if (0) { x = 10 / 0; } else { x = 1; } }\n"
     )
     assert findings == []
 
@@ -112,7 +112,7 @@ def test_boolean_operands_are_all_inspected(tmp_path, expression):
 
 @pytest.mark.parametrize("expression", ["(10 / 0) % 0", "(10 / 0) + (10 / 0)"])
 def test_distinct_arithmetic_occurrences_are_preserved(tmp_path, expression):
-    _, findings = run_program(tmp_path, f"fun main() {{ x = {expression}; }}\n")
+    _, findings = run_program(tmp_path, f"fun main() {{ i32 x = {expression}; }}\n")
     assert len(findings) == 2
     assert all(finding[4] == "error" for finding in findings)
 
@@ -120,18 +120,23 @@ def test_distinct_arithmetic_occurrences_are_preserved(tmp_path, expression):
 def test_conditional_guard_is_reported_once(tmp_path):
     _, findings = run_program(
         tmp_path,
-        "fun main() { if (10 / 0) { x = 1; } else { x = 2; } }\n",
+        "fun main() { i32 x; if (10 / 0) { x = 1; } else { x = 2; } }\n",
     )
     assert len(findings) == 1
 
 
 @pytest.mark.parametrize(
     "statement",
-    ["x = f(10 / 0);", "f(10 / 0);", "x = min(10 / 0, 1);", "x = max(1, 10 / 0);"],
+    [
+        "i32 x = f(10 / 0);",
+        "f(10 / 0);",
+        "i32 x = min(10 / 0, 1);",
+        "i32 x = max(1, 10 / 0);",
+    ],
 )
 def test_call_arguments_are_inspected(tmp_path, statement):
     _, findings = run_program(
-        tmp_path, "fun f(n) { return n; }\n" + f"fun main() {{ {statement} }}\n"
+        tmp_path, "fun i32 f(i32 n) { return n; }\n" + f"fun main() {{ {statement} }}\n"
     )
     assert len(findings) == 1
     assert findings[0][2] == "2"
@@ -141,7 +146,7 @@ def test_call_arguments_are_inspected(tmp_path, statement):
 def test_return_expression_is_inspected(tmp_path):
     _, findings = run_program(
         tmp_path,
-        "fun f(n) {\n  return 10 / n;\n}\nfun main() { x = f(0); }\n",
+        "fun i32 f(i32 n) {\n  return 10 / n;\n}\nfun main() { i32 x = f(0); }\n",
     )
     assert len(findings) == 1
     assert findings[0][2] == "2"
@@ -163,7 +168,7 @@ def test_contexts_aggregate_mixed_zero_and_nonzero_as_possible(
 ):
     _, findings = run_program(
         tmp_path,
-        "fun f(n) { return 10 / n; }\nfun main() { x = f(0); y = f(2); }\n",
+        "fun i32 f(i32 n) { return 10 / n; }\nfun main() { i32 x = f(0); i32 y = f(2); }\n",
         *context_args,
         "--globals",
         rule,
@@ -175,7 +180,7 @@ def test_contexts_aggregate_mixed_zero_and_nonzero_as_possible(
 def test_warning_does_not_change_total_execution(tmp_path):
     proc, findings = run_program(
         tmp_path,
-        "fun main() { x = 7 / 0; y = 7 % 0; "
+        "fun main() { i32 x = 7 / 0; i32 y = 7 % 0; "
         "__voblint_check(x == 0); __voblint_check(y == 7); }\n",
     )
     assert len(findings) == 2
@@ -185,7 +190,7 @@ def test_warning_does_not_change_total_execution(tmp_path):
 def test_html_arithmetic_warning_links_to_source(tmp_path):
     out = tmp_path / "report"
     _, findings = run_program(
-        tmp_path, "fun main() {\n  x = 10 / 0;\n}\n", "--html-out", str(out)
+        tmp_path, "fun main() {\n  i32 x = 10 / 0;\n}\n", "--html-out", str(out)
     )
     assert len(findings) == 1
     warning_docs = list((out / "warn").glob("warn*.xml"))
@@ -206,7 +211,7 @@ def test_html_arithmetic_warning_links_to_source(tmp_path):
 )
 def test_graph_draws_diagnostics_on_their_node(tmp_path, view, prefix):
     # The warning line stays on stderr; the graph names the finding at its node.
-    proc, findings = run_program(tmp_path, "fun main() { x = 10 / 0; }\n", view)
+    proc, findings = run_program(tmp_path, "fun main() { i32 x = 10 / 0; }\n", view)
     assert len(findings) == 1
     assert proc.stdout.startswith(prefix)
     assert (
@@ -221,17 +226,17 @@ def test_multiline_operations_use_statement_start_positions(tmp_path):
         "fun main() {\n"
         "  // An ignored expression: 10 / 0.\n"
         "  // Comments must not shift the statement map.\n"
-        "  x =\n"
+        "  i32 x =\n"
         "    10 / 0;\n"
-        "  y = f(0);\n"
+        "  i32 y = f(0);\n"
         "}\n"
-        "fun f(n) {\n"
+        "fun i32 f(i32 n) {\n"
         "  return\n"
         "    10 / n;\n"
         "}\n",
     )
     assert sorted((int(finding[2]), int(finding[3])) for finding in findings) == [
-        (4, 3),
+        (4, 7),
         (9, 3),
     ]
 
@@ -242,7 +247,7 @@ def test_html_reports_the_combined_finding(tmp_path):
     out = tmp_path / "report"
     _, findings = run_program(
         tmp_path,
-        "fun main() {\n  x = 10 / 0;\n}\n",
+        "fun main() {\n  i32 x = 10 / 0;\n}\n",
         "--html-out",
         str(out),
         analysis="interval,parity",
@@ -262,7 +267,7 @@ def test_html_reports_the_combined_finding(tmp_path):
 
 def test_plain_report_has_two_aligned_tables(tmp_path):
     proc, findings = run_program(
-        tmp_path, "fun main() { x = 10 / 0; __voblint_check(x == 0); }\n"
+        tmp_path, "fun main() { i32 x = 10 / 0; __voblint_check(x == 0); }\n"
     )
     assert proc.stderr == ""
     assert len(findings) == 1
@@ -285,7 +290,7 @@ def test_plain_report_has_two_aligned_tables(tmp_path):
 
 
 def test_empty_report_sections_are_explicit(tmp_path):
-    proc, findings = run_program(tmp_path, "fun main() { x = 1; }\n")
+    proc, findings = run_program(tmp_path, "fun main() { i32 x = 1; }\n")
     assert findings == []
     assert proc.stderr == ""
     assert proc.stdout.endswith(

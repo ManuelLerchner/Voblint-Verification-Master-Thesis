@@ -1,14 +1,18 @@
 // PARAM: --analysis congruence
-// Scaling both residue and modulus survives positive and negative exact division.
+// Exact division over i32. 12 * n + 3 is only 3 (mod 4) after wraparound,
+// because 12 * n reaches every multiple of 4. The quotients by 3 and -3
+// are then no longer 1 (mod 4) and 3 (mod 4), as they are over unbounded
+// integers: 7 / 3 == 2 and -5 / -3 == 1, so both guarded branches are
+// reachable and their check(0) is REFUTED. A guard on a singleton still pins the quotient.
 fun main() {
-  n = __voblint_nondet_int();
-  positive = (12 * n + 3) / 3;
-  negative = (12 * n + 3) / -3;
+  i32 n = __voblint_nondet_int();
+  i32 positive = (12 * n + 3) / 3;
+  i32 negative = (12 * n + 3) / -3;
   if (positive == 2) {
-    __voblint_check(0); // NOWARN
+    __voblint_check(0); // REFUTED
   }
   if (negative == 1) {
-    __voblint_check(0); // NOWARN
+    __voblint_check(0); // REFUTED
   }
   if (positive == 1) {
     __voblint_check(positive != 0); // PROVED

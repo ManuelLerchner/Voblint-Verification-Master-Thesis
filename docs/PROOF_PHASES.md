@@ -5,7 +5,10 @@ stable gates for assessing a change.
 
 ## Source and CFG
 
-- accepted programs satisfy `wf_compile_input`;
+- accepted programs satisfy `wf_compile_input`, and the executable check
+  `wf_program_compile_input_exec` implies it;
+- elaboration (`elab_ptable`) is a definition; theorems are about `pstep` runs
+  of the elaborated program;
 - main has no explicit return;
 - compiler certificates expose procedure ownership and disjoint ranges;
 - source steps are simulated by located CFG execution;
@@ -16,8 +19,8 @@ stable gates for assessing a change.
 - `valid_activation_trace` handles root, call, local flow, procedure result, and resume;
 - `valid_activation_trace` is an inductive set, and `node_collect` projects it to stores
   (`node_collect_I`/`node_collect_E`);
-- `activation_collect` groups the same stores by the context `activation_context_rel`
-  assigns;
+- `activation_collect` groups the same stores by the context
+  `activation_context_rel` admits;
 - abstract closure obligations imply collector coverage.
 
 ## Equation systems
@@ -36,7 +39,9 @@ stable gates for assessing a change.
 
 ## D/G instances
 
-- the instance satisfies `analysis_contract`;
+- the component satisfies `sound_local_spec`, and the registration discharges
+  `dg_analysis` (through `dg_analysis_whole_stateI` or
+  `dg_analysis_keyedI`);
 - executable transfers commute with abstract transfers;
 - entry and combine routing use the same context discipline;
 - the computed post-solution covers plain or activation-indexed collecting
@@ -51,7 +56,8 @@ stable gates for assessing a change.
 - the conclusion names its collector: `node_collect` at the unit context, one
   `activation_collect` bucket at a routed one. A routed bound is not a
   source-facing theorem until a source run is placed in one of its buckets,
-  as `covered_table_of_activation`, `report_of_sound` and `run_voblint_source_sound` do together.
+  as `source_store_in_activation_collect`, `report_run_sound` and
+  `run_voblint_spine` do together.
 
 ## Repository checks
 

@@ -25,7 +25,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from vimp_fixture import analysis_settings, param_args  # noqa: E402
+from vimp_fixture import OPTION_PATHS, analysis_settings, param_args  # noqa: E402
 
 BUNDLE = Path(
     os.environ.get(
@@ -62,6 +62,9 @@ def web_call(path):
         s.get("context_depth", 0),
         s.get("int_refinement", "fixpoint"),
         placement,
+        ";".join(
+            f"{path_}={s[key]}" for key, path_ in OPTION_PATHS.items() if key in s
+        ),
         path.read_text(),
         "compact",
     ]

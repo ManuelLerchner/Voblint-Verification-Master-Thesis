@@ -1,8 +1,8 @@
 // One global written by two calls and read once, solved with program globals
 // flow-insensitive: the trace records how often the global's own unknown
 // changes and how many points each change destabilizes.
-global total;
-fun inc(n) {
+global i32 total;
+fun inc(i32 n) {
   total = total + n;
 }
 fun main() {

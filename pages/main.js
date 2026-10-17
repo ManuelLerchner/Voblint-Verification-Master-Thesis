@@ -86,6 +86,24 @@ const narrowBoundGroup = query("#narrow-bound-group");
 const intRefinementSelect = query("#int-refinement-select");
 const intRefinementGroup = query("#int-refinement-group");
 
+/*
+ * The options the domains read, one control each, keyed by their Goblint path
+ * (data-option). They reach the analyzer as the CLI's --set PATH VALUE pairs, so a
+ * further option is a further control here and a further row of option_specs.
+ */
+const optionControls = [...document.querySelectorAll("[data-option]")];
+
+function optionDefault(control) {
+  return [...control.options].find((option) => option.defaultSelected)?.value ?? control.value;
+}
+
+function readSettings() {
+  return optionControls
+    .filter((control) => control.value !== optionDefault(control))
+    .map((control) => `${control.dataset.option}=${control.value}`)
+    .join(";");
+}
+
 const globalsHelp = query("#globals-help");
 
 const runButton = query("#run-analysis");
@@ -159,7 +177,8 @@ const rawStats = {
 const initialProgram = `// Move the cursor, hover the badges, click the graph.
 // Then try: globals "Warrow per origin", call-string depth k=2, context None.
 
-fun smaller(a, b) {
+fun i32 smaller(i32 a, i32 b) {
+  i32 lo;
   if (a <= b) {
     lo = a;
   } else {
@@ -169,24 +188,25 @@ fun smaller(a, b) {
 }
 
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
 
-  q = 100 / x;
+  i32 q = 100 / x;
 
-  n = smaller(3, 7);
+  i32 n = smaller(3, 7);
   smaller(9, 4);
 
   if (x <= y) {
     if (y <= x) {
-      z = (x == y);
-      w = x;
+      i32 z = (x == y);
+      i32 w = x;
       __voblint_check(z == 1); // PROVED
       __voblint_check(w == y); // PROVED
     }
   }
 
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 u, v;
   if (0 < c) {
     u = 0;
     v = 10;
@@ -196,7 +216,7 @@ fun main() {
   }
   __voblint_check(u <= v); // PROVED
 
-  i = 0;
+  i32 i = 0;
   while (i < 3) {
     i = i + 1;
   }
@@ -418,18 +438,22 @@ function setTraceSummary(text) {
  * the constructor, then each result field with a list's length in place of the list.
  * The answer sits under the arguments, the arrow under the function name.
  */
+/* The configuration record as Isabelle prints it, every field in the order run_voblint declares. */
+function confTerm(conf) {
+  if (!conf) {
+    return "conf";
+  }
+  const sem = conf.conf_sem ?? {};
+  const semFields = Object.entries(sem).map(([key, value]) => `${key} = ${constructorTerm(value)}`);
+  return `⦇conf_analyses = [${(conf.conf_analyses ?? []).map(constructorTerm).join(", ")}], conf_context = ${constructorTerm(conf.conf_context)}, conf_globals = ${constructorTerm(conf.conf_globals)}, conf_sem = ⦇${semFields.join(", ")}⦈⦈`;
+}
+
 function renderRawCall(raw) {
   const input = raw?.input;
   const output = raw?.output;
   const args = input
-    ? [
-        callPart(
-          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} ${input.pg ? `${constructorTerm(input.pg)} ` : ""}`,
-          "arg",
-        ),
-        callPart("p", "program"),
-      ]
-    : [callPart("as rule ctx pg p", "arg")];
+    ? [callPart(confTerm(input.conf), "arg"), callPart("ds p", "program")]
+    : [callPart("conf ds p", "arg")];
   /* Before any run the title asks for one. */
   let result = [callPart("?", "arg"), callPart("  run the analysis to see the answer", "observed")];
 
@@ -797,7 +821,16 @@ function buildAnalysisModel(result, doc) {
 }
 
 /* The compiler's return slot: assigned by `return e`, read back by the caller. */
-const RETURN_SLOT = "#ret";
+const RETURN_SLOT = "return";
+
+/*
+ * A step names what it writes as run_voblint labels it, a local qualified by its
+ * procedure (`main::x`), and its published state binds those labels. A node's own
+ * sections are its procedure's scope and bind each name as the source spells it.
+ */
+function ownName(label) {
+  return label.slice(label.lastIndexOf(":") + 1);
+}
 
 /*
  * What the active analyses give a name in a list of state sections: one analysis's
@@ -847,8 +880,8 @@ function slotValue(node, name) {
  */
 function valueAfterSteps(node, name) {
   const values = node.next
-    .filter((step) => step.writes === name && "state" in step)
-    .map((step) => (step.state ? (sectionValue(step.state, name) ?? null) : null));
+    .filter((step) => step.writes && ownName(step.writes) === name && "state" in step)
+    .map((step) => (step.state ? (sectionValue(step.state, step.writes) ?? null) : null));
 
   return values.length > 0 ? values : undefined;
 }
@@ -913,7 +946,7 @@ function valueHints(model) {
       written.set(label, entry);
     };
 
-    const writeLabel = (name) => (name === RETURN_SLOT ? "\u21a9 " : `${name}: `);
+    const writeLabel = (name) => (name === RETURN_SLOT ? "\u21a9 " : `${ownName(name)}: `);
 
     const nodes =
       joined && model.joinedByPoint.has(statement.point)
@@ -988,7 +1021,7 @@ function valueHints(model) {
         }
 
         const after = nodeById(step.id);
-        const value = after && isLive(after) ? slotValue(after, step.writes) : undefined;
+        const value = after && isLive(after) ? slotValue(after, ownName(step.writes)) : undefined;
 
         if (value !== undefined) {
           sample(writeLabel(step.writes), node.context_key, value, step.join);
@@ -1112,26 +1145,37 @@ function resultAnnotations(result) {
   ];
 }
 
-class AnnotationBadge extends WidgetType {
-  constructor(labels, detail) {
+/*
+ * A line's annotations, one badge per kind and label in its own colour, so an
+ * error beside a warning on one line reads as two findings. Each badge's tooltip
+ * lists only its own details.
+ */
+class AnnotationBadges extends WidgetType {
+  constructor(items) {
     super();
 
-    this.labels = labels;
-    this.detail = detail;
+    this.items = items;
+    this.key = JSON.stringify(items);
   }
 
   eq(other) {
-    return other.labels === this.labels && other.detail === this.detail;
+    return other.key === this.key;
   }
 
   toDOM() {
-    const badge = document.createElement("span");
+    const badges = document.createElement("span");
 
-    badge.className = "cm-verdict-badge";
-    badge.textContent = this.labels;
-    badge.title = this.detail;
+    badges.className = "cm-verdict-badges";
+    for (const item of this.items) {
+      const badge = document.createElement("span");
 
-    return badge;
+      badge.className = `cm-verdict-badge cm-verdict-${item.kind}`;
+      badge.textContent = item.label;
+      badge.title = item.detail;
+      badges.append(badge);
+    }
+
+    return badges;
   }
 
   ignoreEvent() {
@@ -1195,13 +1239,18 @@ function resultDecorations(doc, view, showHints) {
         ANNOTATION_SEVERITY.indexOf(current) > ANNOTATION_SEVERITY.indexOf(worst) ? current : worst,
       );
 
-    const labels = [...new Set(group.map((a) => `${ANNOTATION_ICON[a.kind]} ${a.label}`))].join(
-      "  ",
-    );
-    const detail = group
-      .map((a) => a.detail)
-      .filter(Boolean)
-      .join("\n");
+    const items = [];
+
+    for (const annotation of group) {
+      const label = `${ANNOTATION_ICON[annotation.kind]} ${annotation.label}`;
+      const item = items.find((i) => i.label === label && i.kind === annotation.kind);
+
+      if (item) {
+        item.detail = [item.detail, annotation.detail].filter(Boolean).join("\n");
+      } else {
+        items.push({ kind: annotation.kind, label, detail: annotation.detail ?? "" });
+      }
+    }
 
     ranges.push(Decoration.line({ class: `cm-verdict-line cm-verdict-${kind}` }).range(line.from));
 
@@ -1215,9 +1264,7 @@ function resultDecorations(doc, view, showHints) {
         ranges.push(Decoration.mark({ class: "cm-error-token" }).range(from, to));
       }
     }
-    ranges.push(
-      Decoration.widget({ widget: new AnnotationBadge(labels, detail), side: 2 }).range(line.to),
-    );
+    ranges.push(Decoration.widget({ widget: new AnnotationBadges(items), side: 2 }).range(line.to));
   }
 
   for (const lineNumber of view.deadLines) {
@@ -2302,8 +2349,8 @@ function taxiTurn(index) {
 }
 
 /*
- * A zero divisor is marked by an icon beside the point, definite before possible, and
- * its message left to the tooltip: an expression-length line would widen the node
+ * An arithmetic finding (a zero divisor or a signed overflow) is marked by an icon
+ * beside the point, definite before possible, and its message left to the tooltip: an expression-length line would widen the node
  * and, through it, the whole column of the layout.
  */
 
@@ -4226,6 +4273,7 @@ function readConfiguration() {
     narrowBound,
     intRefinement,
     placement,
+    settings: readSettings(),
   };
 }
 
@@ -4252,6 +4300,12 @@ function configurationLabel(configuration) {
 
   if (usesInt()) {
     parts.push(`Int ${selectedLabel(intRefinementSelect).toLowerCase()}`);
+  }
+
+  for (const control of optionControls) {
+    if (control.value !== optionDefault(control)) {
+      parts.push(`${control.dataset.option}=${control.value}`);
+    }
   }
 
   return parts.join(" · ");
@@ -4464,6 +4518,7 @@ function runAnalysisInWorker(configuration, source, { onChunk = null, onInput = 
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
         placement: configuration.placement,
+        settings: configuration.settings ?? "",
         trace: configuration.trace ?? "off",
         source,
       });
@@ -5140,6 +5195,9 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(placementSelect, settings.placement ?? "flow-sensitive");
   setGraphView(GRAPH_VIEWS.includes(settings.graph) ? settings.graph : graphView);
   selectIfOffered(intRefinementSelect, settings.refinement);
+  for (const control of optionControls) {
+    selectIfOffered(control, settings[control.dataset.option] ?? optionDefault(control));
+  }
 
   /* A linked trace, in any form older links name, opens the panel that shows it. */
   if (settings.trace != null && settings.trace !== "off") {
@@ -5208,6 +5266,7 @@ const LINK_SETTINGS = [
   "refinement",
   "placement",
   "trace",
+  ...optionControls.map((control) => control.dataset.option),
 ];
 
 const shareButton = query("#share-link");
@@ -5306,6 +5365,9 @@ async function shareLink() {
     ...(placementSelect.value === "flow-insensitive"
       ? [linkParam("placement", "flow-insensitive")]
       : []),
+    ...optionControls
+      .filter((control) => control.value !== optionDefault(control))
+      .map((control) => linkParam(control.dataset.option, control.value)),
     ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
     ...(graphView !== "cfg" ? [linkParam("graph", graphView)] : []),
   ];

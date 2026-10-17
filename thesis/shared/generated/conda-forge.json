@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-27",
+  "date": "2026-10-17",
   "platforms": [
     "osx-arm64",
     "osx-64",
@@ -74,13 +74,11 @@
       "for": [
         "native"
       ],
-      "via": "update of ocaml-findlib-feedstock",
+      "via": "conda-forge/ocaml-findlib-feedstock#15",
       "available": false,
-      "newest": null,
+      "newest": "1.9.8",
       "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
+        "osx-arm64"
       ]
     },
     "ocaml-menhir": {
@@ -111,7 +109,7 @@
       "for": [
         "native"
       ],
-      "via": "update of ocaml-zarith-feedstock",
+      "via": "conda-forge/ocaml-zarith-feedstock#7",
       "available": false,
       "newest": null,
       "missing": [
@@ -130,7 +128,7 @@
       "for": [
         "browser"
       ],
-      "via": "needs an upstream release with the wasm runtime",
+      "via": "janestreet/zarith_stubs_js#16: needs a release with the wasm runtime",
       "available": false,
       "newest": null,
       "missing": [
@@ -149,7 +147,7 @@
       "for": [
         "format"
       ],
-      "via": "new output of ocaml-dune-feedstock",
+      "via": "deferred with ocamlformat: new output of ocaml-dune-feedstock",
       "available": false,
       "newest": null,
       "missing": [
@@ -168,14 +166,10 @@
       "for": [
         "format"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "1.5.2",
+      "missing": []
     },
     "ocaml-re": {
       "opam": "re",
@@ -187,14 +181,10 @@
       "for": [
         "format"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "1.14.0",
+      "missing": []
     },
     "ocaml-cmdliner": {
       "opam": "cmdliner",
@@ -207,14 +197,10 @@
         "browser",
         "format"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "2.1.1",
+      "missing": []
     },
     "ocaml-yojson": {
       "opam": "yojson",
@@ -226,14 +212,10 @@
       "for": [
         "browser"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "3.0.0",
+      "missing": []
     },
     "ocaml-seq": {
       "opam": "seq",
@@ -245,14 +227,10 @@
       "for": [
         "browser"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "0.3.1",
+      "missing": []
     },
     "ocaml-sexplib0": {
       "opam": "sexplib0",
@@ -264,14 +242,10 @@
       "for": [
         "browser"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "0.17.0",
+      "missing": []
     },
     "ocaml-stdlib-shims": {
       "opam": "stdlib-shims",
@@ -283,14 +257,10 @@
       "for": [
         "browser"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "0.3.0",
+      "missing": []
     },
     "ocaml-ppx-derivers": {
       "opam": "ppx_derivers",
@@ -302,14 +272,10 @@
       "for": [
         "browser"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "1.2.1",
+      "missing": []
     },
     "ocaml-compiler-libs": {
       "opam": "ocaml-compiler-libs",
@@ -321,14 +287,10 @@
       "for": [
         "browser"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "0.17.0",
+      "missing": []
     },
     "ocaml-gen": {
       "opam": "gen",
@@ -340,14 +302,10 @@
       "for": [
         "browser"
       ],
-      "via": "conda-forge/staged-recipes#34872",
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "via": null,
+      "available": true,
+      "newest": "1.1",
+      "missing": []
     },
     "ocaml-ppxlib": {
       "opam": "ppxlib",
@@ -362,7 +320,7 @@
       "for": [
         "browser"
       ],
-      "via": null,
+      "via": "conda-forge/staged-recipes#35158",
       "available": false,
       "newest": null,
       "missing": [
@@ -382,7 +340,7 @@
       "for": [
         "browser"
       ],
-      "via": null,
+      "via": "conda-forge/staged-recipes#35158",
       "available": false,
       "newest": null,
       "missing": [
@@ -405,7 +363,7 @@
       "for": [
         "format"
       ],
-      "via": null,
+      "via": "deferred: stays on opam for now",
       "available": false,
       "newest": null,
       "missing": [

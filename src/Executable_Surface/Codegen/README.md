@@ -32,7 +32,7 @@ in a handwritten OCaml facade over `Generated`, which this project does not yet 
 `export_code` translates the executable equations of `run_voblint` and everything it
 transitively calls, down to the solver. It is not proving one function and shipping a
 different hand-written one: the generated `run_voblint` *is* a translation of the
-equations the soundness theorems (`Analysis_Run_Sound` through `Analysis_Certified`) are
+equations the soundness theorems (`Run_Report` and `Run_Voblint`) are
 proved about. The proof term is erased, as in any
 `export_code` use; what survives is the identity of the constant.
 

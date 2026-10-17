@@ -8,10 +8,10 @@
 // Context-insensitive (the default --context none): one shared callee
 // context suffices here, since both calls agree on the
 // callee's parity result.
-fun double(p) { return 2 * p; }
+fun i32 double(i32 p) { return 2 * p; }
 fun main() {
-  n = __voblint_nondet_int();
-  a = double(n);
-  b = double(a);
+  i32 n = __voblint_nondet_int();
+  i32 a = double(n);
+  i32 b = double(a);
   __voblint_check(a != b + 1); // PROVED
 }

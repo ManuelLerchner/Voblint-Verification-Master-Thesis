@@ -5,7 +5,7 @@
 // narrowing can close it. 101 contexts, and the slowest setting on the chart:
 // it pays for nearly every context and still answers UNKNOWN.
 
-fun down(n) {
+fun down(i32 n) {
   __voblint_check(n >= 0); // UNKNOWN
   if (n > 0) {
     down(n - 1);
