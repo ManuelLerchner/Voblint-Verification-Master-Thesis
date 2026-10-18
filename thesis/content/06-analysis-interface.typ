@@ -34,7 +34,7 @@ $ s in conc_(D)(d) and s' in #isai("edge_step a s") ==> s' in conc_(D)(asem(a) t
 This is the abstract counterpart of the obligation #oblig("INTRA") of
 @ch:traces for one edge. Unlike Saan's abstract operators @saan26phd[§2.4.2], the
 obligation does not require strictness, $asem(a) thin lbot = lbot$. The interface has one transfer per kind of action,
-named after the corresponding method of Goblint's `Spec` (@fig:dg-spec).
+named after the corresponding method of Goblint's `Spec`.
 
 A call cannot be handled by one such transfer. After it returns, the caller's
 own locals are the ones from before the call, while the globals and the result
@@ -153,22 +153,18 @@ numeric analyses are of this kind.
 == The analysis contract #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:sound-core>
 
 The framework takes an analysis as one parameter, the record
-#isatype("dg_spec") with one field per operation (@fig:dg-spec): the edge
+#isatype("dg_spec") with one field per operation: the edge
 transfers of @sec:calls, enter, the two combine stages, and a query handler
 that @ch:cooperation uses to let analyses exchange facts.
 
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.5pt)
-    thy("dg_spec")
-  },
-  kind: image,
-  placement: none,
-  caption: [The declaration of #isatype("dg_spec"), lifted from the theory.
-    Every field except the query handler carries, marked $sharp$, the name of the corresponding method of Goblint's `Spec`. A #isatype("call_info")
-    names the callee, its formals, the arguments, and the destination of a
-    call.],
-) <fig:dg-spec>
+#{
+  show raw.where(block: true): set text(size: 6.5pt)
+  thy("dg_spec")
+}
+
+Every field except the query handler carries, marked $sharp$, the name of the
+corresponding method of Goblint's `Spec`. A #isatype("call_info") names the
+callee, its formals, the arguments, and the destination of a call.
 
 The goal is that @ch:equations can derive the obligations of @ch:traces for
 every record that satisfies a fixed set of laws. Most of them form the

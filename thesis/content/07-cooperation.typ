@@ -185,21 +185,17 @@ for the literal $1$ gives soundness for $e$. One theorem covers every analysis
 works with every partner whose answers hold.
 
 An analysis without analysis globals is written as a _local specification_
-(#isatype("local_spec"), @fig:local-spec), whose operations each take a
+(#isatype("local_spec")), whose operations each take a
 channel, and whose handler #isaconst("ls_query") answers queries about a
 state.
 
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.5pt)
-    thy("local_spec")
-  },
-  kind: image,
-  placement: auto,
-  caption: [The declaration of #isatype("local_spec"), lifted from the theory.
-    Every operation receives a channel of type #isatype("channel"), and the
-    first combine stage receives two.],
-) <fig:local-spec>
+#{
+  show raw.where(block: true): set text(size: 6.5pt)
+  thy("local_spec")
+}
+
+Every operation receives a channel of type #isatype("channel"), and the first
+combine stage receives two.
 
 Soundness of a local specification (#isaconst("sound_local_spec")) asks for a
 monotone concretization, which turns the solver's inequalities into inclusions

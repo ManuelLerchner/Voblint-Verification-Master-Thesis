@@ -3,7 +3,6 @@
 
 = `isar-tools`: Source Tooling for Isabelle <sec:isar-tools>
 
-
 Isabelle checks what a theory means, but not how a project is maintained: whether
 every theory is reached by a session, whether a proof was left unfinished,
 whether two lemmas state the same fact, or whether a locale still says what it
@@ -31,40 +30,31 @@ answers queries about entries, call graphs, and `sorry`s.
 One check addresses a mistake the batch build cannot see. Inside the header of
 a `locale`, an identifier Isabelle does not know is read as a free variable and
 generalized. An assumption that cites a renamed or misspelled constant
-therefore still builds, but now quantifies over an arbitrary function. In
-@fig:locale-check, the assumption cites a misspelling of the constant defined
+therefore still builds, but now quantifies over an arbitrary function. In the theory below, the assumption cites a misspelling of the constant defined
 above it, and `isar check locales` reports the identifier.
 
+#{
+  set par(first-line-indent: 0pt, justify: false)
+  show raw: set text(size: 7pt)
+  isa(read("/shared/code/isar-locale/Demo.thy").split("\n").slice(3, 8).join("\n"))
+  block(
+    width: 100%,
+    inset: 5pt,
+    radius: 2pt,
+    fill: vb.bg,
+    stroke: 0.5pt + vb.frame,
+    align(left, text(
+      size: 7pt,
+      font: "Latin Modern Mono",
+      read("/shared/code/isar-locale/expected.txt").trim(),
+    )),
+  )
+}
 
-
-The check flags identifiers in a locale header that appear to be neither
+A test reruns the check on this
+#link(repo-blob + "thesis/shared/code/isar-locale")[theory]. The check flags identifiers in a locale header that appear to be neither
 parameters nor locally bound and have no matching declaration. It approximates
 Isabelle's inner syntax lexically and is therefore a heuristic.
-
-#figure(
-  {
-    set par(first-line-indent: 0pt, justify: false)
-    show raw: set text(size: 7pt)
-    isa(read("/shared/code/isar-locale/Demo.thy").split("\n").slice(3, 8).join("\n"))
-    block(
-      width: 100%,
-      inset: 5pt,
-      radius: 2pt,
-      fill: vb.bg,
-      stroke: 0.5pt + vb.frame,
-      align(left, text(
-        size: 7pt,
-        font: "Latin Modern Mono",
-        read("/shared/code/isar-locale/expected.txt").trim(),
-      )),
-    )
-  },
-  kind: image,
-  placement: none,
-  caption: [A locale assumption citing a misspelled constant, which Isabelle
-    accepts, and the report of `isar check locales` on this
-    #link(repo-blob + "thesis/shared/code/isar-locale")[theory], which a test reruns.],
-) <fig:locale-check>
 
 == A hidden cost: re-elaborated theories
 

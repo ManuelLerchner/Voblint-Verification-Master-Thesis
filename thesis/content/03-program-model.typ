@@ -239,7 +239,7 @@ execution.
 Every constructor except sequencing also carries an _annotation_, whose type is
 a parameter of #isatype("gcom"). The commands of a parsed program carry the unit annotation and have type
 #isatype("com"). The grammar above omits
-annotations, which @fig:pstep writes as $i$. @sec:at-node explains why they
+annotations, which the rules of @sec:pstep write as $i$. @sec:at-node explains why they
 are needed.
 
 In concrete syntax, an assignment is written `x = e;` and a check
@@ -391,23 +391,18 @@ call. Each suspended activation keeps its data in a _frame_.
   step relation #isaconst("pstep") relates a configuration to its successor.
 ]
 
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("pstep")
-  },
-  kind: image,
-  placement: none,
-  caption: [The declaration of #isaconst("pstep"), lifted from the theory.],
-) <fig:pstep>
+#{
+  show raw.where(block: true): set text(size: 6.2pt)
+  thy("pstep")
+}
 
 A classifier #isai("\<G> :: vname \<Rightarrow> bool"), separate from the
 store, says which names are global, because a call resets only the locals. For
 a program, it is #isaconst("declared_global"). The relation is written
 #isai("\<G>, \<Pi> \<turnstile> \<kappa> \<rightarrow>\<^sub>p \<kappa>'") for
 configurations $kappa$, $kappa'$, and a procedure table #isai("\<Pi>"). Its
-closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and @fig:pstep lists its
-rules. No rule inspects an annotation. The rules only copy annotations, from
+closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and its rules are
+listed below. No rule inspects an annotation. The rules only copy annotations, from
 the rewritten command or from the procedure table. The
 #link(
   "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics",
@@ -680,24 +675,19 @@ continues at $k$.
     #isai("\<rightarrow>\<^sub>c\<^sup>*") is its closure.
   ]
 
-  #figure(
-    {
-      show raw.where(block: true): set text(size: 6.2pt)
-      thy("cstep")
-    },
-    kind: image,
-    placement: none,
-    caption: [The declaration of #isaconst("cstep"), lifted from the theory.],
-  ) <fig:cstep>
+  #{
+    show raw.where(block: true): set text(size: 6.2pt)
+    thy("cstep")
+  }
 ]
 
-The three rules of @fig:cstep follow a local edge, a call edge, or a return.
+The three rules above follow a local edge, a call edge, or a return.
 In the running example (@fig:program-to-equations), the call `bump(5)` pushes
 a frame, runs the body of `bump` with $n = 5$, and pops the frame at the result
 node, after which `main` continues with `a` holding $6$. Calls and returns
 change the store through #isaconst("call_enter") and
 #isaconst("combine_collect"), which are built from the same functions as
-#isaconst("pstep") (@fig:pstep), so both executions can hold the same store. Like the trace semantics of
+#isaconst("pstep") (@sec:pstep), so both executions can hold the same store. Like the trace semantics of
 @ch:traces, #isaconst("cstep") is defined for an arbitrary graph, not only for
 compiled ones.
 
@@ -734,17 +724,12 @@ then also covers every source run, so soundness needs no converse.
   program.
 ]
 
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("csim")
-  },
-  kind: image,
-  placement: none,
-  caption: [The declaration of #isaconst("csim"), lifted from the theory.],
-) <fig:csim>
+#{
+  show raw.where(block: true): set text(size: 6.2pt)
+  thy("csim")
+}
 
-@fig:csim lists the three rules. Each rule relates one activation at a time.
+The relation has three rules. Each rule relates one activation at a time.
 Its residual command must be what remains of a procedure body, and the graph
 node must be where the compiler placed that residual
 (#isaconst("control_at"), #isaconst("compiled_at")). $sans("Base")$ covers a
