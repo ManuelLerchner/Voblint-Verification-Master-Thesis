@@ -448,13 +448,122 @@ definition sound_report :: "imp_prog \<Rightarrow> analysis_report \<Rightarrow>
    \<and> map (\<lambda>c. (check_point c, check_label c, check_exp c)) (report_checks res)
        = check_sites (prog_cfg p)"
 
+subsection \<open>Contexts under one name\<close>
+
+text \<open>
+  Each context policy has a context type of its own, and the report files every
+  context under one type, \<^typ>\<open>report_context\<close>, through an injective tag. Renaming
+  a policy's contexts through the tag keeps which contexts a trace carries, so the
+  activation buckets survive the renaming unchanged.
+\<close>
+
+definition map_context_policy :: "('c \<Rightarrow> 'd) \<Rightarrow> 'c context_policy \<Rightarrow> 'd context_policy" where
+  "map_context_policy f adm u d ci s es = (\<Union>c \<in> f -` {d}. f ` adm u c ci s es)"
+
+lemma admits_call_context_map_policy:
+  assumes inj: "inj f"
+  shows "admits_call_context \<G> g (map_context_policy f adm) u (f c) q s es d'
+           \<longleftrightarrow> (\<exists>c'. d' = f c' \<and> admits_call_context \<G> g adm u c q s es c')"
+  unfolding admits_call_context_def map_context_policy_def
+  using inj by (auto simp: inj_eq) blast+
+
+lemma activation_context_rel_map_policy:
+  assumes inj: "inj f"
+  shows "activation_context_rel \<G> (map_context_policy f adm) (f c\<^sub>0) g t d
+           \<longleftrightarrow> (\<exists>c. d = f c \<and> activation_context_rel \<G> adm c\<^sub>0 g t c)"
+proof
+  assume "activation_context_rel \<G> (map_context_policy f adm) (f c\<^sub>0) g t d"
+  then show "\<exists>c. d = f c \<and> activation_context_rel \<G> adm c\<^sub>0 g t c"
+  proof induction
+    case (Root xs)
+    then show ?case by blast
+  next
+    case (Call caller x p es x' xs)
+    then obtain c where c: "x = f c" "activation_context_rel \<G> adm c\<^sub>0 g caller c"
+      by blast
+    with Call.hyps(2) obtain c' where "x' = f c'"
+      and "admits_call_context \<G> g adm (sink_node caller) c p (sink_store caller) es c'"
+      by (auto simp: admits_call_context_map_policy [OF inj])
+    with c(2) show ?case by blast
+  next
+    case (Resume current x callee xs)
+    then show ?case by blast
+  qed
+next
+  assume "\<exists>c. d = f c \<and> activation_context_rel \<G> adm c\<^sub>0 g t c"
+  then obtain c where d: "d = f c" and rel: "activation_context_rel \<G> adm c\<^sub>0 g t c"
+    by blast
+  from rel show "activation_context_rel \<G> (map_context_policy f adm) (f c\<^sub>0) g t d"
+    unfolding d
+  proof induction
+    case (Root xs)
+    then show ?case by blast
+  next
+    case (Call caller x p es x' xs)
+    then show ?case
+      by (blast intro: admits_call_context_map_policy [OF inj, THEN iffD2])
+  next
+    case (Resume current x callee xs)
+    then show ?case by blast
+  qed
+qed
+
+text \<open>
+  What a report guarantees per context, for a policy over report contexts: every
+  valid activation trace carries one of the policy's contexts, and each context's
+  activation bucket lies in the report's semantics at the point.
+\<close>
+
+definition context_sound ::
+    "imp_prog \<Rightarrow> analysis_report \<Rightarrow> report_context context_policy \<Rightarrow> report_context \<Rightarrow> bool"
+where
+  "context_sound p res adm rc \<longleftrightarrow>
+     (\<forall>t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>.
+        \<exists>c. activation_context_rel (declared_global p) adm rc (prog_cfg p) t c)
+   \<and> (\<forall>v c. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,cinit_stores (declared_global p)\<^esub> v c
+          \<subseteq> \<R>\<^bsub>res\<^esub> v)"
+
+text \<open>
+  The context policy a configuration runs with, under its report contexts, and the
+  context of \<open>main\<close>. The entry-state policy is read off the program's own solve.
+\<close>
+
+definition run_policy :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> report_context context_policy" where
+  "run_policy config p =
+     (case config_context config of
+        Ctx_None \<Rightarrow>
+          map_context_policy (\<lambda>_ :: unit. Report_Unit) (context_policy_of_fun (\<lambda>u c t. ()))
+      | Ctx_CallString k \<Rightarrow>
+          map_context_policy Report_Call_String
+            (context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t))
+      | Ctx_EntryState \<Rightarrow>
+          map_context_policy Report_Entry
+            (case config_globals config of
+               Program_Globals_Flow_Sensitive \<Rightarrow>
+                 mcp_es_rule.admitted_contexts (config_analyses config) (config_rule config)
+                   (declared_global p) p
+             | Program_Globals_Flow_Insensitive \<Rightarrow>
+                 mcp_split_es_rule.admitted_contexts (config_analyses config) (config_rule config)
+                   (declared_global p) p))"
+
+definition run_root :: "analysis_config \<Rightarrow> report_context" where
+  "run_root config =
+     (case config_context config of
+        Ctx_None \<Rightarrow> Report_Unit
+      | Ctx_CallString k \<Rightarrow> Report_Call_String []
+      | Ctx_EntryState \<Rightarrow> Report_Entry mcp_root_ctx)"
+
 lemma report_of_sound:
-  assumes cov: "covered_table p (run_table sr) gm"
+  assumes act: "activation_table p (run_table sr) gm adm rc"
     and fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
+    and tag: "inj ctx_tag"
     and cl: "classify = mcp_classify (activation (config_analyses config))"
     and gm: "gm = mcp_gamma_v (activation (config_analyses config))"
-  shows "sound_report p (report_of config ctx_key ctx_tag classify sr p)"
+  shows "sound_report p (report_of config ctx_key ctx_tag classify sr p)
+       \<and> context_sound p (report_of config ctx_key ctx_tag classify sr p)
+           (map_context_policy ctx_tag adm) (ctx_tag rc)"
 proof -
+  note cov = activation_table.covered [OF act]
   have st: "sound_table p (run_table sr) classify gm"
     by (rule sound_table.intro [OF cov]) (unfold cl gm, rule mcp_sound_classifier)
   let ?res = "report_of config ctx_key ctx_tag classify sr p"
@@ -494,9 +603,41 @@ proof -
     with sg show ?thesis
       unfolding cl report_gamma_def report_of_simps by (blast dest: mcp_classify_refuted)
   qed
-  show ?thesis
+  have sr: "sound_report p ?res"
     unfolding sound_report_def
     using cons covers safe refuted by (auto simp: result_checks_of_sites)
+  have ctx: "context_sound p ?res (map_context_policy ctx_tag adm) (ctx_tag rc)"
+    unfolding context_sound_def
+  proof (intro conjI ballI allI subsetI)
+    fix t
+    assume t: "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
+    from activation_table.has_context [OF act t]
+    show "\<exists>c. activation_context_rel (declared_global p) (map_context_policy ctx_tag adm)
+              (ctx_tag rc) (prog_cfg p) t c"
+      by (auto simp: activation_context_rel_map_policy [OF tag])
+  next
+    fix v d s
+    assume "s \<in> \<A>\<^bsub>declared_global p,map_context_policy ctx_tag adm,ctx_tag rc,prog_cfg p,
+                    cinit_stores (declared_global p)\<^esub> v d"
+    then obtain t where t: "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
+        "sink_node t = v" "sink_store t = s"
+      and rel: "activation_context_rel (declared_global p) (map_context_policy ctx_tag adm)
+                  (ctx_tag rc) (prog_cfg p) t d"
+      unfolding activation_collect_def by blast
+    from rel obtain c
+      where "activation_context_rel (declared_global p) adm rc (prog_cfg p) t c"
+      by (auto simp: activation_context_rel_map_policy [OF tag])
+    with t have "s \<in> \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,cinit_stores (declared_global p)\<^esub> v c"
+      unfolding activation_collect_def by blast
+    with activation_table.bucket_bound [OF act]
+    have "s \<in> gamma_lift gm (lookup_table (run_table sr) v c)" by blast
+    then obtain st where look: "lookup_table (run_table sr) v c = Lifted st" and s: "s \<in> gm st"
+      by (cases "lookup_table (run_table sr) v c") auto
+    then have "Lifted st \<in> report_states_at ?res v"
+      unfolding rows by (metis image_eqI lookup_table_LiftedD)
+    with s show "s \<in> \<R>\<^bsub>?res\<^esub> v" by (auto simp: report_gamma_def gm)
+  qed
+  show ?thesis using sr ctx by blast
 qed
 
 text \<open>
@@ -514,7 +655,7 @@ lemma inj_entry_ctx_key: "inj (entry_ctx_key as)"
 lemma analysis_report_of_sound:
   assumes wf: "wf_program_compile_input p"
     and some: "analysis_report_of config p = Some res"
-  shows "sound_report p res"
+  shows "sound_report p res \<and> context_sound p res (run_policy config p) (run_root config)"
 proof (cases config)
   case (Analysis_Config as r ctx pg)
   show ?thesis
@@ -533,9 +674,13 @@ proof (cases config)
           dg_pipeline.root_query_def
             mcp_wrappers mcp_place_defs)
       note run = mcp_rule.solve_c_run[OF sol]
+      have pol: "run_policy config p
+                   = map_context_policy (\<lambda>_ :: unit. Report_Unit) (context_policy_of_fun (\<lambda>u c t. ()))"
+        "run_root config = Report_Unit"
+        by (simp_all add: run_policy_def run_root_def Analysis_Config Ctx_None)
       show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ _ _ refl])
+        unfolding res run(2) pol
+        by (rule report_of_sound[where rc = "()", OF _ _ _ _ _ refl])
            (use mcp_rule_table[OF wf run(1)] mcp_rule.vars_finite_of_terminates[OF run(1)] in
              \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
                 dg_pipeline.sol_vars_def inj_def\<close>)
@@ -551,9 +696,13 @@ proof (cases config)
           dg_pipeline.root_query_def
             mcp_wrappers mcp_place_defs)
       note run = mcp_split_rule.solve_c_run[OF sol]
+      have pol: "run_policy config p
+                   = map_context_policy (\<lambda>_ :: unit. Report_Unit) (context_policy_of_fun (\<lambda>u c t. ()))"
+        "run_root config = Report_Unit"
+        by (simp_all add: run_policy_def run_root_def Analysis_Config Ctx_None)
       show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ _ _ refl])
+        unfolding res run(2) pol
+        by (rule report_of_sound[where rc = "()", OF _ _ _ _ _ refl])
            (use mcp_split_rule_table[OF wf run(1)]
               mcp_split_rule.vars_finite_of_terminates[OF run(1)] in
              \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
@@ -573,12 +722,18 @@ proof (cases config)
         by (auto simp: Analysis_Config Ctx_EntryState Program_Globals_Flow_Sensitive
             dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
       note run = mcp_es_rule.solve_c_run[OF sol]
+      have pol: "run_policy config p
+                   = map_context_policy Report_Entry
+                       (mcp_es_rule.admitted_contexts as r (declared_global p) p)"
+        "run_root config = Report_Entry mcp_root_ctx"
+        by (simp_all add: run_policy_def run_root_def Analysis_Config Ctx_EntryState
+            Program_Globals_Flow_Sensitive)
       show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ refl])
+        unfolding res run(2) pol
+        by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ _ refl])
            (use mcp_es_rule_table[OF wf run(1)] mcp_es_rule.vars_finite_of_terminates[OF run(1)] in
              \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
+                dg_pipeline.sol_vars_def inj_def\<close>)
     next
       case Program_Globals_Flow_Insensitive
       from some obtain sol where
@@ -590,13 +745,19 @@ proof (cases config)
         by (auto simp: Analysis_Config Ctx_EntryState Program_Globals_Flow_Insensitive
             dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
       note run = mcp_split_es_rule.solve_c_run[OF sol]
+      have pol: "run_policy config p
+                   = map_context_policy Report_Entry
+                       (mcp_split_es_rule.admitted_contexts as r (declared_global p) p)"
+        "run_root config = Report_Entry mcp_root_ctx"
+        by (simp_all add: run_policy_def run_root_def Analysis_Config Ctx_EntryState
+            Program_Globals_Flow_Insensitive)
       show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ refl])
+        unfolding res run(2) pol
+        by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ _ refl])
            (use mcp_split_es_rule_table[OF wf run(1)]
               mcp_split_es_rule.vars_finite_of_terminates[OF run(1)] in
              \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
+                dg_pipeline.sol_vars_def inj_def\<close>)
     qed
   next
     case (Ctx_CallString k)
@@ -612,12 +773,17 @@ proof (cases config)
         by (auto simp: Analysis_Config Ctx_CallString Program_Globals_Flow_Sensitive
             dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
       note run = mcp_cs_rule.solve_c_run[OF sol]
+      have pol: "run_policy config p
+                   = map_context_policy Report_Call_String
+                       (context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t))"
+        "run_root config = Report_Call_String []"
+        by (simp_all add: run_policy_def run_root_def Analysis_Config Ctx_CallString)
       show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_call_string_key _ refl])
+        unfolding res run(2) pol
+        by (rule report_of_sound[OF _ _ inj_call_string_key _ _ refl])
            (use mcp_cs_rule_table[OF wf run(1)] mcp_cs_rule.vars_finite_of_terminates[OF run(1)] in
              \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
+                dg_pipeline.sol_vars_def inj_def\<close>)
     next
       case Program_Globals_Flow_Insensitive
       from some obtain sol where
@@ -629,13 +795,18 @@ proof (cases config)
         by (auto simp: Analysis_Config Ctx_CallString Program_Globals_Flow_Insensitive
             dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
       note run = mcp_split_cs_rule.solve_c_run[OF sol]
+      have pol: "run_policy config p
+                   = map_context_policy Report_Call_String
+                       (context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t))"
+        "run_root config = Report_Call_String []"
+        by (simp_all add: run_policy_def run_root_def Analysis_Config Ctx_CallString)
       show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_call_string_key _ refl])
+        unfolding res run(2) pol
+        by (rule report_of_sound[OF _ _ inj_call_string_key _ _ refl])
            (use mcp_split_cs_rule_table[OF wf run(1)]
               mcp_split_cs_rule.vars_finite_of_terminates[OF run(1)] in
              \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
+                dg_pipeline.sol_vars_def inj_def\<close>)
     qed
   qed
 qed

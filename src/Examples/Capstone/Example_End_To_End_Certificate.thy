@@ -407,9 +407,9 @@ abbreviation certificate_demo_table where
 lemma certificate_demo_covered_table:
   "covered_table certificate_demo_prog certificate_demo_table
      (mcp_gamma_v (activation certificate_analyses))"
-  by (rule mcp_cs_rule_table
+  by (rule activation_table.covered [OF mcp_cs_rule_table
         [OF wf_program_compile_input_exec_sound [OF certificate_demo_wf]
-            certificate_demo_terminates])
+            certificate_demo_terminates]])
 
 text \<open>
   The endpoint's report conjunct, at the check's node rather than at an existential

@@ -10,7 +10,8 @@ text \<open>
   point --- outright for a call string, which is a function of the call site and
   the caller's context, and for entry state from the totality of its context
   relation --- and each bucket is bounded by the entry filed under its context.
-  \<open>covered_table_of_activation\<close> turns that into a \<open>covered_table\<close>, so each
+  \<open>activation_table\<close> records these facts with the policy that earns them, and
+  \<open>activation_table.covered\<close> turns them into a \<open>covered_table\<close>, so each
   configuration below names its registration's three published facts and nothing
   else. Every registration takes the
   activation list and the global update rule as parameters, so one table per
@@ -22,14 +23,13 @@ subsection \<open>Entry state\<close>
 lemma mcp_es_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_es_rule.terminates as r (declared_global p) p"
-  shows "covered_table p (mcp_es_rule.result as r (declared_global p) p)
-           (mcp_gamma_v (activation as))"
-proof (rule covered_table_of_activation
-    [where adm = "mcp_es_rule.admitted_contexts as r (declared_global p) p"
-       and rc = mcp_root_ctx], goal_cases)
-  case (1 u)
+  shows "activation_table p (mcp_es_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as))
+           (mcp_es_rule.admitted_contexts as r (declared_global p) p) mcp_root_ctx"
+proof (rule activation_table.intro, goal_cases)
+  case (1 t)
   show ?case
-    by (simp add: mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf cov])
+    by (rule mcp_es_rule.entry_state_has_context_of_terminates [OF wf cov 1])
 next
   case (2 u ctx)
   show ?case
@@ -53,15 +53,13 @@ text \<open>
 lemma mcp_cs_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_cs_rule.terminates as k r (declared_global p) p"
-  shows "covered_table p (mcp_cs_rule.result as k r (declared_global p) p)
-           (mcp_gamma_v (activation as))"
-proof (rule covered_table_of_activation
-    [where adm = "context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
-    goal_cases)
-  case (1 u)
+  shows "activation_table p (mcp_cs_rule.result as k r (declared_global p) p)
+           (mcp_gamma_v (activation as))
+           (context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)) []"
+proof (rule activation_table.intro, goal_cases)
+  case (1 t)
   show ?case
-    by (rule equalityD1
-          [OF mcp_cs_rule.fun_route_node_collect_eq_Union [where ctx_fun = "cs_context k"]])
+    by (rule exI, subst activation_context_rel_of_fun_iff [OF 1]) (rule refl)
 next
   case (2 u ctx)
   show ?case
@@ -83,14 +81,13 @@ text \<open>The two contextual tables again, at the shared-globals registrations
 lemma mcp_split_es_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_split_es_rule.terminates as r (declared_global p) p"
-  shows "covered_table p (mcp_split_es_rule.result as r (declared_global p) p)
-           (mcp_gamma_v (activation as))"
-proof (rule covered_table_of_activation
-    [where adm = "mcp_split_es_rule.admitted_contexts as r (declared_global p) p"
-       and rc = mcp_root_ctx], goal_cases)
-  case (1 u)
+  shows "activation_table p (mcp_split_es_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as))
+           (mcp_split_es_rule.admitted_contexts as r (declared_global p) p) mcp_root_ctx"
+proof (rule activation_table.intro, goal_cases)
+  case (1 t)
   show ?case
-    by (simp add: mcp_split_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf cov])
+    by (rule mcp_split_es_rule.entry_state_has_context_of_terminates [OF wf cov 1])
 next
   case (2 u ctx)
   show ?case
@@ -107,15 +104,13 @@ qed
 lemma mcp_split_cs_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_split_cs_rule.terminates as k r (declared_global p) p"
-  shows "covered_table p (mcp_split_cs_rule.result as k r (declared_global p) p)
-           (mcp_gamma_v (activation as))"
-proof (rule covered_table_of_activation
-    [where adm = "context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
-    goal_cases)
-  case (1 u)
+  shows "activation_table p (mcp_split_cs_rule.result as k r (declared_global p) p)
+           (mcp_gamma_v (activation as))
+           (context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)) []"
+proof (rule activation_table.intro, goal_cases)
+  case (1 t)
   show ?case
-    by (rule equalityD1
-          [OF mcp_split_cs_rule.fun_route_node_collect_eq_Union [where ctx_fun = "cs_context k"]])
+    by (rule exI, subst activation_context_rel_of_fun_iff [OF 1]) (rule refl)
 next
   case (2 u ctx)
   show ?case

@@ -453,7 +453,7 @@ L11 THE ANALYZER
     run_voblint, analysis_report, analysis_report_of  Analysis_Run
     render_report (display projection)              Analysis_Render
     covered_table, sound_classifier,
-      covered_table_of_activation                   Analysis_Run_Sound,
+      activation_table                              Analysis_Run_Sound,
                                                     Analysis_Run_Ctx_Sound
     report_sem ℛ⇘res⇙ v, verdict_stores 𝒱⇘res⇙ v,
       consistent_report, well_formed_report,

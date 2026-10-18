@@ -19,7 +19,7 @@ collecting semantics to the CLI:
   termination is the per-run `solve_dom` premise, as for the flat analysis.
 - **Endpoints.** `dg_analysis.entry_state_activation_collect_sound` and
   `fun_route_activation_collect_sound` bound each bucket;
-  `covered_table_of_activation` (`Analysis_Run_Sound`) and `report_of_sound`
+  `activation_table.covered` (`Analysis_Run_Sound`) and `report_of_sound`
   (`Analysis_Report`) reach the report, and `run_voblint_source_sound` a source run.
 - **Checks and rendering.** `classify_checks_verdicts` joins verdicts over the
   contexts the solved table covers (`table_contexts`), with `Dead` kept apart from

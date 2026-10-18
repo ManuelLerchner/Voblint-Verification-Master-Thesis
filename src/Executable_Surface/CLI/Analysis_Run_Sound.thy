@@ -203,27 +203,41 @@ qed
 end
 
 text \<open>
-  The shape every registration publishes its soundness in: each activation bucket
-  is bounded by the entry filed under its context, and the buckets exhaust the point.
+  The shape every registration publishes its soundness in, with its context policy
+  \<open>adm\<close> and root context \<open>rc\<close>: every valid activation trace carries a context, and
+  each activation bucket is bounded by the entry filed under its context. The
+  buckets then exhaust the point, which is all a \<open>covered_table\<close> needs.
 \<close>
 
-lemma covered_table_of_activation:
-  fixes r :: "('c, 'v) solved_table"
-  assumes union: "\<And>u. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
-                    \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,
-                                cinit_stores (declared_global p)\<^esub> u c)"
-      and sound: "\<And>u ctx. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,
-                              cinit_stores (declared_global p)\<^esub> u ctx
-                    \<subseteq> gamma_lift gm (lookup_table r u ctx)"
-      and fin: "finite_solved_table r"
-  shows "covered_table p r gm"
+locale activation_table =
+  fixes p :: imp_prog
+    and r :: "('c, 'v) solved_table"
+    and gm :: "'v \<Rightarrow> store set"
+    and adm :: "'c context_policy"
+    and rc :: 'c
+  assumes has_context:
+      "\<And>t. t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>
+         \<Longrightarrow> \<exists>c. activation_context_rel (declared_global p) adm rc (prog_cfg p) t c"
+    and bucket_bound:
+      "\<And>u ctx. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,cinit_stores (declared_global p)\<^esub> u ctx
+         \<subseteq> gamma_lift gm (lookup_table r u ctx)"
+    and finite_table: "finite_solved_table r"
+begin
+
+lemma covered: "covered_table p r gm"
 proof (rule covered_table.intro)
-  show "finite (table_contexts r v)" for v by (rule finite_table_contexts [OF fin])
+  show "finite (table_contexts r v)" for v by (rule finite_table_contexts [OF finite_table])
+  have union: "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
+                 \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,
+                             cinit_stores (declared_global p)\<^esub> u c)" for u
+    by (rule equalityD1 [OF node_collect_eq_Union_activation_of_has_context [OF has_context]])
   show "table_covers gm r v s"
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     for v s
-    by (meson lookup_table_covers_of_activation [OF union sound that] table_coversI)
+    by (meson lookup_table_covers_of_activation [OF union bucket_bound that] table_coversI)
 qed
+
+end
 
 subsection \<open>The context-free configuration\<close>
 
@@ -236,14 +250,12 @@ text \<open>
 lemma mcp_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_rule.terminates as r (declared_global p) p"
-  shows "covered_table p (mcp_rule.result as r (declared_global p) p)
-           (mcp_gamma_v (activation as))"
-proof (rule covered_table_of_activation
-    [where adm = "context_policy_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
-  case (1 u)
+  shows "activation_table p (mcp_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as)) (context_policy_of_fun (\<lambda>u c t. ())) ()"
+proof (rule activation_table.intro, goal_cases)
+  case (1 t)
   show ?case
-    by (rule equalityD1
-      [OF mcp_rule.fun_route_node_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()"]])
+    by (rule exI, subst activation_context_rel_of_fun_iff [OF 1]) (rule refl)
 next
   case (2 u ctx)
   show ?case
@@ -262,14 +274,12 @@ text \<open>The same with program globals on the shared channel.\<close>
 lemma mcp_split_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_split_rule.terminates as r (declared_global p) p"
-  shows "covered_table p (mcp_split_rule.result as r (declared_global p) p)
-           (mcp_gamma_v (activation as))"
-proof (rule covered_table_of_activation
-    [where adm = "context_policy_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
-  case (1 u)
+  shows "activation_table p (mcp_split_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as)) (context_policy_of_fun (\<lambda>u c t. ())) ()"
+proof (rule activation_table.intro, goal_cases)
+  case (1 t)
   show ?case
-    by (rule equalityD1
-      [OF mcp_split_rule.fun_route_node_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()"]])
+    by (rule exI, subst activation_context_rel_of_fun_iff [OF 1]) (rule refl)
 next
   case (2 u ctx)
   show ?case
