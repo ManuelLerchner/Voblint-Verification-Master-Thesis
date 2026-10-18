@@ -69,7 +69,8 @@ abstract state is a finite representation of a set of program states, for
 instance, an interval
 that contains every value a variable takes whenever execution reaches the
 point. The analysis is _sound_ if the abstract state contains every state that
-occurs in a real run, although it may contain more. If a sound abstract state
+occurs in a real run, although it may contain more. Such a result is an
+_over-approximation_. If a sound abstract state
 contains no state that violates a check, no execution violates it, tested or
 not (@fig:intro-runs). The converse does not hold.
 An abstract state can contain violating states that no execution reaches, and
@@ -110,7 +111,7 @@ proves a check, the check holds in every run that reaches it. An analysis can al
 activations of a procedure by their _calling context_, an abstraction of how
 the call was reached, such as the call site or the abstract state at entry. It
 then keeps one abstract state per program point and context, and it may analyze
-one call in several contexts, for instance one per abstract state that reaches
+one call in several contexts, for instance, one per abstract state that reaches
 the call. A richer domain or more contexts
 can decide more checks, but they also make the analysis more expensive. If there
 are
@@ -213,7 +214,7 @@ most language features and models all their possible behaviors. It instead
 under-approximates a few features that experts in the area know well, such as
 reflection in Java, `eval` in JavaScript, or `setjmp`/`longjmp` in C. The
 analysis then pretends that some possible behaviors of these features cannot
-happen, for instance that `eval` does nothing, so its result can miss
+happen, for instance, that `eval` does nothing, so its result can miss
 executions. The authors call such analyses _soundy_. They treat this as an
 engineering choice for precision and scalability, and they ask the authors of
 such analyses to state
@@ -231,7 +232,7 @@ analyzer is incomplete in the same way as testing any other program
 participation in SV-COMP in 2021, a competition on benchmark programs with
 known verdicts, Goblint has never produced a false negative on the
 competition's benchmark suite @seidl26. Still, its issue tracker lists more
-than a hundred issues labelled as unsound that were opened since 2021
+than a hundred issues labeled as unsound that were opened since 2021
 @goblint-unsound.
 The two observations do not contradict each other. A test finds an error only when
 someone thinks of exactly the scenario that triggers it, and every other error
@@ -308,7 +309,7 @@ its machine-checked soundness proof, available at
 and archived on Zenodo @voblint. The proof closes the gaps of
 @sec:state-of-art with a chain of inclusions at every program point, from
 source executions to the reported verdicts (@fig:intro-nest). Each step may add
-states that no execution reaches, which costs precision, but must not lose a
+states that no execution reaches, which costs precision, but it must not lose a
 reachable state. Errors such as a compiler that drops an edge or a return to
 the wrong caller would lose such a state, and the proof excludes them.
 
@@ -396,7 +397,7 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
   the contexts of a call can be read off the concrete execution. Splitting the
   concrete states by context then loses no execution (@sec:contract). The
   semantics may admit several contexts for one call, so that an analysis can
-  split a call into cases, for instance one per path-sensitive state. The
+  split a call into cases, for instance, one per path-sensitive state. The
   shipped analyses use at most one context per caller context (@sec:contexts).
 - _Separately verified components._ Each component discharges local soundness
   obligations, and generic theorems compose them into the end-to-end guarantee
@@ -582,4 +583,4 @@ the report read off it is sound for every source run (@ch:results).
 
 #partref(<part:assessment>) compares Voblint with prior work (@ch:related) and
 concludes (@ch:conclusion). @sec:isabelle explains the Isabelle syntax of the
-listings, and @sec:isar-tools the source tooling built for this work.
+listings, and @sec:isar-tools describes the source tooling built for this work.
