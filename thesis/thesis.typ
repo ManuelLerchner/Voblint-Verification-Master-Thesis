@@ -97,15 +97,19 @@
 #include "content/09-solving.typ"
 #include "content/10-results.typ"
 
-#part("Instances, Tooling, and Evaluation", lbl: <part:instances>)
+#part("Instances, Implementation, and Evaluation", lbl: <part:instances>)
 #include "content/11-instances.typ"
 #include "content/12-executable.typ"
 #include "content/13-evaluation.typ"
-#include "content/14-tooling.typ"
 
 #part("Context and Conclusion", lbl: <part:assessment>)
 #include "content/15-related.typ"
 #include "content/16-conclusion.typ"
+
+// Appendices keep stable labels under a separate alphabetic counter.
+#set heading(numbering: "A.1.")
+#counter(heading).update(0)
+#include "content/appendix-tooling.typ"
 
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)

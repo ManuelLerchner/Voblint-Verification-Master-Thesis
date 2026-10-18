@@ -130,6 +130,10 @@ for the transfer on nonempty states and for procedure entry. For primitives
 proved sound it holds without a per-domain proof, because the abstract and
 executable steps are derived from the same operations
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"), @sec:instances-supply).
+#isathm("exec_local_spec_sound") states the boundary of this refinement. The
+local specification built from the executable steps is sound for the
+concretization of the represented function, so the analysis contract holds for
+the code that is exported, not only for its specification.
 
 Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
 listed overrides do not decide: an unlisted variable can make the state empty
@@ -383,6 +387,247 @@ shows one step of the replay.
     @fig:build in the reader's browser. The screenshots are illustrative.],
   label: <fig:playground>,
 )
+
+== The repository and its checks <sec:voblint-repo>
+
+The generated analyzer is only as current as the theories it was exported from,
+and the claims of this thesis are only as current as the statements and outputs
+they quote. Keeping these consistent as the development changes is
+engineering, not proof. A formalization of this size needs work around the
+proof assistant as well as inside it. Its theories must be formatted and checked for unfinished proofs,
+its names must stay consistent with the prose that cites them, and a new
+contributor must be able to install everything the build needs. For Isabelle,
+comparatively little project-level tooling is available outside the distribution itself.
+Isabelle users have noted the resulting gap as well, for instance in a
+comment on a recent blog post by Paulson @paulson26lean, which observes that
+Isabelle's own development uses almost no standard tooling @halbgefressen26.
+
+The need for such tooling grows with AI assistance. Many proofs and a large share of the
+surrounding code of this development were written by agents (see #link(<ai-use>)[the statement on the use of generative AI]). An agent can
+produce a plausible change quickly, but it cannot be trusted to keep the
+cross-references of a large development consistent, and a reviewer cannot read every line
+it writes. Deterministic tooling around the agent made its work usable at this scale. An agent's change counts as done only when these checks pass, so
+the checks, not the agent, decide whether the repository is consistent.
+
+Everything this thesis describes is published in one repository: the Isabelle
+theories, a submodule reference to the vendored solver, whose repository is
+private (@sec:upstream-td), the exported analyzer with its command-line tool and playground, the
+regression corpus, and the sources of this thesis. Each release is archived on
+Zenodo with a citable DOI @voblint. The project site hosts the
+playground, the explainer, and the rendered theories that every Isabelle name in
+this thesis links to.
+
+A development of this size drifts when one fact is written down twice. The
+repository therefore keeps a few sources and derives everything else from them
+(@fig:pipeline). One grammar file yields the Isabelle syntax of VIMP, the
+analyzer's parser and its printer. The parser lies outside the proof and hands
+the proved analyzer its syntax tree (@sec:trust-boundary), but it and the
+Isabelle syntax are generated from the same language description. An
+analysis manifest names each analysis, its value type and the theories that
+prove it sound. From it, a generator writes the registration of each numeric domain (@sec:instances-supply) and the combined state of @ch:cooperation, and
+Isabelle checks every generated proof. The generator exists because the
+repetition lies outside what a theory can express: each domain is registered
+once per context policy it supports, for every update rule, and the combined
+state has one field per analysis, of differing types. With dependent types, a heterogeneous list indexed
+by these types could express it inside the logic @chlipala13cpdt[ch. 9]; HOL's
+simple types cannot. #isaconst("run_voblint") itself reaches OCaml through
+#isacmd("export_code") (@sec:codegen). Because the derived files are checked
+against their sources, a stale name, statement, or quoted output fails the build
+instead of reaching the reader (@fig:pipeline).
+
+#figure(
+  {
+    set text(size: 7.5pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let src(pos, body, name) = node(
+      pos,
+      body,
+      name: name,
+      stroke: 0.6pt + vb.accent,
+      fill: vb.accent.lighten(92%),
+      corner-radius: 2pt,
+      inset: 4pt,
+      width: 30mm,
+    )
+    let out(pos, body, name) = node(
+      pos,
+      body,
+      name: name,
+      stroke: 0.6pt + vb.neutral,
+      fill: white,
+      corner-radius: 2pt,
+      inset: 4pt,
+      width: 50mm,
+    )
+    let gen(a, b, lab: none) = edge(
+      a,
+      b,
+      "-|>",
+      stroke: 0.6pt + vb.neutral,
+      label: if lab != none { text(size: 6.5pt, fill: vb.muted, lab) },
+      label-side: center,
+    )
+    diagram(
+      spacing: (14mm, 2.5mm),
+      src(
+        (0, 1),
+        link(repo-blob + "manifests/vimp-grammar.yaml")[grammar \ `vimp-grammar.yaml`],
+        <g>,
+      ),
+      out(
+        (1, 0),
+        link(
+          repo-blob + "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy",
+        )[Isabelle syntax of VIMP],
+        <g1>,
+      ),
+      out(
+        (1, 1),
+        link(repo-blob + "cli/frontend/vimp_parser.mly")[parser and lexer (Menhir)],
+        <g2>,
+      ),
+      out((1, 2), link(repo-blob + "cli/frontend/vimp_printer.ml")[source printer (OCaml)], <g3>),
+      gen(<g>, <g1>),
+      gen(<g>, <g2>),
+      gen(<g>, <g3>),
+      src(
+        (0, 4),
+        link(repo-blob + "manifests/analyses.yaml")[analysis manifest \ `analyses.yaml`],
+        <m>,
+      ),
+      out(
+        (1, 3.5),
+        link(
+          repo-blob + "src/Analyses/Sign/generated/Sign_Analyses.thy",
+        )[per-domain registration theories],
+        <m1>,
+      ),
+      out(
+        (1, 4.5),
+        link(
+          repo-blob + "src/Executable_Surface/CLI/generated/MCP_Carrier.thy",
+        )[combined state of all analyses],
+        <m2>,
+      ),
+      gen(<m>, <m1>),
+      gen(<m>, <m2>),
+      src((0, 7), link(repo-blob + "src")[theories, built session \ and analyzer], <t>),
+      out(
+        (1, 6),
+        link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[generated OCaml analyzer],
+        <t1>,
+      ),
+      out(
+        (1, 7),
+        link(repo-blob + "thesis/shared/generated")[theorem statements, snippets, links],
+        <t2>,
+      ),
+      out(
+        (1, 8),
+        link(repo-blob + "thesis/shared/generated")[quoted analyzer output, figures],
+        <t3>,
+      ),
+      gen(<t>, <t1>),
+      gen(<t>, <t2>),
+      gen(<t>, <t3>),
+    )
+  },
+  kind: image,
+  placement: auto,
+  caption: [The sources of the repository (blue) and the files derived from
+    them; each box links to its file. Each derived file is generated during the build or committed with a
+    check that regenerates it; the link map is also checked against the
+    published site.],
+) <fig:pipeline>
+
+This thesis is held to the same discipline. Each Isabelle name in its Typst
+sources goes through a helper that a check resolves against the theories and
+links to the rendered theories. Theorem statements are lifted from the theories
+and compared with what the built session proves, quoted analyzer results are rerun against the analyzer, each VIMP listing's playground link is decoded
+from the PDF and compared with the listing, and repository figures come from a
+measurement script. A rename, a changed statement, or a changed result
+therefore fails the build, and another check warns when the text shows a
+statement before the entities it uses.
+
+The checks run in layers ordered by cost (@fig:gates), from hooks triggered by
+the staged files to continuous integration, which reruns the checks on a fresh
+runner, reusing cached results for unchanged inputs, together with the tests of
+@sec:eval-corpus. Only the main branch is deployed, and only after the rendered
+theories, the formalization PDF, and this thesis build. All layers invoke the same-named Pixi tasks, and a further check keeps the local `verify` task and
+continuous integration from diverging.
+
+#figure(
+  {
+    set text(size: 7pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let gate(pos, title, items, name) = node(
+      pos,
+      [*#title* \ #items.join(linebreak())],
+      name: name,
+      stroke: 0.6pt + vb.neutral,
+      fill: white,
+      corner-radius: 2pt,
+      inset: 4pt,
+      width: 25mm,
+    )
+    let end(pos, body, name) = node(
+      pos,
+      body,
+      name: name,
+      stroke: 0.6pt + vb.accent,
+      fill: vb.accent.lighten(92%),
+      corner-radius: 2pt,
+      inset: 4pt,
+    )
+    let step(a, b) = edge(a, b, "-|>", stroke: 0.6pt + vb.neutral)
+    diagram(
+      spacing: (3.5mm, 0mm),
+      end((0, 0), [change], <c>),
+      gate(
+        (1, 0),
+        link(repo-blob + ".lefthook.yaml")[pre-commit],
+        ([drift of derived files], [formatters], [`isar` checks, thesis references]),
+        <a>,
+      ),
+      gate(
+        (2, 0),
+        link(repo-blob + ".lefthook.yaml")[pre-push],
+        ([exported OCaml current], [claims and facts], [thesis build]),
+        <b>,
+      ),
+      gate(
+        (3, 0),
+        link(repo-blob + ".github/workflows/ci.yml")[CI],
+        ([session build], [regression and property tests], [thesis PDF]),
+        <d>,
+      ),
+      gate(
+        (4, 0),
+        link(repo-blob + ".github/workflows/ci.yml")[deploy (main)],
+        ([site with playground], [Pages deploy], [published links]),
+        <e>,
+      ),
+      end(
+        (5, 0),
+        link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/")[website],
+        <w>,
+      ),
+      step(<c>, <a>),
+      step(<a>, <b>),
+      step(<b>, <d>),
+      step(<d>, <e>),
+      step(<e>, <w>),
+    )
+  },
+  kind: image,
+  placement: none,
+  caption: [The layers of checks between a change and the published site, with
+    representative checks; the published links are checked after deployment.
+    Each box links to its configuration.],
+) <fig:gates>
+
+The source tooling built for these checks, which reads Isabelle theories
+without running Isabelle, is described in @sec:isar-tools.
 
 == The trust boundary <sec:trust-boundary>
 

@@ -1185,6 +1185,19 @@ manifest that other chapters refer to. "Watching the solve" (`sec:tracing`)
 moved to the executable chapter, after the browser artifact. The solver
 section now lists the four upstream pull requests (td-verification 13-16).
 
+**Tooling chapter dissolved (2026-10-18, author decision).** The argument
+review (`docs/THESIS_ARGUMENT_STORYBOARD.md`, R-17) found that the tooling
+chapter interrupted evaluation → related work and was not among the
+contributions. The repository section (`sec:voblint-repo`, with
+`fig:pipeline` and `fig:gates`) is now a section of the executable chapter
+before the trust boundary; the solver changes (`sec:upstream-td`) are the last
+subsection of "Adapting the equations to the solver"; `isar-tools`
+(`sec:isar-tools`) is Appendix A. Part V is "Instances, Implementation, and
+Evaluation", and the thesis has 15 chapters. The same review moved the
+adequacy section to the end of the program-model chapter, the relational state
+to the instances chapter (`sec:rel-state`), and gave procedures and calling
+contexts their own background section (`sec:interproc`).
+
 **Evaluation cut (2026-10-08, author decision).** The evaluation chapter
 repeated earlier chapters, so it now runs: non-vacuity (`sec:nonvacuity`); "Do
 the obligations exclude real errors?" (`sec:eval-1161`), which absorbs the

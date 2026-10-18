@@ -1,3 +1,4 @@
+#import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
 #import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, thy-badge
 #import "../lib/figures.typ": int-axis, int-strip, printed-set, verdict as verdict-chip
@@ -288,13 +289,127 @@ evaluation). Goblint's
 does reduce after narrowing. No proof obliges its lattices to satisfy the
 bracket laws, so Goblint can make this choice and Voblint cannot.
 
+== A relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
+
+#let _order = 0.7pt + vb.neutral
+None of these domains can express that $x <= y$, because each describes the
+variables one at a time (@fig:rel-vs-nonrel). A relational state keeps what the pointwise form forgets. Its concretization
+therefore maps a whole state to a set of stores directly, instead of a value
+to a set of integers. The type #isatype("relc") records a set $P$ of variable
+pairs, where the pair $(x, y)$ stands for the constraint $x <= y$. Its
+concretization is #isaconst("gamma_relc"):
+$
+  conc(ctor("RelC")(P)) = setcomp(s, forall (x, y) in P. s(x) <= s(y)),
+  quad conc(ctor("RelBot")) = emptyset.
+$
+Below, the pair $(x, y)$ is written $x <= y$.
+
+More pairs describe fewer stores, so the order is reverse inclusion:
+$ctor("RelC")(P) lle ctor("RelC")(Q)$ exactly when $Q subset.eq P$
+(#isaconst("less_eq_relc")), with #ctor("RelBot") below every value and
+$ltop = ctor("RelC")(emptyset)$, which constrains nothing. The join keeps the
+pairs both operands share,
+$ctor("RelC")(P) ljoin ctor("RelC")(Q) = ctor("RelC")(P inter Q)$
+(#isaconst("sup_relc")). The widening is simply the join. The solver's
+widening contract (#isalocale("widening")) only asks for a value above both
+operands, and the join is one, although the contract alone does not force the
+iteration to terminate. Here an ascending chain can only drop pairs
+from a finite set, since every constructed $P$ is finite (below), so it is
+finite anyway. The narrowing returns its second
+operand, the newly computed value. This is sound for the same reason, since
+the narrowing law only asks for a value between the two operands.
+
+The carrier does not close its pairs under transitivity (@fig:rel-state). The
+values ${x <= y, y <= z}$ and ${x <= y, y <= z, x <= z}$ therefore denote the
+same stores but are different values. The join can also forget an implied
+relation. The join of ${x <= y, y <= z}$ and ${x <= y, x <= z}$ keeps only
+their common pair and is ${x <= y}$, although both operands imply $x <= z$.
+
+Pairs enter only at guards, and an assignment to $x$ removes every pair that
+mentions $x$, so $P$ is finite in every value the analysis constructs. This matters for the
+executable analyzer. Generated code stores a finite set as the list of its
+elements, while an infinite set, such as the set of all pairs, needs a
+complement representation for which not every set operation has executable
+code.
+
+#let _rnode(pos, name, body) = node(pos, text(size: 7pt, body), name: name, inset: 3pt)
+#figure(
+  diagram(
+    spacing: (5mm, 6mm),
+    _rnode((1.5, 0), <r-top>, $ltop = ctor("RelC")(emptyset)$),
+    _rnode((0, 1), <r-xy>, ${x <= y}$),
+    _rnode((1.5, 1), <r-yz>, ${y <= z}$),
+    _rnode((3, 1), <r-xz>, ${x <= z}$),
+    _rnode((0, 2), <r-xy-yz>, ${x <= y, y <= z}$),
+    _rnode((1.5, 2), <r-xy-xz>, ${x <= y, x <= z}$),
+    _rnode((3, 2), <r-yz-xz>, ${y <= z, x <= z}$),
+    _rnode((1.5, 3), <r-all>, ${x <= y, y <= z, x <= z}$),
+    _rnode((0.5, 4), <r-all-yx>, ${x <= y, y <= z, x <= z, y <= x}$),
+    _rnode((2.5, 4), <r-all-zy>, ${x <= y, y <= z, x <= z, z <= y}$),
+    _rnode((3.6, 4), <r-all-more>, $dots.c$),
+    _rnode((0.5, 4.8), <r-down1>, $dots.v$),
+    _rnode((2.5, 4.8), <r-down2>, $dots.v$),
+    _rnode((1.5, 5.6), <r-nine>, [all nine pairs, $x = y = z$]),
+    _rnode((1.5, 6.4), <r-bot>, ctor("RelBot")),
+    ..(<r-xy>, <r-yz>, <r-xz>).map(n => edge(<r-top>, n, "-", stroke: _order)),
+    edge(<r-xy>, <r-xy-yz>, "-", stroke: _order),
+    edge(<r-xy>, <r-xy-xz>, "-", stroke: _order),
+    edge(<r-yz>, <r-xy-yz>, "-", stroke: _order),
+    edge(<r-yz>, <r-yz-xz>, "-", stroke: _order),
+    edge(<r-xz>, <r-xy-xz>, "-", stroke: _order),
+    edge(<r-xz>, <r-yz-xz>, "-", stroke: _order),
+    edge(<r-xy-yz>, <r-all>, "-", stroke: _order),
+    edge(<r-xy-xz>, <r-all>, "-", stroke: _order),
+    edge(<r-yz-xz>, <r-all>, "-", stroke: _order),
+    edge(<r-all>, <r-all-yx>, "-", stroke: _order),
+    edge(<r-all>, <r-all-zy>, "-", stroke: _order),
+    edge(<r-all-yx>, <r-down1>, "-", stroke: _order),
+    edge(<r-all-zy>, <r-down2>, "-", stroke: _order),
+    edge(<r-down1>, <r-nine>, "-", stroke: _order),
+    edge(<r-down2>, <r-nine>, "-", stroke: _order),
+    edge(<r-nine>, <r-bot>, "-", stroke: _order),
+  ),
+  kind: image,
+  placement: auto,
+  caption: [The relational states over the variables $x$, $y$, and $z$,
+    ordered bottom to top by reverse inclusion. Each #ctor("RelC") value is
+    drawn as its set of pairs. The upper part shows all values built from
+    $x <= y$, $y <= z$ and $x <= z$. Values with other pairs, such as $y <= x$, are
+    drawn only below the lowest of these, and the dots stand for the rest.
+    Nine pairs exist, including $x <= x$, so the values are finitely many, and
+    the lowest #ctor("RelC") value holds all nine and denotes the stores with
+    $x = y = z$.],
+) <fig:rel-state>
+
+All constraints in $P$ can be satisfied simultaneously by assigning the same
+value to every variable. In particular, the store that maps every variable to $0$ satisfies every pair
+in $P$. Therefore every $ctor("RelC")(P)$ denotes at least one store,
+regardless of which constraints $P$ contains. Only #ctor("RelBot") denotes the
+empty set of stores. The emptiness
+test only compares with #ctor("RelBot") (#isathm("is_empty_relc_gamma")).
+Unlike the pointwise form, the carrier has a single representation of
+unreachability, so it needs no lifting.
+
+A relational state stores no value per variable, so it cannot evaluate an
+expression to an abstract value. Its transfers update the constraints
+directly instead. An assignment to $x$ forgets every pair that mentions $x$,
+and a comparison between two variables adds the pairs it implies
+(below). The type instantiates the solver's classes and
+#isalocale("executable_domain"), but it is not a numeric domain.
+
+It learns from a guard as the numeric filter of @sec:branches does, but what
+it learns is a relation. On the true arm of `if (x < y)`, it adds the pair $x <= y$ (#isaconst("assume_step")), the
+meet of its current value with $ctor("RelC"){x <= y}$. The carrier
+stores only weak orders, so the strictness of $x < y$ is lost, which is sound
+but less precise. The relational refinement #isaconst("relc_branch_step")
+satisfies the same statement as the filter
+(#isathm("relc_branch_step_sound")).
+
 == The order analysis #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
 
-None of these domains can express that $x lt.eq y$, because each describes
-the variables one at a time. The order analysis keeps a set of such pairs, the
-relational state of @sec:rel-state. A guard between two variables adds a pair.
-An assignment first forgets the pairs involving the changed variable. It then
-asks the shared query channel how the new value relates to each variable, and
+The order analysis runs on the relational state of @sec:rel-state. After an
+assignment has forgotten the pairs involving the changed variable, it asks the
+shared query channel how the new value relates to each variable, and
 every active analysis, the order analysis included, may contribute an answer
 (@sec:coop-catalogue). In the program below, the guard `x < y` tells Interval
 nothing about either variable, so it keeps

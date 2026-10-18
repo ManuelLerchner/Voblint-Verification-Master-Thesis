@@ -254,8 +254,8 @@ compiled code behaves as the source semantics specifies, and it lists the
 components that remain trusted @leroy09. Verasco carries the approach to a
 static analyzer for C @jourdan15, and several other abstract interpreters have
 machine-checked soundness proofs as well. None of the works we compare, however,
-combines recursive procedures, calling contexts that may split one call, and a
-verified solver (@sec:rel-mechanized). Goblint's architecture uses the first
+combines recursive procedures, calling contexts, and a verified solver
+(@sec:rel-mechanized). Goblint's architecture uses the first
 two and a generic solver, whose top-down algorithm has since been verified. It
 analyzes recursive programs and keeps one abstract state per program point and
 calling context.
@@ -265,7 +265,13 @@ results, and Voblint follows this architecture @vojdani16 @seidl26. The
 interface between the two is a side-effecting constraint system @seidl03
 @apinis12 @seidl26. Such a system relates unknown abstract values by
 inequalities, and the inequality of one unknown may also contribute to other
-unknowns. For the last step of the chain, a proof already exists. The top-down
+unknowns. This separation also suits a proof. The argument about programs can
+end at a property of the solver's result, that it satisfies the inequalities,
+whatever algorithm computed it. The contributions to other unknowns are what
+calling contexts need. Which calls enter a callee in a given context is known
+only while the system is solved, so each call contributes its entry state to
+the callee instead of the callee listing its callers (@sec:side-effects). For
+the last step of the chain, a proof already exists. The top-down
 solver that Goblint uses, including its extension to side effects, has been formalized
 and proved partially correct in Isabelle/HOL @stade24 @tilscher26. When it
 terminates, it returns values that satisfy the inequalities of the queried
@@ -295,8 +301,9 @@ verified top-down solver of Tilscher et al. @tilscher26 and builds on
 established abstract-interpretation techniques. The
 resulting theorem starts from source executions and holds for the executable
 analyzer, which Isabelle's code generator @haftmann10 exports to OCaml. To our
-knowledge, no prior mechanized analyzer connects a source semantics to a
-side-effecting constraint system and its verified solver (@sec:rel-summary).
+knowledge, no prior mechanized analyzer connects a source semantics, through a
+context-indexed collecting semantics, to a side-effecting constraint system and
+its verified solver (@sec:rel-summary).
 
 == Contributions <sec:contributions>
 
@@ -343,9 +350,10 @@ the wrong caller would lose such a state, and the proof excludes them.
           vb.cong,
           [Collecting semantics],
           [#isaconst("node_collect"): stores of valid traces ending at $v$, which
-            under the coverage contract equals the same stores split by context,
-            #box[$union.big_c$ #isaconst("activation_collect")]
-            (#isathm("node_collect_eq_Union_activation_collect"), @ch:traces)],
+            equals the same stores split by context,
+            #box[$union.big_c$ #isaconst("activation_collect")], when every trace
+            carries a context
+            (#isathm("node_collect_eq_Union_activation_of_has_context"), @ch:traces)],
           ring(
             vb.called,
             [Graph runs],
@@ -389,9 +397,11 @@ runs, and the fifth addresses what the proof kernel cannot check.
 - _A concrete semantics of calling contexts._ Activation traces give the
   per-context states of an analysis their concrete counterpart. Each trace
   follows one procedure activation and records which activation called it, so
-  the contexts of a call can be read off the concrete execution, and one call
-  may receive several contexts. Splitting the concrete states by context then
-  loses no execution (@sec:contract).
+  the contexts of a call can be read off the concrete execution. Splitting the
+  concrete states by context then loses no execution (@sec:contract). The
+  semantics and its proofs also admit several contexts for one call. The
+  shipped analyses use at most one per caller context, and only a constructed
+  example uses two (@sec:contexts).
 - _Separately verified components._ Each component discharges local soundness
   obligations, and generic theorems compose them into the end-to-end guarantee
   for every configuration. Domains prove their primitive operations sound,
@@ -502,8 +512,9 @@ The theorem has the following limits (@sec:limitations).
   Termination of the solve is not proved for every program (@sec:termination).
 - _Precision and cost._ No completeness or general precision ordering is
   proved (@sec:eval-precision). The executable uses the same data
-  representations as the proofs, and we report no time or memory measurements
-  (@sec:limitations).
+  representations as the proofs. We report no systematic time or memory
+  evaluation, only the speedup from one fixed performance defect
+  (@sec:generated-code, @sec:limitations).
 - _Goblint and evidence._ The correspondence to Goblint is architectural, and
   no theorem transfers to Goblint's implementation (@sec:rel-goblint). The
   regression corpus is small and was written or adapted for this work
@@ -536,9 +547,9 @@ computes their solution with the verified solver, and @ch:results composes
 these parts into the source-level theorem.
 
 #partref(<part:instances>) puts the
-theorem to use. @ch:instances instantiates it for five numeric domains and a relational order analysis. @ch:executable follows #isaconst("run_voblint") to the delivered tools and their trust boundary. @ch:evaluation tests the premises and
-obligations, the precision, and the unverified code, and @ch:tooling describes
-the tooling.
+theorem to use. @ch:instances instantiates it for five numeric domains and a relational order analysis. @ch:executable follows #isaconst("run_voblint") to the delivered tools, the repository checks around them, and their trust boundary. @ch:evaluation tests the premises and
+obligations, the precision, and the unverified code. @sec:isar-tools describes
+the Isabelle source tooling built for this work.
 
 #partref(<part:assessment>) compares Voblint with prior work
 (@ch:related) and closes with limitations and future work (@ch:conclusion).

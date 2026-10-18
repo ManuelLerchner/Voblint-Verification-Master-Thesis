@@ -585,10 +585,19 @@ An _abstract state_ describes a set of stores. It is a type $D$ with
 the order and join the solver needs, and a monotone concretization that maps
 each state $d$ to the set $conc(d)$ of stores it describes. Each kind of state
 defines its own concretization, and Isabelle overloads one constant,
-#isaconst("gamma_S"), written $conc(d)$, for all of them. The numeric analyses use non-relational states. An analysis that records
-relations $x <= y$ between variables uses a relational state.
+#isaconst("gamma_S"), written $conc(d)$, for all of them. The numeric
+analyses use non-relational states. An analysis that records relations
+$x <= y$ between variables uses a relational state, whose concretization maps
+a whole state to a set of stores instead of each variable to a set of
+integers. The interface of this chapter admits such a state, because the
+solver and the framework ask only for order, join, and a monotone
+concretization, never for a map from variables to abstract values. The
+relational state of the order analysis instantiates the solver's classes and
+#isalocale("executable_domain") without being a numeric domain
+(@sec:rel-state). The remaining sections of this chapter develop the
+non-relational case.
 
-=== A non-relational state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
+== A non-relational state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
 
 A non-relational state is represented pointwise. It replaces the integer of a
 store by an abstract value:
@@ -724,115 +733,6 @@ would come too late. The branch refinement of @sec:branches therefore also
 replaces each empty arm of a disjunction with #ctor("Bot") before the join, and
 the two arms join to #ctor("Bot").
 
-=== A relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
-
-A relational state keeps what the pointwise form forgets. Its concretization
-therefore maps a whole state to a set of stores directly, instead of a value
-to a set of integers. The type #isatype("relc") records a set $P$ of variable
-pairs, where the pair $(x, y)$ stands for the constraint $x <= y$. Its
-concretization is #isaconst("gamma_relc"):
-$
-  conc(ctor("RelC")(P)) = setcomp(s, forall (x, y) in P. s(x) <= s(y)),
-  quad conc(ctor("RelBot")) = emptyset.
-$
-Below, the pair $(x, y)$ is written $x <= y$.
-
-More pairs describe fewer stores, so the order is reverse inclusion:
-$ctor("RelC")(P) lle ctor("RelC")(Q)$ exactly when $Q subset.eq P$
-(#isaconst("less_eq_relc")), with #ctor("RelBot") below every value and
-$ltop = ctor("RelC")(emptyset)$, which constrains nothing. The join keeps the
-pairs both operands share,
-$ctor("RelC")(P) ljoin ctor("RelC")(Q) = ctor("RelC")(P inter Q)$
-(#isaconst("sup_relc")). The widening is simply the join. The solver's
-widening contract (#isalocale("widening")) only asks for a value above both
-operands, and the join is one, although the contract alone does not force the
-iteration to terminate. Here an ascending chain can only drop pairs
-from a finite set, since every constructed $P$ is finite (below), so it is
-finite anyway. The narrowing returns its second
-operand, the newly computed value. This is sound for the same reason, since
-the narrowing law only asks for a value between the two operands.
-
-The carrier does not close its pairs under transitivity (@fig:rel-state). The
-values ${x <= y, y <= z}$ and ${x <= y, y <= z, x <= z}$ therefore denote the
-same stores but are different values. The join can also forget an implied
-relation. The join of ${x <= y, y <= z}$ and ${x <= y, x <= z}$ keeps only
-their common pair and is ${x <= y}$, although both operands imply $x <= z$.
-
-Pairs enter only at guards, and an assignment to $x$ removes every pair that
-mentions $x$, so $P$ is finite in every value the analysis constructs. This matters for the
-executable analyzer. Generated code stores a finite set as the list of its
-elements, while an infinite set, such as the set of all pairs, needs a
-complement representation for which not every set operation has executable
-code.
-
-#let _rnode(pos, name, body) = node(pos, text(size: 7pt, body), name: name, inset: 3pt)
-#figure(
-  diagram(
-    spacing: (5mm, 6mm),
-    _rnode((1.5, 0), <r-top>, $ltop = ctor("RelC")(emptyset)$),
-    _rnode((0, 1), <r-xy>, ${x <= y}$),
-    _rnode((1.5, 1), <r-yz>, ${y <= z}$),
-    _rnode((3, 1), <r-xz>, ${x <= z}$),
-    _rnode((0, 2), <r-xy-yz>, ${x <= y, y <= z}$),
-    _rnode((1.5, 2), <r-xy-xz>, ${x <= y, x <= z}$),
-    _rnode((3, 2), <r-yz-xz>, ${y <= z, x <= z}$),
-    _rnode((1.5, 3), <r-all>, ${x <= y, y <= z, x <= z}$),
-    _rnode((0.5, 4), <r-all-yx>, ${x <= y, y <= z, x <= z, y <= x}$),
-    _rnode((2.5, 4), <r-all-zy>, ${x <= y, y <= z, x <= z, z <= y}$),
-    _rnode((3.6, 4), <r-all-more>, $dots.c$),
-    _rnode((0.5, 4.8), <r-down1>, $dots.v$),
-    _rnode((2.5, 4.8), <r-down2>, $dots.v$),
-    _rnode((1.5, 5.6), <r-nine>, [all nine pairs, $x = y = z$]),
-    _rnode((1.5, 6.4), <r-bot>, ctor("RelBot")),
-    ..(<r-xy>, <r-yz>, <r-xz>).map(n => edge(<r-top>, n, "-", stroke: _order)),
-    edge(<r-xy>, <r-xy-yz>, "-", stroke: _order),
-    edge(<r-xy>, <r-xy-xz>, "-", stroke: _order),
-    edge(<r-yz>, <r-xy-yz>, "-", stroke: _order),
-    edge(<r-yz>, <r-yz-xz>, "-", stroke: _order),
-    edge(<r-xz>, <r-xy-xz>, "-", stroke: _order),
-    edge(<r-xz>, <r-yz-xz>, "-", stroke: _order),
-    edge(<r-xy-yz>, <r-all>, "-", stroke: _order),
-    edge(<r-xy-xz>, <r-all>, "-", stroke: _order),
-    edge(<r-yz-xz>, <r-all>, "-", stroke: _order),
-    edge(<r-all>, <r-all-yx>, "-", stroke: _order),
-    edge(<r-all>, <r-all-zy>, "-", stroke: _order),
-    edge(<r-all-yx>, <r-down1>, "-", stroke: _order),
-    edge(<r-all-zy>, <r-down2>, "-", stroke: _order),
-    edge(<r-down1>, <r-nine>, "-", stroke: _order),
-    edge(<r-down2>, <r-nine>, "-", stroke: _order),
-    edge(<r-nine>, <r-bot>, "-", stroke: _order),
-  ),
-  kind: image,
-  placement: auto,
-  caption: [The relational states over the variables $x$, $y$, and $z$,
-    ordered bottom to top by reverse inclusion. Each #ctor("RelC") value is
-    drawn as its set of pairs. The upper part shows all values built from
-    $x <= y$, $y <= z$ and $x <= z$. Values with other pairs, such as $y <= x$, are
-    drawn only below the lowest of these, and the dots stand for the rest.
-    Nine pairs exist, including $x <= x$, so the values are finitely many, and
-    the lowest #ctor("RelC") value holds all nine and denotes the stores with
-    $x = y = z$.],
-) <fig:rel-state>
-
-All constraints in $P$ can be satisfied simultaneously by assigning the same
-value to every variable. In particular, the store that maps every variable to $0$ satisfies every pair
-in $P$. Therefore every $ctor("RelC")(P)$ denotes at least one store,
-regardless of which constraints $P$ contains. Only #ctor("RelBot") denotes the
-empty set of stores. The emptiness
-test only compares with #ctor("RelBot") (#isathm("is_empty_relc_gamma")).
-Unlike the pointwise form, the carrier has a single representation of
-unreachability, so it needs no lifting.
-
-A relational state stores no value per variable, so it cannot evaluate an
-expression to an abstract value. Its transfers update the constraints
-directly instead. An assignment to $x$ forgets every pair that mentions $x$,
-and a comparison between two variables adds the pairs it implies
-(@sec:branches). The type instantiates
-the solver's classes and #isalocale("executable_domain"), but it is not a
-numeric domain. The next three sections introduce operations on single
-numeric values. They serve non-relational states, and @sec:branches returns to
-the relational state at its end.
-
 == Evaluating expressions #thy-badge("Voblint_Domain", "Forward_Domain") <sec:domain-forward>
 
 The carrier operations serve the solver. The analysis additionally needs
@@ -923,8 +823,9 @@ comparisons.
 One proof covers every domain. The answer _true_ certifies that $c$ holds in
 every store the state describes, _false_ that it holds in none, and _unknown_
 makes no claim (#isathm("check_query_sound")). #isalocale("sound_check_query")
-combines the queries with forward evaluation, and @sec:verdicts turns the
-answers into the analyzer's verdicts.
+combines the queries with forward evaluation. An analysis passes these answers
+to its partners and to the verdicts as answers to the query
+#isaconst("EvalInt") of @sec:coop-queries (@sec:coop-mcp, @sec:verdicts).
 
 The condition `x <= y && y != 0` is answered from $"less"(hat(y), hat(x))$ and
 $"eq"(hat(y), hat(0))$ alone. In Sign, with $x$ non-positive and $y$ positive,
@@ -1050,15 +951,6 @@ that the truth test rules out, and otherwise applies the filter. Where it joins
 the arms of a disjunction, it uses #isaconst("bfilter_lifted"), which turns
 each empty arm into #ctor("Bot") first (@sec:nonrel-state). The branch inherits the filter's
 soundness (#isathm("sound_refinement.branch_sound")).
-
-A relational state learns from a guard in the same way, but what it learns is
-a relation. On the true arm of `if (x < y)`, the relational
-state of @sec:rel-state adds the pair $x <= y$ (#isaconst("assume_step")), the
-meet of its current value with $ctor("RelC"){x <= y}$. The carrier
-stores only weak orders, so the strictness of $x < y$ is lost, which is sound
-but less precise. The relational refinement #isaconst("relc_branch_step")
-satisfies the same statement as the filter
-(#isathm("relc_branch_step_sound")).
 
 == The complete domain interface #thy-badge("Voblint_Nonrelational", "Nonrelational_Transfer") <sec:domain-contract>
 

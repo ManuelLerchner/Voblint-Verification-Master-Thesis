@@ -17,10 +17,11 @@ policy meet their separate obligations. The solver enters only through a
 post-solution certificate, and the source-level theorem reads the verdicts off
 its result.
 
-The central contribution is this composition. A context-free activation
-semantics, relational context routing, analysis-local soundness obligations and
-a verified side-effecting solver together yield one guarantee from source
-executions to verdicts. The proved function is the analyzer that the
+The central contribution is this connection, from a source semantics through a
+context-indexed collecting semantics to a side-effecting constraint system and
+its verified solver. A context-free activation semantics, relational context
+routing, analysis-local soundness obligations, and the reused solver together
+yield one guarantee from source executions to verdicts. The proved function is the analyzer that the
 command-line tool and the browser playground run (@ch:executable).
 
 == Discussion <sec:discussion>
@@ -91,7 +92,8 @@ its local form, and one update rule serves every global unknown of a run
 The delivered tools rest on the trusted components of @sec:trust-boundary, and
 every theorem proved by evaluation trusts the code generator. No test runs VIMP
 programs concretely, since the development has no executable form of
-#isaconst("pstep"). No time or memory measurement is reported. The executable
+#isaconst("pstep"). No systematic time or memory evaluation is reported, only
+the speedup from one fixed defect on one machine (@sec:generated-code). The executable
 keeps proof-oriented data representations, and no data refinement to efficient
 sets and maps has been carried out (@sec:generated-code). A refinement of the solver's state would require
 the proof of the vendored solver to be redone. The rest of the chain uses the
@@ -168,7 +170,7 @@ the other analyses nor contexts, the solver, or the equations
 AI agents (see #link(<ai-use>)[the statement on the use of generative AI]).
 Formal verification and agents complement each other here. An agent may
 propose definitions and proofs, but Isabelle checks every proof, and the batch
-build and the drift checks of @ch:tooling reject anything that does not check.
+build and the drift checks of @sec:voblint-repo reject anything that does not check.
 Counterexample theorems for weakened obligations (@sec:eval-1161,
 @sec:discussion) act as negative tests. Human review can therefore concentrate
 on what no proof settles: whether the base definitions and the obligations state

@@ -181,30 +181,35 @@ to its value. The locale states three semantic laws and one technical premise:
   show raw.where(block: true): set text(size: 6.5pt)
   thy("analysis_contract")
 }
-First, $tau$ is an arbitrary
-valuation of the solver's unknowns, valued in pairs #isatype("dg_state")
-(@sec:global-unknowns), and `key` maps each analysis global to its unknown.
-Thus $d$ is the local half #isaconst("dg_local") of $tau$ at the edge's source,
-and $e$ is #isai("genv key \<tau>"), the global halves at those unknowns. Second, #isaconst("edge_out") and #isaconst("edge_pub") are the
-local state a transfer returns and the environment of what it publishes, which
-is $lbot$ at every unknown it does not publish to.
-#isaconst("combine_out") and #isaconst("combine_pub") are the same for combine,
-whose resume state is $q$ and whose exit state is $r$. Third, $cal(G)$ marks
-the program globals, which #isaconst("combine_collect") takes from the callee.
-
-#isathm("analysis_contract.gammaDG_mono") requires that a larger state or environment describe more stores. This turns the solver's inequalities
-between values into inclusions between sets of stores, as $conc$ does for a
-domain (@ch:domains). #isathm("analysis_contract.step_sound") is the abstract counterpart of
+Read for a local state $d$ at the edge's source and an environment $e$, the
+laws say the following. #isathm("analysis_contract.gammaDG_mono") requires
+that a larger state or environment describe more stores. This turns the
+solver's inequalities between values into inclusions between sets of stores,
+as $conc$ does for a domain (@ch:domains).
+#isathm("analysis_contract.step_sound") is the abstract counterpart of
 #oblig("INTRA"). Every store the edge produces from a store described under
 $e$ is described by the returned state under $e$ joined with the publications.
 A transfer that publishes nothing thus meets the condition of @sec:calls with
-$e$ as a fixed parameter. #isathm("analysis_contract.combine_sound") is the counterpart of
-#oblig("RETURN") in the same shape. Finally,
-#isaconst("dg_spec_wf") requires that the program of every operation run
-its continuation exactly once, so what it publishes is well defined. Beyond
-these laws, the contract asks the domains only for a join semilattice with a
-least element, and never for a map from variables to abstract values
+$e$ as a fixed parameter. #isathm("analysis_contract.combine_sound") is the
+counterpart of #oblig("RETURN") in the same shape. Finally,
+#isaconst("dg_spec_wf") requires that the program of every operation run its
+continuation exactly once, so what it publishes is well defined. Beyond these
+laws, the contract asks the domains only for a join semilattice with a least
+element, and never for a map from variables to abstract values
 (@sec:relational).
+
+The locale states these laws over the solver's representation of a valuation,
+which @sec:global-unknowns introduces. There, $tau$ is an arbitrary valuation
+of the solver's unknowns, valued in pairs #isatype("dg_state"), and `key` maps
+each analysis global to its unknown. Thus $d$ is the local half
+#isaconst("dg_local") of $tau$ at the edge's source, and $e$ is
+#isai("genv key \<tau>"), the global halves at those unknowns.
+#isaconst("edge_out") and #isaconst("edge_pub") are the local state a transfer
+returns and the environment of what it publishes, which is $lbot$ at every
+unknown it does not publish to. #isaconst("combine_out") and
+#isaconst("combine_pub") are the same for combine, whose resume state is $q$
+and whose exit state is $r$, and $cal(G)$ marks the program globals, which
+#isaconst("combine_collect") takes from the callee.
 
 The contract supplies the context-independent core of #oblig("INTRA") and
 #oblig("RETURN"). #oblig("CALL") requires that the callee's entry covers the entered

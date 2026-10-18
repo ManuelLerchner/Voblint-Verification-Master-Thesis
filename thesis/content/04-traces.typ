@@ -262,7 +262,10 @@ concrete semantics is fixed once. Each context policy supplies, for every concre
 contexts it admits, and contexts of traces are derived from these sets
 (@sec:contexts). The soundness theorems are proved once for all policies, and an analysis only
 has to show that its claim meets the coverage contract of @sec:contract for
-its policy.
+its policy. A policy may even be defined from an analysis result, as the
+entry-state policy is (@sec:eq-routing), without making the guarantee
+circular. The final guarantee concerns the stores collected per node, which
+no policy influences, and a policy only splits them by context.
 
 === Valid traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:valid>
 
@@ -651,6 +654,16 @@ Isabelle states the five obligations as the assumptions of the locale
 
   #proved("node_collect_covered")
 ]
+
+The proof of the exhaustiveness theorem uses only one consequence of the
+obligations, namely that every valid trace carries some context.
+#isathm("node_collect_eq_Union_activation_of_has_context") states the equality
+with exactly this premise, and the end-to-end proof uses this form with one
+instance per policy (@sec:chain). Functional policies, which compute one
+context per call, give every trace a context
+(#isathm("node_collect_eq_Union_activation_of_fun")). Entry-state policies obtain it
+from #oblig("TOTAL"), once the analyzer's result meets the coverage contract
+(#isathm("routed_valid_activation_trace_has_context"), @sec:eq-routing).
 
 Apinis et al. recall the corresponding observation for the abstract side
 @apinis12[§3]: after local solving, the abstract values that reach a program

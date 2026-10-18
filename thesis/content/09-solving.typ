@@ -203,6 +203,39 @@ widening update rules the timing can change the computed result, though not
 the equations it solves. @sec:outlook-extending discusses a solver
 extension that would make seeds and buffering unnecessary.
 
+=== Changes to the vendored solver <sec:upstream-td>
+
+The adapters change the equations, not the solver. Voblint vendors the
+top-down solver formalization of Tilscher et al. @tilscher26 as a submodule.
+Four changes made for this thesis, each useful to any downstream user, were
+proposed upstream, and none of them changes the algorithm.
+
+- The first restores the build under Isabelle2025-2 @td15.
+- The second removes the well-foundedness assumptions from the solver's
+  #isalocale("widening") and #isalocale("narrowing") classes; termination is
+  proved in locales that state their own well-foundedness assumptions @td13. Those assumptions say that
+  widening and narrowing stabilize, which only termination proofs use. Partial
+  correctness needs the four order laws alone, so a domain does not have to provide a
+  stabilizing widening (@sec:domain-carrier-laws), and no domain instance has
+  to prove a property that no soundness theorem uses (@sec:termination).
+- The third renames short record fields and constructors, such as `c`, `W`
+  and `N`, that took these names away from downstream theories, and adds one
+  interface theory per solver family @td14.
+- The fourth adds solver facts that Voblint had proved on its side, although
+  they speak only about the solver's own definitions @td16, among them that a
+  returned run of the executable solver lies in the solver's domain
+  (#isathm("solve_dom_of_solve_c")) and that a terminating solve returns a
+  finite set of stable unknowns (#isathm("finite_stabl_solve")), both used by
+  #isathm("td_certified_solver") (@sec:certificate).
+
+At the time of writing, all four pull requests await review. The vendored copy
+carries the second to fourth on an older upstream revision; the first repairs a
+later upstream change. The solver's
+repository is private and accessible only by invitation, so the development
+cannot yet be built from public sources alone. There are plans to publish the
+solver in the Archive of Formal Proofs, which would make the whole development
+buildable by anyone.
+
 == Merging contributions to global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
 
 A global unknown such as a seed receives contributions from several places.

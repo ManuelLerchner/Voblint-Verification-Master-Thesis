@@ -355,7 +355,13 @@ like a single analysis.
 Checks are decided from the same kind of answers. At a check with condition
 $b$, every active analysis answers the question #isaconst("EvalInt") about the
 truth value of $b$ from its own part of the solved state, and the analyzer
-meets these answers (#isaconst("mcp_answer")). An exact $1$ proves the check,
+meets these answers (#isaconst("mcp_answer")). A numeric analysis computes its
+answer with the domain query of @sec:queries. A comparison or connective
+evaluates to $0$ or $1$, so a decided #isaconst("check_query") gives the exact
+answer $1$ or $0$, and an undecided one the interval $ivl(0, 1)$
+(#isaconst("sound_check_query.eval_answer")). Reading the check off this answer
+gives the domain's own verdict
+(#isathm("sound_check_query.classify_eval_answer")). An exact $1$ proves the check,
 and an exact $0$ refutes it (#isaconst("mcp_classify")). Several analyses
 together can thus decide a check that each alone leaves unknown, as the run
 #verdict("coop-eq-both", "16:7") of the opening example shows. The exchange
@@ -366,7 +372,7 @@ also works in the other direction, with the order analysis asking Interval
 
 A new analysis joins the combined state by proving the laws of its local
 specification, which mention no other analysis. Its field, the lens, and the code that reads its answers are generated from its entry in the analysis
-manifest (@ch:tooling), so only its operations and their proofs are written by
+manifest (@sec:voblint-repo), so only its operations and their proofs are written by
 hand. There are two routes to these proofs. A numeric domain proves its
 primitive operations sound once (#isalocale("sound_nonrelational_ops"),
 @sec:instances-supply), and the framework derives the laws from that proof

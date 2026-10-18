@@ -219,7 +219,9 @@ Formally, a call publishes its entry state to a _seed_
 $ctor("Activation_Seed") thin p space c'$, one global unknown
 (#isatype("global_unknown")) per callee entry and context. Every call routed
 to $(p, c')$ publishes to this seed, and the equation of the entry
-$(ctor("FunctionEntry") thin p, c')$ reads it. In general, a call may enter
+$(ctor("FunctionEntry") thin p, c')$ reads it. The seed stands in for
+publishing to the entry itself, which the verified solver does not allow,
+because it accepts side effects only to global unknowns (@sec:eq-seed-global). In general, a call may enter
 several callees, and enter may return several entry pairs. Each of them is
 routed separately.
 
@@ -482,9 +484,20 @@ $s' in conc(e)$. The equations publish that same $e$ to $c'$, so every admitted 
 backed by a covering entry state, which is adequacy. Entry coverage (@sec:calls)
 gives every covered call such a pair, which is totality.
 
-This policy depends on the solved analysis (@sec:contexts) without circularity:
-the proof fixes $sol$, defines $italic("adm")$ from it, and shows that $sol$
-covers the induced collecting semantics.
+This policy depends on the solved analysis, which @sec:activation-trace kept
+out of the trace datatype. The dependence is not circular, because the
+quantifiers come in a fixed order. The proof first fixes the valuation $sol$
+that the solver returned. It then defines $italic("adm")$ from $sol$
+(#isaconst("routed_entry_context_rel") takes the valuation as a parameter) and
+shows that $sol$ covers the activation collecting semantics that this
+$italic("adm")$ induces. The valid traces and the node collecting semantics do
+not mention $italic("adm")$, so the choice of policy cannot shrink the set
+the final theorem bounds. Totality guarantees that the split by context loses
+no store of it (@sec:contract). For the analyzer, a terminated solve gives
+both halves: every valid trace carries a context of the induced policy
+(#isathm("entry_state_has_context_of_terminates")), and each context's
+activation collecting semantics lies in its solved state
+(#isathm("entry_state_activation_collect_sound_of_terminates")).
 
 == Soundness of the generated system #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 

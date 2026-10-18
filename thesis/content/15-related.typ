@@ -220,7 +220,8 @@ recursion, contexts, and the fixpoint computation. Verasco raises an alarm
 where a recursive call can occur @jourdan15, and three of the works have no
 procedures at all. No work in the table lets the context policy give one call
 several contexts, which an analysis needs when it splits one call into several
-alternatives. Only Cachera et al. compute the fixpoint with a verified solver,
+alternatives. Voblint's semantics and proofs admit this, but its shipped
+analyses do not use it (@sec:contexts). Only Cachera et al. compute the fixpoint with a verified solver,
 and that solver handles ordinary inequations, not side-effecting ones
 @cachera05. Only two works specify the constraints without computing them, and
 they have no executable analyzer @dabrowski09 @lammich07afp.
@@ -485,8 +486,8 @@ Tilscher et al. @tilscher26, its update rules from Stemmler et al.
 @stemmler25, side-effecting constraint systems from Seidl et al. @seidl03 and
 Apinis et al. @apinis12, widening, narrowing, and the reduced product from
 Cousot and Cousot @cousot77 @cousot79, its activation traces from the local
-traces of Schwarz et al. @schwarz21, and its architecture from Goblint. It
-combines these with what we did not find
-mechanized elsewhere: a
-context-indexed collecting semantics over activation traces, covered by
-equations that a verified side-effecting solver computes.
+traces of Schwarz et al. @schwarz21, and its architecture from Goblint. What
+we did not find mechanized elsewhere is the connection between these parts: a
+soundness proof that leads from a source semantics, through a context-indexed
+collecting semantics over activation traces, to a side-effecting constraint
+system and its verified solver.

@@ -167,7 +167,7 @@ check is #snapshot-verdict(_k99, "n >= 0") (claims #claim-ref("cost-down-k99") a
 *Modularity.* _Evidence: source inspection._ Adding the order analysis required three proofs about its local
 specification (#isathm("order_spec_sound"), #isathm("single_entry_order_spec"),
 #isathm("relc_qry_sound")), a lattice instance, an entry in the analysis manifest
-(@ch:tooling), and a few class instances for the command-line layer. No theory of the framework or of the numeric domains refers to
+(@sec:voblint-repo), and a few class instances for the command-line layer. No theory of the framework or of the numeric domains refers to
 it outside document text. A new numeric domain proves its lattice laws and its
 forward, backward, and query operations sound once
 (#isalocale("sound_nonrelational_ops")), and the generic construction derives

@@ -775,6 +775,24 @@ theorem entry_state_node_collect_eq_Union_of_terminates:
   by (rule node_collect_eq_Union_activation_of_has_context)
      (rule entry_state_has_context_of_terminates[OF wf solves])
 
+text \<open>
+  The entry-state policy in one statement: the solve is fixed first, the policy is
+  read off it, and that policy is total on valid traces and covered by the solved
+  states. This order of quantifiers is why reading contexts off the result is not
+  circular.
+\<close>
+corollary entry_state_policy_of_terminates:
+  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+  shows "\<forall>t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>.
+           \<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)
+                 root_ctx (prog_cfg p) t c"
+    and "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
+           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
+           \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
+  using entry_state_has_context_of_terminates[OF wf solves]
+    entry_state_activation_collect_sound_of_terminates[OF wf solves]
+  by blast+
+
 end
 
 end

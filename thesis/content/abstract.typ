@@ -26,8 +26,8 @@ that the solver terminates. We also prove that a check reported #verdict("DEAD")
 is unreachable. At a point without an arithmetic warning or error, no divisor is
 zero, and a divisor reported as an error is zero wherever its point is reached.
 To our knowledge, Voblint is the first mechanized analyzer whose soundness proof
-connects a source semantics to a side-effecting constraint system and its
-verified solver.
+connects a source semantics, through a context-indexed collecting semantics, to
+a side-effecting constraint system and its verified solver.
 
 The main difficulty is modeling context sensitivity. A context-sensitive
 analyzer computes a separate invariant for each program point and calling

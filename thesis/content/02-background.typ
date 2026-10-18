@@ -215,24 +215,24 @@ pairwise intersection that keeps every value both operands admit
 (#isalocale("sound_intersection"), @sec:branches).
 
 An analysis computes the description at a point from the descriptions at its
-predecessors, by a function $f$ on $lat(D)$. The classical theory requires $f$
-to be _monotone_ (#isaconst("mono")), so that $a lle b$ implies
-$f(a) lle f(b)$ @nipkow14[Def. 10.26] @mine17[Def. 2.9] and more precise input
-never yields less precise output. For a monotone $f$, the _Kleene iterates_
-$lbot, f(lbot), f(f(lbot)), dots$ form an ascending chain. Each of them lies below
-every fixpoint. The verified solver that Voblint reuses, however, does not assume
-monotonicity.
-
-A _fixpoint_ of $f$ is an element with $f(d) = d$, and a _post-fixpoint_ is an
-element with $f(d) lle d$, so applying $f$ once more stays below $d$. By the
-Knaster–Tarski theorem, a monotone $f$ on a complete lattice has a least
-fixpoint $lfp f$, the meet of all post-fixpoints @tarski55[Thm. 1]
-(#isaconst("lfp"), #isathm("lfp_unfold")), so every post-fixpoint lies above
-$lfp f$. For a monotone $f$ on a
-finite-height order, the iteration from $lbot$ stabilizes after finitely many
-steps
-@seidl12compiler[§1.5], and an iterate that no longer changes is the least
-fixpoint (on a complete lattice, #isathm("lfp_Kleene_iter")).
+predecessors, by a function $f$ on $lat(D)$, and its result must be stable
+under $f$. A _fixpoint_ of $f$ is an element with $f(d) = d$, and a
+_post-fixpoint_ is an element with $f(d) lle d$, so applying $f$ once more
+stays below $d$. Post-fixpoints are the notion the soundness argument of
+@sec:abs-int rests on. The classical theory of least fixpoints requires $f$ to
+be _monotone_ (#isaconst("mono")), so that $a lle b$ implies $f(a) lle f(b)$
+@nipkow14[Def. 10.26] @mine17[Def. 2.9] and more precise input never yields
+less precise output. By the Knaster–Tarski theorem, a monotone $f$ on a
+complete lattice has a least fixpoint $lfp f$, the meet of all post-fixpoints
+@tarski55[Thm. 1] (#isaconst("lfp"), #isathm("lfp_unfold")), so every
+post-fixpoint lies above $lfp f$. For a monotone $f$, the _Kleene iterates_
+$lbot, f(lbot), f(f(lbot)), dots$ form an ascending chain, each element of
+which lies below every fixpoint. On a finite-height order the iteration
+stabilizes after finitely many steps @seidl12compiler[§1.5], and an iterate
+that no longer changes is the least fixpoint (on a complete lattice,
+#isathm("lfp_Kleene_iter")). The verified solver that Voblint reuses, however,
+does not assume monotonicity, since a post-fixpoint suffices for soundness
+(@sec:widening).
 
 An analysis does not have to reach $lfp f$. If $f$ approximates each step
 soundly, the concretization of every post-fixpoint that covers the initial
@@ -402,7 +402,7 @@ domain elements, and the soundness of $sh(f)$ relates the two through $conc$.
 Voblint's proof uses the same principle on a set of execution traces defined
 inductively as a least fixpoint, and proceeds by induction over its rules.
 Analyzers keep one abstract state per program point @rival20[§4.2.1], or per
-point and context (@sec:constraints), and state one inequality per unknown, whose solution plays the
+point and context (@sec:interproc), and state one inequality per unknown, whose solution plays the
 role of $a$ (@sec:constraints).
 
 == Constraint systems <sec:constraints>
@@ -479,22 +479,6 @@ requires inequalities.
 The formulation goes back to data-flow analysis, where Kildall computes one
 value per node of a program graph by iteration @kildall73[§3].
 
-Programs with procedures can be analyzed with one unknown per program point or
-separately per calling context, which abstracts how an activation
-(one execution from call to return) was reached @aho06[§7.2.1]. Sharir and Pnueli
-distinguish call strings, which record recent call sites, from the functional approach,
-which relates abstract entry and return states @sharir81. Context-sensitive constraint
-systems use unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3].
-At a call, such an analysis computes the abstract state in which the callee is
-entered, which also determines the callee's context. At the return, it combines
-the callee's result with the caller's state before the call, as Goblint's
-#link(
-  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",
-)[constraint generator]
-does with its operations `enter` and `combine` (@sec:calls).
-For the calls `bump(5)` and `bump(4)` in @ch:intro, entry-argument contexts
-distinguish return values $6$ and $5$, while a single unknown must cover both.
-
 == Widening and narrowing <sec:widening>
 
 An analysis should terminate in reasonable time, even on a program whose
@@ -569,6 +553,32 @@ Voblint uses is not proved,
 so the laws they state do not make a solve terminate. Within these laws, the
 choice of widening and narrowing affects only precision and termination.
 
+== Procedures and calling contexts <sec:interproc>
+
+The counting loop has no procedures. With procedures, the analysis must decide
+which abstract state a callee's body starts from. Take the calls `bump(5)` and
+`bump(4)` of @ch:intro, where `bump` returns its argument plus one. With one
+unknown per program point, the entry of `bump` must cover both arguments, so
+over intervals its result is at best $[5, 6]$, and the analysis cannot show
+that the first call returns $6$. A context-sensitive analysis instead
+separates the _activations_ of a procedure, each execution from its call to
+its return, by a _calling context_, an abstraction of how the activation was
+reached @aho06[§7.2.1]. Sharir and Pnueli distinguish call strings, which
+record recent call sites, from the functional approach, which relates abstract
+entry and return states @sharir81. Context-sensitive constraint systems use
+unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3]. With
+contexts that record the argument at entry, `bump` gets one copy of its
+unknowns for $[5, 5]$ and one for $[4, 4]$, with the results $6$ and $5$.
+
+At a call, such an analysis computes the abstract state in which the callee is
+entered, which also determines the callee's context. At the return, it
+combines the callee's result with the caller's state before the call, as
+Goblint's
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",
+)[constraint generator]
+does with its operations `enter` and `combine` (@sec:calls).
+
 == Side-effecting constraint systems <sec:side-effects>
 
 The analyses so far are _flow-sensitive_: they respect the order in which
@@ -586,6 +596,15 @@ all these points in advance, which is not always possible. In a
 context-sensitive analysis, for example, an unknown that writes a global is a
 pair of a program point and a calling context, and the contexts are discovered
 only while the system is solved.
+
+Every context-sensitive analysis meets the same problem at procedure entries,
+even without flow-insensitive facts. The entry of a callee in context $c$
+must cover the entry states of all calls that enter it in $c$
+(@sec:interproc).
+When contexts are computed from abstract entry states, as for `bump(5)` and
+`bump(4)`, which calls these are is known only once their callers' states are,
+so the entry's right-hand side cannot list them either. Voblint meets this at
+every call (@sec:eq-call).
 
 Side-effecting constraint systems avoid that list. Seidl, Vene, and Müller-Olm
 introduced them for multithreaded programs @seidl03[§3], and Apinis et al. use

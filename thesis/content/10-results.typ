@@ -204,7 +204,7 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
   isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"),
 
   [],
-  _step($=$, isathm("node_collect_eq_Union_activation_collect")),
+  _step($=$, isathm("node_collect_eq_Union_activation_of_has_context")),
   $union.big_c #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c")$,
 
   [], _step(sym.subset.eq, isathm("run_voblint_covers")), isai("\<R>\<^bsub>res\<^esub> v"),
@@ -216,16 +216,23 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
 The first step places a store that a finite source run reaches in the node
 collecting semantics, at a node $v$ the simulation relates to the run. On the
 elaboration this is every node at which the run is observed
-(#isathm("csim_point_compile_prog"), @sec:csim). The second step holds for a policy with a cover that meets all
-five obligations of @ch:traces: #isaconst("node_collect") is the
-union of #isaconst("activation_collect") over the contexts #isai("adm")
-admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). Contexts enter the
-argument only at this step. The source-level theorem itself goes from
-#isai("\<C>") directly to the report. The third inclusion is the analyzer's soundness result. It bounds
-the stores collected at $v$, over all contexts, by the union of the report's
-states at $v$, without saying which state covers a given store. The fourth is
-the inclusion of @sec:verdicts and depends only on the report and its
-consistency.
+(#isathm("csim_point_compile_prog"), @sec:csim). The second step splits
+#isaconst("node_collect") into #isaconst("activation_collect") over the
+contexts #isai("adm") admits, with `main` in #isai("c\<^sub>0")
+(@sec:contexts). It needs only that every valid trace carries some context.
+Functional policies meet this for every trace, and the entry-state policy
+through #oblig("TOTAL") on the solved result (@sec:contract). The third
+inclusion is the analyzer's soundness result. Its proof combines the second
+step with the per-context bound of @ch:equations, which places the activation
+collecting semantics of each context inside the state solved for it
+(#isathm("activation_collect_dg_sound")). The theorem itself states only the
+outer sets, #isai("\<C>") and #isai("\<R>\<^bsub>res\<^esub>"), so it does not
+say which state covers a given store, and the contexts stay inside its proof.
+#isathm("run_voblint_spine") states the whole chain for each policy. Through
+#isathm("source_store_in_activation_collect") it places a reached store in the
+activation collecting semantics of a context that the store's representing
+trace carries. The fourth inclusion is the one of @sec:verdicts and depends
+only on the report and its consistency.
 
 The program of @fig:chain calls `f` twice. The first call passes $1$. The second passes an input $x$ with $1 <= x <= 3$, if the input is in that range.
 So `m` is $2$, $4$, or $6$ at the checks: `m >= 2` always holds, and `m == 2`
