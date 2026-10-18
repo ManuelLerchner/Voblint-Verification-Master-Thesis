@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-17",
+  "date": "2026-10-18",
   "platforms": [
     "osx-arm64",
     "osx-64",
@@ -18,7 +18,7 @@
       ],
       "via": null,
       "available": true,
-      "newest": "5.4.0",
+      "newest": "5.4.1",
       "missing": []
     },
     "gmp": {
