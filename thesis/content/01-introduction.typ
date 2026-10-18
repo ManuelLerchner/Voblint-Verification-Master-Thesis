@@ -2,7 +2,9 @@
 #import "../lib/figures.typ": check-row, partref, verdict
 #import "../lib/sources.typ": proved
 #import "../lib/math.typ": *
-#import "../lib/theme.typ": vb
+#import "../lib/theme.typ": metro, vb
+
+#let metro-line(c, body) = text(fill: c, weight: "bold", body)
 #import "../lib/claims.typ": claim-ref
 
 = Introduction <ch:intro>
@@ -58,7 +60,6 @@ anchor.
 
 == From executions to static guarantees <sec:intro-static>
 
-Testing and static analysis make different kinds of claims about a program.
 Software is usually checked by testing. A failing test demonstrates a bug, but
 a passing test suite has observed only finitely many executions
 @rival20[§1.4.1]. A static analysis reasons about all
@@ -222,22 +223,13 @@ that this list is likely incomplete @goblint-assumptions.
 A documented assumption tells the user where a soundness claim ends. Within
 that boundary, however, the claim still rests on an implementation that no one
 has proved correct. Even the analyzers in practical use that are designed to be
-sound have no machine-checked soundness proof (@sec:rel-practice). The analyzers themselves are tested
-instead, and these tests share the limit of testing any program
-(@sec:intro-static). Since no specification gives the correct answer for an
-arbitrary program, they compare an
-analyzer's answers on whole programs with independent evidence: the values the
-program computes when it runs, the answers of other analyzers, or the known
-verdicts of benchmark programs. Cuoq et al. @cuoq12 run C programs generated
-by Csmith and compare the results of Frama-C's value analysis with those of
-compiled execution, and they report fifty bugs found and fixed in Frama-C.
-Differential
-testing, which flags answers on which analyzers disagree, has found soundness
-issues in most of the analyzers it was applied to (@sec:rel-practice). Since its first participation in SV-COMP in 2021, a
-competition on benchmark programs with known verdicts, Goblint has never
-produced a false negative on the competition's benchmark suite @seidl26. Still, its issue
-tracker lists more than a hundred issues labelled as unsound that were opened
-since 2021 @goblint-unsound.
+sound are tested rather than proved (@sec:rel-practice), and these tests share
+the limit of testing any program (@sec:intro-static). Since its first
+participation in SV-COMP in 2021, a competition on benchmark programs with
+known verdicts, Goblint has never produced a false negative on the
+competition's benchmark suite @seidl26. Still, its issue tracker lists more
+than a hundred issues labelled as unsound that were opened since 2021
+@goblint-unsound.
 Testing finds such an error only when some test program exercises it. The
 Goblint defect at the start of this chapter shows only for a negative dividend,
 and only in the congruence domain. A proof does not depend on such a program.
@@ -399,9 +391,8 @@ runs, and the fifth addresses what the proof kernel cannot check.
   follows one procedure activation and records which activation called it, so
   the contexts of a call can be read off the concrete execution. Splitting the
   concrete states by context then loses no execution (@sec:contract). The
-  semantics and its proofs also admit several contexts for one call. The
-  shipped analyses use at most one per caller context, and only a constructed
-  example uses two (@sec:contexts).
+  semantics also admits several contexts for one call, although the shipped
+  analyses use at most one per caller context (@sec:contexts).
 - _Separately verified components._ Each component discharges local soundness
   obligations, and generic theorems compose them into the end-to-end guarantee
   for every configuration. Domains prove their primitive operations sound,
@@ -416,11 +407,13 @@ runs, and the fifth addresses what the proof kernel cannot check.
   arithmetic diagnostics in the editor, and can replay the solver's steps. @fig:intro-trust shows which parts stay outside the proof.
 - _Needed assumptions and nonempty results._ The kernel cannot tell whether a
   theorem assumes too much or concludes too little. Further theorems therefore
-  show that several conditions of the proof cannot be dropped, since dropping
-  them admits answers that concrete executions contradict (@sec:eval-1161).
-  Others show that the analyzer gives definite verdicts on concrete programs
-  (@sec:nonvacuity) and that one context policy is strictly more precise than
-  another on one program (@sec:eval-precision).
+  show that the analyzer gives definite verdicts on concrete programs
+  (@sec:nonvacuity). Two selected conditions cannot be dropped, since
+  dropping them admits answers that concrete executions contradict, and one
+  domain obligation rejects a defect that occurred in Goblint
+  (@sec:eval-1161). Concrete programs show what each mechanism gains,
+  including one context policy proved strictly more precise than another on
+  one program (@sec:eval-precision).
 
 == Scope and limitations <sec:intro-scope>
 
@@ -492,9 +485,8 @@ stage of the analyzer relative to the proof.
   },
   placement: none,
   caption: [Where the proof starts and stops, for accepted programs whose solve
-    terminates. The adequacy of #isaconst("pstep") is argued
-    (@sec:vimp-vs-c). Zarith is OCaml's arbitrary-precision integer
-    library, and @sec:trust-boundary gives the exact boundary.],
+    terminates (@sec:trust-boundary). The adequacy of #isaconst("pstep") is
+    argued (@sec:vimp-vs-c).],
 ) <fig:intro-trust>
 
 The theorem has the following limits (@sec:limitations).
@@ -520,36 +512,69 @@ The theorem has the following limits (@sec:limitations).
   regression corpus is small and was written or adapted for this work
   (@sec:eval-corpus).
 
-== Outline
+== Roadmap <sec:roadmap>
+
+The nested sets of @fig:intro-nest say what the theorem claims. @fig:metro
+shows how the proof establishes it. Each line groups the results of one layer
+of the development, and each interchange is a theorem that uses the results of
+the lines that meet there. The labels name the theorems, and the caption gives
+the chapter that presents each line.
+
+#figure(
+  image("/shared/generated/svg/metro.svg", width: 100%),
+  placement: auto,
+  caption: [A map of the proof with its interior definitions omitted. The
+    #link(
+      "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#proof-map",
+    )[project site]
+    shows it interactively, with every station linked to its theory. Each line
+    groups the results of one layer: #metro-line(metro.sem)[Semantics], the
+    source and trace semantics (#partref(<part:over-approx>), @ch:program-model
+    and @ch:traces), #metro-line(metro.comp)[Compiler], the compiler and its
+    simulation (#partref(<part:over-approx>), @ch:program-model),
+    #metro-line(metro.dom)[Domain], what a domain proves and how the analyses
+    combine (#partref(<part:analyses>), @ch:domains to @ch:cooperation, and the
+    order analysis of @ch:instances), #metro-line(metro.fw)[Framework], the
+    analysis contract, routing and coverage (@ch:traces, @ch:analysis-interface
+    and @ch:equations), #metro-line(metro.sol)[Solver], the verified solver
+    (#partref(<part:verdicts>), @ch:solving), and #metro-line(metro.res)[Result],
+    from the solved equations to the verdicts (#partref(<part:verdicts>),
+    @ch:equations and @ch:results). Wide markers are interchanges, where a theorem uses the
+    results of the lines that meet. The result line leaves the central
+    interchange, splits for functional and entry-state context policies, and
+    rejoins at one common theorem. From there the context-free coverage leads to
+    DEAD and SAFE directly. PROVED goes through the source-level theorem
+    #isathm("run_voblint_source_sound"), which also uses the compiler line to
+    place a source run at a graph node. A second branch uses the compiler line
+    in the same way for the chain that keeps the contexts.],
+) <fig:metro>
 
 #partref(<part:problem>) consists of this introduction and @ch:background,
-which recalls what the later chapters build on: the collecting semantics,
-lattices and fixpoints, abstract interpretation, constraint systems with
-widening and narrowing, side-effecting constraint systems and the verified
-top-down solver, and the Isabelle/HOL mechanisms the development uses. The
-remaining parts follow the nested sets of @fig:intro-nest from the inside out.
+which recalls abstract interpretation, constraint systems, calling contexts,
+side-effecting constraint systems, and the verified top-down solver.
 
-#partref(<part:over-approx>) fixes what an analysis must
-over-approximate: VIMP and its compilation to a control-flow graph
-(@ch:program-model), and activation traces indexed by calling context with the
-coverage contract that analyses must meet (@ch:traces).
+#partref(<part:over-approx>) fixes what an analysis must over-approximate:
+source programs and their graphs (@ch:program-model) and activation traces with
+the coverage contract (@ch:traces). The contract reduces soundness to five
+local obligations about one claim per node and context, and every later part
+works toward a claim that meets them.
 
-#partref(<part:analyses>)
-develops what each analysis
-contributes, without contexts or a solver: the abstract domains
-(@ch:domains), the interface through which an analysis supplies its transfer
-functions (@ch:analysis-interface), and the combination of analyses that query
-one another (@ch:cooperation).
+#partref(<part:analyses>) states what domains, analyses, and combinations of
+analyses must prove (@ch:domains to @ch:cooperation). A domain proves its value
+operations sound once, an analysis supplies abstract transfer functions with
+the analysis contract, and cooperating analyses prove conditions on the answers
+they exchange.
 
-#partref(<part:verdicts>) turns any analysis that meets this interface into a
-sound result. @ch:equations generates the equations of a program, @ch:solving
-computes their solution with the verified solver, and @ch:results composes
-these parts into the source-level theorem.
+#partref(<part:verdicts>) builds the equations, solves them, and composes the
+source-level theorem (@ch:equations to @ch:results). Every post-solution of the
+equations induces a claim that meets the contract (@ch:equations), the verified
+solver returns such a post-solution whenever it terminates (@ch:solving), and
+the report read off it is sound for every source run (@ch:results).
 
-#partref(<part:instances>) puts the
-theorem to use. @ch:instances instantiates it for five numeric domains and a relational order analysis. @ch:executable follows #isaconst("run_voblint") to the delivered tools, the repository checks around them, and their trust boundary. @ch:evaluation tests the premises and
-obligations, the precision, and the unverified code. @sec:isar-tools describes
-the Isabelle source tooling built for this work.
+#partref(<part:instances>) instantiates the theorem (@ch:instances), follows
+#isaconst("run_voblint") to the delivered tools and their trust boundary
+(@ch:executable), and evaluates it (@ch:evaluation).
 
-#partref(<part:assessment>) compares Voblint with prior work
-(@ch:related) and closes with limitations and future work (@ch:conclusion).
+#partref(<part:assessment>) compares Voblint with prior work (@ch:related) and
+concludes (@ch:conclusion). @sec:isabelle explains the Isabelle syntax of the
+listings, and @sec:isar-tools the source tooling built for this work.

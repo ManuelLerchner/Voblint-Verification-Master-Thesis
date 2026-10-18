@@ -507,28 +507,15 @@ Otherwise $ivl(1, 0) + ivl(1, 1) = ivl(2, 1)$ would keep creating new empty valu
 fail to stabilize. Normalizing never changes the denoted set
 (#isathm("normalize_ivl_gamma")), so it is sound wherever it is applied.
 
-The meet intersects the bounds, so
-$ivl(0, 3) lmeet ivl(5, 9) = ivl(5, 3)$, an empty pair. In the order on pairs,
-$ivl(5, 3)$ is the greatest lower bound of the two operands, as a meet must
-be. A normalizing meet would return $lbot$ instead. However, $ivl(5, 3)$ lies
-below both operands but not below $lbot$, since its lower bound $5$ is smaller
-than the lower bound $+infinity$ of $lbot$. So $lbot$ would not be the greatest
-lower bound (#isathm("meet_ivl_normalized_breaks_greatest")). Because an empty
-pair is not necessarily $lbot$, the emptiness test inspects the bounds
-(#isaconst("is_bottom_ivl")). A pair is empty if $l > u$, if its lower bound
-is $+infinity$, or if its upper bound is $-infinity$. The printer uses the same
-test and shows every empty pair as $lbot$. It lies outside the verified
-boundary (@sec:trust-boundary).
-
-The widening is the standard one of @sec:widening
-(#isaconst("widen_ivl_core")), with one exception: widening with $lbot$
-returns the other operand. The standard rule pushes a bound to infinity
-whenever the new value reaches beyond it. Both bounds of
-$lbot = ivl(+infinity, -infinity)$ are exceeded by every nonempty interval, so
-the rule would widen $lbot widen ivl(0, 0)$ all the way to $ltop$.
-The narrowing #isaconst("narrow_ivl_td") refines only infinite bounds and
-keeps finite ones, so $ivl(0, +infinity) narrow ivl(0, 10) = ivl(0, 10)$. Each
-bound leaves infinity at most once, so a narrowing sequence is finite.
+The meet intersects the bounds and does not normalize, since $lbot$ would not
+be the greatest lower bound of, say, $ivl(0, 3)$ and $ivl(5, 9)$ in the order
+on pairs (#isathm("meet_ivl_normalized_breaks_greatest")). An empty pair is
+therefore not necessarily $lbot$, and the emptiness test inspects the bounds
+(#isaconst("is_bottom_ivl")): a pair is empty if $l > u$, if its lower bound is
+$+infinity$, or if its upper bound is $-infinity$. The widening is the
+standard one of @sec:widening, except that widening with $lbot$ returns the
+other operand (#isaconst("widen_ivl_core")), and the narrowing refines only
+infinite bounds (#isaconst("narrow_ivl_td")).
 
 == From values to stores <sec:domain-states>
 
@@ -991,88 +978,38 @@ transfers sound at once.
     solver, #swatch(vb.voblint) Voblint.],
 ) <fig:domain-carrier>
 
-== A carrier the interface excludes <sec:no-defexc>
+The interface also excludes some carriers. The verified solver requires a
+#isalocale("bounded_semilattice_sup_bot") (#isalocale("TD_side_upd_rule")),
+whose join is the _least_ upper bound, and the framework's proofs use
+leastness (#isathm("sound_refinement.bfilter_reductive")). Goblint's
+exclusion-set domain
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`],
+stripped of its bit range so that it describes mathematical integers, has no
+least upper bound of `Definite 1` and `Definite 2`. Every `Excluded {p}` with
+$p in.not {1, 2}$ lies above both, so a least upper bound would have to denote
+exactly ${1, 2}$, which no value does. Voblint could admit such a carrier only
+by bounding its integers or by weakening the join to an upper bound throughout
+the solver and the framework.
 
-Voblint cannot host every domain Goblint offers. The verified solver requires
-its values to form a #isalocale("bounded_semilattice_sup_bot")
-(#isalocale("TD_side_upd_rule")), and the generic framework inherits the
-requirement. That class asks for the _least_ upper bound
-(#isalocale("semilattice_sup")), and the proofs use it. Reductive refinement
-bounds the join of two disjunction arms by the state it started from
-(#isathm("sound_refinement.bfilter_reductive")). This requirement excludes every
-carrier in which two values have upper bounds but no least one.
+== Executable states <sec:exec-states>
 
-Goblint's exclusion-set domain
-#link(
-  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml",
-)[`DefExc`]
-is such a carrier once its bit range is removed. A non-bottom value is
-`Definite n`,
-denoting ${n}$, or `Excluded (S, r)`, denoting the integers in the bit range
-$r$ outside the finite set $S$. Mathematical integers have no bit range, so
-`Excluded S` denotes $ZZ without S$ (@fig:defexc). Then `Definite 1` and
-`Definite 2` have no least upper bound. Every `Excluded {p}` with
-$p in.not {1, 2}$ lies above both. A least upper bound $u$ would lie below
-each of them, so by monotonicity of $conc$
-$ {1, 2} subset.eq conc(u) subset.eq inter.big_(p in.not {1, 2}) (ZZ without {p}) = {1, 2}, $
-but no value denotes exactly ${1, 2}$, since `Definite n` denotes a single
-integer and `Excluded S` all but finitely many.
+The non-relational state of @sec:nonrel-state is a total function on
+infinitely many variable names. The solver cannot compute with it, because it
+compares states after every evaluation, so the analyzer runs on a finite
+representation, and the soundness proved for function states must carry over
+to it. The obligation is a commutation law. Each executable operation, read
+back as the function it represents, must equal the abstract operation on that
+function (#isathm("sound_nonrelational_ops.tf_st_for_commute")). Abstract and
+executable steps are built from the same primitives, so the law holds for
+every domain without a proof of its own, and the executable local
+specification inherits the soundness of the abstract one:
 
-#let _gnode(pos, name, body) = node(pos, text(size: 7pt, raw(body)), name: name, inset: 3pt)
-#figure(
-  diagram(
-    spacing: (4.5mm, 4.5mm),
-    _gnode((1.5, 0), <x-top>, "Excluded {}"),
-    _gnode((0.6, 1), <x-3>, "Excluded {3}"),
-    _gnode((2.4, 1), <x-4>, "Excluded {4}"),
-    _snode((3.4, 1), <x-more>, $dots.c$),
-    _gnode((1.5, 2), <x-34>, "Excluded {3,4}"),
-    _gnode((1.5, 3), <x-345>, "Excluded {3,4,5}"),
-    _snode((1.5, 3.6), <x-down>, $dots.v$),
-    node(
-      (1.5, 4.4),
-      text(size: 8pt, fill: vb.muted, ${1, 2}$),
-      name: <x-12>,
-      inset: 3pt,
-      stroke: stroke(paint: vb.muted, thickness: 0.6pt, dash: "dashed"),
-      shape: rect,
-      corner-radius: 2pt,
-    ),
-    _gnode((-0.9, 5.3), <x-s0>, "Definite 0"),
-    _gnode((0.4, 5.3), <x-s1>, "Definite 1"),
-    _gnode((2.6, 5.3), <x-s2>, "Definite 2"),
-    _gnode((3.9, 5.3), <x-s3>, "Definite 3"),
-    _snode((4.9, 5.3), <x-smore>, $dots.c$),
-    _gnode((1.5, 6.4), <x-bot>, "Bot"),
-    edge(<x-top>, <x-3>, "-", stroke: _order),
-    edge(<x-top>, <x-4>, "-", stroke: _order),
-    edge(<x-3>, <x-34>, "-", stroke: _hit),
-    edge(<x-4>, <x-34>, "-", stroke: _hit),
-    edge(<x-34>, <x-345>, "-", stroke: _hit),
-    edge(<x-345>, <x-down>, "-", stroke: _hit),
-    edge(<x-345>, <x-s1>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
-    edge(<x-345>, <x-s2>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
-    edge(<x-12>, <x-s1>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
-    edge(<x-12>, <x-s2>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
-    ..("s0", "s1", "s2", "s3").map(n => edge(label("x-" + n), <x-bot>, "-", stroke: _order)),
-  ),
-  kind: image,
-  placement: none,
-  caption: [Goblint's exclusion sets without a bit range, ordered bottom to
-    top: `Definite n` denotes ${n}$ and `Excluded S` denotes $ZZ without S$.
-    Every `Excluded S` with $1, 2 in.not S$ lies above `Definite 1` and
-    `Definite 2`. The blue chain of such upper bounds descends forever, and
-    each of its elements lies above both values (dotted). A least upper bound
-    would denote ${1, 2}$ (dashed), which no value does. Illustrative, not
-    machine-checked.],
-) <fig:defexc>
+#proved("exec_local_spec_sound")
 
-Goblint's domain escapes this argument through its bit range. With a range $r$,
-the value `Excluded (`$r without {1, 2}$`, r)` denotes exactly ${1, 2}$. Its
-join does not return this value anyway. Joining two distinct `Definite`
-values yields `Excluded ({0}, r)`, or excludes nothing if one of them is $0$. Voblint could admit this carrier
-only by bounding its integers, or by weakening #isalocale("semilattice_sup")
-to an upper-bound law throughout the solver and the framework.
+The analysis contract of @ch:analysis-interface therefore holds for the code
+that is exported, not only for its specification. @sec:represented-function
+describes the representation itself, a pair of finite default dictionaries
+with an exact emptiness test.
 
 The domain interface is now complete. Its laws make every operation keep the
 stores its inputs admit, but each law speaks only about one value or one state.

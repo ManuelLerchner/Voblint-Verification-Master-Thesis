@@ -60,6 +60,18 @@
       "theory": "Source_To_Trace",
       "why": "Chapter 4: one graph step is matched by a trace rule."
     },
+    "entry_state_policy_of_terminates": {
+      "oracles": [],
+      "statement": "\\<lbrakk>dg_analysis comp emp rd init_st buffer_key global_of seed solve\n          solve_dom bot_state classify \\<gamma>\\<^sub>V empty\\<^sub>V\n          solve_c place_spec place_cmb place_rl place_rg place_inits\n          place_enter;\n wf_program_compile_input p;\n dg_pipeline.terminates comp init_st buffer_key global_of seed route\n  root_ctx solve_dom place_spec place_rg place_inits (declared_global p)\n  p\\<rbrakk>\n\\<Longrightarrow> \\<forall>t\\<in>\\<T>\\<^bsub>declared_global\n        p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>.\n                     \\<exists>c.\n                        activation_context_rel (declared_global p)\n                         (dg_analysis.admitted_contexts comp rd init_st\n                           buffer_key global_of seed route root_ctx solve\n                           \\<gamma>\\<^sub>V place_spec place_cmb place_rl\n                           place_rg place_inits place_enter\n                           (declared_global p) p)\n                         root_ctx (prog_cfg p) t c\n\\<lbrakk>dg_analysis comp emp rd init_st buffer_key global_of seed solve\n          solve_dom bot_state classify \\<gamma>\\<^sub>V empty\\<^sub>V\n          solve_c place_spec place_cmb place_rl place_rg place_inits\n          place_enter;\n wf_program_compile_input p;\n dg_pipeline.terminates comp init_st buffer_key global_of seed route\n  root_ctx solve_dom place_spec place_rg place_inits (declared_global p)\n  p\\<rbrakk>\n\\<Longrightarrow> \\<A>\\<^bsub>declared_global\n                               p,dg_analysis.admitted_contexts comp rd\n                                  init_st buffer_key global_of seed route\n                                  root_ctx solve \\<gamma>\\<^sub>V place_spec\n                                  place_cmb place_rl place_rg place_inits\n                                  place_enter (declared_global p)\n                                  p,root_ctx,prog_cfg\n        p,cinit_stores (declared_global p)\\<^esub>\n                   v ctx\n                  \\<subseteq> gamma_lift \\<gamma>\\<^sub>V\n                               (map_lift (rd (declared_global p))\n                                 (place_cmb p\n                                   (dg_pipeline.reader comp init_st\n                                     buffer_key global_of seed route\n                                     root_ctx solve place_spec place_rg\n                                     place_inits (declared_global p) p\n                                     (Inl (v, ctx)))\n                                   (dg_pipeline.sol_global comp init_st\n                                     buffer_key global_of seed route\n                                     root_ctx solve place_spec place_rg\n                                     place_inits (declared_global p) p)))",
+      "theory": "DG_Live_Unknowns",
+      "why": "Chapter 8: the entry-state policy read off a terminated solve is total and covered."
+    },
+    "exec_local_spec_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>dg_domain_exec \\<G> empty_pred tf_st enter_st sk asn sp br bd rt en\n          ev;\n sound_nonrelational_transfer \\<G> sk asn sp br bd rt en ev\\<rbrakk>\n\\<Longrightarrow> sound_local_spec \\<G> (gamma_lift (default_st_gamma \\<G>))\n                   (exec_local_spec \\<G> empty_pred tf_st enter_st)",
+      "theory": "DG_Local_State_Exec_Refinement",
+      "why": "Chapter 5: the executable refinement preserves the local specification's soundness."
+    },
     "ls_channel_sound": {
       "oracles": [],
       "statement": "\\<lbrakk>sound_local_spec \\<G> \\<gamma>\\<^sub>c c;\n s \\<in> \\<gamma>\\<^sub>c x\\<rbrakk>\n\\<Longrightarrow> eval_query.channel_holds (ls_channel c x) s",
@@ -72,6 +84,12 @@
       "theory": "MCP_Spec",
       "why": "Cooperation chapter: independent sound components combine into a sound component."
     },
+    "mcp_comp_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>distinct as; as \\<noteq> []\\<rbrakk>\n\\<Longrightarrow> sound_local_spec (declared_global p)\n                   (mcp_gamma (map (part_gamma (declared_global p)) as))\n                   (mcp_comp as (declared_global p) p)",
+      "theory": "MCP_Analyses",
+      "why": "Chapter 7: the combination of shipped analyses is a sound local specification."
+    },
     "node_collect_covered": {
       "oracles": [],
       "statement": "activation_coverage g S cover adm c\\<^sub>0 \\<G> \\<Longrightarrow>\n\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v \\<subseteq> \\<Union> (range (cover v))",
@@ -83,6 +101,12 @@
       "statement": "activation_coverage g S cover adm c\\<^sub>0 \\<G> \\<Longrightarrow>\n\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v =\n\\<Union> (range (\\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S\\<^esub> v))",
       "theory": "Activation_Trace_Abstract",
       "why": "Chapter 4: exhaustive buckets under the coverage contract."
+    },
+    "node_collect_eq_Union_activation_of_has_context": {
+      "oracles": [],
+      "statement": "(\\<And>t.\n    t \\<in> \\<T>\\<^bsub>\\<G>,g,S\\<^esub> \\<Longrightarrow>\n    \\<exists>c.\n       activation_context_rel \\<G> adm c\\<^sub>0 g t c) \\<Longrightarrow>\n\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v =\n\\<Union> (range (\\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S\\<^esub> v))",
+      "theory": "Activation_Trace_Collect",
+      "why": "Chapter 4: exhaustive contexts from the premise that every valid trace carries a context."
     },
     "node_collect_semantic_postfix": {
       "oracles": [],
@@ -194,7 +218,7 @@
     },
     "run_voblint_spine": {
       "oracles": [],
-      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res;\n \\<And>t.\n    t \\<in> \\<T>\\<^bsub>declared_global\n                         p,prog_cfg\n                            p,cinit_stores\n                               (declared_global p)\\<^esub> \\<Longrightarrow>\n    \\<exists>c.\n       activation_context_rel (declared_global p) adm c\\<^sub>0 (prog_cfg p)\n        t c;\n \\<And>v.\n    \\<Union>\n     (range\n       (\\<A>\\<^bsub>declared_global\n                     p,adm,c\\<^sub>0,prog_cfg\np,cinit_stores (declared_global p)\\<^esub>\n         v)) =\n    \\<C>\\<^bsub>declared_global\n                 p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n     v\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t c.\n                     prog_table p,prog_cfg p,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr (declared_global p) (prog_cfg p)\n                      (cinit_stores (declared_global p)) (v, s, stk)\n                      t \\<and>\n                     activation_context_rel (declared_global p) adm\n                      c\\<^sub>0 (prog_cfg p) t c \\<and>\n                     s \\<in> \\<A>\\<^bsub>declared_global\n    p,adm,c\\<^sub>0,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              v c \\<and>\n                     \\<Union>\n                      (range\n                        (\\<A>\\<^bsub>declared_global\np,adm,c\\<^sub>0,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                          v)) =\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v \\<and>\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v\n                     \\<subseteq> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n                     \\<R>\\<^bsub>res\\<^esub> v\n                     \\<subseteq> \\<V>\\<^bsub>res\\<^esub> v",
+      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t c.\n                     prog_table p,prog_cfg p,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr (declared_global p) (prog_cfg p)\n                      (cinit_stores (declared_global p)) (v, s, stk)\n                      t \\<and>\n                     activation_context_rel (declared_global p)\n                      (run_policy config p) (run_root config) (prog_cfg p) t\n                      c \\<and>\n                     s \\<in> \\<A>\\<^bsub>declared_global\n    p,run_policy config\n       p,run_root config,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              v c \\<and>\n                     \\<Union>\n                      (range\n                        (\\<A>\\<^bsub>declared_global\np,run_policy config\n   p,run_root config,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                          v)) =\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v \\<and>\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v\n                     \\<subseteq> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n                     \\<R>\\<^bsub>res\\<^esub> v\n                     \\<subseteq> \\<V>\\<^bsub>res\\<^esub> v",
       "theory": "Analysis_Certified",
       "why": "Results chapter: a source run's trace, its context and the chain to the verdicts, once for every policy."
     },

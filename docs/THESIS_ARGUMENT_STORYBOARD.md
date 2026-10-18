@@ -4,6 +4,15 @@ Review of `thesis/content/01-introduction.typ` to `16-conclusion.typ` (and
 `abstract.typ`) at commit `f3e4c49ec`, branch `thesis-review`. This is an
 analysis only, and no thesis file was changed.
 
+> **Later change (2026-10-18).** The run-level proof was restructured after this
+> review. `covered_table_of_activation` became the locale `activation_table`
+> (lemma `activation_table.covered`), and the per-policy corollaries
+> `run_voblint_{unit,call_string,entry_state}_chain` were removed. One hub,
+> `run_voblint_contexts`, now states context soundness for every configuration
+> through `run_policy`; `run_voblint_spine` (no policy premises) and
+> `run_voblint_covers` both derive from it. References below to the old names
+> describe the state at review time.
+
 The thesis is treated as an argument under review. Each transition is graded by
 what the text says, not by what a reader who knows the formalization could
 reconstruct. Where I checked a claim against the theories, the file is named.

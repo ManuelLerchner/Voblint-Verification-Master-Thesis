@@ -163,46 +163,6 @@ Voblint uses the product because its componentwise lattice structure keeps
 the Isabelle proofs simple, at the price of an unused #lbot half in every
 unknown.
 
-=== Repeated publications #thy-badge("Voblint_Solver", "Strategy_Tree_Side_Buffering") <sec:eq-buffer>
-
-One right-hand side can publish to the same global unknown twice. Two calls
-that resume at the same node may be routed to the same callee context and then
-write the same seed. Declaratively two writes to one target $g$ mean one
-bound:
-$
-  #ctor("Side") (g, a); #ctor("Side") (g, b)
-  quad "means" quad
-  sol(g) lge a ljoin b.
-$
-The vendored solver applies the update rule at every #ctor("Side"), first to
-$a$ and then to $a union.sq b$. The per-origin update rules keep one record
-per origin (@sec:td), so in every re-evaluation the recorded contribution
-first shrinks to $a$ and then grows back to $a union.sq b$. Under warrowing
-the shrinking step narrows, the growing step widens again, and the solver may not stabilize. The update rules of Stemmler et al. assume one joined contribution per target and evaluation @stemmler25[§3], and Goblint's
-per-origin narrowing rule for globals, when `narrow-globs` is enabled, joins
-the side effects of an evaluation before updating
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L228")[`td3UpdateRule.ml`]).
-
-#isaconst("buffer_sides") collects the publications of a right-hand side and
-joins those to the same target until a flush point. Where several calls return
-at a node, it flushes only when the right-hand side answers, so each seed
-receives one #ctor("Side") per evaluation. Elsewhere it flushes before every
-local read, so that an entry state reaches the callee before the callee's
-result is demanded, in the order of Goblint's normal-call transfer
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245")[`constraints.ml`]).
-A flow-insensitive global (@sec:mixed-flow) assigned on two edges into one
-node therefore still receives one #ctor("Side") per edge. Where the buffer
-waits for the answer, the solver does extra work: a newly routed callee is
-solved from the seed's old value first, and once the joined seed is published,
-the callee and then the caller are evaluated again.
-
-Buffering changes only when publications are issued. The buffered generator
-#isaconst("routed_node_rhs_buffered"), which the analyzer runs, answers the
-same join of the four parts as the direct generator of @sec:eq-call. Under
-widening update rules the timing can change the computed result, though not
-the equations it solves. @sec:outlook-extending discusses a solver
-extension that would make seeds and buffering unnecessary.
-
 === Changes to the vendored solver <sec:upstream-td>
 
 The adapters change the equations, not the solver. Voblint vendors the
@@ -327,6 +287,46 @@ termination. @sec:eval-precision compares them on the programs of
     Voblint's interval operators; the contributions separate the rules and come
     from no program.],
 ) <fig:update-rules>
+
+== Repeated publications #thy-badge("Voblint_Solver", "Strategy_Tree_Side_Buffering") <sec:eq-buffer>
+
+One right-hand side can publish to the same global unknown twice. Two calls
+that resume at the same node may be routed to the same callee context and then
+write the same seed. Declaratively two writes to one target $g$ mean one
+bound:
+$
+  #ctor("Side") (g, a); #ctor("Side") (g, b)
+  quad "means" quad
+  sol(g) lge a ljoin b.
+$
+The vendored solver applies the update rule at every #ctor("Side"), first to
+$a$ and then to $a union.sq b$. The per-origin update rules keep one record
+per origin (@sec:td), so in every re-evaluation the recorded contribution
+first shrinks to $a$ and then grows back to $a union.sq b$. Under warrowing
+the shrinking step narrows, the growing step widens again, and the solver may not stabilize. The update rules of Stemmler et al. assume one joined contribution per target and evaluation @stemmler25[§3], and Goblint's
+per-origin narrowing rule for globals, when `narrow-globs` is enabled, joins
+the side effects of an evaluation before updating
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L228")[`td3UpdateRule.ml`]).
+
+#isaconst("buffer_sides") collects the publications of a right-hand side and
+joins those to the same target until a flush point. Where several calls return
+at a node, it flushes only when the right-hand side answers, so each seed
+receives one #ctor("Side") per evaluation. Elsewhere it flushes before every
+local read, so that an entry state reaches the callee before the callee's
+result is demanded, in the order of Goblint's normal-call transfer
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245")[`constraints.ml`]).
+A flow-insensitive global (@sec:mixed-flow) assigned on two edges into one
+node therefore still receives one #ctor("Side") per edge. Where the buffer
+waits for the answer, the solver does extra work: a newly routed callee is
+solved from the seed's old value first, and once the joined seed is published,
+the callee and then the caller are evaluated again.
+
+Buffering changes only when publications are issued. The buffered generator
+#isaconst("routed_node_rhs_buffered"), which the analyzer runs, answers the
+same join of the four parts as the direct generator of @sec:eq-call. Under
+widening update rules the timing can change the computed result, though not
+the equations it solves. @sec:outlook-extending discusses a solver
+extension that would make seeds and buffering unnecessary.
 
 == A demand-driven solve <sec:eq-example>
 

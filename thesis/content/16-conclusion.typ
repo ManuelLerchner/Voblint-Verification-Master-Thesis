@@ -3,7 +3,11 @@
 
 = Conclusion <ch:conclusion>
 
-The thesis shows that the soundness of a Goblint-style analyzer with contexts,
+Goblint once claimed `c % 2 == 1` for $c in {-5, -7}$ (@ch:intro). In Voblint
+the obligation of the congruence remainder rejects such an operator
+(@sec:eval-1161), and a theorem connects every such obligation to the verdicts
+a user reads. More generally, the thesis shows that the soundness of a
+Goblint-style analyzer with contexts,
 side effects, and a verified solver can be machine-checked from source
 executions to the verdicts of the exported function. The result holds for a
 scalar language with recursive procedures and is a partial-correctness result,

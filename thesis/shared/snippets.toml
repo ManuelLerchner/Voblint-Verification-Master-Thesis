@@ -357,3 +357,15 @@ why = "Solving chapter, update-rule figure: the value each rule computes after e
 
 [snippets.routed_node_rhs_parts]
 why = "Chapter 8, interprocedural equations: a node's right-hand side as the join of its initial value, edge, call and seed parts."
+
+[snippets.node_collect_eq_Union_activation_of_has_context]
+why = "Chapter 4: the contexts exhaust the node collecting semantics when every trace carries one; the form the end-to-end proof uses."
+
+[snippets.mcp_comp_sound]
+why = "Chapter 7: any nonempty selection of distinct shipped analyses is a sound local specification."
+
+[snippets.entry_state_policy_of_terminates]
+why = "Chapter 8: a terminated solve induces an entry-state policy that is total on valid traces and covered by the solved states."
+
+[snippets.exec_local_spec_sound]
+why = "Chapter 5: the executable local specification is sound for the concretization of the represented function."

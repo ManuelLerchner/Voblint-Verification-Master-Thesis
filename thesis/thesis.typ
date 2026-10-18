@@ -109,6 +109,7 @@
 // Appendices keep stable labels under a separate alphabetic counter.
 #set heading(numbering: "A.1.")
 #counter(heading).update(0)
+#include "content/appendix-isabelle.typ"
 #include "content/appendix-tooling.typ"
 
 // -------------------------------------------------------------- back matter -

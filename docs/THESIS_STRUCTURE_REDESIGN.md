@@ -5,6 +5,15 @@ Architecture-first review of the Voblint thesis. Inputs:
 `docs/THESIS_THEOREM_AUDIT.md` (theorem audit), the thesis sources, and the
 Isabelle theories. No thesis file was changed for this review.
 
+> **Later change (2026-10-18).** The run-level proof was restructured after this
+> review. `covered_table_of_activation` became the locale `activation_table`
+> (lemma `activation_table.covered`), and the per-policy corollaries
+> `run_voblint_{unit,call_string,entry_state}_chain` were removed. One hub,
+> `run_voblint_contexts`, now states context soundness for every configuration
+> through `run_policy`; `run_voblint_spine` (no policy premises) and
+> `run_voblint_covers` both derive from it. References below to the old names
+> describe the state at review time.
+
 **Baseline.** The current working tree, not the last commit. It already
 contains the uncommitted revision passes 1 to 3 and the dissolution of the
 former tooling chapter: 15 chapters, Appendix A (`isar-tools`), new sections

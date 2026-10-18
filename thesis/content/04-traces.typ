@@ -16,11 +16,9 @@ calling context, so to justify its result we need to know which executions each
 context represents.
 
 The collecting semantics of @ch:background, which gathers the stores reached
-at each node, does not record this.
-In the running example, both calls of `bump` reach the same result node, but a
-context-sensitive analysis may distinguish the activation entered with $5$ from
-the one entered with $4$. This chapter gives that distinction a concrete
-meaning.
+at each node, does not record this, because it puts the stores of all
+activations of a procedure at the same node. This chapter gives the
+distinction between activations a concrete meaning.
 
 Each call of a procedure starts a new _activation_ of it, which lasts until the
 call returns @aho06[§7.2.1]. We represent executions by _activation traces_.
@@ -29,34 +27,32 @@ also records the trace of the caller that created the activation, because the
 contexts of a call are admitted from the caller's context and store. After a call returns, it also records the finished callee, because the activation continues with the callee's result. The calling contexts of an activation are then derived from
 its trace.
 
-On this semantics we build a local _coverage contract_. Its obligations are
-the concrete interface that the abstract analyses and the equation system of
-@ch:domains to @ch:solving must satisfy. Once they hold, the claim for a node
-and a context covers the stores that executions in that context reach there,
-and the claims of all contexts together cover every store that a run reaches
-at the node.
+The chapter works toward one theorem. Call a _claim_ any assignment of a set of
+stores to each node and context. If a claim meets five local conditions, the
+_coverage contract_, then it contains every store that an execution in context
+$c$ brings to node $v$ (@sec:contract). If, in addition, every execution
+carries at least one context, the claims of all contexts together contain
+every store that any run brings to $v$. The contract is stated over stores
+only, so it is the concrete interface that the abstract analyses and the
+equation system of @ch:domains to @ch:solving must satisfy. The sections below
+build what the theorem needs: traces that keep the activation structure
+(@sec:traces), contexts read off them (@sec:contexts), and the contract
+itself.
 
 == Why contexts need traces <sec:why-traces>
 
-The collecting semantics of @ch:background assigns each node $v$ of a
-control-flow graph the set of stores that some run holds on reaching $v$
-@cousot77[§4]. @ch:background over-approximated it with one unknown per node,
-which we now write $[v]$ @apinis12[§2]. A context-sensitive analysis instead
-splits $[v]$ into unknowns $[v, c]$, one per calling context $c$, following the
-value tables of Sharir and Pnueli @sharir81, as Apinis et al. formulate them as
-a constraint system @apinis12[§3]. Seidl et al. state that the invariant for
+A context-sensitive analysis splits the unknown $[v]$ of a node into unknowns
+$[v, c]$, one per calling context $c$ (@sec:interproc). Seidl et al. state that the invariant for
 $[u, c]$ "only need[s] to take into account executions reaching $u$ that
 satisfy the restriction imposed by context $c$" @seidl26[§4]. The claim for
 $[v, c]$ therefore has to describe only a subset of the stores that the claim for $[v]$
 describes, and it can be correspondingly more precise.
 
-In the running example (@fig:program-to-equations), `main` calls `bump(5)` and
-then `bump(4)`, and `bump` returns its argument plus one. A context-insensitive
-analysis has one claim for the result node of `bump`, which must describe both
-results, $6$ and $5$. An analysis that distinguishes the two calls by their
-argument can instead claim the result $6$ for the call with argument $5$ and
-the result $5$ for the call with argument $4$. To justify these claims, we must know which store at the result node belongs
-to which call. The collecting semantics, however, is too weak to tell. It holds
+For the calls `bump(5)` and `bump(4)` of the running example
+(@fig:program-to-equations), an analysis with argument contexts claims the
+result $6$ in the context of the first call and $5$ in that of the second
+(@sec:interproc). To justify these claims, we must know which store at the
+result node of `bump` belongs to which call. The collecting semantics, however, is too weak to tell. It holds
 both stores at the result node but does not record which activation reached
 each of them, so we need a richer semantics that keeps this information.
 
@@ -383,21 +379,15 @@ local edge keeps the contexts of the trace
 (#isathm("activation_context_rel_extend")), and after a return the caller continues in the contexts it had before the call
 (#isathm("activation_context_rel_Resume_iff")).
 
-Which information a context records is a design decision of the analysis, and
-the literature describes many such _context policies_ @sharir81 @rival20[§8.4.1]
-@seidl12compiler[§2.6] @seidl12compiler[§2.9]. The call-string approach records
-the call history, and practical variants bound it to the $k$ most recent call
-sites, since a recursive procedure otherwise has infinitely many contexts. The
-functional approach, in contrast, computes a procedure summary independent of
-callers, which each call site instantiates. Goblint uses partial tabulation, a
-variant of the functional approach that tabulates summaries only for the
-calling contexts the analysis meets @saan26phd[§3.3] @schwarz25phd[§5, p. 110].
-Voblint's entry-state policy is of this kind. Its context is the abstract
-value of the callee's formal parameters in the entry state (@ch:equations), and
-nothing bounds the number of such contexts (@sec:termination). Goblint obtains the context of a
-callee by applying each analysis's `context` function to the callee's abstract
-entry state (@sec:rel-goblint), and Erhard et al. treat full entry states, their projections, and call strings in one framework @erhard25[§4]. Voblint
-offers the context-insensitive policy, bounded call strings, and entry-state contexts (#isatype("context_mode"), @ch:equations).
+Which information a context records is a design decision of the analysis,
+and the definitions below must accommodate every policy Voblint offers
+(#isatype("context_mode")): no contexts, call strings bounded to the $k$ most
+recent call sites, and entry-state contexts, which take the abstract values of
+the callee's formal parameters in its entry state @sharir81
+@seidl12compiler[§§2.6, 2.9]. Entry-state contexts follow Goblint's partial
+tabulation, which tabulates procedure summaries only for the calling contexts
+the analysis meets @saan26phd[§3.3] @schwarz25phd[§5, p. 110], and nothing
+bounds their number (@sec:termination).
 
 These context selectors are functions, each choosing one callee context per
 call from the call site, the caller's context, or the entry state. Goblint's entry operation, however, may return several
@@ -630,21 +620,30 @@ Isabelle states the five obligations as the assumptions of the locale
 ]
 
 #block(breakable: false)[
-  The same obligations give every valid trace at least one context, so the
-  activation collecting semantics of all contexts together is exactly the
-  node collecting semantics.
+  The split by context loses no store as soon as every valid trace carries at
+  least one context. The activation collecting semantics of all contexts
+  together is then exactly the node collecting semantics.
 
   #theorem(
     name: [Exhaustive contexts],
-    isa: "node_collect_eq_Union_activation_collect",
+    isa: "node_collect_eq_Union_activation_of_has_context",
   )[
-    Under the five coverage obligations, including #oblig("TOTAL"), the node
-    collecting semantics at every node $v$ is the union of the activation
-    collecting semantics at $v$ over all contexts.
+    If every valid trace carries some context, the node collecting semantics at
+    every node $v$ is the union of the activation collecting semantics at $v$
+    over all contexts.
   ]
 
-  #proved("node_collect_eq_Union_activation_collect")
+  #proved("node_collect_eq_Union_activation_of_has_context")
 ]
+
+The coverage obligations supply the premise through #oblig("TOTAL")
+(#isathm("node_collect_eq_Union_activation_collect")), and every functional
+policy, which computes one context per call, supplies it outright
+(#isathm("node_collect_eq_Union_activation_of_fun")). For the entry-state
+policy, #oblig("TOTAL") comes from the analyzer's result (@sec:eq-routing).
+The end-to-end proof uses the theorem in this form, with one instance per
+policy (@sec:chain). Together with the context-indexed soundness above, it
+gives the claims of all contexts the whole node collecting semantics:
 
 #block(breakable: false)[
   #corollary(name: [Claims cover the collection], isa: "node_collect_covered")[
@@ -654,21 +653,6 @@ Isabelle states the five obligations as the assumptions of the locale
 
   #proved("node_collect_covered")
 ]
-
-The proof of the exhaustiveness theorem uses only one consequence of the
-obligations, namely that every valid trace carries some context.
-#isathm("node_collect_eq_Union_activation_of_has_context") states the equality
-with exactly this premise, and the end-to-end proof uses this form with one
-instance per policy (@sec:chain). Functional policies, which compute one
-context per call, give every trace a context
-(#isathm("node_collect_eq_Union_activation_of_fun")). Entry-state policies obtain it
-from #oblig("TOTAL"), once the analyzer's result meets the coverage contract
-(#isathm("routed_valid_activation_trace_has_context"), @sec:eq-routing).
-
-Apinis et al. recall the corresponding observation for the abstract side
-@apinis12[§3]: after local solving, the abstract values that reach a program
-point are bounded by the join of the solution's values at that point over the contexts
-the solver encountered.
 
 This chapter has built the concrete half of the soundness argument. Every
 finite source execution of a well-formed program is matched by a graph run

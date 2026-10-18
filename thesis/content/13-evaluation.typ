@@ -21,9 +21,13 @@ tested.
 
 The evidence differs in strength. A _machine-checked_ result is an Isabelle
 theorem and holds for every input its statement ranges over, under its
-premises. An _evaluated_ result is an Isabelle fact proved by `eval`, which runs
-the generated code of a concrete solve: Isabelle checks it, but it trusts the
-code generator and concerns one input. An _executable_ result records that one
+premises. An _evaluated_ result is an Isabelle fact proved by `eval`, which compiles a
+closed proposition to code, runs it, and accepts the result through the code
+generator's evaluation oracle. Isabelle checks it, but it concerns one input
+and extends the trusted base beyond the inference kernel to the code
+generator. A defect of this kind has occurred: in 2025, a defect in
+normalization by evaluation, which also extends trust beyond the kernel,
+admitted a proof of `False` @paulson26broken. An _executable_ result records that one
 program, run with fixed analysis settings, produces one answer. Its run also
 passes through the parser and renderer outside the theorem
 (@sec:trust-boundary). A _source inspection_ or _repository measurement_
@@ -138,7 +142,7 @@ $[-7, -5]$, refutes the first check, and proves the second.
     both executions.],
 ) <fig:goblint-1161>
 
-== Precision and cost on concrete programs <sec:eval-precision>
+== Precision, cost, and modularity on concrete programs <sec:eval-precision>
 
 The theorem says nothing about precision, since an analyzer that answers
 #verdict("UNKNOWN") everywhere satisfies it (#isathm("unknown_everywhere_sound")). We therefore show on concrete programs what each mechanism gains. Each example below fixes the concrete behavior first, then
@@ -254,63 +258,13 @@ its default bound 5, reaches the verdicts of per-origin warrowing on all four
 programs.
 
 
-#let _z(name) = claim-check(name, "z == 1")
-
-*Refinement inside Int.* _Evidence: executable._ Int combines the four base
-domains in one value and refines them against each other (@sec:reduced-product).
-In the program below, `q` is $4n + 1$ for some $n in [0, 20]$, so `r` is $1$.
-
-#let _r(name) = claim-check("int-refine-" + name, "r == 1")
-#listing(lang: "c", claim: "int-refine-int", ```
-fun main() {
-  n = __voblint_nondet_int();
-  if (0 <= n && n <= 20) {
-    q = (12 * n + 3) / 3;
-    r = q % 4;
-    __voblint_check(r == 1);
-    __voblint_check(r > 0);
-    __voblint_check(r % 2 == 1);
-  }
-}
-```)
-
-Interval alone bounds `r` to #raw(_r("interval").at(4).split("r=").at(1)) and reports
-#verdict(_r("interval").at(3)) at `r == 1`. Congruence alone keeps
-`r` in #raw(_r("congruence").at(4).split("r=").at(1)), which admits $-3$ for a
-negative `q`, and reports #verdict(_r("congruence").at(3)). Int intersects the
-two to #raw(_r("int").at(4).split("r=").at(1)) and proves the check (claims
-#claim-ref("int-refine-*")). @fig:goblint-1161 and @fig:stride2 show the same
-effect.
-
-*Queries between analyses.* _Evidence: executable, and evaluated._ Separate
-analyses refine each other only through queries (@ch:cooperation). In the
-following program they do so in both directions:
-
-#listing(lang: "c", claim: "coop-mutual-both", ```
-fun main() {
-  c = __voblint_nondet_int();
-  if (0 < c) { x = 0; y = 10; } else { x = 20; y = 30; }
-  z = (x <= y);
-  __voblint_check(z == 1);
-}
-```)
-
-Int alone joins the branches, so `z` lies only in
-#raw(_z("coop-mutual-int").at(4).split("intervals:").at(1).split(";").at(0)) and the check is #verdict(_z("coop-mutual-int").at(3)). The order analysis alone
-cannot compare a variable with a constant and reports
-#verdict(_z("coop-mutual-order").at(3)). Together, at both assignments to `y`
-the order analysis asks Int whether $x$ is at most the assigned constant and
-records the pair $(x, y)$ on both branches. At `z = (x <= y)` Int asks the
-query #isaconst("EvalInt") $(x <= y)$, the order analysis answers $1$, and the
-check is #verdict(_z("coop-mutual-both").at(3)) (claims
-#claim-ref("coop-mutual-*")). Int asks at every assignment, and at `z = (x <= y)`
-the answer is decisive. On a check of `x <= y` itself, the order analysis
-would answer the check directly, though it still needs Int's answers at the
-assignments to `y`. On two related programs with Interval in place of Int,
-#isathm("coop_demo_needs_both"), #isathm("order_asks_interval_alone"),
-#isathm("order_asks_order_alone"), and #isathm("order_asks_needs_both") prove by
-`eval`, one direction each, that the check is proved only with both
-analyses.
+*Queries between analyses.* _Evidence: executable, and evaluated._ The two
+programs of @ch:cooperation show analyses deciding together a check that each
+leaves unknown alone, as executable claims. On two related programs with
+Interval in place of Int, #isathm("coop_demo_needs_both"),
+#isathm("order_asks_interval_alone"), #isathm("order_asks_order_alone"), and
+#isathm("order_asks_needs_both") prove by `eval`, one direction each, that the
+check is proved only with both analyses.
 
 == Tests of the unverified parts <sec:eval-corpus>
 

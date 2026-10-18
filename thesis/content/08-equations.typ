@@ -46,11 +46,8 @@ of @fig:program-to-equations.
 
 == Unknowns and right-hand sides #thy-badge("Voblint_Framework", "DG_Indexed_Generator") <sec:eq-call>
 
-The running example calls `bump` first with 5 and then with 4. If both
-activations shared one abstract state at the entry of `bump`, that state would
-have to contain both values, the return would merge the two results, and the
-analysis could no longer show that the first result is exactly 6. Contexts
-avoid this merge by giving the two activations separate copies of `bump`.
+Separate contexts give the activations of `bump(5)` and `bump(4)` separate
+copies of `bump`, so the first result stays exactly $6$ (@sec:interproc).
 
 Voblint therefore indexes the unknowns of the equations by contexts. For every
 node $v$ and context $c$ there is a _local_ unknown $(v, c)$, whose value
@@ -493,11 +490,16 @@ shows that $sol$ covers the activation collecting semantics that this
 $italic("adm")$ induces. The valid traces and the node collecting semantics do
 not mention $italic("adm")$, so the choice of policy cannot shrink the set
 the final theorem bounds. Totality guarantees that the split by context loses
-no store of it (@sec:contract). For the analyzer, a terminated solve gives
-both halves: every valid trace carries a context of the induced policy
-(#isathm("entry_state_has_context_of_terminates")), and each context's
-activation collecting semantics lies in its solved state
-(#isathm("entry_state_activation_collect_sound_of_terminates")).
+no store of it (@sec:contract). For the analyzer, one corollary states the
+argument in this order. Its premises fix the program and a terminated solve,
+its policy #isaconst("admitted_contexts") is read off that solve, and its two
+conclusions are totality on valid traces and the per-context bound:
+
+#proved("entry_state_policy_of_terminates")
+
+It conjoins #isathm("entry_state_has_context_of_terminates") and
+#isathm("entry_state_activation_collect_sound_of_terminates"), which the
+end-to-end proof uses.
 
 == Soundness of the generated system #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 

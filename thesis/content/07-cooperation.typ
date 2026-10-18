@@ -5,6 +5,7 @@
 #import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": definition
 #import "../lib/figures.typ": verdict as verdict-chip
+#import "../lib/claims.typ": claim-check, claim-ref
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
 // its source location, so a table cell cannot drift from what the CLI prints.
@@ -220,10 +221,34 @@ for Goblint's queries.
 
 == Many analyses over one state #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
 
-The analyses cannot be solved one after another. In the opening example
-Interval needs the order analysis's facts at `z = (x == y)`, and in the example
-of @sec:eval-precision the order analysis needs Interval's, at the same program
-point and context. The framework therefore runs all selected analyses as a
+The analyses cannot be solved one after another, because each may need the
+other's facts at the same program point and context. In the opening example
+Interval needs the order analysis's facts. In the program below the exchange
+runs in both directions, here between the order analysis and Int, the product
+of the numeric domains (@sec:reduced-product).
+
+#let _z(name) = claim-check(name, "z == 1")
+#listing(lang: "c", claim: "coop-mutual-both", ```
+fun main() {
+  c = __voblint_nondet_int();
+  if (0 < c) { x = 0; y = 10; } else { x = 20; y = 30; }
+  z = (x <= y);
+  __voblint_check(z == 1);
+}
+```)
+
+Int alone joins the branches, so `z` lies only in
+#raw(_z("coop-mutual-int").at(4).split("intervals:").at(1).split(";").at(0)),
+and the check is #verdict-chip(_z("coop-mutual-int").at(3)). The order analysis
+alone cannot compare a variable with a constant and reports
+#verdict-chip(_z("coop-mutual-order").at(3)). Together, at both assignments to
+`y` the order analysis asks Int whether $x$ is at most the assigned constant
+and records the pair $(x, y)$ on both branches. At `z = (x <= y)` Int asks
+#isaconst("EvalInt") $(x <= y)$, the order analysis answers $1$, and the check
+is #verdict-chip(_z("coop-mutual-both").at(3)) (claims
+#claim-ref("coop-mutual-*")).
+
+The framework therefore runs all selected analyses as a
 single analysis whose abstract state is a tuple with one field per analysis.
 At `z = (x == y)` this state is the pair of Interval's state, in which $x$ and
 $y$ are unbounded, and the order analysis's state $\{x lt.eq y, y lt.eq x\}$.
@@ -337,10 +362,13 @@ components in turn, gives every one the same channel, and meets the answers of
 their handlers. If the list of components is nonempty, the components are
 independent, and each is a sound local specification, then the combination is
 a sound local specification for the intersection of their concretizations
-(#isathm("mcp_combine_sound")). #isathm("mcp_comp_sound") applies this to every
-nonempty selection of distinct analyses. The components cannot invalidate one
+(#isathm("mcp_combine_sound")). The components cannot invalidate one
 another's guarantees, since each guarantee is about a field no other component
 writes, and it holds for any channel that holds, whichever component answered.
+For the analyses the analyzer ships, this gives the chapter's result, for every
+nonempty selection #isai("as") of distinct analyses:
+
+#proved("mcp_comp_sound")
 
 The premise that the channel holds leaves one task to the framework. For every
 state $x$ it must build a channel that holds at every store of $conc(x)$. It
@@ -364,9 +392,8 @@ gives the domain's own verdict
 (#isathm("sound_check_query.classify_eval_answer")). An exact $1$ proves the check,
 and an exact $0$ refutes it (#isaconst("mcp_classify")). Several analyses
 together can thus decide a check that each alone leaves unknown, as the run
-#verdict("coop-eq-both", "16:7") of the opening example shows. The exchange
-also works in the other direction, with the order analysis asking Interval
-(@sec:eval-precision).
+#verdict("coop-eq-both", "16:7") of the opening example shows, and the second example
+shows the exchange in the other direction.
 
 == What a new analysis has to prove <sec:coop-catalogue>
 
@@ -386,8 +413,8 @@ facts (#isathm("order_spec_sound")).
 Two limits remain. Components cannot read or publish analysis globals
 (@sec:shared-facts), which Goblint's MCP allows by tagging each analysis's
 globals with its index. No theorem guarantees that the combination is more
-precise than its components. The opening program and the one in
-@sec:eval-precision only show concrete cases where it is.
+precise than its components. The two programs of this chapter only show
+concrete cases where it is.
 
 Each analysis is proved sound against every channel that holds, and the
 framework supplies such a channel and runs each analysis on its own field. The

@@ -5,6 +5,15 @@ chapter it asks one question: can the reader identify one theorem that
 answers the chapter's central question, and see how that result reaches the
 end-to-end guarantee? No theory was changed.
 
+> **Later change (2026-10-18).** The run-level proof was restructured after this
+> review. `covered_table_of_activation` became the locale `activation_table`
+> (lemma `activation_table.covered`), and the per-policy corollaries
+> `run_voblint_{unit,call_string,entry_state}_chain` were removed. One hub,
+> `run_voblint_contexts`, now states context soundness for every configuration
+> through `run_policy`; `run_voblint_spine` (no policy premises) and
+> `run_voblint_covers` both derive from it. References below to the old names
+> describe the state at review time.
+
 "Used downstream" means another theorem on the path to
 `run_voblint_source_sound` invokes it. Uses were found with `rg` over
 `src/**/*.thy` and confirmed by reading the invoking proof.

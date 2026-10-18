@@ -150,3 +150,25 @@ theory = "Voblint_Framework.DG_Indexed_Generator"
 why = "Chapter 8, interprocedural equations: the executed buffered generator answers the same join of parts as the reference generator."
 session = "Voblint_Framework"
 theory = "Voblint_Framework.DG_Indexed_Generator"
+
+[facts.node_collect_eq_Union_activation_of_has_context]
+why = "Chapter 4: exhaustive contexts from the premise that every valid trace carries a context."
+session = "Voblint_CFG"
+theory = "Voblint_CFG.Activation_Trace_Collect"
+
+[facts.mcp_comp_sound]
+why = "Chapter 7: the combination of shipped analyses is a sound local specification."
+session = "Voblint_CLI"
+theory = "Voblint_CLI.MCP_Analyses"
+
+[facts.entry_state_policy_of_terminates]
+why = "Chapter 8: the entry-state policy read off a terminated solve is total and covered."
+fact = "dg_analysis.entry_state_policy_of_terminates"
+session = "Voblint_Result"
+theory = "Voblint_Result.DG_Live_Unknowns"
+
+[facts.exec_local_spec_sound]
+why = "Chapter 5: the executable refinement preserves the local specification's soundness."
+fact = "dg_domain_exec.exec_local_spec_sound"
+session = "Voblint_Exec"
+theory = "Voblint_Exec.DG_Local_State_Exec_Refinement"

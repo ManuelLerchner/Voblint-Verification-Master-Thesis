@@ -54,12 +54,8 @@ shows how the proved function becomes the analyzer that runs, and where the proo
 
 == Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
 
-The pointwise analyses of @ch:domains are specified over abstract states
-$"Var" -> A$, total functions on variable names (the relational order
-analysis has its own state type, #isatype("relc")). This suits proofs, where
-lookup is function application and the lattice operations are pointwise. The solver, however, cannot compute with it: after every
-evaluation it decides whether an unknown changed, and deciding $f lle g$ for two such
-functions means checking $f(x) lle g(x)$ for infinitely many names $x$. Nipkow and Klein address the same
+@sec:exec-states stated what a finite representation of the function states
+of @ch:domains must satisfy. This section gives the representation. Nipkow and Klein address the same
 problem in the abstract interpreter of Concrete Semantics by refining total
 function states to a finite representation with a default @nipkow14[§13.6]:
 a state is a finite list of variables with their values, every unlisted name
@@ -67,14 +63,13 @@ reads as #ltop, and two states are compared on the listed names. Such a
 representation works like a default dictionary, a finite dictionary that
 answers every missing key with a default. Voblint follows the same idea but
 needs two defaults. It
-represents a total function exactly and therefore loses no precision. We call such a representation an _executable state carrier_ (_carrier_ for
-short, distinct from the carrier of a domain, @ch:background).
+represents a total function exactly and therefore loses no precision. We call such a representation an _executable state_.
 
 VIMP initializes globals to zero, as
 C does for objects with static storage (#c11("6.7.9p10")), and leaves the
 locals of `main` arbitrary (@sec:vimp-vs-c). The initial state must give every local
 the value #ltop and every global the value $0^sharp$, the abstract value of the
-constant $0$, without listing the declared globals. Voblint's carrier
+constant $0$, without listing the declared globals. Voblint's executable state
 therefore keeps two default dictionaries, one for the names the program
 treats as local and one for the globals, each a default paired with a finite
 list of overrides. We write the state with local dictionary $(d_l, "ls")$ and
@@ -90,7 +85,7 @@ answer every lookup alike, and its operations are lifted with
 
 #thy("default_st")
 
-Two carrier states are therefore equal exactly when every lookup agrees
+Two executable states are therefore equal exactly when every lookup agrees
 (#isathm("default_st_eq_iff")). Comparing the two defaults and the finitely
 many listed names decides the order (#isathm("le_default_st_rep_code_iff")),
 and equality tests it in both directions.
@@ -101,17 +96,17 @@ dictionary of the variable's location: the override if there is one, the
 default otherwise. We write
 $d⟨l⟩$ for the lookup at location $l$ and $d⟨l := a⟩$ for the update. Looking
 up every variable at its location gives the total function $rho_(cal(G))(d)$
-that a carrier state represents (#isaconst("default_st_to_fun")). A carrier
+that an executable state represents (#isaconst("default_st_to_fun")). An executable
 state means what its function means under the concretization
 #isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
 (#isaconst("default_st_gamma")) is
 $ conc(d) = conc(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
 The solver never computes $conc(d)$. It uses only the executable lattice operations. Function states get order, join, and bottom pointwise from HOL, but
-no widening or narrowing. The carrier instantiates all of these classes on
+no widening or narrowing. The executable state instantiates all of these classes on
 #isatype("default_st") whenever the values do, so the generic solver runs on
 it unchanged.
 
-Distinct carrier states can still denote the same stores: every state whose
+Distinct executable states can still denote the same stores: every state whose
 local default is #lbot denotes $emptyset$, yet the quotient keeps such states
 apart because they represent distinct functions.
 
@@ -130,14 +125,12 @@ for the transfer on nonempty states and for procedure entry. For primitives
 proved sound it holds without a per-domain proof, because the abstract and
 executable steps are derived from the same operations
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"), @sec:instances-supply).
-#isathm("exec_local_spec_sound") states the boundary of this refinement. The
-local specification built from the executable steps is sound for the
-concretization of the represented function, so the analysis contract holds for
-the code that is exported, not only for its specification.
+This is the obligation @sec:exec-states states, and
+#isathm("exec_local_spec_sound") is its consequence for the exported code.
 
 Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
 listed overrides do not decide: an unlisted variable can make the state empty
-through its default. The carrier's test inspects the local default, the
+through its default. The test inspects the local default, the
 overrides that the represented function reads, and each declared global. The globals are listed explicitly because a program has finitely many of them, so
 the global default may describe no variable at all.
 #isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
@@ -198,84 +191,30 @@ another closure, so a lookup may traverse a chain as long as the number of
 earlier updates, and superseded closures stay reachable.
 
 The proofs guarantee that this code computes the proved function, but they say
-nothing about its running time or how it computes the result. One such cost was a defect. A sampling profile of a
-program of 256 chained assignments, taken on one machine, attributed most of
-the CPU time to the compiler, which ran once per equation evaluation. The cause
-was #isaconst("init_publications"). On every equation evaluation it tests
-whether the unknown is the program's entry, and its definition names the entry
-as #isai("cfg_entry (prog_cfg p)"). The generated code evaluates this term as
-written, so it compiled the whole program to find a node that is always the
-entry of `main` (@fig:init-publications).
-
-#figure(
-  {
-    set text(size: 7.5pt)
-    set par(first-line-indent: 0pt, justify: false)
-    let box-node(pos, body, name, color: vb.neutral) = node(
-      pos,
-      body,
-      name: name,
-      stroke: 0.6pt + color,
-      fill: white,
-      corner-radius: 2pt,
-      inset: 4pt,
-    )
-    let lab(body) = text(size: 6.5pt, fill: vb.muted, body)
-    diagram(
-      spacing: (8mm, 5mm),
-      box-node((0, 0), [equation evaluation \ of an unknown $x$], <eval>),
-      box-node((1, 0), isaconst("init_publications"), <init>),
-      box-node((2, -0.6), isai("cfg_entry (prog_cfg p)"), <old>, color: vb.unproved),
-      box-node((3, -0.6), [compile the \ whole program], <comp>, color: vb.unproved),
-      box-node((2, 0.6), isai("FunctionEntry prog_main_name"), <new>, color: vb.proved),
-      edge(<eval>, <init>, "-|>", stroke: 0.6pt + vb.neutral),
-      edge(
-        <init>,
-        <old>,
-        "-|>",
-        stroke: 0.6pt + vb.unproved,
-        label: lab[definition],
-        label-side: left,
-      ),
-      edge(<old>, <comp>, "-|>", stroke: 0.6pt + vb.unproved),
-      edge(
-        <init>,
-        <new>,
-        "-|>",
-        stroke: 0.6pt + vb.proved,
-        label: lab[code equation],
-        label-side: right,
-      ),
-    )
-  },
-  kind: image,
-  placement: none,
-  caption: [The entry test of #isaconst("init_publications") in the generated
-    code. Generated from the definition (red), it compiled the program at every
-    equation evaluation. Generated from the proved code equation
-    #isathm("init_publications_code") (green), it compares with a constant.],
-) <fig:init-publications>
-
-Isabelle lets a theory replace the equation that code generation uses for a constant with any proved equation for it. #isathm("init_publications_code")
-states #isaconst("init_publications") with the entry node
-#isai("FunctionEntry prog_main_name") written out and follows from
-#isathm("cfg_entry_compile_prog") by simplification. The definition and every
-theorem about it stay unchanged, and no trust is added (@sec:trust-boundary). The trace hook of @sec:tracing, by contrast, adds a mapping to
-handwritten OCaml to the trusted base.
-The proof establishes that the equations agree, and the unchanged corpus and
-solver traces only confirm that the code generator uses the new one. On the same machine, the
+nothing about its running time. One cost was a defect. On every equation
+evaluation, #isaconst("init_publications") tests whether the unknown is the
+program's entry, and its definition names the entry as
+#isai("cfg_entry (prog_cfg p)"). The generated code evaluated this term as
+written and compiled the whole program at every evaluation. A sampling
+profile of a program of 256 chained assignments, taken on one machine,
+attributed most of the CPU time to this compilation. Isabelle lets a theory replace the
+equation that code generation uses for a constant with any proved equation for
+it. #isathm("init_publications_code") writes the entry node out as
+#isai("FunctionEntry prog_main_name") and follows from
+#isathm("cfg_entry_compile_prog"), so the definition and every theorem about it
+stay unchanged and no trust is added. On the same machine, the
 #link(repo-blob + "scripts/gen_bench_program.py")[generated] chain of 256
 assignments then ran #_speedup("chain256") times faster, and a program of 512
 assignments in procedures of eight statements #_speedup("procs512") times
 faster (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded
-  measurement]).
+  measurement]). These are single measurements on one machine, not a
+performance evaluation.
 
-The remaining cost is spread over report construction, printing, and dictionary calls. Three routes would remove more of it,
-at increasing price. Further proved code equations change the code without
-changing a theorem. Isabelle's library implements sets by red-black trees, but
-only for element types with a linear order. Abstract values, check results, and entry-state contexts have only their lattice order. Replacing the solver's function-valued table with a finite map would remove the closure chains, but it would change the state of the vendored solver and require its proof to be redone. This thesis aims at a sound
-analyzer rather than efficient generated code, so the code was not measured
-further.
+The remaining cost is spread over report construction, printing, and
+dictionary calls. Further proved code equations could remove more of it
+without changing a theorem. Replacing the solver's function-valued table with a
+finite map would remove the closure chains, but it would change the state of
+the vendored solver and require its proof to be redone.
 
 == The unverified shell <sec:ocaml-boundary>
 
@@ -638,7 +577,7 @@ of @sec:verdict-meaning hold for every report #isaconst("run_voblint")
 returns, from the syntax tree it receives to the semantic report. The proof
 covers the compiler, the
 well-formedness test, the vendored solver with its executable refinement and
-the executable state carrier.
+the executable states (@sec:exec-states).
 
 *What is trusted.* Two groups lie outside the proof. The first is the
 handwritten code around the generated analyzer: the lexer, the parser, the

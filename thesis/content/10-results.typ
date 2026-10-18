@@ -228,11 +228,26 @@ collecting semantics of each context inside the state solved for it
 (#isathm("activation_collect_dg_sound")). The theorem itself states only the
 outer sets, #isai("\<C>") and #isai("\<R>\<^bsub>res\<^esub>"), so it does not
 say which state covers a given store, and the contexts stay inside its proof.
-#isathm("run_voblint_spine") states the whole chain for each policy. Through
-#isathm("source_store_in_activation_collect") it places a reached store in the
-activation collecting semantics of a context that the store's representing
-trace carries. The fourth inclusion is the one of @sec:verdicts and depends
-only on the report and its consistency.
+The fourth inclusion is the one of @sec:verdicts and depends only on the
+report and its consistency.
+
+Both endpoints of the proof start from one theorem,
+#isathm("run_voblint_contexts"). For the context policy the configuration runs
+with (#isaconst("run_policy")), every valid trace carries a context, and each
+context's activation collecting semantics lies in the report at its node. The
+context-explicit chain follows from it together with
+#isathm("source_store_in_activation_collect"). By #isathm("run_voblint_spine"),
+for every configuration, a store $s$ that a source run reaches lies, at some
+node $v$ where the run is observed, in the activation collecting semantics of a
+context $c$ that the run's representing trace carries, and
+$
+  s in #isai("\<A> v c"), quad union.big_(c') #isai("\<A> v c'") = #isai("\<C> v"), quad #isai("\<C> v") subset.eq #isai("\<R>\<^bsub>res\<^esub> v") subset.eq #isai("\<V>\<^bsub>res\<^esub> v").
+$
+The source-level theorem of @sec:headline is the context-erased statement for
+users. It keeps only the memberships in #isai("\<C>"),
+#isai("\<R>\<^bsub>res\<^esub>") and #isai("\<V>\<^bsub>res\<^esub>"), through
+#isathm("run_voblint_covers"), which follows from the same common theorem
+because the contexts exhaust the node collecting semantics.
 
 The program of @fig:chain calls `f` twice. The first call passes $1$. The second passes an input $x$ with $1 <= x <= 3$, if the input is in that range.
 So `m` is $2$, $4$, or $6$ at the checks: `m >= 2` always holds, and `m == 2`
@@ -428,10 +443,7 @@ verdicts at every node where the run is observed. This is the chain of
 The statement mentions no activation and no context. Source executions carry
 neither, and the report states its guarantee per CFG node (@sec:report), so
 both appear only inside the proof, at the second inclusion of the chain.
-#isathm("run_voblint_spine") keeps them visible: it states the chain once for
-every context policy, together with a representing activation trace and one context it carries
-whose set contains the reached store, and each shipped policy discharges its two
-assumptions.
+@sec:chain gives the per-policy theorem that keeps them visible.
 
 == What a verdict says about executions #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
@@ -506,3 +518,13 @@ nonzero in every store collected at $v$
 leaving $v$):
 
 #proved("run_voblint_arithmetic_intra_safe")
+
+These theorems complete the chain of @fig:intro-nest. Source executions are
+graph runs (@ch:program-model), graph runs are valid traces whose stores the
+contexts split without loss (@ch:traces), every context's stores lie in the
+state the solver returned for it (@ch:equations, @ch:solving), and the report
+and its verdicts contain those states. Each verdict therefore holds for every
+covered execution that reaches its check, for every configuration the
+analyzer offers and every report it returns. @sec:termination and
+@sec:trust-boundary state what the theorems do not cover: termination and the
+components outside the proof.

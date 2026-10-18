@@ -21,7 +21,9 @@
 
 = Five Domains and an Order Analysis <ch:instances>
 
-@ch:results proved that a report is sound regardless of which analyses produced it. A
+@ch:results proved that a report is sound regardless of which analyses produced it, so
+this chapter adds no step to the proof. It answers which analyses instantiate
+the interfaces of @ch:domains to @ch:cooperation and what each can establish. A
 user can choose among the numeric domains Sign, Interval, Parity, and Congruence, their combination Int, and the relational order analysis. The four
 base domains are textbook material, and the project site lets readers
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#values")[try them interactively],
