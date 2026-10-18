@@ -124,9 +124,9 @@ executions, and the framework cannot check this without knowing what the
 analysis tracks. It therefore asks every analysis for local guarantees, which
 @ch:equations combines into the five obligations of @ch:traces for every
 program and context policy. Edge transfers account for #oblig("INTRA") and
-combine for #oblig("RETURN"). #oblig("CALL") and #oblig("TOTAL") also depend
+combine for #oblig("RETURN"). The obligations #oblig("CALL") and #oblig("TOTAL") depend
 on the context policy, so the framework combines the entry coverage of
-@sec:calls with the policy (@sec:eq-routing). #oblig("INIT") requires the
+@sec:calls with the policy (@sec:eq-routing), and #oblig("INIT") requires the
 initial state $d_0$ to cover the initial stores, which the analysis discharges
 when it is registered (#isathm("dg_analysis.init_sound")).
 
