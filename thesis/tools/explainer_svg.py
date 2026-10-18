@@ -92,6 +92,7 @@ THEME = {
     "ivl": "#1565C0",
     "par": "#6A1B9A",
     "cong": "#AD1457",
+    "ink": "#212121",
 }
 
 
@@ -148,8 +149,9 @@ VAR_MAP = {
     "--line-comp": "unstable",
     "--line-dom": "par",
     "--line-fw": "sign",
-    "--line-sol": "trusted",
+    "--line-sol": "cong",
     "--line-res": "accent",
+    "--metro-ring": "ink",
 }
 
 # The cross-section figure draws the development as rock strata, and its

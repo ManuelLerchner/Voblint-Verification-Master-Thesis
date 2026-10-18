@@ -7,6 +7,8 @@
   --line-fw: #2f8f6b;
   --line-sol: #c9971c;
   --line-res: #172126;
+  /* one ring for every station, so no interchange reads as part of one line */
+  --metro-ring: #172126;
 }
 
 .scene-metro .metro-svg {
@@ -81,7 +83,7 @@
 :where(.scene-metro) .metro-station circle,
 :where(.scene-metro) .metro-station rect {
   fill: #ffffff;
-  stroke: var(--line-res);
+  stroke: var(--metro-ring);
   stroke-width: 3;
   transition:
     fill 150ms ease,
@@ -103,12 +105,13 @@
 }
 
 :where(.scene-metro) .metro-core rect {
-  stroke: var(--accent);
+  stroke: var(--metro-ring);
   stroke-width: 5;
 }
 
 .scene-metro .metro-terminal rect {
   fill: var(--line-res);
+  stroke: var(--line-res);
 }
 
 .scene-metro .metro-terminal text {

@@ -65,6 +65,15 @@ css = ["strata"]
 chapter = "Appendix A (session structure)"
 why = "The formalization in cross-section: one stratum per session, sized by its proof."
 
+[figures.metro]
+aria_prefix = "A metro map."
+css = ["metro"]
+# The thesis shows the proof's milestones; interior plumbing stations stay on
+# the site. Every dropped station sits inside a line, so no line dangles.
+drop_classes = ["metro-detail"]
+chapter = "1.5 (roadmap)"
+why = "How the components' contracts compose into the two endpoints: thematic lines by layer, interchanges where one theorem uses another, chapter roadmap in the caption."
+
 # Not extractable, deliberately absent
 # -----------------------------------
 # These figures are empty <svg> shells in the page; pages/figures/*.js builds
