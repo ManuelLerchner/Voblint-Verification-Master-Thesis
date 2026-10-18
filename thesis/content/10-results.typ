@@ -216,7 +216,7 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
 The first step places a store that a finite source run reaches in the node
 collecting semantics, at a node $v$ the simulation relates to the run. On the
 elaboration this is every node at which the run is observed
-(#isathm("csim_point_compile_prog"), @sec:csim). The second step splits
+(#isathm("csim_point_compile_prog"), @sec:at-node). The second step splits
 #isaconst("node_collect") into #isaconst("activation_collect") over the
 contexts #isai("adm") admits, with `main` in #isai("c\<^sub>0")
 (@sec:contexts). It needs only that every valid trace carries some context.
@@ -414,7 +414,7 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
 The conclusions are stated at graph nodes, but a source configuration names
 none. Its residual command can occur at several places of the program, so the
 node has to come from the run. The relation
-$p, s_0 tack.r ("residual", s, "frs") gt.closed v$ of @sec:csim
+$p, s_0 tack.r ("residual", s, "frs") gt.closed v$ of @sec:at-node
 (#isaconst("at_node")) supplies it. It holds when some run of the elaboration
 from $s_0$ reaches an annotated command that erases to the residual and names
 $v$, and the simulation #isaconst("csim") relates that configuration to $v$

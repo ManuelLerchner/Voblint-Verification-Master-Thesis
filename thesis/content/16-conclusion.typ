@@ -124,7 +124,7 @@ A richer source language, up to a subset of C, needs the new obligations that
 also needs a semantics and a preservation argument per construct at every
 layer.
 
-Such a language would extend the elaboration of @sec:csim. For VIMP,
+Such a language would extend the elaboration of @sec:at-node. For VIMP,
 elaboration only records where the compiler places each statement, and erasure
 relates the elaborated runs to the runs of the program as written. A front end
 for C would use the same annotated syntax to resolve names, types, and
