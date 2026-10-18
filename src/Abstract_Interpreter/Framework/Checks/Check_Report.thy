@@ -11,10 +11,8 @@ text \<open>
   siblings, or \<open>sound_check_query.classify_check\<close> generically).
   Entries are read directly off \<^const>\<open>intra\<close> through the same deterministic
   order \<^const>\<open>cfg_intra_list\<close> already gives the TD bridge, rather than
-  sorting \<^typ>\<open>pp\<close> or \<^typ>\<open>exp\<close> values by hand: a compiled \<^const>\<open>checks\<close>
-  table has exactly the same \<^const>\<open>EA_Check\<close> edges as its source, by
-  construction, so this report is a second view of that one representation,
-  not a parallel table.
+  sorting \<^typ>\<open>pp\<close> or \<^typ>\<open>exp\<close> values by hand, so the report has exactly
+  one entry per \<^const>\<open>EA_Check\<close> edge and no separate table can drift from it.
 
   This layer is deliberately generic in \<open>classify\<close>: it depends on neither
   \<open>Abstract_Checks\<close> nor a specific domain, only on a plain

@@ -15,10 +15,8 @@ text \<open>
   already proves sound: this theory adds no new soundness anchor, only the
   store-level check layer on top of an existing one.
 
-  The table's shape, \<open>(pp \<times> exp) set\<close>, matches \<^const>\<open>checks\<close> --- the
-  \<^type>\<open>cfg\<close> record field the compiler populates from the \<open>EA_Check\<close> edges it
-  emits --- directly: a caller instantiates \<open>ck\<close> with
-  \<open>checks g\<close> for a compiled \<open>g\<close>, not with a hand-built table.
+  A compiled graph's table is read off its \<open>EA_Check\<close> edges: each edge
+  contributes its source node and its condition.
 \<close>
 
 type_synonym checks = "(pp \<times> exp) set"

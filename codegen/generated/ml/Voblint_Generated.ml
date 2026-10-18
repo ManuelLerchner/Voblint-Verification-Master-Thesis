@@ -4252,8 +4252,7 @@ type phase = Widening | Narrowing;;
 type 'a cfg_ext =
   Cfg_ext of
     (cfg_node * (edge_action * cfg_node)) set *
-      (cfg_node * (call_action * (cfg_node * cfg_node))) set * cfg_node *
-      (cfg_node * exp) set * 'a;;
+      (cfg_node * (call_action * (cfg_node * cfg_node))) set * cfg_node * 'a;;
 
 type 'a trace_key = Trace_Buffer | Trace_Global of string |
   Trace_Seed of cfg_node * 'a;;
@@ -4933,8 +4932,7 @@ let rec c_mod
   a b = (if equal_inta b zero_inta then a
           else minus_inta a (times_inta (c_div a b) b));;
 
-let rec cfg_entry
-  (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
+let rec cfg_entry (Cfg_ext (intra, calls, cfg_entry, more)) = cfg_entry;;
 
 let rec cfg_exit
   g = (match cfg_entry g
@@ -5110,9 +5108,9 @@ let rec mcp_qry
              (ls_query c ch x q))
       cs (top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
-let rec calls (Cfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
+let rec calls (Cfg_ext (intra, calls, cfg_entry, more)) = calls;;
 
-let rec intra (Cfg_ext (intra, calls, cfg_entry, checks, more)) = intra;;
+let rec intra (Cfg_ext (intra, calls, cfg_entry, more)) = intra;;
 
 let bot_set : 'a set = Set [];;
 
@@ -10128,14 +10126,7 @@ let rec compile_prog
               (equal_prod equal_call_action
                 (equal_prod equal_cfg_node equal_cfg_node)))
             kprocs kmain,
-          FunctionEntry prog_main_name,
-          image (fun (u, (a, _)) -> (u, ea_check_cond a))
-            (filter (fun (_, (a, _)) -> is_EA_Check a)
-              (sup_set
-                (equal_prod equal_cfg_node
-                  (equal_prod equal_edge_action equal_cfg_node))
-                eprocs emain)),
-          ()));;
+          FunctionEntry prog_main_name, ()));;
 
 let rec prog_cfg p = compile_prog (prog_table p) (prog_procs p);;
 
