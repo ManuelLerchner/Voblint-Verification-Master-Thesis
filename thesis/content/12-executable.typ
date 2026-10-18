@@ -54,8 +54,9 @@ shows how the proved function becomes the analyzer that runs, and where the proo
 
 == Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
 
-@sec:exec-states stated what a finite representation of the function states
-of @ch:domains must satisfy. This section gives the representation. Nipkow and Klein address the same
+The function states of @ch:domains are total functions on infinitely many
+variable names, which the solver cannot compare after every evaluation. This
+section gives a finite representation. Nipkow and Klein address the same
 problem in the abstract interpreter of Concrete Semantics by refining total
 function states to a finite representation with a default @nipkow14[§13.6]:
 a state is a finite list of variables with their values, every unlisted name
@@ -125,8 +126,8 @@ for the transfer on nonempty states and for procedure entry. For primitives
 proved sound it holds without a per-domain proof, because the abstract and
 executable steps are derived from the same operations
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"), @sec:instances-supply).
-This is the obligation @sec:exec-states states, and
-#isathm("exec_local_spec_sound") is its consequence for the exported code.
+Its consequence for the exported code is
+#isathm("exec_local_spec_sound").
 
 Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
 listed overrides do not decide: an unlisted variable can make the state empty
@@ -577,7 +578,7 @@ of @sec:verdict-meaning hold for every report #isaconst("run_voblint")
 returns, from the syntax tree it receives to the semantic report. The proof
 covers the compiler, the
 well-formedness test, the vendored solver with its executable refinement and
-the executable states (@sec:exec-states).
+the executable states (@sec:represented-function).
 
 *What is trusted.* Two groups lie outside the proof. The first is the
 handwritten code around the generated analyzer: the lexer, the parser, the
