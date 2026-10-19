@@ -10,7 +10,7 @@
 This appendix explains the Isabelle/HOL syntax @nipkow14 of the listings that
 the chapters lift from the theories. Readers who know Isabelle can skip it.
 
-HOL is a typed logic of total functions. We write $x :: tau$ for "$x$ has type
+HOL is a typed logic of total functions. The thesis writes $x :: tau$ for "$x$ has type
 $tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
 #isai("'a") for a type variable, and $lambda x. t$ for the function that maps
 $x$ to $t$. A function is applied by juxtaposition, as in $f med x med y$. A

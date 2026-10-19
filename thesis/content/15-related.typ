@@ -8,7 +8,7 @@
 Most parts of Voblint build on earlier work, from verified analyzers and
 solvers to Goblint and its local-trace semantics. The sections below compare
 each line of work with Voblint and separate what Voblint inherits from what it
-adds. We found the literature through web and OpenAlex searches. AI agents supported this work heavily, from the search
+adds. The literature was found through web and OpenAlex searches. AI agents supported this work heavily, from the search
 to checking each claim against its source
 (#link(<ai-use>)[statement on the use of generative AI]).
 
@@ -303,8 +303,8 @@ the solver side recovering precision. Voblint adopts the split. An analysis
 supplies local and global transfer behavior, and the generator and solver
 organize their interaction.
 
-The correspondence with Goblint's implementation is architectural. We compared
-Voblint with the framework interface of Goblint's
+The correspondence with Goblint's implementation is architectural. Voblint was compared
+with the framework interface of Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/"
     + alignment.revision
@@ -325,7 +325,7 @@ Where Voblint simplifies Goblint, its results do not carry over directly. For
 instance, Voblint publishes the callee entry to a global seed, which the
 entry's local unknown reads back, whereas Goblint writes the local entry
 directly. Under the warrowing rules the seed itself can be widened, so widening applies
-at a different place than in Goblint, and we have not proved which of the two
+at a different place than in Goblint, and it is not proved which of the two
 is more precise. Voblint also resolves call targets statically, and its
 analyses share one combined state and one query kind without globals, whereas
 Goblint's MCP also passes events, spawns, and per-analysis globals. No agreement rate between
@@ -394,7 +394,7 @@ Tilscher et al. @tilscher26, its update rules from Stemmler et al.
 @stemmler25, side-effecting constraint systems from Seidl et al. @seidl03 and
 Apinis et al. @apinis12, widening, narrowing, and the reduced product from
 Cousot and Cousot @cousot77 @cousot79, its activation traces from the local
-traces of Schwarz et al. @schwarz21, and its architecture from Goblint. To our knowledge, the connection between these parts has not been mechanized
+traces of Schwarz et al. @schwarz21, and its architecture from Goblint. As far as the author is aware, the connection between these parts has not been mechanized
 before, namely a soundness proof that leads from a source semantics, through a
 context-indexed collecting semantics over activation traces, to a
 side-effecting constraint system and its verified solver.

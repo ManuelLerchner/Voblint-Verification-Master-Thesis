@@ -48,7 +48,7 @@ names the compiler, assembly code, boot code, cache management, and hardware as
 assumptions. It also assumes that its formal model of C reflects the C standard
 @klein09.
 
-In this thesis, we build Voblint, an executable analyzer whose answers are
+This thesis builds Voblint, an executable analyzer whose answers are
 proved to hold for every execution of the analyzed program. Like these
 projects, it names the assumptions under which its proof holds. Voblint draws
 its boundary at
@@ -256,7 +256,7 @@ shows that such a theorem is possible for a realistic tool. It proves that its
 compiled code behaves as the source semantics specifies, and it lists the
 components that remain trusted @leroy09. Verasco carries the approach to a
 static analyzer for C @jourdan15, and several other abstract interpreters have
-machine-checked soundness proofs as well. None of the works we compare, however,
+machine-checked soundness proofs as well. None of the compared works, however,
 combines recursive procedures, calling contexts, and a verified solver
 (@sec:rel-mechanized). Goblint's architecture uses the first
 two and a generic solver, whose top-down algorithm has since been verified. It
@@ -382,7 +382,7 @@ the wrong caller would lose such a state, and the proof excludes them.
 Voblint closes these gaps by combining existing ideas, some of them already
 formalized and others so far only described on paper or implemented. Its
 overall design mirrors Goblint's architecture inside Isabelle/HOL, without
-formalizing Goblint's implementation or C (@sec:rel-goblint). To our
+formalizing Goblint's implementation or C (@sec:rel-goblint). To the author's
 knowledge, no prior mechanized analyzer connects a source semantics, through a
 context-indexed collecting semantics, to a side-effecting constraint system and
 its verified solver (@sec:rel-summary). Within this design, the formalization makes five contributions.
@@ -496,7 +496,7 @@ that Voblint isolates, over a small language with recursive procedures.
     argued (@sec:vimp-vs-c).],
 ) <fig:intro-trust>
 
-The theorem has the following limits (@sec:limitations).
+The theorem has the following limits.
 
 - _Language and properties._ VIMP has no pointers, heap, or threads. Its
   integers are unbounded, division by zero is defined, and a callee's locals
@@ -505,15 +505,15 @@ The theorem has the following limits (@sec:limitations).
   Voblint checks assertions and division by zero, while Goblint also checks
   overflows, data races, memory
   safety, memory leaks, and program termination @saan26phd[§3.3].
-- _Adequacy and trusted components._ We argue, but do not prove, that #isaconst("pstep") models the intended language (@sec:vimp-vs-c). The parser, the code generator, and the target
+- _Adequacy and trusted components._ It is argued, but not proved, that #isaconst("pstep") models the intended language (@sec:vimp-vs-c). The parser, the code generator, and the target
   toolchains lie outside the proof (@fig:intro-trust).
 - _Partial correctness._ The theorem covers every report the analyzer returns.
   Termination of the solve is not proved for every program (@sec:certificate).
 - _Precision and cost._ No completeness or general precision ordering is
   proved (@sec:eval-precision). The executable uses the same data
-  representations as the proofs. We report no systematic time or memory
-  evaluation, only the speedup from one fixed performance defect
-  (@sec:generated-code, @sec:limitations).
+  representations as the proofs. No systematic time or memory evaluation
+  is reported, only the speedup from one fixed performance defect
+  (@sec:generated-code).
 - _Goblint and evidence._ The correspondence to Goblint is architectural, and
   no theorem transfers to Goblint's implementation (@sec:rel-goblint). The
   regression corpus is small and was written or adapted for this work

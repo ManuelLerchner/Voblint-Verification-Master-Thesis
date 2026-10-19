@@ -320,7 +320,7 @@ $
     the equations must route a covering entry pair to the same $c'$ (right).],
 ) <fig:eq-adequacy>
 
-We call this condition _adequacy_
+This condition is called _adequacy_
 (#isathm("routed_context.routing_adequate", thy: "Routed_Context", display: "routing_adequate")).
 It also requires the callee's entry unknown in $c'$ to be in the solved set.
 #oblig("CALL") and #oblig("RETURN") rely on adequacy, because the call

@@ -15,18 +15,18 @@ context, a solver result that is a post-solution of the equations, and reported
 verdicts that follow from that result. For Goblint's top-down solver, only the third
 condition had been verified @stade24 @tilscher26.
 
-We present Voblint, an Isabelle/HOL formalization of a context-sensitive
+Voblint is an Isabelle/HOL formalization of a context-sensitive
 interprocedural analyzer. Its soundness proof covers all four conditions for
 VIMP, a small C-like language with global and local integer variables and
 recursive procedures with parameters and return values. The main theorem states
 that if the analyzer returns a report, the report covers every store that a
 finite execution of the program reaches from an initial store, and that every
 #verdict("PROVED") or #verdict("REFUTED") verdict at the corresponding program
-point holds for that store. This is partial correctness, since we do not prove
-that the solver terminates. We also prove that a check reported #verdict("DEAD")
-is unreachable. At a point without an arithmetic warning or error, no divisor is
+point holds for that store. This is partial correctness, since termination of
+the solver is not proved. A check reported #verdict("DEAD") is also proved
+unreachable. At a point without an arithmetic warning or error, no divisor is
 zero, and a divisor reported as an error is zero wherever its point is reached.
-To our knowledge, Voblint is the first mechanized analyzer whose soundness proof
+To the author's knowledge, Voblint is the first mechanized analyzer whose soundness proof
 connects a source semantics, through a context-indexed collecting semantics, to
 a side-effecting constraint system and its verified solver.
 
@@ -35,7 +35,7 @@ analyzer computes a separate invariant for each program point and calling
 context. Soundness proofs usually compare them with the collecting semantics,
 the stores reachable at each program point. This semantics, however, merges the
 stores of all calls to a procedure, so it cannot say which stores a given
-context must cover. To solve this, we introduce activation traces, inspired by
+context must cover. Voblint therefore introduces activation traces, inspired by
 the local traces of Schwarz et al. @schwarz21. Each trace follows one procedure
 activation, and a context policy decides to which contexts it belongs. If the
 policy assigns at least one context to every call that an execution reaches,
@@ -58,7 +58,7 @@ a
 by evaluation show that the main theorem is non-vacuous on concrete programs.
 
 The analyzer runs inside unverified hand-written OCaml glue and driver code,
-including the parser and the rendering. We trust this code, Isabelle's code
-generator, and the OCaml and WebAssembly toolchains, and test them
-conventionally using unit and regression tests. Because the theorem concerns VIMP, we also document where
-VIMP differs from C11 @iso-c11.
+including the parser and the rendering. This code, Isabelle's code
+generator, and the OCaml and WebAssembly toolchains are trusted and tested
+conventionally using unit and regression tests. Because the theorem concerns VIMP, VIMP's differences from
+C11 @iso-c11 are documented.

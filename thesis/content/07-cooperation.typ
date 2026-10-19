@@ -347,7 +347,7 @@ that field contributes.
     $italic("ch")$ (blue).],
 ) <fig:mcp-combine>
 
-We call a local specification that runs on one field a _component_. Each
+A local specification that runs on one field is called a _component_. Each
 component reads and writes only its own field, through a _lens_
 (#isaconst("lens_of")) that takes the field out of the combined state and puts
 a new value back, as Goblint's MCP hands each analysis its own part of the

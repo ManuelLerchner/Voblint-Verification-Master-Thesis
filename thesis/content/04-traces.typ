@@ -12,7 +12,7 @@
 @ch:program-model matched every source run with a run of the compiled graph.
 For an analysis that computes one abstract state per node, this suffices. A
 context-sensitive analysis, however, computes a separate state for each node and
-calling context, so to justify its result we need to know which executions each
+calling context, so justifying its result requires knowing which executions each
 context stands for. This chapter gives that distinction a concrete meaning. It
 groups executions into _activation traces_, reads calling contexts off them,
 and states the _coverage contract_, the local conditions under which an
@@ -31,10 +31,10 @@ state for $[v]$ describes, and it can be correspondingly more precise.
 For the calls `bump(5)` and `bump(4)` of the running example
 (@fig:program-to-equations), an analysis with argument contexts claims the
 result $6$ in the context of the first call and $5$ in that of the second
-(@sec:interproc). To justify these claims, we must know which store at the
+(@sec:interproc). To justify these claims, it must be known which store at the
 result node of `bump` belongs to which call. The collecting semantics, however, is too weak to tell. It holds
 both stores at the result node but does not record which activation reached
-each of them, so we need a richer semantics that keeps this information.
+each of them, so a richer semantics that keeps this information is needed.
 
 Contexts depend on how an activation was created, for example on its call site
 or arguments and on the context of its caller (@sec:contexts), and after a
@@ -172,7 +172,7 @@ program (@sec:activation-trace).
 
 === Activation traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:activation-trace>
 
-We turn the grouping of @fig:flat-nested into a datatype. Each box of the
+The grouping of @fig:flat-nested is turned into a datatype. Each box of the
 figure becomes a trace, and the three ways in which a box arises become the
 three constructors. The outermost box, the activation of `main`, is a root. A
 box opened by a call is a callee trace and remembers the box that called it.
@@ -284,7 +284,7 @@ continuation $italic("cont")$, where the caller continues with the store that
 === Graph runs are valid traces #thy-badge("Voblint_Compile", "Source_To_Trace") <sec:source-bridge>
 
 The rules of valid traces mirror the rules of #isaconst("cstep"), but nothing
-so far states that a graph run actually yields a valid trace. We therefore relate graph configurations to traces.
+so far states that a graph run actually yields a valid trace. Graph configurations are therefore related to traces.
 Besides the node and the store, the relation matches the trace's callers with
 the frame stack, so that it still holds after a return.
 
@@ -357,8 +357,8 @@ as here, and split by context, as in @sec:contexts.
 == Calling contexts #thy-badge("Voblint_CFG", "Activation_Trace_Context") <sec:contexts>
 
 A context-sensitive analysis of the running example claims the result $6$ for
-`bump` in the context of the call `bump(5)` and $5$ in that of `bump(4)`. To
-check such claims, we must know which executions each context stands for. This
+`bump` in the context of the call `bump(5)` and $5$ in that of `bump(4)`. Checking
+such claims requires knowing which executions each context stands for. This
 section assigns contexts to activation traces and uses them to split the
 stores collected at each node.
 
@@ -455,7 +455,7 @@ carries $c$.
   ]
 ]
 
-We call #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") the _activation collecting semantics_ at $v$ and $c$.
+The set #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") is called the _activation collecting semantics_ at $v$ and $c$.
 It contains the final stores of the valid traces that end at $v$ and carry
 $c$, and the abstract state computed for $[v, c]$ must describe it. In the running example under interval entry-state contexts, `bump(5)` gets the
 context $[[5, 5]]$ and `bump(4)` the context $[[4, 4]]$
@@ -474,7 +474,7 @@ to local checks.
 
 An analysis result is sound if, at every node $v$ and in every context $c$,
 it accounts for the stores of the activation collecting semantics
-#isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). We state this over a _cover_, a function #isai("cover") that assigns a set of
+#isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). This is stated over a _cover_, a function #isai("cover") that assigns a set of
 stores to each node and context. Since valid
 traces grow by only four rules, it suffices to check the cover against each
 rule once. The _coverage contract_ does this with one local obligation per rule,

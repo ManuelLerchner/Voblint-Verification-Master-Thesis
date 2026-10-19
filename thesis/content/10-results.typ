@@ -116,7 +116,7 @@ this aggregation, so a node at which the report holds no state, or only
 The chain of @sec:chain has to end in
 something an end user reads, and an end user reads the verdicts rather than
 the states. To state that
-the verdicts are correct as an inclusion of sets, we turn the verdicts at $v$
+the verdicts are correct as an inclusion of sets, the verdicts at $v$ are turned
 into the set of stores consistent with them, the _verdict set_
 #isai("\<V>\<^bsub>res\<^esub> v"). If $v$ carries the check `x > 0` with
 verdict #verdict("PROVED"), the verdict set is $setcomp(s, s(x) > 0)$: the verdict

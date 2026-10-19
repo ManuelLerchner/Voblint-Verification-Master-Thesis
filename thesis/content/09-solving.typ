@@ -29,8 +29,8 @@ set to contain the program entry and every unknown that an execution can reach
 from it. This chapter shows that the analyzer obtains such a solved set and
 post-solution. Voblint solves the equations with the
 verified top-down solver of Tilscher et al. @tilscher26, which is proved
-partially correct. To use it, we first bring the equations into the form the
-solver accepts and then derive the premises about the solved set from the
+partially correct. To use it, Voblint first brings the equations into the form the
+solver accepts and then derives the premises about the solved set from the
 solver's correctness theorem.
 
 == Adapting the equations to the solver <sec:eq-encoding>

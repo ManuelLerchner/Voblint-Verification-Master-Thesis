@@ -33,7 +33,7 @@ consistent is to exhibit a program that meets all of them, as
 #cite(<marmsoler26stark>, form: "prose", supplement: [§9]) does for the locale
 assumptions of a formal model.
 
-We take the two-call program of @fig:program-to-equations and analyze it with
+Here, the two-call program of @fig:program-to-equations is analyzed with
 Interval, entry-state contexts, and warrowing. The theory builds a source run
 that returns from `bump(5)` and `bump(4)` and stops before the first check.
 Evaluation shows that the analyzer answers and that both checks are
@@ -209,8 +209,8 @@ level demands a fresh context at every level, and widening bounds the values
 of unknowns but not their number (#fixture(
   "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
   label: "01-unbounded_context_chain_diverges",
-)). The solve exceeds its time limit, and we expect, without proof, that it
-diverges. Goblint's configuration for the SV-COMP competition avoids this
+)). The solve exceeds its time limit, and it is expected, without proof, to
+diverge. Goblint's configuration for the SV-COMP competition avoids this
 explosion by omitting intervals from the contexts of recursive functions
 @saan26phd[§3.4.3].
 
@@ -255,12 +255,12 @@ the bound.
 
 The two recursions separate the joining rules from the widening ones. On the
 growing recursion, the argument grows without bound, and the joining rules give
-no answer within the limit. We expect their solve to diverge, although the
+no answer within the limit. Their solve is expected to diverge, although the
 timeout alone does not show this. The widening rules stop at
 $absval(ivl(0, +infinity))$, which suffices for `x >= 0`. On the shrinking
 recursion, in contrast, per-origin warrowing widens the recursive call's own
 contribution to $-infinity$, so `a + 2` may be zero and the division loses all
-information. Warrow keeps the lower bound, which we attribute to its joining in
+information. Warrow keeps the lower bound, which the author attributes to its joining in
 `main`'s argument $-1$ first, and the joining rules keep
 $absval(ivl(-1, 9))$. No rule is therefore best on every row. Bounded
 narrowing, at its default bound 5, matches per-origin warrowing on all four

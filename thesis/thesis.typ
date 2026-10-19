@@ -107,16 +107,17 @@
 #include "content/15-related.typ"
 #include "content/16-conclusion.typ"
 
-// Appendices keep stable labels under a separate alphabetic counter.
-#set heading(numbering: "A.1.")
-#counter(heading).update(0)
-#include "content/appendix-isabelle.typ"
-#include "content/appendix-notation.typ"
-#include "content/appendix-tooling.typ"
-
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
 
 #pagebreak(weak: true)
 #bibliography("literature.bib", style: "ieee")
+
+// Appendices follow the references and keep stable labels under a separate
+// alphabetic counter.
+#set heading(numbering: "A.1.")
+#counter(heading).update(0)
+#include "content/appendix-isabelle.typ"
+#include "content/appendix-notation.typ"
+#include "content/appendix-tooling.typ"
 

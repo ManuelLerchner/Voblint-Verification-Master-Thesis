@@ -192,7 +192,7 @@ condition holds when it is nonzero (#isaconst("truthy"), #c11("6.8.4.1p2"),
 
 Each operator has its own constructor, because an abstract domain chooses its
 transformer by the operator, and the executable analyzer has to make this
-choice by inspecting the syntax. The two AFP languages with procedures that we
+choice by inspecting the syntax. The two AFP languages with procedures that were
 considered, IMP2 and Simpl, do not allow this. IMP2 @lammich19imp2 represents a binary operator by a HOL
 function of type #isai("int \<Rightarrow> int \<Rightarrow> int"). Concrete
 evaluation can apply such a function, but executable code cannot compare it
@@ -361,7 +361,7 @@ An _operational semantics_ defines the meaning of a program by how it
 executes. A _small-step_ operational semantics does so one step at a time. A
 step relation leads from one configuration to the next, and a run is a
 sequence of steps @plotkin04[§3.2]. VIMP's semantics #isaconst("pstep") is of
-this kind. We call it the _source semantics_, to distinguish it from the graph
+this kind. It is called the _source semantics_, to distinguish it from the graph
 semantics of @sec:cstep, which is also a small-step semantics.
 
 Without calls, a configuration is a pair $(c, s)$ of the command that remains
@@ -371,7 +371,7 @@ check leaves the store unchanged. A sequence steps its first command until it
 is #skipC, a conditional selects a branch by #isaconst("truthy"), and a loop
 unfolds into a conditional that runs the body and then the loop again. After
 each step the remaining command describes the remainder of the execution
-@plotkin04[§3.2], which we call a _residual_.
+@plotkin04[§3.2], here called a _residual_.
 
 Calls raise two questions. While a callee runs, the caller's remaining work
 has to wait somewhere, and a #keyw("return") has to skip the rest of the
@@ -416,7 +416,7 @@ result. These operations select by name and are polymorphic in the value type (#
 non-relational analyses reuse the concrete definitions at their abstract state types, with $top$ in place of the reset
 value $0$.
 
-We model the root activation without a #ctor("Restore"), since `main` has no
+The root activation is modeled without a #ctor("Restore"), since `main` has no
 caller to return to, and a bare #ctor("Unwind") has no step
 (#isathm("pstep_Unwind_stuck")). This is why the source contract rejects
 #keyw("return") in `main` (#isaconst("no_return")). A source run starts from
@@ -424,7 +424,7 @@ the configuration $(#isaconst("main_body") thin Pi, s_0, [])$, with an initial
 store $s_0$ in #isaconst("cinit_stores") (@sec:vimp-vs-c).
 
 Just as Nipkow and Klein show that well-typed programs do not get stuck
-@nipkow14[§9.1.2], we show that well-formed VIMP programs do not. Otherwise,
+@nipkow14[§9.1.2], Voblint proves that well-formed VIMP programs do not. Otherwise,
 claims about the points after a stuck run would hold vacuously. For a program satisfying
 #isaconst("wf_source_program"), every reachable configuration has either
 finished, as #skipC with an empty frame stack, or can step:
@@ -499,7 +499,7 @@ every call names its callee, and the compiler can fix the target of each call
 edge. Supporting indirect calls would require discovering call targets during the analysis, which is left for future work.
 The node kinds match Goblint's
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/framework/node0.ml")[`node0.ml`]),
-which also has statement and function-entry nodes and calls our
+which also has statement and function-entry nodes and calls Voblint's
 $ctor("FunctionResult")$ node `Function`.
 
 The graph keeps local edges and call edges apart, in its fields
@@ -696,7 +696,7 @@ definitions. One describes source programs, the other arbitrary graphs, and
 nothing yet says that a compiled graph behaves like its program. The soundness
 theorem is stated over #isaconst("pstep"), but the analysis solves equations
 generated from the graph, so every source run must be matched by a run of the
-compiled graph that holds the same store at corresponding points. We prove this with a _forward simulation_, a
+compiled graph that holds the same store at corresponding points. This is proved with a _forward simulation_, a
 relation between source and graph configurations that every source step
 preserves.
 
@@ -708,8 +708,8 @@ nested command against a stack of frames. The two executions also do not step
 in lockstep. Some source steps only rearrange the command, such as unfolding a
 loop into a conditional, discarding a finished #skipC, or propagating
 #ctor("Unwind") past the commands it skips. They have no graph counterpart, so
-the graph answers one source step with zero or more steps. We prove only this
-direction. An analysis that covers every graph run from the entry (@ch:traces)
+the graph answers one source step with zero or more steps. Only this direction
+is proved. An analysis that covers every graph run from the entry (@ch:traces)
 then also covers every source run, so soundness needs no converse.
 
 === Matching each source step <sec:csim-step>

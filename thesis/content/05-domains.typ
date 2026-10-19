@@ -719,7 +719,7 @@ can report it as unreachable.
 == Evaluating expressions #thy-badge("Voblint_Domain", "Forward_Domain") <sec:domain-forward>
 
 The carrier operations serve the solver. The analysis additionally needs
-operations that mirror the program's own arithmetic, comparisons, and branch conditions. We call them the domain's _primitives_. This section
+operations that mirror the program's own arithmetic, comparisons, and branch conditions. They are called the domain's _primitives_. This section
 and the next two introduce them, one use at a time.
 
 An assignment `x = e` needs the abstract value of $e$. Forward evaluation

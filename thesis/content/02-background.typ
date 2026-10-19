@@ -133,7 +133,7 @@
 @sec:state-of-art ended with a plan. Each step from source executions to the
 verdicts should relate two sets of concrete stores, so that a proof can check
 that the step loses nothing. This chapter introduces the ideas needed to state
-these steps. We first describe what a program can actually do, then how an
+these steps. It first describes what a program can actually do, then how an
 analysis describes the same behavior more coarsely, and finally how a solver
 computes this description. One small counting loop serves as the example
 throughout.
@@ -141,11 +141,11 @@ throughout.
 == Executions and the collecting semantics <sec:collecting>
 
 An analysis describes the states a program can be in at each of its points, so
-we first make the points explicit. A _control-flow graph_ has the program
+the points are made explicit first. A _control-flow graph_ has the program
 points as nodes and an edge for every way control can pass from one point to
 the next, labeled with the assignment or condition executed on the way.
 @fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
-our running example. The loop becomes a cycle through $h$, $b$, and $t$, and
+the running example. The loop becomes a cycle through $h$, $b$, and $t$, and
 its _loop head_ $h$ is the node through which control enters and exits the cycle.
 
 #figure(
@@ -443,8 +443,8 @@ $ rhs(x)(sol) lle sol(x) quad "for every unknown" x $
 solution @saan26phd[§2.4.4]. For the loop head,
 $rhs(h)(sol) = absval(ivl(0, 0)) ljoin sol(t)$. A post-solution is a post-fixpoint of all
 right-hand sides at once, so the argument of @sec:abs-int applies at every
-program point, and a post-solution bounds the reachable states everywhere. We
-use the term _constraint system_ for the general concept and the term _equation
+program point, and a post-solution bounds the reachable states everywhere. The
+term _constraint system_ is used for the general concept and the term _equation
 system_ for the system that Voblint generates and the solver receives, although
 soundness only
 requires inequalities.
@@ -609,7 +609,7 @@ Side-effecting constraint systems avoid that list. Seidl, Vene, and Müller-Olm
 introduced them for multithreaded programs @seidl03[§3], and Apinis et al. use
 them for context-sensitive analysis @apinis12. While the right-hand side of
 one unknown is evaluated, it may _publish_ a _contribution_ to another unknown
-as a _side effect_. We follow the verified solver and let side effects target
+as a _side effect_. As in the verified solver, side effects target
 only _global unknowns_ $Unk_G$, which have no right-hand side and receive only
 contributions. From here on, $Unk$ denotes the _local_ unknowns, which keep
 their right-hand sides, and a valuation $sol$ assigns values to both kinds. A
@@ -738,6 +738,6 @@ query $x$ and returns its stable set
 $V$ and the valuation $sol$, then $V$ contains $x$, is closed under the local
 reads of its right-hand sides, and on $V$ the valuation is a post-solution,
 published contributions included. It says nothing about unknowns outside $V$,
-and we call $V$ the _solved set_. Unlike some TD variants without side effects
+and $V$ is called the _solved set_. Unlike some TD variants without side effects
 @tilscher26jar, this solver has no termination proof (@sec:isabelle explains
 how Isabelle defines such a function).
