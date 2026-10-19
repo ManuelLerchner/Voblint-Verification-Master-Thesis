@@ -186,7 +186,7 @@ assumption that the channel holds. The transfer must lose no successor, as in
 transfer's concern, and @sec:coop-mcp shows that the framework always supplies
 a channel that holds.
 
-For #isaconst("ask_assign") this assumption is exactly what the proof needs.
+For #isaconst("ask_assign"), this assumption is exactly what the proof needs.
 In the example, only the stores with $x = y$ remain, because the answer $1$ is
 false at all others. At these stores, $e$ evaluates to $1$, so the analysis's
 own assignment of the literal $1$ is sound for $e$ as well
@@ -242,7 +242,7 @@ Int alone joins the branches, so `z` lies only in
 and the check is #verdict-chip(_z("coop-mutual-int").at(3)). The order analysis
 alone cannot compare a variable with a constant and reports
 #verdict-chip(_z("coop-mutual-order").at(3)). Together, at both assignments to
-`y` the order analysis asks Int whether $x$ is at most the assigned constant
+`y`, the order analysis asks Int whether $x$ is at most the assigned constant
 and records the pair $(x, y)$ on both branches. At `z = (x <= y)` Int asks
 #isaconst("EvalInt") $(x <= y)$, the order analysis answers $1$, and the check
 is #verdict-chip(_z("coop-mutual-both").at(3)) (claims
@@ -251,7 +251,7 @@ is #verdict-chip(_z("coop-mutual-both").at(3)) (claims
 The framework therefore runs all selected analyses as a
 single analysis whose abstract state is a tuple with one field per analysis.
 For the solver,
-the tuple is one abstract state per node and context like any other. It is ordered, joined, and widened field by field (#isatype("analysis_product")),
+the tuple is one abstract state per node and context, like any other. It is ordered, joined, and widened field by field (#isatype("analysis_product")),
 so each field evolves as it would alone, except that its transfers may ask the
 other fields. If one selected field shows that a node is unreachable, the whole
 product state does (#isaconst("mcp_norm")).

@@ -17,7 +17,7 @@ which determine every edge (@sec:domain-contract). Other analyses need more. A
 relational analysis does not store one value per variable (@sec:rel-state), an
 analysis may keep facts that belong to no program point, and analyses may need
 each other's facts to be precise (@ch:cooperation). Calls, moreover, need more
-than one transfer, because the caller's locals survive the call while the
+than one transfer, because the caller's locals survive the call, while the
 callee's globals and result flow back.
 
 Everything else between an analysis and the obligations is the same for every
@@ -167,8 +167,8 @@ more general form of these laws, which @sec:analysis-globals states.
 
 == Facts shared across program points <sec:shared-facts>
 
-Not every fact belongs to one program point. An analysis may keep, for
-example, one range for a global variable `g` that holds throughout the execution.
+Not every fact belongs to one program point. An analysis may, for example,
+keep one range for a global variable `g` that holds throughout the execution.
 
 === Reading and publishing analysis globals #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:analysis-globals>
 
@@ -207,7 +207,7 @@ Each law of @sec:sound-core takes $eta$ as an extra parameter
 arguments, and the edge and combine laws describe their results under $eta$
 joined with what the operation publishes. A technical premise
 (#isaconst("dg_spec_wf")) requires that the program of every operation run its
-continuation exactly once, so what it publishes is well defined. The locale
+continuation exactly once, so that what it publishes is well defined. The locale
 states these laws over the solver's representation of a valuation:
 #{
   show raw.where(block: true): set text(size: 6.5pt)

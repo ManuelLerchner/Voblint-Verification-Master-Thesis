@@ -17,7 +17,7 @@ analyzer makes, and an analyzer that answers #verdict("UNKNOWN") everywhere
 satisfies it as well (#isathm("unknown_everywhere_sound")). Following
 #cite(<kim26regulatory>, form: "prose", supplement: [§6]), this chapter first
 checks that the premises can hold and that the obligations exclude real
-errors. It then shows on concrete programs what precision the analyzer reaches,
+errors. It then shows, on concrete programs, what precision the analyzer reaches
 and how the code outside the theorem is tested. Several facts below concern one
 fixed program and are proved by `eval`, which runs generated code and therefore
 also trusts the code generator (@fig:intro-trust).
@@ -55,7 +55,7 @@ each applies to at least one program on which the solve actually terminates.
 == The obligations reject a real Goblint bug <sec:eval-1161>
 
 Non-vacuity does not show that the obligations are strong enough to reject a
-wrong analysis. One way to test them is against a real error. @ch:intro opened
+wrong analysis. One way to test them is to check them against a real error. @ch:intro opened
 with #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156], in
 which Goblint claimed `c % 2 == 1` for $c in {-5, -7}$, although C's truncating
 remainder gives $-1$ for both values.
@@ -142,7 +142,7 @@ Earlier chapters already showed precise answers. Narrowing recovers the bound of
 (@sec:widening), entry-state contexts keep the two calls of `bump` apart
 (@fig:eq-policies), and only Int proves `v == 51` on the
 stride-2 loop (@fig:stride2). Analyses that cooperate through queries decide
-checks that each leaves unknown alone (@ch:cooperation,
+checks that each alone leaves unknown (@ch:cooperation,
 #isathm("order_asks_needs_both")). Beyond these, the corpus holds
 #stat("corpus.kinds.precision") fixtures that pin a definite verdict
 (@sec:eval-corpus). Searching the
@@ -261,7 +261,7 @@ joins the two contributions before widening, so the second looks like growth,
 and the upper bound of `x` jumps to $+infinity$. The per-origin rules widen each
 call site's contribution separately, and since each site writes one constant,
 nothing grows. The joining rules never widen and keep $absval(ivl(1, 2))$ as
-well. The call in a loop shows the same pattern, and again only _warrow_ loses
+well. The call in a loop shows the same pattern, and again, only _warrow_ loses
 the bound.
 
 The two recursions separate the joining rules from the warrowing ones. On the
@@ -334,7 +334,7 @@ The theorem stops at the generated analyzer, so the handwritten OCaml around it
 (@tab:sizes) is tested rather than proved. A
 #link(repo-blob + "tests/regression")[regression corpus] runs the analyzer end
 to end. It holds #stat("corpus.cases") VIMP fixtures in #stat("corpus.groups")
-groups, part of them adapted from Goblint's regression tests, as each header
+groups, some of which are adapted from Goblint's regression tests, as each header
 records. Each fixture states its command-line flags and the verdict expected at
 each check.  In
 `soundness/`, the program has executions on both sides of the check, so

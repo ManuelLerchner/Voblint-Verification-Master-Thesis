@@ -30,7 +30,7 @@ Goblint's architecture served as the specification to follow. Each construct was
 revision, and the decision to model it, simplify it, or leave it out was
 recorded with its reason in an alignment register, which the project site and
 @sec:rel-goblint summarize. The main questions were therefore architectural.
-They concerned which parts of Goblint to keep, which to simplify, and where a
+They asked which parts of Goblint to keep, which to simplify, and where a
 proof could state something that Goblint leaves implicit. Context sensitivity
 is the clearest example. In Goblint, routing a call to a context is part of the
 constraint system, and no formal statement says which concrete activations the
@@ -54,7 +54,7 @@ along the way. The first version compiled single-procedure programs to a flat
 control-flow graph and solved them with a plain top-down solver. Within six
 weeks, a trace semantics and interprocedural graphs replaced it, and the
 side-effecting solver became the only one. Contexts were first built on a
-digest-indexed concrete semantics, which was removed again after two weeks in
+digest-indexed concrete semantics, which was removed after two weeks in
 favor of the activation traces of @ch:traces. A
 #link(repo-blob + "docs/ACTIVATION_LOCAL_TRACE_CONVERGENCE.md")[design record]
 explains this change, and an earlier
@@ -62,7 +62,7 @@ explains this change, and an earlier
 had judged the alternatives by their fidelity to Goblint and by whether
 the concrete semantics stays independent of the analysis. Local state and analysis globals, call strings, the
 relational domain, and finally cooperating analyses were then each added on top
-of this foundation without major rewrites of it. Each larger change followed a written
+of this foundation without major rewrites. Each larger change followed a written
 plan, and more than a hundred of these documents remain in the repository's
 #link(repo-blob + "docs/history")[history folder]. They are not part of the
 argument, but they record why the definitions look as they do.
@@ -156,6 +156,6 @@ step functions and the proofs that unfold them, while the contract and its
 composition keep their shape. Pointers, a shared heap, and threads break the assumption. Through a pointer or the
 heap, a callee could change data its caller still uses, and threads let other
 activations run in between. Such features
-would require extending the trace semantics @sotin11 @schwarz21, and with it
-every soundness proof built on traces, which amounts to a large rewrite of the
+would require extending the trace semantics @sotin11 @schwarz21, and, with it,
+every soundness proof built on traces, which would amount to a large rewrite of the
 whole formalization.

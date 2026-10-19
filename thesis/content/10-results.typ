@@ -27,7 +27,7 @@ This chapter derives the guarantees of the analyzer's report for the
 executions of the source program. Solving the equations of @ch:equations
 (@ch:solving) gives an abstract state for each CFG node and context the solver
 reached, as well as a value for each global unknown. By @sec:certificate, these states cover every
-execution. A user, however, reads neither states nor contexts. The user reads
+execution. A user, however, reads neither the states nor the contexts. The user reads
 a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
 from the solution and why every verdict in it is sound.
@@ -102,7 +102,7 @@ holds in every store the state describes (#isathm("mcp_classify_proved"),
 
 The verdict of the CFG node soundly joins the per-context verdicts of its states
 (#isaconst("aggregate_verdicts")). If every state other than #ctor("Bot")
-gives #verdict("PROVED"), the node is #verdict("PROVED"); if every such state
+gives #verdict("PROVED"), the node is #verdict("PROVED"). If every such state
 gives #verdict("REFUTED"), it is #verdict("REFUTED"). If the states disagree,
 or one of them gives #verdict("UNKNOWN"), the node is #verdict("UNKNOWN").
 Disagreement cannot be resolved otherwise. If one context proves `x > 0` and
@@ -125,7 +125,7 @@ tells the user that $x$ is positive there and nothing else.
 (#isaconst("verdict_holds")).
 A #verdict("DEAD") check says nothing about the values in a store. It claims
 that no store arrives at $v$, which is a statement about reachability, and
-@sec:verdict-meaning treats it. As a set of stores it therefore admits
+@sec:verdict-meaning treats it. As a set of stores, it therefore admits
 every store and leaves the claims of the other checks at $v$ untouched:
 
 #thy("check_stores")
@@ -137,7 +137,7 @@ check at $v$:
 #thy("verdict_stores")
 
 The intersection states this for any number of checks at a node. In a compiled
-program each check has a node of its own, and the verdict set is then the set
+program, each check has a node of its own, and the verdict set is then the set
 of that single check.
 
 The verdict set can be much larger than
@@ -194,24 +194,24 @@ of the chain is a theorem:
   isai("\<V>\<^bsub>res\<^esub> v"),
 )))
 The first step places a store that a finite source execution reaches in the node
-collecting semantics, at a node $v$ the simulation relates to the run. On the
-elaboration this is every node at which the run is observed
+collecting semantics, at a node $v$ that the simulation relates to the run. On the
+elaboration, this is every node at which the run is observed
 (#isathm("csim_point_compile_prog"), @sec:at-node). The second step splits
 #isaconst("node_collect") into #isaconst("activation_collect") over the
 contexts #isai("adm") admits, with `main` in #isai("c\<^sub>0")
 (@sec:contexts). It needs only that every valid trace carries some context.
 Functional policies meet this for every trace, and the entry-state policy
-through #oblig("TOTAL") on the solution (@sec:contract). The third
+meets it through #oblig("TOTAL") on the solution (@sec:contract). The third
 inclusion is the analyzer's soundness result. Its proof combines the second
 step with the per-context bound of @ch:equations, which places the activation
 collecting semantics of each context inside the state solved for it
 (#isathm("activation_collect_dg_sound")). The theorem itself states only the
 outer sets, #isai("\<C>") and #isai("\<R>\<^bsub>res\<^esub>"), so it does not
 say which state covers a given store, and the contexts stay inside its proof.
-The fourth inclusion is the one of @sec:verdicts and depends only on the
+The fourth inclusion is that of @sec:verdicts and depends only on the
 report and its consistency.
 
-Consider the example below (@fig:chain), whose program calls `f` twice. The first call passes $1$. The second passes an input $x$ with $1 <= x <= 3$, if the input is in that range.
+Consider the example below (@fig:chain), whose program calls `f` twice. The first call passes $1$. The second passes the input $x$ if $1 <= x <= 3$.
 So `m` is $2$, $4$, or $6$ at the checks: `m >= 2` always holds, and `m == 2`
 holds at the first call and fails at the second call when $x$ is $2$ or $3$.
 
@@ -340,7 +340,7 @@ quantifies over an arbitrary analysis configuration and program, the arguments
 of #isaconst("run_voblint") (@sec:report). Whenever the analyzer returns a
 report, every store that a finite source execution reaches is covered by that
 report and satisfies its definite verdicts. Of the sets in the chain, its conclusion keeps the node collecting semantics,
-#isai("\<R>\<^bsub>res\<^esub> v"), and the verdict set, and the contexts appear only inside its
+#isai("\<R>\<^bsub>res\<^esub> v"), and the verdict set. The contexts appear only inside its
 proof.
 
 The theorem is about #isaconst("run_voblint") itself, the constant that code
@@ -372,7 +372,7 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
 ]
 
 The conclusions are stated at graph nodes, but a source configuration names
-none, since its residual command can occur at several places of the program.
+none, since its residual command can occur at several places in the program.
 The node comes from the run, through the relation
 $p, s_0 tack.r ("residual", s, "frs") gt.closed v$ of @sec:at-node
 (#isaconst("at_node")), which may observe one configuration at several nodes.
@@ -391,7 +391,7 @@ observed
 ]
 
 Whenever the analyzer returns a report, every store that a source execution
-reaches is thus collected, covered by the report and consistent with its
+reaches is thus collected, covered by the report, and consistent with its
 verdicts at every node where the run is observed. This is the chain of
 @sec:chain read at one store.
 
@@ -419,7 +419,7 @@ reachability. The corresponding theorem for #verdict("PROVED") and #verdict("REF
 ]
 
 The report also contains arithmetic diagnostics. At every division and
-remainder the analyzer asks, through the queries of
+remainder, the analyzer asks, through the queries of
 @sec:coop-queries, whether the divisor can be zero. It reports an error if the analyses
 show that it is zero, a warning if they cannot exclude zero, and nothing
 otherwise. An error means that the divisor is zero whenever a covered execution reaches

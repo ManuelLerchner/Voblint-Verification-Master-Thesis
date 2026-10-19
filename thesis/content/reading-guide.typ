@@ -6,8 +6,8 @@
 
 = Reading This Thesis <reading-guide>
 
-The thesis is written to be read on screen as well as on paper. It follows a
-machine-checked Isabelle/HOL development closely, and most references to that
+The thesis is written to be read on screen as well as on paper. It closely follows a
+machine-checked Isabelle/HOL development, and most references to that
 development are links. The HTML rendering of every theory is hosted on GitHub
 Pages, and a single
 #link(site("formalization.pdf"))[PDF export of the whole formalization] is

@@ -75,12 +75,12 @@ or reads (@sec:update-rules). The adapters change the equations, not the solver.
 A local edge always reads the same unknown, its predecessor. A call, in
 contrast, chooses what to read from values it has already read. In the running
 example, the continuation $(italic("pp3"), c_0)$ first reads the caller
-$(italic("pp2"), c_0)$. From that value it computes the entry state
+$(italic("pp2"), c_0)$. From that value, it computes the entry state
 $n = absval(ivl(5, 5))$, which determines the context $c_1$ and thus the result it reads
 next, $(ctor("FunctionResult") thin italic("bump"), c_1)$.
 The vendored TD solver accepts a right-hand side only as a strategy tree, which
 issues one read at a time and passes each value read to a continuation
-(@sec:td). Every right-hand side of Voblint is such a tree. For a local edge
+(@sec:td). Every right-hand side of Voblint is such a tree. For a local edge,
 the tree reads the predecessor and applies the transfer. For a call it chains reads whose
 continuations choose the next read from the value received. In the notation of
 @sec:td, the value of
@@ -102,7 +102,7 @@ entry pairs.
 
 === Publishing entry states to global seeds <sec:eq-seed-global>
 
-In $t_"call"$ the caller pushes the entry state to the callee with a
+In $t_"call"$, the caller pushes the entry state to the callee with a
 #ctor("Side") step. Otherwise, the equation of the callee's entry would have
 to read every call routed to it. Under entry-state contexts, however, these
 calls depend on the entry states, which are known only while the equations are
@@ -159,18 +159,18 @@ local state.
     global unknowns are named by #isatype("global_unknown").],
 ) <tab:eq-carrier>
 
-Transfers never see the pair or the seeds. Goblint combines the two kinds of value in a
+Transfers never see the pair or the seeds. Goblint instead combines the two kinds of value in a
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/constraint/translators.ml#L30-L32",
 )[lifted sum]
-instead, in which each unknown holds a value of exactly one of the two kinds.
+in which each unknown holds a value of exactly one of the two kinds.
 Voblint uses the product because its componentwise lattice structure keeps
 the Isabelle proofs simple, at the price of an unused #lbot half in every
 unknown.
 
 == Update rules for global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
 
-A global unknown such as a seed receives contributions from several places.
+A global unknown, such as a seed, receives contributions from several places.
 The solver merges each new contribution into the value it holds, and this
 merge, the _update rule_, decides both precision and termination. Stemmler et
 al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
@@ -184,7 +184,7 @@ origin_ reports the join of each origin's latest contribution. Of the three
 _warrowing rules_, _warrow_ and _warrow per origin_ warrow toward
 the same join or per origin, and _bounded narrowing_ additionally limits how
 often an origin may switch from widening to narrowing. @fig:update-rules runs
-all five on one sequence of contributions. In #isaconst("run_voblint") the rule
+all five on one sequence of contributions. In #isaconst("run_voblint"), the rule
 decides how a callee's entry state accumulates across call sites and how a
 flow-insensitive program global (@sec:mixed-flow) accumulates its writes. No
 rule is more precise on every program, and @sec:eval-precision compares them.
@@ -240,7 +240,7 @@ rule is more precise on every program, and @sec:eval-precision compares them.
     rules.],
 ) <fig:update-rules>
 
-One right-hand side can publish to the same global unknown twice, for example
+One right-hand side can publish to the same global unknown twice, for example,
 when two calls that resume at the same node are routed to the same callee
 context and publish to the same seed. The equations read two publications to one target
 $g$ as one bound:
@@ -252,7 +252,7 @@ $
 The vendored TD solver, however, applies the update rule at every #ctor("Side").
 A per-origin rule (@sec:td) therefore records first $a$ and then
 $a union.sq b$, so in every re-evaluation the recorded contribution shrinks
-and grows back. Under warrowing the shrinking step narrows, the growing step
+and grows back. Under warrowing, the shrinking step narrows, the growing step
 widens again, and the solver may not stabilize. The update rules of Stemmler
 et al. assume one joined contribution per target and evaluation
 @stemmler25[§3], and Goblint, when `narrow-globs` is enabled, joins the side
@@ -262,13 +262,13 @@ effects of an evaluation before its per-origin update
 Voblint joins them as well. #isaconst("buffer_sides") collects the
 publications of a right-hand side and joins those to the same target until a
 flush point. Where several calls return at a node, it flushes only when the
-right-hand side answers. Elsewhere it flushes before every local read, so that
+right-hand side answers. Elsewhere, it flushes before every local read, so that
 an entry state reaches the callee before the callee's exit state is demanded, as
 in Goblint's normal-call transfer
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245")[`constraints.ml`]).
 The buffered generator #isaconst("routed_node_rhs_buffered"), which the
 analyzer runs, answers the same join as the direct generator of
-@sec:eq-call. Under warrowing rules the timing can change the computed
+@sec:eq-call. Under warrowing rules, the timing can change the computed
 result, though not the equations it solves. @sec:outlook-extending discusses a
 solver extension that would make seeds and buffering unnecessary.
 
@@ -304,7 +304,7 @@ have no termination premise. The solve starts from one query, the result of
 as in @apinis12[§3]), and evaluates an unknown only when a right-hand side it
 is solving reads it @seidl21 @tilscher26. It thus discovers contexts as it
 goes, and whether it returns depends on how many unknowns it reaches. Under
-entry-state contexts a recursion can demand unboundedly many
+entry-state contexts, a recursion can demand unboundedly many
 (@sec:eval-precision). The existing termination theorems do
 not apply to Voblint (@sec:rel-solvers), so the end-to-end soundness theorem
 (@sec:headline) is a partial-correctness result about every report the
@@ -336,7 +336,7 @@ and the contributions it publishes. In Isabelle these are
 $#isaconst("eq", thy: "Basics_side") med T med u med sol$,
 $#isaconst("dep\<^sub>L") med T med sol med u$, and
 #isaconst("sides_of_rhs"), which joins the published values per target and is
-#lbot where the tree publishes nothing.  With them the
+#lbot where the tree publishes nothing. With them, the
 certificate states four facts about the query $x$ and the solved set $V$:
 $
   & x in V & wide "(C1)" \

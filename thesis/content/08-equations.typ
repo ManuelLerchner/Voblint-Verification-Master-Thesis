@@ -51,7 +51,7 @@ Separate contexts give the activations of `bump(5)` and `bump(4)` separate
 copies of `bump`, so the first result stays exactly $6$ (@sec:interproc).
 
 Voblint therefore indexes the unknowns of the equations by contexts. For every
-node $v$ and context $c$ there is a _local_ unknown $(v, c)$, whose value
+node $v$ and context $c$, there is a _local_ unknown $(v, c)$, whose value
 $sol(v, c)$ is the abstract state for the activations of context $c$ at $v$.
 These are the indices of the cover. Goblint's local unknowns have the
 #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape] @apinis14[§5.2].
@@ -65,7 +65,7 @@ reaches $v$ there. Such states come from four sources: the initial state at
 the program entry, the transfer along each local edge into $v$, the result of
 each call that returns to $v$, and, at a procedure entry, the entry states that
 calls publish to it. An entry state is the abstract state in which the callee
-starts, for example with its formal parameters bound to the abstract values of
+starts, for example, with its formal parameters bound to the abstract values of
 the call's arguments (@sec:calls). Along a local edge, the
 activation keeps its context (@sec:contexts), so the second source applies the
 transfer to the predecessor's value in the same context $c$. A callee, however,
@@ -91,7 +91,7 @@ this join.
 
 At a call, the analyzer chooses the callee's context with a _routing_ function
 $ctxh(u, c, e)$ of the call site $u$, the caller context $c$, and the entry
-state $e$. Under entry-state contexts the choice depends on $e$, which is
+state $e$. Under entry-state contexts, the choice depends on $e$, which is
 known only while the equations are solved. The set of calls that contribute to
 a particular callee context is therefore not known in advance, and the
 callee's entry cannot list them in its equation. Each call instead publishes
@@ -242,13 +242,13 @@ classified as bottom is required to have an empty concretization
 Every call is assigned a callee context twice. The equations choose one from
 the abstract entry state, and the concrete semantics of @ch:traces chooses one
 from the concrete call, through the context policy $italic("adm")$ of
-@sec:contexts. The unknowns of a context only receive what the equations publish
+@sec:contexts. The unknowns of a context receive only what the equations publish
 there, but they must describe every concrete activation that the policy admits
 in it. The two choices must therefore agree. In the running example, the
 policy admits the activation of `bump` with $n = 5$ in the context $[[5, 5]]$,
 and the call `bump(5)` publishes an entry state with $n = 5$ to the same context.
 In general, whenever the policy admits a concrete call in a context, the
-equations must publish an entry pair that describes the call to that context
+equations must publish to that context an entry pair that describes the call
 (@fig:eq-adequacy). For a caller store $s$ that the caller's solved state
 describes and the entered store $s'$:
 $
@@ -366,7 +366,7 @@ the soundness theorem and are proved once for each context policy.
     abstract states.],
 ) <tab:eq-policies>
 
-For unit and call strings the correspondence is direct, as the last column of
+For unit and call strings, the correspondence is direct, as the last column of
 @tab:eq-policies shows. $italic("adm")$ admits exactly the context that the
 routing function computes for the call, which does not depend on $e$
 (#isaconst("context_policy_of_fun")), so totality is immediate. Adequacy then reduces to the entry coverage of @sec:calls and a routed entry unknown in the solved set.

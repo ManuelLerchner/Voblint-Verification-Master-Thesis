@@ -22,7 +22,7 @@
 = Numeric and Relational Analyses <ch:instances>
 
 The preceding chapters stated what a domain, an analysis, and a combination of
-analyses must prove, and @ch:results showed that every report is sound
+analyses must prove, and @ch:results showed that every report is sound,
 whichever analyses produced it. This chapter introduces and describes the analyses that Voblint currently
 implements. A user selects among the
 non-relational domains Sign, Interval, Parity, and Congruence, their reduced product
@@ -111,7 +111,7 @@ obligation concerns the initial state, which must describe the initial stores.
 The loop below is the fixture #fixture("12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp", label: "05-mine_ex410_stride2_parity.vimp"),
 adapted from Goblint's regression test #link("https://github.com/goblint/analyzer/blob/d155e9e/tests/regression/56-witness/29-mine-tutorial-ex4.10.c")[`56-witness/29-mine-tutorial-ex4.10.c`]
 (revision `d155e9e`) after Example 4.10 of Miné's tutorial @mine17. In every
-run $v$ takes the odd values $1, 3, dots, 51$ and the loop exits with
+run, $v$ takes the odd values $1, 3, dots, 51$ and the loop exits with
 $v = 51$, so every check holds.
 
 #listing(
@@ -188,12 +188,12 @@ the bound and the oddness together, does (@sec:reduced-product).
 
 An Int value (#isatype("int_dom")) holds one value of each base domain and
 stands for the integers that all four allow. Running the four side by side
-would be sound, but each would work with its own value only, so a fact that
+would be sound, but each would work only with its own value, so a fact that
 needs two of them would not be found. @fig:stride2 shows this: no
 base domain alone proves `v == 51`. In the program below, the guards keep
 $x$ between $-2$ and $10$, and the assignment makes $x$ one more than a
 multiple of $4$. Only $1$, $5$, and $9$ satisfy both, so `x >= 1 && x <= 9`
-holds. Yet the interval alone still allows $-2$ and the residue class alone
+holds. Yet the interval alone still allows $-2$, and the residue class alone
 allows $-3$, so neither component can decide the check.
 
 #listing(lang: "c", claim: "int-reduction-fixpoint", ```
@@ -213,9 +213,9 @@ fun main() {
 A _reduction_ lets the components sharpen each other, as in the reduced product
 @cousot79 @mine17[Def. 6.3, Ex. 6.2]. Here the residue class moves the
 interval's bounds to the nearest values that are $1$ modulo $4$, giving
-$absval(ivl(1, 9))$, and the now positive interval makes the sign positive.
+$absval(ivl(1, 9))$, and the now-positive interval makes the sign positive.
 The reduced value stands for the same integers but decides the check. Without
-reduction the analyzer reports #verdict-chip(_red-verdict("never")) there, and
+reduction, the analyzer reports #verdict-chip(_red-verdict("never")) there, and
 with it #verdict-chip(_red-verdict("fixpoint")) (claims
 #claim-ref("int-reduction-never") and #claim-ref("int-reduction-fixpoint")).
 Reduction also proves `v == 51` in @fig:stride2. Inside the loop, "odd"
@@ -248,7 +248,7 @@ to no reduction, whereas Voblint defaults to repeating rounds until nothing
 changes.
 
 In the generated OCaml, the default mode iterates without a termination proof,
-so on some input the analyzer might not return. Soundness is unaffected, since
+so on some inputs the analyzer might not return. Soundness is unaffected, since
 the theorem only speaks about returned reports (@fig:intro-trust).
 
 Int reduces the result of every arithmetic operation and of the guard filter,
@@ -405,11 +405,11 @@ fun main() {
 ```)
 
 Because the analysis does not combine pairs transitively, it cannot prove
-`x <= z` under `y <= z`: it holds #state("order-alone-order", "14:7") there
+`x <= z` under `y <= z`. It holds #state("order-alone-order", "14:7") there
 and answers #verdict("order-alone-order", "14:7") (@sec:rel-state). The assignment
 `y = y + 1` throws away every pair involving $y$, leaving
 #state("order-alone-order", "17:5"). A copy, in contrast, yields pairs in both
-directions. At `w = x` the assignment asks, for the variable $x$ itself,
+directions. At `w = x`, the assignment asks, for the variable $x$ itself,
 whether `x <= x` holds in each direction. The order analysis answers yes to
 both, because it treats a variable as ordered with itself, so it records
 #state("order-alone-order", "20:3") and proves `w == x`, where Interval

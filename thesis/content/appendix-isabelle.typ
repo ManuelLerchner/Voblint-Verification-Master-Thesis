@@ -21,7 +21,7 @@ existing type.
 
 A #isai("definition") gives a new constant by one equation whose
 right-hand side does not mention the constant, so it only names an existing
-term and needs no proof. The right-hand side may be any term, for instance a
+term and needs no proof. The right-hand side may be any term, for instance, a
 set comprehension ${s. P med s}$ over an infinite type, so a definition need
 not be computable. Below, $forall x$ ranges over all variables:
 // deps: preview -- shown for its syntax; @sec:nonrel-state introduces abstract states.
@@ -42,12 +42,12 @@ the recursion terminates, as for the verified TD solver and its domain
 #block(breakable: false)[
   A theorem declares its variables and their types after #isai("fixes"),
   introduces abbreviations local to the statement after #isai("defines"), lists
-  its premises after #isai("assumes") and states its conclusion after
+  its premises after #isai("assumes"), and states its conclusion after
   #isai("shows"). The end-to-end soundness theorem of @sec:headline uses all four:
   // deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
   #proved("run_voblint_source_sound")
 ]
-Inside a proposition, $A ==> B$ is implication and $exists$, $and$, $or$ are
+Inside a proposition, $A ==> B$ is an implication and $exists$, $and$, $or$ are
 the usual connectives. Subscripts, superscripts, and symbols such as $tack.r$
 and $gt.closed$ are notation for a constant applied to its arguments, and the
 text names the constant at first use.

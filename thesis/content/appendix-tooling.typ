@@ -48,7 +48,7 @@ and there are plans to publish the solver in the Archive of Formal Proofs.
 
 The repository currently relies on several package managers.
 #link("https://pixi.sh")[Pixi] installs Python and the conda-forge packages
-and runs every task, opam installs the OCaml toolchain of the exported
+and runs every task, opam installs the OCaml toolchain for the exported
 analyzer and its browser build, and Isabelle is installed separately. The goal
 is a single Pixi file from which one `pixi install` sets up everything. For the
 OCaml side, this requires every package the analyzer builds with on
@@ -59,9 +59,9 @@ Menhir, and almost none of the libraries below them.
 Alongside this thesis, considerable effort went into changing this, together
 with other conda-forge contributors. A #link(_pr(34872))[recipe for ten base
   libraries], from `csexp` to `yojson`, has been merged, and Apple Silicon builds
-were enabled for each of them. Two fixes to the Dune package have been merged,
-and recipes for `ppxlib` and `sedlex` and an update of Zarith are under
-review. `isar-tools` itself #link(_pr(34960))[installs from conda-forge]. Of
+have been enabled for each of them. Two fixes to the Dune package have been
+merged, and recipes for `ppxlib` and `sedlex`, as well as an update to Zarith,
+are under review. `isar-tools` itself #link(_pr(34960))[installs from conda-forge]. Of
 the #_cf.len() packages in the
 #link(repo-blob + "manifests/conda-forge-ocaml.toml")[toolchain manifest],
 #_cf-ready are now available on conda-forge, and the others, among them

@@ -36,9 +36,9 @@ result node of `bump` belongs to which call. The collecting semantics, however, 
 both stores at the result node but does not record which activation reached
 each of them, so a richer semantics that keeps this information is needed.
 
-Contexts depend on how an activation was created, for example on its call site
-or arguments and on the context of its caller (@sec:contexts), and after a
-return, the caller must continue in the contexts it had before the call.
+Contexts depend on how an activation was created, for example, on its call site
+or arguments and on the context of its caller (@sec:contexts). After a return,
+the caller must continue in the contexts it had before the call.
 Neither the graph execution nor a flat record of its runs exposes this. Each
 frame of the stack in @sec:cstep holds only what execution needs to resume its
 caller, and the frame disappears once the call has returned. The list of
@@ -269,8 +269,8 @@ created itself.
 The root rule corresponds to the initial graph configuration, and the other
 three rules correspond to the three rules of #isaconst("cstep"). Intra appends
 a step along a local edge. Call starts a new trace that holds the caller, where
-#isaconst("cstep") pushes a frame. Ret builds a third trace that holds caller
-and callee, where #isaconst("cstep") pops the frame.
+#isaconst("cstep") pushes a frame. Ret builds a third trace that holds the caller
+and the callee, where #isaconst("cstep") pops the frame.
 
 The ret rule applies when a callee trace has reached a result node
 #isai("FunctionResult p"), which no edge leaves in a compiled graph. The rule
@@ -366,7 +366,7 @@ context is the call site in `main`. With entry-state contexts, it is the
 abstract value of the formal parameter at the callee's entry, $[[5, 5]]$ under
 Interval (@sec:eq-routing). In general, the choice may depend on the call site,
 on the caller's context, which call strings extend, on the call itself, which
-names the callee, its formals, arguments and destination, and on the
+names the callee, its formals, arguments, and destination, and on the
 caller's store and the _entered store_, the store at the callee's entry after
 the formals have been bound. A _context policy_ fixes this choice for every
 concrete call.
@@ -389,7 +389,7 @@ state, and each alternative gets its own context. Suppose a caller passes an
 argument that is either negative or positive, and its state keeps the two
 cases apart, for instance, as two path-sensitive states. With one alternative
 per case, the callee is analyzed in one context for negative arguments and in
-another for positive ones, and a sign analysis keeps the sign in both, where a
+another for positive ones, and a sign analysis keeps the sign in both, whereas a
 single entry state would join the cases to $ltop$. When the cases overlap, one
 concrete call belongs to several contexts at once
 (#isathm("ov_two_contexts_admitted")).
@@ -425,8 +425,8 @@ draws, for each policy, the contexts that the analyzer creates for one program.
   }
 ]
 
-Voblint offers three policies (#isatype("context_mode")): the unit context policy,
-which uses one context for every activation, call strings bounded to the $k$
+Voblint offers three policies (#isatype("context_mode")): the unit context policy
+with one context for every activation, call strings bounded to the $k$
 most recent call sites, and entry-state contexts
 @sharir81 @seidl12compiler[§§2.6, 2.9]. Entry-state contexts follow Goblint's
 partial tabulation, which tabulates procedure summaries only for the calling

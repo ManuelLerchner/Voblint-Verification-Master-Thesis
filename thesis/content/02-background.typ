@@ -174,7 +174,7 @@ value, here the value of $i$. An execution starts at the entry of the graph in
 an initial store and follows a path, updating the store at every edge. The
 counting loop reaches $h$ once before the first iteration and again after each
 run of the body, so $i$ takes exactly the values $0, 1, dots, 5$ there.
-Collecting, for every program point, the stores of all executions that reach
+For every program point, collecting the stores of all executions that reach
 it gives the _collecting semantics_ $cal(C)$ @cousot77[§4] @mine17[§3.4],
 which maps every program point $v$ to the set $cal(C)(v)$ of stores reached
 there. For
@@ -221,7 +221,7 @@ joins need to exist only for pairs. Joins of infinite sets would not help an
 executable analyzer anyway, since it computes only with finite representations.
 
 A numeric domain adds two operations to this structure. Its top element
-describes a variable about which nothing is known, for instance a value read
+describes a variable about which nothing is known, for instance, a value read
 from input. Refinement at a branch adds an intersection, which does not have to
 be the exact meet. It must keep every value that both operands admit, and its
 result must lie below both operands (#isalocale("sound_intersection"),
@@ -349,7 +349,7 @@ interval transfer $[l, u] |-> [l + 1, u + 1]$ is sound for it, and applied to
 $absval(ivl(0, 4))$ it yields $absval(ivl(1, 5))$, which contains every successor $i = 1, dots, 5$.
 Soundness
 composes along paths
-@mine17[Thm. 2.6], and at control-flow joins the upper-bound laws of the join
+@mine17[Thm. 2.6], and at control-flow joins, the upper-bound laws of the join
 keep the states from both predecessors (#isathm("gamma_sup_ub1"),
 #isathm("gamma_sup_ub2")).
 
@@ -556,8 +556,8 @@ choice of widening and narrowing affects only precision and termination.
 The counting loop has no procedures. With procedures, the analysis must decide
 which abstract state a callee's body starts from. Take the calls `bump(5)` and
 `bump(4)` of @ch:intro, where `bump` returns its argument plus one. With one
-unknown per program point, the entry of `bump` must cover both arguments, so
-over intervals its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
+unknown per program point, the entry of `bump` must cover both arguments, so,
+over intervals, its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
 that the first call returns $6$. A context-sensitive analysis instead
 separates the _activations_ of a procedure, each execution from its call to
 its return, by a _calling context_, an abstraction of how the activation was
@@ -736,7 +736,7 @@ certificate #isaconst("part_post_solution", thy: "Basics_side") of
 @sec:side-effects and states partial correctness. If the run terminates on the
 query $x$ and returns its stable set
 $V$ and the valuation $sol$, then $V$ contains $x$, is closed under the local
-reads of its right-hand sides, and on $V$ the valuation is a post-solution,
+reads of its right-hand sides, and, on $V$, the valuation is a post-solution,
 published contributions included. It says nothing about unknowns outside $V$,
 and $V$ is called the _solved set_. Unlike some TD variants without side effects
 @tilscher26jar, this solver has no termination proof (@sec:isabelle explains

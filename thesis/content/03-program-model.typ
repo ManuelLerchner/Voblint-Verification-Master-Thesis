@@ -370,7 +370,7 @@ to run and the store, as in the semantics of IMP by Nipkow and Klein
 check leaves the store unchanged. A sequence steps its first command until it
 is #skipC, a conditional selects a branch by #isaconst("truthy"), and a loop
 unfolds into a conditional that runs the body and then the loop again. After
-each step the remaining command describes the remainder of the execution
+each step, the remaining command describes the remainder of the execution
 @plotkin04[§3.2], here called a _residual_.
 
 Calls raise two questions. While a callee runs, the caller's remaining work
@@ -437,7 +437,7 @@ library call has a result (#isathm("special_result_ex")).
 == The procedure-aware control-flow graph <sec:graph>
 
 The source semantics executes a program by rewriting the command that remains
-to run. The analysis works on a procedure-aware control-flow graph instead,
+to run. The analysis instead works on a procedure-aware control-flow graph,
 whose nodes are the program points that carry abstract states and whose local
 edges and call edges carry the transfers.
 
@@ -581,7 +581,7 @@ so in a body that always returns, $r$ and its edge are dead code.
 @sec:certificate explains why the compiler keeps them. Every edge into
 $ctor("FunctionResult") thin p$ is therefore a return edge.
 
-These rules give every compiled graph a fixed shape. Call edges always enter a
+These rules give every compiled graph a fixed shape. Call edges always enter an
 entry node, no local edge enters one, and every return edge ends at the
 result node of its own procedure. The structural contract #isaconst("wf_cfg")
 collects these properties, and every compiled graph satisfies it without
@@ -887,7 +887,7 @@ argument.
 
 These differences limit what a verdict says about a C program, but the
 analysis of VIMP still answers the question this thesis asks. The subject of
-the formalization is the analyzer architecture, and VIMP has the features that
+the formalization is the analyzer architecture, and VIMP has the features the
 architecture has to handle: procedures, recursion, locals and globals, and
 calls with results. Since VIMP also has the shape of Goblint's normalized
 input, a C front end with a verified translation could reuse the framework,

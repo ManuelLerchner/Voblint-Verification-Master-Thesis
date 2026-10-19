@@ -711,7 +711,7 @@ state by #ctor("Bot") only exchanges one abstract representation of the empty
 set for another, equivalent one (#isathm("gamma_state_normalize_lift")), so it
 cannot make the analysis unsound.
 
-From then on #ctor("Bot") stays #ctor("Bot"). A transfer applied to
+From then on, #ctor("Bot") stays #ctor("Bot"). A transfer applied to
 #ctor("Bot") is skipped and returns #ctor("Bot"), and a join with #ctor("Bot") returns the other operand. An
 unreachable program point thus keeps the value #ctor("Bot"), and the analysis
 can report it as unreachable.
@@ -787,7 +787,7 @@ $
   a != b & ~> not "eq"(hat(a), hat(b)).
 $
 
-Negation keeps _unknown_. The connectives `!`, `&&` and `||` combine the answers
+Negation keeps _unknown_. The connectives `!`, `&&`, and `||` combine the answers
 of their operands in three-valued logic. A definite _false_ decides `&&`, and a
 definite _true_ decides `||`, regardless of the other operand's answer. Both
 operands are evaluated in the same state, so for $x$ in $ivl(1, 2)$,
@@ -895,7 +895,7 @@ The refined operand is then combined with the value known before. Nipkow and
 Klein use the lattice meet for this and require it to be exact on the denoted
 sets. Voblint asks for less, namely an intersection that keeps every integer
 both operands share and lies below both (#isalocale("sound_intersection"), shown in
-@sec:isabelle). For Interval it is the normalized meet
+@sec:isabelle). For Interval, it is the normalized meet
 #isaconst("intersect_ivl"), which agrees with the meet on the operands below. In the program above, Interval
 refines $x$ to $ltop lmeet absval(ivl(1, +infinity)) = absval(ivl(1, +infinity))$ on the true
 arm and to
@@ -903,7 +903,7 @@ $absval(ivl(-infinity, 0))$ on the false arm. Both arms then give $y$ a non-nega
 value, and the join yields #absval(raw(_g.state)).
 
 The guard filter #isaconst("bfilter") takes a condition, the required truth
-value and a state, and applies the inverse operators along the structure of
+value, and a state, and applies the inverse operators along the structure of
 the condition. For the arithmetic operands of a comparison, it calls
 #isaconst("afilter"), which refines a state so that an expression evaluates
 within a required value @nipkow14[§13.7.1]. Its soundness is exactly what
@@ -965,7 +965,7 @@ $d[x |-> absval(ivl(1, 10))]$. The interpretation of
 once, so the domains of @ch:instances mainly define their values and
 primitives and prove the primitive laws. The analyzer runs the same primitives
 on a finite representation of states, and their soundness carries over to the
-generated code without a further proof (#isathm("exec_local_spec_sound"),
+generated code without further proof (#isathm("exec_local_spec_sound"),
 @sec:represented-function).
 
 #figure(

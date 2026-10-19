@@ -222,8 +222,8 @@ analysis then pretends that some possible behaviors of these features cannot
 happen, for instance, that `eval` does nothing, so its result can miss
 executions. The authors call such analyses _soundy_. They treat this as an
 engineering choice for precision and scalability, and they ask the authors of
-such analyses to state
-clearly the nature and extent of the unsoundness @livshits15[p. 45]. Goblint,
+such analyses to clearly
+state the nature and extent of the unsoundness @livshits15[p. 45]. Goblint,
 for instance, documents such assumptions. It assumes that pointer arithmetic
 does not overflow and, by default, that array reads stay in bounds, and it notes
 that this list is likely incomplete @goblint-assumptions.
@@ -237,7 +237,7 @@ analyzer is incomplete in the same way as testing any other program
 participation in SV-COMP in 2021, a competition on benchmark programs with
 known verdicts, Goblint has never produced a false negative on the
 competition's benchmark suite @seidl26. Still, its issue tracker lists more
-than a hundred issues labeled as unsound that were opened since 2021
+than a hundred issues labeled as unsound that have been opened since 2021
 @goblint-unsound.
 The two observations do not contradict each other. A test finds an error only when
 someone thinks of exactly the scenario that triggers it, and every other error
@@ -248,7 +248,7 @@ depend on the right scenario. If every abstract operation is proved
 sound for every input, a congruence remainder that ignores the sign of the
 dividend cannot pass, and errors of this kind are ruled out completely.
 
-A proof about single operations, on paper or formal, however, protects the
+A proof about single operations, on paper or in a proof assistant, however, protects the
 user only if a theorem connects these operations to the tool the user runs. Between the operations and the
 reported verdict, the analyzer compiles the program, assigns calling contexts,
 and solves equations, and each of these steps could lose executions. CompCert
@@ -383,7 +383,7 @@ Voblint closes these gaps by combining existing ideas, some of them already
 formalized and others so far only described on paper or implemented. Its
 overall design mirrors Goblint's architecture inside Isabelle/HOL, without
 formalizing Goblint's implementation or C (@sec:rel-goblint). To the author's
-knowledge, no prior mechanized analyzer connects a source semantics, through a
+knowledge, no prior mechanized analyzer connects a source semantics, through an
 activation collecting semantics, indexed by context, to a side-effecting constraint system and
 its verified solver (@sec:rel-summary). Within this design, the formalization makes five contributions.
 

@@ -95,7 +95,7 @@ else stands in the way. The verified TD solver already comes with an executable
 version, #isaconst("solve_c", thy: "TD_side_upd_rule"), which Tilscher et al.
 refine from its definition @tilscher26, and @sec:certificate shows that every
 run of it that returns satisfies the solver's correctness theorem. The values of the numeric domains (@sec:instances-supply) and the
-states of the order analysis (@sec:rel-state) are finite data already.
+states of the order analysis (@sec:rel-state) are already finite data.
 
 == Exporting the analyzer to OCaml and WebAssembly #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
@@ -180,13 +180,13 @@ hand, alongside the trusted code generator and OCaml compiler.
 ) <tab:sizes>
 
 The proofs say nothing about running time, and the generated code can be very
-inefficient. Profiling revealed one case. A sampling profile of a program of
+inefficient. Profiling revealed one case. A sampling profile of a program with
 256 chained assignments attributed most of the CPU time to a single
 function. The generated
 code of #isaconst("init_publications") recompiled the whole program at every
 equation evaluation, because its definition names the program's entry through the compiler from
 VIMP to control-flow graphs (@sec:compile). A proved code equation that names the entry directly fixed this
-without changing any theorem (#isathm("init_publications_code")), and on the same machine the chain of 256 assignments then ran
+without changing any theorem (#isathm("init_publications_code")), and on the same machine, the chain of 256 assignments then ran
 #_speedup("chain256") times faster and a program of 512 assignments in
 procedures of eight statements #_speedup("procs512") times faster, in one
 measurement each
@@ -203,7 +203,7 @@ the vendored TD solver @tilscher26 untouched. Voblint therefore adds tracing onl
 that code generation translates. Every traced equation reports each step
 through one constant, #isaconst("trace_event"), which is defined as the unit
 value $()$ and so does nothing in the logic. Each traced equation is thus
-provably equal to the one it replaces (for example
+provably equal to the one it replaces (for example,
 #isathm("solve_rec_c_traced")). Isabelle's code generator takes the
 equations it translates from a set of _code equations_, which a theory may
 change. The theory removes the vendored TD solver's equations from this set
@@ -238,7 +238,7 @@ as JSON, from which the playground draws the graph and marks the verdicts and
 diagnostics in the editor. The command-line tool and the playground share the
 parser, the generated module, and the code that turns a request into an
 analysis configuration. They differ only in their surroundings, since the
-command-line tool manages processes and files and the playground's worker
+command-line tool manages processes and files, and the playground's worker
 exchanges JSON with the page. The code generator maps HOL's integers to
 arbitrary-precision Zarith integers, as VIMP requires (@sec:vimp-vs-c).
 

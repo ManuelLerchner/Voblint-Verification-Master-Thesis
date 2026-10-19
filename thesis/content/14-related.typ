@@ -28,7 +28,7 @@ call may change any value @blanchet03[§5.3] @eva-manual[§6.3.9]
 contrast, keeps one abstract state per program point and calling context and
 analyzes recursive programs.
 
-Without a proof, these tools are tested against independent evidence, such as
+Without proof, these tools are tested against independent evidence, such as
 compiled execution, other analyzers, or the known verdicts of benchmark
 programs. Such testing keeps finding errors. On eight analyzers for C and C++,
 metamorphic testing found 24 issues, 16 of them related to soundness, and
@@ -96,7 +96,7 @@ context-sensitive calls. CompCert is a compiler from Clight, a large subset of
 C, to PowerPC assembly, programmed and proved correct in Coq, now Rocq
 @leroy09. Its theorem is semantic preservation, so safety properties proved of
 the source hold for the executable. The compiler is extracted to Caml and
-linked with unverified parts, and Leroy lists what remains trusted: the
+linked with unverified parts. Leroy lists what remains trusted: the
 semantics of Clight and of the PowerPC assembly, the CIL-based parser, the
 assembler and the linker, and Coq's extraction together with the Caml compiler
 and run-time system @leroy09[§5]. Voblint's guarantee has the same shape, a
@@ -301,7 +301,7 @@ Side-effecting constraint systems let one equation both define a local unknown
 and publish contributions to global unknowns @seidl03 @apinis12. Seidl et al.
 @seidl26 describe how Goblint uses them to decouple a mixed flow-sensitive
 analysis from the solver, with digests on the analysis side and update rules on
-the solver side recovering precision. Voblint adopts the split. An analysis
+the solver side, recovering precision. Voblint adopts the split. An analysis
 supplies local and global transfer behavior, and the generator and solver
 organize their interaction.
 
@@ -350,8 +350,8 @@ Voblint's answers describe the predecessor state only, as Goblint's do.
 === Digests and the context relation
 
 Local traces give each thread of a concurrent program a semantics against which
-thread-modular analyses are proved sound and compared @schwarz21, later
-extended to relational analyses @schwarz23 @schwarz25phd[Ch. 6].
+thread-modular analyses are proved sound and compared @schwarz21, and they
+were later extended to relational analyses @schwarz23 @schwarz25phd[Ch. 6].
 @sec:activation-trace described how Voblint adapts them to procedure
 activations. Activations do not interfere, so no concurrency result of that
 work transfers. #cite(<sotin11>, form: "prose") also replace a stack semantics
