@@ -9,7 +9,6 @@
 #import "@preview/cetz:0.5.2"
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 
-
 // The counting loop's control-flow graph. With `values`, a dictionary from
 // node name to (least, widened) intervals, each node also shows its value in
 // the least solution and, where it differs, after widening.
@@ -49,7 +48,6 @@
     edge(<h>, <e>, "-|>", raw("!(i < 5)"), label-side: left),
   )
 }
-
 
 // The loop-head lattice of the counting loop; the widening figure adds the
 // extrapolation arrows once widening and narrowing are defined.
@@ -106,13 +104,18 @@
   }
   circle(lfp-pt, radius: 0.12, fill: vb.proved, stroke: none)
   if extrapolate { circle(wide, radius: 0.1, fill: wcol, stroke: none) }
-  lbl((-0.25, 0.5), [$[0, 0]$], anchor: "east")
+  lbl((-0.25, 0.5), [$absval(ivl(0, 0))$], anchor: "east")
   if mode == "fix" {
-    lbl((-0.25, 1.7), [joins: $[0, 1], dots, [0, 4]$], anchor: "east", fill: vb.accent)
+    lbl(
+      (-0.25, 1.7),
+      [joins: $absval(ivl(0, 1)), dots, absval(ivl(0, 4))$],
+      anchor: "east",
+      fill: vb.accent,
+    )
   }
-  lbl((-0.3, 3.2), [least fixpoint $[0, 5]$], anchor: "east", fill: vb.proved)
+  lbl((-0.3, 3.2), [least fixpoint $absval(ivl(0, 5))$], anchor: "east", fill: vb.proved)
   if extrapolate {
-    lbl((1.45, 6.3), [$[0, +infinity]$])
+    lbl((1.45, 6.3), [$absval(ivl(0, +infinity))$])
     if mode == "warrow" {
       lbl((2.3, 2.75), [warrowing $widen narrow$], fill: wcol)
     } else {
@@ -125,25 +128,24 @@
   content((0, 8.4), text(9.5pt)[$ltop$])
 })
 
+= Abstract Interpretation and Solvers <ch:background>
 
-= Background <ch:background>
+@sec:state-of-art ended with a plan. Each step from source executions to the
+verdicts should relate two sets of concrete stores, so that a proof can check
+that the step loses nothing. This chapter introduces the ideas needed to state
+these steps. It first describes what a program can actually do, then how an
+analysis describes the same behavior more coarsely, and finally how a solver
+computes this description. One small counting loop serves as the example
+throughout.
 
-@ch:intro described soundness informally: an analysis result must contain
-every state that a real run reaches, and it may contain more. Such a result is
-an _over-approximation_. To prove that Voblint computes one, we need precise
-definitions of the runs, of the abstract states, and of how an analyzer
-computes them from a system of constraints. We introduce them using one small
-program, which we follow from its executions to the result of the solver.
-
-== Executions and the collecting semantics <sec:collecting>
-
+== Control-flow graphs and the collecting semantics <sec:collecting>
 
 An analysis describes the states a program can be in at each of its points, so
-we first make the points explicit. A _control-flow graph_ has the program
+the points are made explicit first. A _control-flow graph_ (CFG) has the program
 points as nodes and an edge for every way control can pass from one point to
 the next, labeled with the assignment or condition executed on the way.
 @fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
-our running example. The loop becomes a cycle through $h$, $b$, and $t$, and
+the running example. The loop becomes a cycle through $h$, $b$, and $t$, and
 its _loop head_ $h$ is the node through which control enters and exits the cycle.
 
 #figure(
@@ -172,40 +174,38 @@ value, here the value of $i$. An execution starts at the entry of the graph in
 an initial store and follows a path, updating the store at every edge. The
 counting loop reaches $h$ once before the first iteration and again after each
 run of the body, so $i$ takes exactly the values $0, 1, dots, 5$ there.
-Collecting, for every program point, the stores of all executions that reach
+For every program point, collecting the stores of all executions that reach
 it gives the _collecting semantics_ $cal(C)$ @cousot77[§4] @mine17[§3.4],
 which maps every program point $v$ to the set $cal(C)(v)$ of stores reached
-there. Here $cal(C)(h)$ holds the stores with $i in {0, dots, 5}$. For
-programs with procedures, @ch:traces defines Voblint's version over execution
+there. For
+programs with procedures, @ch:traces defines Voblint's version over activation
 traces (#isaconst("node_collect")).
 
 The collecting semantics is the exact answer an analysis approximates. An
 analysis is _sound_ if, at every program point, its result describes every store
 that the collecting semantics gives there. It may describe more stores,
-which costs precision, but never fewer. Soundness thus relates three levels: the
-individual executions, the collecting semantics that gathers the stores
-they reach, and the abstract states that an analysis computes. @fig:intro-nest
-refines these levels for Voblint.
+which costs precision, but never fewer.
 
 == Lattices and fixpoints <sec:lattices>
 
-At $h$, the intervals $[0, 5]$ and $[0, 10]$ both contain every value $i$ takes
-there (the collecting semantics ${0, dots, 5}$), but $[0, 10]$ also admits
+At $h$, the intervals $absval(ivl(0, 5))$ and $absval(ivl(0, 10))$ both contain every value $i$ takes
+there (the collecting semantics ${0, dots, 5}$), but $absval(ivl(0, 10))$ also admits
 $i = 7$, which no execution reaches. A description is _more precise_ than
 another if it admits fewer states. Ordered sets make this comparison formal.
 In an ordered set $(lat(D), lle)$ (#isalocale("order")),
 $a lle b$ means that $a$ is at least as precise as $b$ @nipkow14[Def. 10.23].
-For sets of concrete states, the order is inclusion.
+For sets of concrete states, the order is inclusion. Isabelle writes the order
+as $<=$, and the listings taken from the theories keep this symbol.
 
-Two descriptions reaching a point along different paths must be combined into
+Two descriptions reaching a point along different paths must be joined into
 one that covers both. Their _join_ $a ljoin b$ is the least upper bound, the
 most precise element above both (#isalocale("semilattice_sup")). At the loop
-head, the value before the loop and the value after the body are combined this
+head, the value before the loop and the value after the body are joined this
 way. Dually, the _meet_ $a lmeet b$ is the greatest lower bound. An analysis
 uses it at a branch to restrict the incoming value to the values the condition
-admits. If the analysis knew only $[0, 10]$ at $h$, entering the body would
-restrict it to $[0, 10] lmeet [-infinity, 4] = [0, 4]$. Soundness does not need this
-refinement, since $[0, 10]$ itself is sound at $b$, but it makes the result
+admits. If the analysis knew only $absval(ivl(0, 10))$ at $h$, entering the body would
+restrict it to $absval(ivl(0, 10)) lmeet absval(ivl(-infinity, 4)) = absval(ivl(0, 4))$. Soundness does not need this
+refinement, since $absval(ivl(0, 10))$ itself is sound at $b$, but it makes the result
 more precise, and Goblint and Voblint both refine at branches. The least
 element $lbot$ lies below every element, and a top element $ltop$, if one
 exists, lies above every element. In abstract interpretation, $lbot$ describes
@@ -213,39 +213,39 @@ no states and $ltop$ describes all of them. A _complete lattice_
 (#isalocale("complete_lattice")) has a join $lJoin X$ and a meet $lMeet X$ for
 every subset $X$ @nipkow14[Def. 13.1] @mine17[Def. 2.5].
 
-Voblint's solver, however, requires only a join semilattice with a least
-element (#isalocale("bounded_semilattice_sup_bot")) that carries the widening
-and narrowing operators of @sec:widening, so joins need to exist only for
-pairs. A numeric domain adds a top element. Refinement at a branch adds a
-pairwise intersection that keeps every value both operands admit
-(#isalocale("sound_intersection"), @sec:branches).
+Voblint does not need a complete lattice. Its solver requires only a join
+semilattice with a least element (#isalocale("bounded_semilattice_sup_bot"))
+that carries the widening and narrowing operators of @sec:widening. The solver
+joins two values at a time, whenever a new value reaches an unknown, so
+joins need to exist only for pairs. Joins of infinite sets would not help an
+executable analyzer anyway, since it computes only with finite representations.
+
+A numeric domain adds two operations to this structure. Its top element
+describes a variable about which nothing is known, for instance, a value read
+from input. Refinement at a branch adds an intersection, which does not have to
+be the exact meet. It must keep every value that both operands admit, and its
+result must lie below both operands (#isalocale("sound_intersection"),
+@sec:branches). An intersection that admits more values than both operands
+share loses precision, but not soundness.
 
 An analysis computes the description at a point from the descriptions at its
-predecessors, by a function $f$ on $lat(D)$. The classical theory requires $f$
-to be _monotone_ (#isaconst("mono")), so that $a lle b$ implies
-$f(a) lle f(b)$ @nipkow14[Def. 10.26] @mine17[Def. 2.9] and more precise input
-never yields less precise output. For a monotone $f$, the iterates $lbot,
-f(lbot), f(f(lbot)), dots$ form an ascending chain. Each of them lies below
-every fixpoint. The verified solver that Voblint reuses, however, does not assume
-monotonicity.
+predecessors, by a function $f$ on $lat(D)$, and its result must be stable
+under $f$. A _fixpoint_ of $f$ is an element with $f(d) = d$, and a
+_post-fixpoint_ is an element with $f(d) lle d$, so applying $f$ once more
+stays below $d$. The classical theory of least fixpoints requires $f$ to be
+_monotone_ (#isaconst("mono")): $a lle b$ implies $f(a) lle f(b)$
+@nipkow14[Def. 10.26] @mine17[Def. 2.9], so more precise input never yields
+less precise output. By the Knaster–Tarski theorem, a monotone $f$ on a
+complete lattice has a least fixpoint $lfp f$, the meet of all post-fixpoints
+@tarski55[Thm. 1] (#isaconst("lfp"), #isathm("lfp_unfold")). On an order of
+finite height, the _Kleene iterates_ $lbot, f(lbot), f(f(lbot)), dots$
+stabilize at $lfp f$ after finitely many steps @seidl12compiler[§1.5]
+(#isathm("lfp_Kleene_iter")). An analysis, however, does not have to compute
+$lfp f$. As long as $f$ is sound, every post-fixpoint that includes the initial
+states is already a sound result (@sec:abs-int). The verified solver that Voblint reuses therefore
+does not assume monotonicity (@sec:widening).
 
-A _fixpoint_ of $f$ is an element with $f(d) = d$, and a _post-fixpoint_ is an
-element with $f(d) lle d$, so applying $f$ once more yields nothing above $d$. By the
-Knaster–Tarski theorem, a monotone $f$ on a complete lattice has a least
-fixpoint $lfp f$, the meet of all post-fixpoints @tarski55[Thm. 1]
-(#isaconst("lfp"), #isathm("lfp_unfold")), so every post-fixpoint lies above
-$lfp f$. For a monotone $f$ on a
-finite-height order, the iteration from $lbot$ stabilizes after finitely many
-steps
-@seidl12compiler[§1.5], and an iterate that no longer changes is the least
-fixpoint (#isathm("lfp_Kleene_iter")).
-
-An analysis does not have to reach $lfp f$. Every post-fixpoint of an $f$ that
-includes the initial states and approximates each step soundly already contains
-the collecting semantics (@sec:abs-int).
-
-
-== Abstract interpretation <sec:abs-int>
+== Concretization and sound transfer functions <sec:abs-int>
 
 The correctness of an abstract result needs a meaning for its elements. Let $U$ be
 a set of concrete objects, such as integers or stores (#isatype("store")),
@@ -256,12 +256,13 @@ values of one variable, such as an interval for one integer, and an _abstract
 state_ when it describes stores. A concretization $conc : A -> cal(P)(U)$ gives
 each domain element its meaning. It is monotone, so a less precise element
 admits at least the same objects: $a lle b$ implies
-$conc(a) subset.eq conc(b)$ (#isathm("gamma_mono")). Soundness at a program
-point $v$ (@sec:collecting) then becomes an inclusion. If $a$ is the analysis
-result at $v$, then
-$ cal(C)(v) subset.eq conc(a), $
-the consistency requirement between an abstract and a concrete interpretation
-in @cousot77[§6] @mine17[Def. 2.11].
+$conc(a) subset.eq conc(b)$ (#isathm("gamma_mono")). With a concretization, the
+informal notion of soundness from @sec:collecting becomes a definition. An
+analysis result $a$ at a program point $v$ is _sound_ if it describes every
+store that executions reach at $v$, that is, if
+$ cal(C)(v) subset.eq conc(a). $
+This inclusion is the consistency requirement between an abstract and a
+concrete interpretation @cousot77[§6] @mine17[Def. 2.11].
 
 The running example uses the _interval domain_ @cousot77[§9.2] @mine17[§4.5].
 Its elements are $lbot$ and the intervals $[l, u]$ with
@@ -272,15 +273,15 @@ The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
 when $l' <= l$ and $u <= u'$. The join
 $[l, u] ljoin [l', u'] = [min(l, l'), max(u, u')]$ is the smallest interval
 containing both. An interval cannot have holes, so the join may contain values
-that neither operand contains: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
+that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet
 intersects the bounds. This is the textbook domain. Voblint's representation
 #isatype("ivl") admits every pair of bounds, so $lbot$ is one of several empty
 pairs (@sec:domain-carrier-laws).
 
-At the loop head, both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
-as is every interval that contains $[0, 5]$. An analysis aims for a precise one,
+At the loop head, both $absval(ivl(0, 5))$ and $absval(ivl(0, 10))$ are sound (@fig:concretization),
+as is every interval that contains $absval(ivl(0, 5))$. An analysis aims for a precise one,
 because a more precise element admits fewer values and so decides more checks:
-$[0, 5]$ proves `i <= 5` at the loop head, and $[0, 10]$ does not.
+$absval(ivl(0, 5))$ proves `i <= 5` at the loop head, and $absval(ivl(0, 10))$ does not.
 
 #figure(
   cetz.canvas(length: 0.62cm, {
@@ -302,25 +303,25 @@ $[0, 5]$ proves `i <= 5` at the loop head, and $[0, 10]$ does not.
     }
     content((10.9, -0.45), text(9pt)[$i$])
     // join of two points adds the values between them
-    row(1.2, [$conc([0, 0] ljoin [5, 5])$])
+    row(1.2, [$conc(absval(ivl(0, 0)) ljoin absval(ivl(5, 5)))$])
     bar(1.2, 0, 5, vb.muted)
     dot(0, 1.2, vb.neutral)
     dot(5, 1.2, vb.neutral)
     // a coarser sound value permits values no run has
-    row(2.3, [$conc([0, 10])$])
+    row(2.3, [$conc(absval(ivl(0, 10)))$])
     bar(2.3, 0, 10, vb.trusted)
     circle((7, 2.3), radius: 0.16, fill: white, stroke: 0.7pt + vb.unproved)
     content((7, 2.85), text(8pt, fill: vb.unproved)[permitted, never reached])
-    row(3.4, [$conc([0, 5])$])
+    row(3.4, [$conc(absval(ivl(0, 5)))$])
     bar(3.4, 0, 5, vb.proved)
     // the collecting semantics at the loop head
     row(4.5, [collecting semantics $cal(C)(h)$])
     for n in range(0, 6) { dot(n, 4.5, vb.accent) }
   }),
   placement: none,
-  caption: [Concretization of intervals at the loop head. Both $[0, 5]$ and
-    $[0, 10]$ contain the collecting semantics $cal(C)(h)$, and $[0, 10]$ also permits
-    $i = 7$. The join of $[0, 0]$ and $[5, 5]$ adds the values in between.],
+  caption: [Concretization of intervals at the loop head. Both $absval(ivl(0, 5))$ and
+    $absval(ivl(0, 10))$ contain the collecting semantics $cal(C)(h)$, and $absval(ivl(0, 10))$ also permits
+    $i = 7$. The join of $absval(ivl(0, 0))$ and $absval(ivl(5, 5))$ adds the values in between.],
 ) <fig:concretization>
 
 Much of abstract interpretation also assumes an abstraction function
@@ -331,11 +332,7 @@ has such best abstractions, and Cousot and Cousot treat a Galois connection as
 the ideal case that efficient representations do not always meet
 @cousot92plilp[§5]. Voblint uses $conc$ alone, like the verified analyzers of
 Jourdan et al. and of Nipkow @jourdan15[§2] @nipkow12[§5.2], since its
-soundness theorem claims coverage and nothing about optimal precision. The
-concretization exists only in the logic. Since its result is in general an
-infinite set, it is never executed, and the analyzer itself is defined from
-executable operations only,
-so that it can be exported and run as a standalone program.
+soundness theorem claims coverage and nothing about optimal precision.
 
 The analysis replaces each concrete operation by an abstract one, a _transfer
 function_ $sh(f) : A -> A$, which must not lose any state that the concrete
@@ -349,10 +346,10 @@ $sh(f)(a)$ describes @cousot77[§6] @mine17[Def. 2.15] @rival20[§4.2.2]. The
 square of @fig:transfer-square thus commutes only up to inclusion. In the
 counting loop, the edge from $b$ to $t$ executes `i = i + 1`. Over $ZZ$, the
 interval transfer $[l, u] |-> [l + 1, u + 1]$ is sound for it, and applied to
-$[0, 4]$ it yields $[1, 5]$, which contains every successor $i = 1, dots, 5$.
+$absval(ivl(0, 4))$ it yields $absval(ivl(1, 5))$, which contains every successor $i = 1, dots, 5$.
 Soundness
 composes along paths
-@mine17[Thm. 2.6], and at control-flow joins the upper-bound laws of the join
+@mine17[Thm. 2.6], and at control-flow joins, the upper-bound laws of the join
 keep the states from both predecessors (#isathm("gamma_sup_ub1"),
 #isathm("gamma_sup_ub2")).
 
@@ -379,42 +376,36 @@ keep the states from both predecessors (#isathm("gamma_sup_ub1"),
 ) <fig:transfer-square>
 
 Sound transfer functions make every post-fixpoint that contains the initial
-states a sound result
-@mine17[Thm. 2.8]. The standard argument uses one domain element that
-describes the whole program. It works with _configurations_, each a program
-point together with a store, so that one relation $->$ describes every step
-of the program, each moving an execution along one edge. The constraint systems of
-@sec:constraints then split this element into one abstract state per program
-point. In the counting loop, a configuration is a pair
-$(p, n)$ of a program point and the value of $i$, so
-$U = {"start", h, b, t, e} times ZZ$. With the set $I$ of initial
+configurations a sound result @mine17[Thm. 2.8]. The standard argument works with
+_configurations_, each a program point together with a store, so that one
+relation $->$ describes every step of the program. With the set $I$ of initial
 configurations, the reachable configurations form the least fixpoint of
 $ F(X) = I union "post"(X) $
-@rival20[§4.1.1, Thm. 4.1]. A set with $F(X) subset.eq X$ contains the initial
-configurations and the successors of all its elements, so no execution can
-leave it, and $lfp F$ is the smallest such set. In the counting loop,
-executions begin at the node `start`, with any value of $i$, so
-$I = {("start", n) | n in ZZ}$. Iterating $F$ from $emptyset$ adds one step at
-a time: $(h, 0)$, then $(b, 0)$, $(t, 1)$, $(h, 1)$, and so on, up to $(h, 5)$
-and finally $(e, 5)$. The least fixpoint contains $(h, n)$ exactly for
-$n in {0, dots, 5}$, which is $cal(C)(h)$, since $cal(C)$ groups the reachable
-configurations by their program point.
+@rival20[§4.1.1, Thm. 4.1]. One application of $F$ keeps the initial
+configurations and adds every successor of a configuration already in $X$.
+A set with $F(X) subset.eq X$ therefore contains the initial configurations
+and is closed under steps, so no execution can leave it. The least such set,
+$lfp F$, contains exactly the configurations that some execution reaches. In
+the counting loop, executions begin at `start` with any value of $i$, and
+$lfp F$ contains $(h, n)$ exactly for $n in {0, dots, 5}$, which is
+$cal(C)(h)$.
 
-Now take a domain element $a$ with $I subset.eq conc(a)$ and
-$sh(f)(a) lle a$, for a sound $sh(f)$. Soundness of $sh(f)$ and monotonicity
-of $conc$ give
+Now take a domain
+element $a$ with $I subset.eq conc(a)$ and $sh(f)(a) lle a$, for a sound
+$sh(f)$. Soundness of $sh(f)$ and monotonicity of $conc$ give
 $F(conc(a)) subset.eq I union conc(sh(f)(a)) subset.eq conc(a)$. So $conc(a)$
 is a post-fixpoint of $F$ and, by Knaster–Tarski, contains $lfp F$, every
-reachable configuration. Here $F$ works on sets of configurations and $sh(f)$ on
-domain elements, and the soundness of $sh(f)$ relates the two through $conc$.
+reachable configuration.
 
-Voblint's proof uses the same principle on a set of execution traces defined
-inductively as a least fixpoint, and proceeds by induction over its rules.
-Analyzers such as Goblint keep one abstract state per program point
-@rival20[§4.2.1] and state one inequality per point, whose solution plays the
-role of $a$.
+This argument uses a single domain element $a$ for the whole program.
+Analyzers, however, typically keep one abstract state per program point @rival20[§4.2.1],
+or per point and context (@sec:interproc). The element $a$ then becomes a
+family of abstract states, and the condition $sh(f)(a) lle a$ becomes one
+inequality for each of these states, as the next section describes. Voblint's proof
+uses the same principle on a set of activation traces defined inductively as a
+least fixpoint, and proceeds by induction over its rules.
 
-== Constraint systems <sec:constraints>
+== Analyses as constraint systems <sec:constraints>
 
 An analysis needs an abstract state at every program point, and the state at
 one point depends on the states at its predecessors. The analysis therefore
@@ -428,14 +419,14 @@ its own abstract value.) With one unknown per program point of
 @fig:counting-loop, each unknown must cover what the edges entering its point
 produce:
 $
-  h & gt.eq [0, 0] ljoin t, & quad b & gt.eq h lmeet [-infinity, 4], \
-  t & gt.eq b sh(+) [1, 1], & quad e & gt.eq h lmeet [5, +infinity].
+  h & lge absval(ivl(0, 0)) ljoin t, & quad b & lge h lmeet absval(ivl(-infinity, 4)), \
+  t & lge b sh(+) absval(ivl(1, 1)), & quad e & lge h lmeet absval(ivl(5, +infinity)).
 $
-The assignment `i = 0` yields $[0, 0]$ at $h$, the condition `i < 5`
+The assignment `i = 0` yields $absval(ivl(0, 0))$ at $h$, the condition `i < 5`
 restricts the branch into the body, and its negation restricts the exit.
 Substituting $b$ and $t$ into the first inequality gives one for the loop head,
-$h gt.eq f(h)$, with
-$ f(d) = [0, 0] ljoin ((d lmeet [-infinity, 4]) sh(+) [1, 1]), $
+$h lge f(h)$, with
+$ f(d) = absval(ivl(0, 0)) ljoin ((d lmeet absval(ivl(-infinity, 4))) sh(+) absval(ivl(1, 1))), $
 whose post-fixpoints appear in @fig:lattice-fixpoints. A solution assigns an
 interval to every unknown such that all four inequalities hold, and
 @fig:loop-solutions shows two. Both contain the collecting semantics
@@ -450,10 +441,10 @@ valuation, and $sol$ is a _post-solution_ if
 $ rhs(x)(sol) lle sol(x) quad "for every unknown" x $
 (#isaconst("post_solution")), what the constraint-system literature calls a
 solution @saan26phd[§2.4.4]. For the loop head,
-$rhs(h)(sol) = [0, 0] ljoin sol(t)$. A post-solution is a post-fixpoint of all
+$rhs(h)(sol) = absval(ivl(0, 0)) ljoin sol(t)$. A post-solution is a post-fixpoint of all
 right-hand sides at once, so the argument of @sec:abs-int applies at every
-program point, and a post-solution bounds the reachable states everywhere. We
-use the term _constraint system_ for the general concept and the term _equation
+program point, and a post-solution bounds the reachable states everywhere. The
+term _constraint system_ is used for the general concept and the term _equation
 system_ for the system that Voblint generates and the solver receives, although
 soundness only
 requires inequalities.
@@ -461,51 +452,64 @@ requires inequalities.
 #subfigures(
   figure(
     _loop-cfg((
-      h: ($[0, 5]$, $[0, +infinity]$),
-      b: ($[0, 4]$, none),
-      t: ($[1, 5]$, none),
-      e: ($[5, 5]$, $[5, +infinity]$),
+      h: ($absval(ivl(0, 5))$, $absval(ivl(0, +infinity))$),
+      b: ($absval(ivl(0, 4))$, none),
+      t: ($absval(ivl(1, 5))$, none),
+      e: ($absval(ivl(5, 5))$, $absval(ivl(5, +infinity))$),
     )),
     caption: [two solutions on the graph],
   ),
   <fig:loop-solutions>,
   figure(
-    _loop-lattice("fix", scale: 0.44cm, size: 7pt),
-    caption: [post-fixpoints of $h gt.eq f(h)$],
+    _loop-lattice("fix", scale: 0.36cm, size: 7pt),
+    caption: [post-fixpoints of $h lge f(h)$],
   ),
   <fig:lattice-fixpoints>,
   columns: (1fr, 1fr),
   align: auto,
+  placement: bottom,
   caption: [The counting loop's inequalities, solved by hand. (a) The least
     solution at each node of @fig:counting-loop and, in orange where it
     differs, a less precise solution. (b) Post-fixpoints of the loop-head
-    constraint (schematic, shaded) and its least fixpoint $[0, 5]$.],
+    constraint (schematic, shaded), its least fixpoint $absval(ivl(0, 5))$, and the
+    Kleene iterates.],
   label: <fig:loop-constraints>,
 )
 
-The formulation goes back to data-flow analysis, where Kildall computes one
-value per node of a program graph by iteration @kildall73[§3].
-
-Programs with procedures can be analyzed with one unknown per program point or
-separately per calling context, which abstracts how an activation
-(one execution from call to return) was reached @aho06[§7.2.1]. Sharir and Pnueli
-distinguish call strings, which record recent call sites, from the functional approach,
-which relates abstract entry and return states @sharir81. Context-sensitive constraint
-systems use unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3].
-For the calls `bump(5)` and `bump(4)` in @ch:intro, entry-argument contexts
-distinguish return values $6$ and $5$, while a single unknown must cover both.
-
 == Widening and narrowing <sec:widening>
 
-An analysis should terminate in reasonable time, even on a program whose
+An analysis should terminate in a reasonable time, even on a program whose
 executions do not terminate. With
 joins alone, successive abstract iterates can mirror successive loop
-iterations. At the example's loop head, joins take five increases after $[0,
-  0]$. For `while (true) { i = i + 1; }`, the iteration over intervals with bounds
+iterations. At the example's loop head, joins take five increases after
+$absval(ivl(0, 0))$. For `i = 0; while (true) { i = i + 1; }`, the iteration over intervals with bounds
 in $ZZ$ never stabilizes, because these intervals have infinite ascending chains
 such as
-$ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
+$ absval(ivl(0, 0)) llt absval(ivl(0, 1)) llt absval(ivl(0, 2)) llt dots. $
 
+
+A _widening_ $a widen b$ replaces the update from the old value $a$ to the new
+value $b$ by a guess that lies above both, which keeps the result sound
+(#isalocale("widening")). The standard
+interval widening replaces a growing bound by $+infinity$ @cousot77[§9.2]
+@mine17[§4.5.2], so widening at $h$ turns the first change there, from
+$absval(ivl(0, 0))$ to $absval(ivl(0, 1))$, into $absval(ivl(0, +infinity))$ at once. Propagated through the
+loop, this value yields the less precise solution of @fig:loop-solutions,
+which loses the bound $5$ of the loop condition `i < 5`.
+
+The branch into the body restricts $absval(ivl(0, +infinity))$ to $absval(ivl(0, 4))$, the body
+yields $absval(ivl(1, 5))$, and evaluating the head again gives
+$absval(ivl(0, 0)) ljoin absval(ivl(1, 5)) = absval(ivl(0, 5))$. A widened iteration only grows and would not
+take this smaller value. A _narrowing_ lets it descend. It maps the
+current value $a$ and a candidate $b lle a$ to a value between the
+two @cousot77[§9.3.4] @cousot92plilp[§4]:
+$ b lle a narrow b lle a. $
+In the counting loop, the interval narrowing reaches $absval(ivl(0, 5))$, but in general,
+narrowing need not recover the least fixpoint. Both steps appear in
+@fig:widening-phases. The verified TD solver applies both operators in a single
+update, _warrowing_ (#isaconst("warrow")), shown in @fig:widening-warrow. It
+narrows when the candidate lies below the current value and widens otherwise
+@apinis13 @apinis16[§3] @grass24.
 
 #subfigures(
   figure(
@@ -519,56 +523,59 @@ $ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
   ),
   <fig:widening-warrow>,
   columns: (1fr, 1fr),
-  placement: auto,
+  placement: none,
   caption: [Extrapolation on the lattice of @fig:lattice-fixpoints. (a) Widening
-    jumps from $[0, 0]$ to the post-fixpoint $[0, +infinity]$, and narrowing then
-    recovers the least fixpoint $[0, 5]$. (b) Warrowing takes the same two
-    steps with one operator, which widens while the candidate grows and
-    narrows once it lies below the current value. Here both reach $[0, 5]$.],
+    jumps from $absval(ivl(0, 0))$ to the post-fixpoint $absval(ivl(0, +infinity))$, and narrowing then
+    recovers the least fixpoint $absval(ivl(0, 5))$. (b) Warrowing takes the same two
+    steps with one operator, which narrows when the candidate lies below the
+    current value and widens otherwise. Here both reach $absval(ivl(0, 5))$.],
   label: <fig:widening>,
 )
 
-A _widening_ $a widen b$ replaces the update from the old value $a$ to the new
-value $b$ by a guess that lies above both, which keeps the result sound
-(#isalocale("widening")). A classical widening is also chosen so that repeated
-widening stabilizes after finitely many steps @cousot77[§9.1.3]
-@cousot92plilp[§4], which the upper-bound law alone does not ensure. A common
-strategy widens at loop heads. The standard interval widening replaces a
-growing bound by $+infinity$ @cousot77[§9.2] @mine17[§4.5.2], so widening at
-$h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
-$[0, +infinity]$ at once. Propagated through the loop, this value yields the
-less precise solution of @fig:loop-solutions, which loses the bound $5$ of the
-loop condition `i < 5`.
-
-The branch into the body restricts $[0, +infinity]$ to $[0, 4]$, the body
-yields $[1, 5]$, and evaluating the head again gives
-$[0, 0] ljoin [1, 5] = [0, 5]$. A widened iteration only grows and would not
-take this smaller value. A _narrowing_ lets it descend. Both steps
-appear in @fig:widening-phases, and @fig:widening-warrow shows one update
-operator that combines them, widening or narrowing depending on the candidate.
-
-
-A narrowing $a narrow b$ combines the current value $a$ with a candidate
-$b lle a$ and returns a value between the two @cousot77[§9.3.4]
-@cousot92plilp[§4]:
-$ b lle a narrow b lle a. $ These are the _bracket laws_ of the solver's class #isalocale("narrowing"). A classical
-narrowing must also make repeated narrowing stabilize. The class omits this
-law, since termination of the solver is not proved. In the counting loop, the
-interval narrowing reaches $[0, 5]$, but in general, narrowing need not recover
-the least fixpoint.
-
-Soundness of the result does not depend on how the solver widens and narrows.
-The verified TD solver applies both operators in a single update,
-_warrowing_ (#isaconst("warrow")). It narrows when the candidate lies below
-the current value and widens otherwise @apinis13 @apinis16[§3] @grass24, so
-each update lies above the candidate
-(#isathm("warrowing_properties", thy: "Warrowing")). An unknown whose value no
-longer changes under this update therefore satisfies its inequality. The
-solver's correctness theorem uses only this and holds whether or not the
-right-hand sides are monotone (@sec:td). Monotonicity is thus needed for the
-classical theory of least fixpoints, but not to certify that a returned
-valuation is a post-solution. As long as the operators satisfy their laws, the
+Soundness, termination, and precision depend on different properties of these
+operators. The solver's classes #isalocale("widening") and
+#isalocale("narrowing") state the upper-bound law of widening and the
+_bracket laws_ of narrowing above. Soundness needs only the upper-bound law and
+the lower bracket law $b lle a narrow b$. With them, each
+warrowing update lies above the candidate
+(#isathm("warrowing_properties", thy: "Warrowing")), so an unknown whose value
+no longer changes satisfies its inequality. The solver's correctness theorem
+uses only this and holds whether or not the right-hand sides are monotone
+(@sec:td). Monotonicity is needed for the classical theory of least fixpoints,
+but not to certify that a returned valuation is a post-solution. Termination
+needs more. A classical widening is chosen so that repeated widening stabilizes
+after finitely many steps @cousot77[§9.1.3] @cousot92plilp[§4], and a classical
+narrowing must also make repeated narrowing stabilize. The solver's classes
+omit these stabilization laws, since termination of the side-effecting TD that
+Voblint uses is not proved,
+so the laws they state do not make the solver terminate. Within these laws, the
 choice of widening and narrowing affects only precision and termination.
+
+== Context-sensitive analysis of procedures <sec:interproc>
+
+The counting loop has no procedures. With procedures, the analysis must decide
+which abstract state a callee's body starts from. Take the calls `bump(5)` and
+`bump(4)` of @ch:intro, where `bump` returns its argument plus one. With one
+unknown per program point, the entry of `bump` must cover both arguments, so,
+over intervals, its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
+that the first call returns $6$. A context-sensitive analysis instead
+separates the _activations_ of a procedure, each execution from its call to
+its return, by a _calling context_, an abstraction of how the activation was
+reached @aho06[§7.2.1]. Sharir and Pnueli distinguish call strings, which
+record recent call sites, from the functional approach, which relates abstract
+entry and exit states @sharir81. Context-sensitive constraint systems use
+unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3]. With
+contexts that record the argument at entry, `bump` gets one copy of its
+unknowns for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the results $6$ and $5$.
+
+At a call, such an analysis computes the abstract state in which the callee is
+entered, which also determines the callee's context. At the return, it
+combines the callee's exit state with the caller's state before the call, as
+Goblint's
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",
+)[constraint generator]
+does with its operations `enter` and `combine` (@sec:calls).
 
 == Side-effecting constraint systems <sec:side-effects>
 
@@ -588,23 +595,38 @@ context-sensitive analysis, for example, an unknown that writes a global is a
 pair of a program point and a calling context, and the contexts are discovered
 only while the system is solved.
 
+Every context-sensitive analysis meets the same problem at procedure entries,
+even without flow-insensitive facts. The entry of a callee in context $c$
+must cover the entry states of all calls that enter it in $c$
+(@sec:interproc).
+When contexts are computed from abstract entry states, as for `bump(5)` and
+`bump(4)`, the calls that enter a context are known only once the states of
+their callers are known. The entry's right-hand side therefore cannot list them
+either. Voblint meets this at
+every call (@sec:eq-call).
+
 Side-effecting constraint systems avoid that list. Seidl, Vene, and Müller-Olm
 introduced them for multithreaded programs @seidl03[§3], and Apinis et al. use
 them for context-sensitive analysis @apinis12. While the right-hand side of
 one unknown is evaluated, it may _publish_ a _contribution_ to another unknown
-as a _side effect_. We follow the verified solver and let side effects target
+as a _side effect_. As in the verified solver, side effects target
 only _global unknowns_ $Unk_G$, which have no right-hand side and receive only
 contributions. From here on, $Unk$ denotes the _local_ unknowns, which keep
 their right-hand sides, and a valuation $sol$ assigns values to both kinds. A
-global unknown need not correspond to a global variable of the program. A
+global unknown need not correspond to a global variable of the program. It can
+hold any fact to which several right-hand sides contribute. In Voblint, for
+instance, the entry state of a callee in one context is a global unknown, and
+every call that enters this context publishes its entry state to it
+(@sec:eq-call). An analysis may also keep facts of its own in global unknowns
+that stand for no program variable at all (@ch:analysis-interface). A
 right-hand side then returns a pair @saan26phd[§2.4.5],
 $rhs(x) : (Unk union Unk_G -> A) -> (Unk_G harpoon.rt A) times A$, of a
 partial map $rho$ of the contributions it publishes, joined per global
 unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a post-solution
 must bound both, $d lle sol(x)$ and $rho(g) lle sol(g)$ for every
 $g in op("dom")(rho)$. If the assignments
-`g = 5` and `g = 4` publish $[5, 5]$ and $[4, 4]$ to the unknown of a
-flow-insensitive global `g`, that unknown must bound their join $[4, 5]$. This
+`g = 5` and `g = 4` publish $absval(ivl(5, 5))$ and $absval(ivl(4, 4))$ to the unknown of a
+flow-insensitive global `g`, that unknown must bound their join $absval(ivl(4, 5))$. This
 describes what a right-hand side computes. The verified solver represents its
 evaluation by a strategy tree (@sec:td), so that it discovers reads and side
 effects while it solves.
@@ -617,14 +639,13 @@ _certificate_, the property #isaconst("part_post_solution", thy: "Basics_side"),
 which requires the bounds above only on a set of unknowns that contains the
 query and is closed under the local reads of its right-hand sides.
 
-== The verified top-down solver <sec:td>
+== The verified top-down solver and its guarantee <sec:td>
 
 // The counting loop of fig:counting-loop, for the playground link below.
 #let _counting-loop = "i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
 
-A straightforward implementation of Kleene iteration recomputes every unknown in
-every round, although most values
-no longer change. Practical solvers therefore update one unknown at a time. They
+Plain Kleene iteration recomputes every unknown in every round, although most
+values no longer change, so practical solvers update one unknown at a time. They
 work in rounds or with a worklist of unknowns whose inequalities may be violated
 @seidl12compiler[§§1.5, 1.12], in orders chosen for widening @bourdoncle93, or
 locally, on demand from a query, as the solver RLD does @hofmann10. Voblint
@@ -638,7 +659,7 @@ later, every unknown that read it is _destabilized_ and evaluated again. The
 unknowns at which a read closes a cycle are the solver's _widening points_
 @seidl21. TD detects them while it solves @apinis16[§4], so they need not
 coincide with the loop heads of the control-flow graph. At a widening point, it
-combines the old and the new value with warrowing. The
+updates the old value with the new one by warrowing. The
 #link(playground-link(_counting-loop, trace: "verbose"))[playground] replays this run on the counting loop step by step. Contributions published to a
 global unknown are merged into its value by an _update rule_
 (#isalocale("update_rule")), which keeps one record per _origin_, the unknown whose right-hand side
@@ -646,12 +667,11 @@ published the contribution (@sec:update-rules). The run ends
 once every unknown the query transitively reads is stable, and it returns this
 _stable set_ $V$ together with the valuation $sol$.
 
-To solve on demand, TD has to discover which unknowns a right-hand side reads,
-so that it can solve each of them first. In the counting loop, the reads are
-fixed, since the right-hand side of $h$ always reads $t$. In general, a
+To solve on demand, TD has to discover which unknowns a right-hand side reads.
+In the counting loop, these reads are fixed. In general, a
 right-hand side may choose the next unknown from a value it has already read.
 At a procedure call, for instance, the callee context to read is known only
-once the caller's value has been read. The verified solver therefore receives
+once the caller's value has been read. The verified TD solver therefore receives
 every right-hand side as a _strategy tree_
 (#isatype("strategy_tree", thy: "Basics_side")), a small program that reads
 one unknown at a time and makes every read and every side effect explicit:
@@ -692,20 +712,20 @@ loop and of a flow-insensitive assignment.
     row-gutter: 3mm,
     align: center + top,
     $h$, $b$, $t$, $e$, [`g = 5` after $u$],
-    _tree((($ctor("QueryL")(t)$, $v$), (_ans($[0, 0] ljoin v$), none))),
-    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet [-infinity, 4]$), none))),
-    _tree((($ctor("QueryL")(b)$, $v$), (_ans($v sh(+) [1, 1]$), none))),
-    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet [5, +infinity]$), none))),
+    _tree((($ctor("QueryL")(t)$, $v$), (_ans($absval(ivl(0, 0)) ljoin v$), none))),
+    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet absval(ivl(-infinity, 4))$), none))),
+    _tree((($ctor("QueryL")(b)$, $v$), (_ans($v sh(+) absval(ivl(1, 1))$), none))),
+    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet absval(ivl(5, +infinity))$), none))),
     _tree((
       ($ctor("QueryL")(u)$, $v$),
-      ($ctor("Side")(g, [5, 5])$, none),
+      ($ctor("Side")(g, absval(ivl(5, 5)))$, none),
       (_ans($v$), none),
     )),
   ),
   kind: image,
   placement: none,
   caption: [Right-hand sides as strategy trees. The first four are the
-    inequalities of the counting loop (@sec:constraints): each reads one
+    right-hand sides of the inequalities of the counting loop (@sec:constraints): each reads one
     unknown, passes its value $v$ on, and answers. The last publishes the
     value of a flow-insensitive global `g` (@sec:side-effects) before
     answering.],
@@ -716,112 +736,8 @@ certificate #isaconst("part_post_solution", thy: "Basics_side") of
 @sec:side-effects and states partial correctness. If the run terminates on the
 query $x$ and returns its stable set
 $V$ and the valuation $sol$, then $V$ contains $x$, is closed under the local
-reads of its right-hand sides, and on $V$ the valuation is a post-solution,
-published contributions included. The theorem needs no monotonicity of the
-right-hand sides and says nothing about unknowns outside $V$. We call the set
-on which this certificate holds the _solved set_. Termination of this solver is not proved, and @sec:isabelle explains how
-Isabelle defines such a function.
-
-== Isabelle/HOL mechanisms used in this development <sec:isabelle>
-
-// The declarations below are examples, set smaller than the running text.
-#show raw.where(block: true): set text(size: 6.5pt)
-
-This section explains the mechanisms of Isabelle/HOL @nipkow14 needed to read
-the definitions and theorems that later chapters show, each with the place
-where the formalization uses it.
-
-HOL is a typed logic of total functions. We write $x :: tau$ for "$x$ has type
-$tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
-#isai("'a") for a type variable, and $lambda x. t$ for the function that maps
-$x$ to $t$. A _datatype_ declares a type by its constructors and comes with
-case distinction and structural induction. VIMP's commands
-#isatype("gcom") are one (@sec:vimp). A _record_ is a tuple with named fields.
-The analysis interface #isatype("dg_spec") is one (@sec:sound-core).
-
-Every HOL function is total, so an ordinary recursive definition needs a
-termination proof. Otherwise a definition such as $f(n) = f(n) + 1$ would yield $0 = 1$ @nipkow14[§2.3.4]. Isabelle's function package can also define a
-recursive function without one. The result is still a total HOL constant, but
-its defining equations are proved only on its _domain_, the arguments on which
-the recursion terminates, and theorems about it assume membership in that
-domain. The vendored solver is defined this way, with the domain
-#isaconst("solve_dom", thy: "TD_side_upd_rule"). @sec:termination explains why Voblint's main
-theorem nevertheless needs no termination premise.
-
-A _type class_ collects operations and laws that an instance proves once for a
-carrier @haftmann07. The solver's class #isalocale("widening") fixes the
-operator $widen$ and assumes that it bounds both operands:
-#thy("widening")
-A type has at most one instance of each class. The numeric domains state
-their algebra as classes (@ch:domains).
-
-A _locale_ fixes parameters and assumptions, and interpreting it proves the
-assumptions for an instance and yields its theorems @ballarin14. Unlike a
-class, a locale can be interpreted several times for one type. Voblint states
-its soundness obligations as locale assumptions, so an analysis becomes sound
-by interpreting the locale. #isalocale("sound_intersection"), for instance,
-fixes an intersection that keeps every value both operands admit and lies
-below both:
-#thy("sound_intersection")
-
-An _inductive definition_ is the least relation closed under its rules, and
-#isacmd("inductive_set") defines a set the same way. Its _rule induction_
-proves a property of every element with one case per rule. The solver's
-verification defines #isaconst("reach"), the unknowns on which a
-query $x$ transitively depends, by two rules:
-#thy("reach")
-Source execution #isaconst("pstep") (@fig:pstep), graph execution
-#isaconst("cstep") (@fig:cstep), the valid activation traces
-#isaconst("valid_activation_trace") and the reflexive–transitive closure
-$scripts(->)^*$ of a step relation are defined by rules as well, and a source
-run is written $scripts(->)_p^*$ (#isaconst("psteps")).
-
-A theorem declares its variables and their types after #isai("fixes"),
-introduces abbreviations local to the statement after #isai("defines"), lists
-its premises after #isai("assumes") and states its conclusion after
-#isai("shows"). The source-level theorem of @sec:headline uses all four:
-// deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
-#proved("run_voblint_source_sound")
-It fixes a program $p :: #isatype("imp_prog")$ and two stores, abbreviates the
-program's globals classifier, procedure table and graph, and assumes an initial
-store, a source run $scripts(->)_p^*$ from it and an answer of the analyzer. It
-shows that the reached configuration is observed at some graph node $v$
-(written $gt.closed$, #isaconst("at_node"), @sec:csim), and that at every such
-node the reached store lies in the collecting semantics, in the state the
-report gives there, and in the stores its verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
-$and$, $or$ are the usual connectives. Subscripts, superscripts, and symbols
-such as $tack.r$ are notation for a constant applied to its arguments, and the
-text names the constant at first use.
-
-A _quotient type_ identifies representations up to an equivalence
-@huffman13. The executable abstract states of @ch:solving are one: two finite
-representations are identified when they read back to the same
-function-valued state:
-#thy("default_st")
-Its operations are lifted with #isacmd("lift_definition").
-
-_Code equations_ determine what code generation emits @haftmann10, and one
-#isacmd("export_code") declaration emits the analyzer's OCaml from them, so
-the delivered analyzer runs the definitions the theorems are about. The
-generated code is _trusted_, not proved: no theorem states that the OCaml
-program computes what the Isabelle definitions compute, so its correctness
-rests on the code generator and the OCaml toolchain. The trust has a basis.
-The generator translates code equations that are proved from the definitions,
-apart from target-language adaptations such as the mapping of integers to
-OCaml's arbitrary-precision numbers (#isacmd("code_printing")), which are
-trusted. Haftmann and Nipkow give its source and intermediate language
-a semantics and prove the translation of type classes correct on paper
-@haftmann10, and the regression corpus runs the generated analyzer against
-expected verdicts (@ch:executable). Theories are grouped
-into _sessions_, which Isabelle builds and checks as units, and which later
-chapters cite as the home of a construction. The control-flow graph, for
-instance, lives in #isasession("Voblint_CFG"), which builds on
-#isasession("Voblint_VIMP").
-
-The _trusted computing base_ is the code that must be correct for a proof to
-be believed, normally only Isabelle's inference kernel. A _proof by
-evaluation_ extends it. The method `eval` compiles a closed proposition to code, runs it, and accepts
-the result through the code generator's evaluation oracle. In 2025, a defect in
-normalization by evaluation, which also extends trust beyond the kernel,
-admitted a proof of `False` @paulson26broken. Theorems about fixed programs such as #isathm("nv_report") are proved this
-way.
+reads of its right-hand sides, and, on $V$, the valuation is a post-solution,
+published contributions included. It says nothing about unknowns outside $V$,
+and $V$ is called the _solved set_. Unlike some TD variants without side effects
+@tilscher26jar, this solver has no termination proof (@sec:isabelle explains
+how Isabelle defines such a function).

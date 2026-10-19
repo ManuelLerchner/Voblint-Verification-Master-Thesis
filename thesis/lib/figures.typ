@@ -365,7 +365,19 @@
 // A reference to a part ("Figure 5.2b") is resolved by the `show ref` rule in
 // tum.typ, at the part's own location: subpar's `numbering-sub-ref` would run
 // at the citing sentence and count the part's own kind.
-#let subfigures(..args) = subpar.grid(numbering: chapter-numbering, ..args)
+//
+// HTML export drops grids and with them the labels of the parts, which breaks
+// every reference to one; `thesis-text` sets `text-export` so the parts and
+// the outer caption become plain labelled figures instead.
+#let subfigures(..args) = if "text-export" in sys.inputs {
+  for (i, part) in args.pos().enumerate() {
+    if type(part) == label { continue }
+    let next = args.pos().at(i + 1, default: none)
+    if type(next) == label [#part #next] else { part }
+  }
+  let named = args.named()
+  [#figure([], caption: named.at("caption", default: none)) #named.at("label", default: none)]
+} else { subpar.grid(numbering: chapter-numbering, ..args) }
 
 
 // ------------------------------------------------------------------ parts --
@@ -423,16 +435,19 @@
   link(loc)[Part #numbering("I", part-counter.at(loc).first())]
 }
 
-// The contents entry for a part: a bold, unnumbered group line without a page
-// number, set off from the chapters it groups. Every other level-1 entry is
-// left to the default.
+// The contents entry for a part: a muted label and title in tracked small
+// capitals, so parts read as groups rather than as further chapters.
+// It has no page number. Every other level-1 entry is left to the default.
 #let part-outline-entry(it) = {
   if it.element.supplement == [Part] {
     let n = part-counter.at(it.element.location()).first()
-    block(above: 13pt, below: 0pt, sticky: true, link(it.element.location(), text(
-      font: "Latin Modern Sans",
-      weight: "bold",
-    )[Part #numbering("I", n): #it.element.body]))
+    block(above: 15pt, below: 2pt, sticky: true, link(it.element.location(), {
+      text(0.75em, fill: vb.muted, tracking: 1.5pt)[PART #numbering("I", n)]
+      h(1em)
+      text(1.15em, fill: vb.muted, tracking: 1.5pt, font: "Latin Modern Roman Caps", lower(
+        it.element.body,
+      ))
+    }))
   } else {
     it
   }

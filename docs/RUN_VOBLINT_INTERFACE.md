@@ -101,19 +101,18 @@ and its per-policy instances). Then:
 s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v
 ```
 
-`run_voblint_spine` states the chain once, for any context relation `R` and root
-context, given what a policy owes: every valid activation trace carries some context,
-and the buckets together are the collecting semantics.
-`run_voblint_unit_chain`, `run_voblint_entry_state_chain` and
-`run_voblint_call_string_chain` (`Analysis_Certified.thy`) state this chain for a
-source run, one per policy, since the context type is the policy's own. Each keeps
-the witness: the conclusion names the trace `t`, its representation of the run's
-configuration, and the context the policy relates it to. Under call strings and the
-unit policy every valid trace has its context outright; under entry-state routing
-the admitted context exists because the solve returned
-(`run_voblint_entry_state_terminates`), read off the registration the placement of
-program globals selects (`mcp_es_admitted`). All three chains hold for both
-placements. `run_voblint_source_sound` is the context-erased form.
+`run_voblint_contexts` (`Analysis_Certified.thy`) is the common hub:
+`context_sound p res (run_policy config p) (run_root config)` says that every valid
+activation trace has a context under the configuration's policy and that every
+bucket lies in `ℛ⇘res⇙ v`. `run_policy` renames each policy's contexts into one type,
+`report_context`, through an injective tag (`map_context_policy`), so one statement
+covers every configuration. Under call strings and the unit policy every valid trace
+has its context outright; under entry-state routing the admitted context exists
+because the solve returned (`entry_state_policy_of_terminates`).
+`run_voblint_spine` states the chain above for a source run with no policy premise
+and keeps the witness: the trace `t`, its representation of the run's configuration,
+and its context. `run_voblint_covers` and `run_voblint_source_sound` are the
+context-erased form.
 
 ## Public contract
 
@@ -164,7 +163,8 @@ The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
 | `run_voblint_arithmetic_safe`, `run_voblint_arithmetic_intra_safe` | no diagnostic at `v` means no collected store at `v` divides by zero |
 | `run_voblint_well_formed` | the report is `well_formed_report`: indices in range, one row per `(point, context)`, row verdicts are their own state's |
 | `run_voblint_check_sites` | `report_checks` lists one check per compiled `EA_Check` edge, in graph order: the rows the verdict theorems speak about are all of the program's checks |
-| `run_voblint_unit_chain`, `run_voblint_entry_state_chain`, `run_voblint_call_string_chain` | the semantic spine above, per policy |
+| `run_voblint_contexts` | every valid trace has a context under `run_policy config p`, and every bucket lies in `ℛ⇘res⇙ v` |
+| `run_voblint_spine` | the semantic spine above, for every configuration |
 
 ```text
                   source

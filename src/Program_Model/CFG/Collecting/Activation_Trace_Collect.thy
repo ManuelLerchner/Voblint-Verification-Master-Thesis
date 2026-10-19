@@ -220,8 +220,7 @@ definition activation_trace_witness_cfg :: cfg where
   "activation_trace_witness_cfg =
      \<lparr> intra = {(Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1)},
        calls = {},
-       cfg_entry = Statement 0,
-       checks = {} \<rparr>"
+       cfg_entry = Statement 0 \<rparr>"
 
 lemma activation_trace_witness_entry [simp]: "cfg_entry activation_trace_witness_cfg = Statement 0"
   by (simp add: activation_trace_witness_cfg_def)

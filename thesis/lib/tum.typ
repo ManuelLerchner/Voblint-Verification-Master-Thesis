@@ -102,7 +102,7 @@
 
 // A front-matter chapter (acknowledgements, abstract): a centred serif title
 // with its baseline at 195pt and the text from 248.6pt, under an empty head.
-#let front-chapter(body) = {
+#let front-chapter(body) = if "text-export" in sys.inputs { body } else {
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
     // Tighter than the TUM LaTeX template (83.5pt / 40.2pt) so the abstract
@@ -193,6 +193,13 @@
       it.body
     }),
   )
+
+  // `thesis-text` exports HTML, which drops the layout above together with
+  // the heading text; plain heading tags keep the section structure.
+  show heading: it => if "text-export" in sys.inputs {
+    let num = if it.numbering != none { counter(heading).display(it.numbering) + " " }
+    html.elem("h" + str(it.level), [#num#it.body])
+  } else { it }
 
   // Display equations are unnumbered, as with LaTeX's `\\[ \\]`: the grammars and
   // definitions here fill the line and nothing refers to them by number.
@@ -325,7 +332,7 @@
     }
     if it.level == 1 {
       // Sticky: a chapter line never ends a page apart from its first section.
-      block(above: 13pt, below: 12pt, sticky: true, link(el.location(), text(
+      block(above: 10pt, below: 10pt, sticky: true, link(el.location(), text(
         font: sans,
         weight: "bold",
         row,

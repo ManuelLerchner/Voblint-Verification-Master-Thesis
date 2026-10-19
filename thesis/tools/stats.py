@@ -55,11 +55,7 @@ NUMBER = re.compile(r"(?<![\w.,-])(?:\d{1,3}(?:,\d{3})+|\d{2,}|\d+%)(?![\w,]|\.\
 # no longer matches anything is reported, so the list cannot outlive its text.
 ALLOW: dict[tuple[str, str], str] = {
     # Goblint pull request and issue numbers, not counts.
-    ("13-evaluation.typ", "1161"): "Goblint pull request number",
-    # Figures quoted from cited external work, not repository counts.
-    ("01-introduction.typ", "85,000"): "line count reported by bryant26munkres",
-    ("01-introduction.typ", "806"): "result count reported by bryant26munkres",
-    ("01-introduction.typ", "132,000"): "program size reported by blanchet03",
+    # Size of the profiled example program, not a repository count.
     # Drawing coordinates of a figure, not a count.
     ("02-background.typ", "11"): "tick range of the number line in fig:concretization",
     # Colour lightening in cetz figure code, whose `line` calls trip the heuristic.
@@ -68,10 +64,6 @@ ALLOW: dict[tuple[str, str], str] = {
     ("10-results.typ", "60"): "bar lightening in fig:chain",
     # Listing line numbers, not counts.
     ("11-instances.typ", "10"): "line of the stride-2 listing marked in fig:stride2",
-    (
-        "14-tooling.typ",
-        "19",
-    ): "past share of a clean build, recorded in scripts/mk/reelaboration-check.sh",
 }
 
 

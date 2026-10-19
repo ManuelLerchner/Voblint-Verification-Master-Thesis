@@ -33,11 +33,29 @@ lemma run_voblint_cfg:
   "run_voblint config p = Analysed res \<Longrightarrow> report_cfg res = prog_cfg p"
   by (auto dest: analysis_report_of_fields)
 
+lemma run_voblint_report_sound:
+  assumes "run_voblint config p = Analysed res"
+  shows "sound_report p res \<and> context_sound p res (run_policy config p) (run_root config)"
+  using assms
+  by (elim run_voblint_AnalysedE)
+     (rule analysis_report_of_sound [OF wf_program_compile_input_exec_sound])
+
 theorem run_voblint_sound:
   assumes "run_voblint config p = Analysed res"
   shows "sound_report p res"
-  using assms
-  by (auto intro: analysis_report_of_sound wf_program_compile_input_exec_sound)
+  using run_voblint_report_sound [OF assms] by blast
+
+text \<open>
+  The common point of the source-level results. Whatever configuration produced
+  the report, the policy it runs with gives every valid activation trace a context,
+  and every context's activation bucket lies in the report's semantics. The
+  context-free coverage below and the per-context spine both start here.
+\<close>
+
+theorem run_voblint_contexts:
+  assumes "run_voblint config p = Analysed res"
+  shows "context_sound p res (run_policy config p) (run_root config)"
+  using run_voblint_report_sound [OF assms] by blast
 
 lemma run_voblint_consistent:
   "run_voblint config p = Analysed res \<Longrightarrow> consistent_report res"
@@ -66,7 +84,14 @@ theorem run_voblint_report_contract:
 theorem run_voblint_covers:
   assumes "run_voblint config p = Analysed res"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v"
-  using run_voblint_sound[OF assms] unfolding sound_report_def by blast
+proof -
+  note ctx = run_voblint_contexts [OF assms, unfolded context_sound_def]
+  have "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
+          = (\<Union>c. \<A>\<^bsub>declared_global p,run_policy config p,run_root config,prog_cfg p,
+                       cinit_stores (declared_global p)\<^esub> v c)"
+    by (rule node_collect_eq_Union_activation_of_has_context) (use ctx in blast)
+  with ctx show ?thesis by blast
+qed
 
 text \<open>
   Every store the program reaches at a point lies in the report's semantics there,
@@ -361,205 +386,49 @@ qed
 subsection \<open>The semantic spine\<close>
 
 text \<open>
-  The endpoint above starts at the collecting semantics. Below the point where a
-  report erases its contexts, each policy states the whole chain for a source run: the
-  run is represented by a valid activation trace \<open>t\<close>, the policy assigns \<open>t\<close> a context
-  \<open>c\<close>, the run's store lies in the bucket of \<open>c\<close>, the buckets together are the collecting
-  semantics, and the report and its verdicts contain that. The context type is the
-  policy's own, so there is one statement per policy.
-\<close>
-
-text \<open>
-  The chain for any context policy, given what the policy owes: every valid
-  activation trace carries some context, and the buckets together are the collecting
-  semantics. Each policy below supplies exactly these two facts.
+  The endpoint above starts at the collecting semantics. The spine keeps the
+  contexts the report erases, for the policy the configuration runs with: a source
+  run is represented by a valid activation trace \<open>t\<close>, the policy gives \<open>t\<close> a context
+  \<open>c\<close>, the run's store lies in the bucket of \<open>c\<close>, the buckets together are the
+  collecting semantics, and the report and its verdicts contain that. It follows
+  from \<open>run_voblint_contexts\<close> and holds for every configuration.
 \<close>
 
 theorem run_voblint_spine:
-  fixes p :: imp_prog and s0 s :: store
+  fixes p :: imp_prog and s0 s :: store and config :: analysis_config
   defines G_def: "\<G> \<equiv> declared_global p"
       and Pi_def: "\<Pi> \<equiv> prog_table p"
       and g_def: "g \<equiv> prog_cfg p"
       and S_def: "S \<equiv> cinit_stores (declared_global p)"
+      and adm_def: "adm \<equiv> run_policy config p"
+      and rc_def: "rc \<equiv> run_root config"
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-      and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
-      and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v"
   shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
+           \<and> activation_context_rel \<G> adm rc g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
            \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
+  have has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm rc g t c"
+    using run_voblint_contexts [OF ans]
+    unfolding context_sound_def G_def g_def S_def adm_def rc_def by blast
+  have buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v"
+    by (rule node_collect_eq_Union_activation_of_has_context [OF has_ctx, symmetric])
   have cfg: "g = compile_prog \<Pi> (prog_procs p)"
     unfolding g_def Pi_def by (rule prog_cfg_def)
   from source_store_in_activation_collect
          [OF run_voblint_wf [OF ans, folded G_def Pi_def] s0 run has_ctx [unfolded cfg]]
   have witness: "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
+           \<and> activation_context_rel \<G> adm rc g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v c"
     unfolding cfg .
   from witness buckets run_voblint_covers [OF ans]
        analysis_report_verdicts_sound [OF run_voblint_consistent [OF ans]]
   show ?thesis unfolding G_def g_def S_def by blast
-qed
-
-theorem run_voblint_call_string_chain:
-  fixes p :: imp_prog and s0 s :: store and k :: nat
-  defines G_def: "\<G> \<equiv> declared_global p"
-      and Pi_def: "\<Pi> \<equiv> prog_table p"
-      and g_def: "g \<equiv> prog_cfg p"
-      and S_def: "S \<equiv> cinit_stores (declared_global p)"
-      and R_def: "adm \<equiv> context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)"
-  assumes s0: "s0 \<in> S"
-      and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and ans: "run_voblint (Analysis_Config as r (Ctx_CallString k) pg) p = Analysed res"
-  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> adm [] g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
-           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
-proof -
-  have has_ctx: "\<exists>c. activation_context_rel \<G> adm [] g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
-    unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
-  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
-    unfolding G_def g_def S_def R_def
-    by (rule mcp_cs_rule.fun_route_node_collect_eq_Union [where ctx_fun = "cs_context k",
-          symmetric])
-  show ?thesis
-    unfolding G_def Pi_def g_def S_def
-    by (rule run_voblint_spine [OF s0 [unfolded S_def G_def] run [unfolded G_def Pi_def] ans
-          has_ctx [unfolded G_def g_def S_def] buckets [unfolded G_def g_def S_def]])
-qed
-
-theorem run_voblint_unit_chain:
-  fixes p :: imp_prog and s0 s :: store
-  defines G_def: "\<G> \<equiv> declared_global p"
-      and Pi_def: "\<Pi> \<equiv> prog_table p"
-      and g_def: "g \<equiv> prog_cfg p"
-      and S_def: "S \<equiv> cinit_stores (declared_global p)"
-      and R_def: "adm \<equiv> context_policy_of_fun (\<lambda>u c t. ())"
-  assumes s0: "s0 \<in> S"
-      and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and ans: "run_voblint (Analysis_Config as r Ctx_None pg) p = Analysed res"
-  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> adm () g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
-           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
-proof -
-  have has_ctx: "\<exists>c. activation_context_rel \<G> adm () g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
-    unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
-  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
-    unfolding G_def g_def S_def R_def
-    by (rule mcp_rule.fun_route_node_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()",
-          symmetric])
-  show ?thesis
-    unfolding G_def Pi_def g_def S_def
-    by (rule run_voblint_spine [OF s0 [unfolded S_def G_def] run [unfolded G_def Pi_def] ans
-          has_ctx [unfolded G_def g_def S_def] buckets [unfolded G_def g_def S_def]])
-qed
-
-text \<open>
-  Under entry-state routing a trace carries an admitted context, and the buckets cover
-  the collecting semantics, because the solve terminated, which the answer carries.
-\<close>
-
-text \<open>
-  Each placement registers entry-state routing once, so the contexts an answered run
-  admits are read off the registration its placement selects.
-\<close>
-
-definition mcp_es_admitted where
-  "mcp_es_admitted pg as r p = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> mcp_es_rule.admitted_contexts as r (declared_global p) p
-   | Program_Globals_Flow_Insensitive \<Rightarrow> mcp_split_es_rule.admitted_contexts as r (declared_global p) p)"
-
-lemma run_voblint_entry_state_terminates:
-  assumes "run_voblint (Analysis_Config as r Ctx_EntryState pg) p = Analysed res"
-  shows "case pg of
-           Program_Globals_Flow_Sensitive \<Rightarrow> mcp_es_rule.terminates as r (declared_global p) p
-         | Program_Globals_Flow_Insensitive \<Rightarrow> mcp_split_es_rule.terminates as r (declared_global p) p"
-proof -
-  from assms have rep: "analysis_report_of (Analysis_Config as r Ctx_EntryState pg) p = Some res"
-    by (rule run_voblint_AnalysedE)
-  show ?thesis
-  proof (cases pg)
-    case Program_Globals_Flow_Sensitive
-    with rep obtain sol where
-      "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
-         (mcp_es_rule.root_query p) = Some sol"
-      by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-    then show ?thesis
-      using Program_Globals_Flow_Sensitive by (simp add: mcp_es_rule.solve_c_run(1))
-  next
-    case Program_Globals_Flow_Insensitive
-    with rep obtain sol where
-      "TD_side_rule_Interp_solve_c r (mcp_split_es_rule.equations as (declared_global p) p)
-         (mcp_split_es_rule.root_query p) = Some sol"
-      by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-    then show ?thesis
-      using Program_Globals_Flow_Insensitive by (simp add: mcp_split_es_rule.solve_c_run(1))
-  qed
-qed
-
-theorem run_voblint_entry_state_chain:
-  fixes p :: imp_prog and s0 s :: store
-    and as :: "analysis_domain list" and r :: globals_rule and pg :: program_globals
-  defines G_def: "\<G> \<equiv> declared_global p"
-      and Pi_def: "\<Pi> \<equiv> prog_table p"
-      and g_def: "g \<equiv> prog_cfg p"
-      and S_def: "S \<equiv> cinit_stores (declared_global p)"
-      and R_def: "adm \<equiv> mcp_es_admitted pg as r p"
-  assumes s0: "s0 \<in> S"
-      and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and ans: "run_voblint (Analysis_Config as r Ctx_EntryState pg) p = Analysed res"
-  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> adm mcp_root_ctx g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
-           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
-proof -
-  note wf = run_voblint_wf [OF ans]
-  note terminates = run_voblint_entry_state_terminates [OF ans]
-  have has_ctx: "\<exists>c. activation_context_rel \<G> adm mcp_root_ctx g t c"
-    if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
-  proof (cases pg)
-    case Program_Globals_Flow_Sensitive
-    with terminates show ?thesis
-      using mcp_es_rule.entry_state_has_context_of_terminates [OF wf] that
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  next
-    case Program_Globals_Flow_Insensitive
-    with terminates show ?thesis
-      using mcp_split_es_rule.entry_state_has_context_of_terminates [OF wf] that
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  qed
-  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
-  proof (cases pg)
-    case Program_Globals_Flow_Sensitive
-    with terminates show ?thesis
-      using mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf]
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  next
-    case Program_Globals_Flow_Insensitive
-    with terminates show ?thesis
-      using mcp_split_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf]
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  qed
-  show ?thesis
-    unfolding G_def Pi_def g_def S_def
-    by (rule run_voblint_spine [OF s0 [unfolded S_def G_def] run [unfolded G_def Pi_def] ans
-          has_ctx [unfolded G_def g_def S_def] buckets [unfolded G_def g_def S_def]])
 qed
 end

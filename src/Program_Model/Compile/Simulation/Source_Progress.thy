@@ -196,7 +196,7 @@ theorem source_progress:
   shows "(is_SKIP c \<and> frs = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p cfg')"
 proof -
   define g :: cfg where
-    "g = \<lparr>intra = UNIV, calls = UNIV, cfg_entry = FunctionEntry prog_main_name, checks = {}\<rparr>"
+    "g = \<lparr>intra = UNIV, calls = UNIV, cfg_entry = FunctionEntry prog_main_name\<rparr>"
   have pc: "procs_embedded \<Pi> g"
     unfolding procs_embedded_def
   proof (intro allI impI)

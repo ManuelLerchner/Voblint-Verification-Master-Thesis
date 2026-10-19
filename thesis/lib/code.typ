@@ -213,6 +213,14 @@
   )
 }
 
+// A small button opening a run in the playground, styled like a listing's tag.
+#let vimp-button(url) = link(url, box(
+  stroke: 0.5pt + vb.keyword,
+  radius: 1.5pt,
+  inset: (x: 0.3em, y: 0.1em),
+  text(size: 0.75em, fill: vb.keyword.darken(20%))[VIMP #sym.arrow.tr],
+))
+
 // A listing. VIMP (`lang: "c"`) carries a playground link on its language tag.
 // `claim` names an entry of shared/claims.toml whose fixture this listing shows
 // or excerpts: the link then opens the whole fixture, without its comments, at

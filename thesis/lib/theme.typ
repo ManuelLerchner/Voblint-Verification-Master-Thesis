@@ -48,6 +48,20 @@
   ivl: rgb("#1565C0"),
   par: rgb("#6A1B9A"),
   cong: rgb("#AD1457"),
+
+  // station rings of the proof map, distinct from every line colour
+  ink: rgb("#212121"),
+)
+
+// The proof map's lines (thesis/tools/explainer_svg.py maps the site's line
+// colours to these names), for prose that names a line.
+#let metro = (
+  sem: vb.neutral,
+  comp: vb.unstable,
+  dom: vb.par,
+  fw: vb.sign,
+  sol: vb.cong,
+  res: vb.accent,
 )
 
 #let tint(c, amount) = c.lighten(amount)

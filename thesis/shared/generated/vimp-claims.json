@@ -223,6 +223,28 @@
       "placement": "flow-sensitive"
     }
   },
+  "ctx-nest-k1": {
+    "fixture": "tests/regression/17-call-string/known-imprecision/06-depth1_sign_merges_nested_callee.vimp",
+    "program": "fun g(p) { return p + p; }\nfun f(p) { t = g(p); return t; }\nfun main() {\n  x = f(3);\n  y = f(-10);\n  __voblint_check(0 < x);\n  __voblint_check(y < 0);\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 1,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctx-nest-k2": {
+    "fixture": "tests/regression/17-call-string/precision/05-callstring_graph_sign.vimp",
+    "program": "fun g(p) { return p + p; }\nfun f(p) { t = g(p); return t; }\nfun main() {\n  x = f(3);\n  y = f(-10);\n  __voblint_check(0 < x);\n  __voblint_check(y < 0);\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 2,
+      "placement": "flow-sensitive"
+    }
+  },
   "dom-conjunct-order": {
     "fixture": "tests/regression/02-control-flow/known-imprecision/05-conjunct_order.vimp",
     "program": "fun main() {\n  i = __voblint_nondet_int();\n  j = __voblint_nondet_int();\n  if (0 < i && i < j && j < 10) {\n    __voblint_check(i <= 8);\n    __voblint_check(j >= 2);\n  }\n  if (j < 10 && i < j && 0 < i) {\n    __voblint_check(i <= 8);\n    __voblint_check(j >= 2);\n  }\n}",

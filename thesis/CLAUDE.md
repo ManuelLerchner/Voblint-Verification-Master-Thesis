@@ -282,6 +282,17 @@ handing a section over.
   standard domains, classical fixpoint theory) gets a sentence, a citation and,
   where it exists, a link to the interactive explainer; the depth goes to what
   only this development has.
+- Chain paragraphs into a story. Each paragraph answers the question the
+  previous one raised and ends on the question the next one answers (wrong
+  answers harm users -> a proof rules them out, but who checks the proof? ->
+  the kernel, but only against the definitions -> so state the boundary ->
+  where this thesis draws it). Open with a sentence that names the link
+  ("Fixing one such bug does not rule out the next."), and put the thesis
+  statement where the argument has earned it, not inside the motivation.
+- Cite as support, not as the sentence subject. Write the claim and put the
+  citation at its end ("Agents have formalized … with all 806 results proved
+  @bryant26munkres."), not "Bryant et al. @bryant26munkres report …". Name
+  authors only when the comparison is about their work.
 
 ### Evidence
 

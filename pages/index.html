@@ -4622,12 +4622,12 @@ fun main() {
           <tr><td class="nl-sym">𝒢,g ⊢ c →<sub>c</sub> c' / 𝒢,g ⊢ c →<sub>c</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em> in <em>g</em></td><td><a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.csteps%7Cconst"><code>csteps</code></a></td></tr>
           <tr><td class="nl-sym">Π,g,p ⊢ c ≈ c'</td><td><em>c</em> is matched with <em>c′</em></td><td><a href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst"><code>csim</code></a></td></tr>
           <tr><td class="nl-sym">p,s0 ⊢ c ⊳ v</td><td>from <em>s₀</em>, <em>c</em> is observed at node <em>v</em> in <em>p</em></td><td><a href="Voblint/Voblint_Compile/Elaborated_Compilation.html#Elaborated_Compilation.at_node%7Cconst"><code>at_node</code></a></td></tr>
-          <tr><td class="nl-sym">skip<sup>♯</sup> S / assign<sup>♯</sup> S / special<sup>♯</sup> S / branch<sup>♯</sup> S / body<sup>♯</sup> S / return<sup>♯</sup> S / event<sup>♯</sup> S</td><td>the <em>op</em> transfer of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst"><code>dgs_skip</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst"><code>dgs_assign</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst"><code>dgs_special</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst"><code>dgs_branch</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst"><code>dgs_body</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst"><code>dgs_return</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst"><code>dgs_event</code></a></td></tr>
-          <tr><td class="nl-sym">enter<sup>♯</sup> S / combine_env<sup>♯</sup> S / combine_assign<sup>♯</sup> S</td><td>the call-boundary transfers of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst"><code>dgs_enter</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst"><code>dgs_combine_env</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst"><code>dgs_combine_assign</code></a></td></tr>
-          <tr><td class="nl-sym">combine<sup>♯</sup> 𝒢 dst σc σe</td><td>the abstract return of <em>σe</em> into <em>σc</em></td><td><a href="Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst"><code>combine_collect_abs</code></a></td></tr>
+          <tr><td class="nl-sym">skip<sup>♯</sup> S / assign<sup>♯</sup> S / special<sup>♯</sup> S / branch<sup>♯</sup> S / body<sup>♯</sup> S / return<sup>♯</sup> S / event<sup>♯</sup> S</td><td>the <em>op</em> transfer of analysis <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst"><code>dgs_skip</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst"><code>dgs_assign</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst"><code>dgs_special</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst"><code>dgs_branch</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst"><code>dgs_body</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst"><code>dgs_return</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst"><code>dgs_event</code></a></td></tr>
+          <tr><td class="nl-sym">enter<sup>♯</sup> S / combine_env<sup>♯</sup> S / combine_assign<sup>♯</sup> S</td><td>the call-boundary transfers of analysis <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst"><code>dgs_enter</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst"><code>dgs_combine_env</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst"><code>dgs_combine_assign</code></a></td></tr>
+          <tr><td class="nl-sym">combine<sup>♯</sup> 𝒢 dst q r</td><td>the abstract return of <em>r</em> into <em>q</em></td><td><a href="Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst"><code>combine_collect_abs</code></a></td></tr>
           <tr><td class="nl-sym">context<sup>♯</sup></td><td>the computed callee context</td><td><a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale"><code>route</code></a></td></tr>
           <tr><td class="nl-sym">a ∇ b / a Δ b</td><td><em>a</em> widened by <em>b</em>, <em>a</em> narrowed by <em>b</em></td><td><a href="Unsorted/TD/Warrowing.html#Warrowing.widening_class.widen%7Cconst"><code>widen</code></a> <a href="Unsorted/TD/Warrowing.html#Warrowing.narrowing_class.narrow%7Cconst"><code>narrow</code></a></td></tr>
-          <tr><td class="nl-sym">𝒢</td><td>the globals classifier</td><td><a href="Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst"><code>declared_global</code></a></td></tr>
+          <tr><td class="nl-sym">𝒢</td><td>the global-variable classifier</td><td><a href="Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst"><code>declared_global</code></a></td></tr>
           <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid activation traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></td></tr>
           <tr><td class="nl-sym">𝒞<sub>𝒢,g,S</sub> v<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.collect%7Cconst">𝒞 v</a></span></td><td>the stores collected at <em>v</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a></td></tr>
           <tr><td class="nl-sym">𝒜<sub>𝒢,adm,c₀,g,S</sub> v c<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.buckets%7Cconst">𝒜 v c</a></span></td><td>the stores collected at <em>v</em> in context <em>c</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a></td></tr>
@@ -5088,20 +5088,20 @@ qed</code></pre>
       </figure>
 
       <div class="prose-block">
-        <h3>A map of the proof</h3>
+        <h3 id="proof-map">A map of the proof</h3>
         <p>The zoom followed one path. The development as a whole runs along five lines: what programs mean, how they are compiled, what a domain proves, how equations are built, and how the solver answers them. Stations on one line belong to the same layer and are listed in reading order. Only the interchanges claim that one result uses another. All five lines reach the result line, which ends at the verdicts you see. Hover over a station to see its theory, and click it to open the theory.</p>
       </div>
 
       <figure class="scene scene-metro">
-        <svg class="metro-svg" viewBox="0 24 1100 520" role="img"
-          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; a short branch carrying the order analysis joins the domain line at the interchange where the analyses meet; the semantics line runs on into the central interchange, which the result line leaves, ending at three terminals: PROVED, DEAD and SAFE.">
+        <svg class="metro-svg" viewBox="0 24 1145 486" role="img"
+          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; a short branch carrying the order analysis joins the domain line at the interchange where the analyses meet; the semantics line runs on into the central interchange, which the result line leaves, ending at three terminals: PROVED, DEAD and SAFE; a lower branch of the result line carries the entry-state policy, and the compiler line meets the result line twice, first at the chain that keeps the contexts, which a branch of the result line reaches from below, then at the headline above the three terminals.">
           <g class="metro-lines">
             <path class="line-sem" d="M70 70 H 700 V 336"/>
-            <path class="line-comp" d="M70 165 H 960 V 380"/>
+            <path class="line-comp" d="M70 165 H 930 V 280 H 1010"/>
             <path class="line-dom" d="M70 270 H 490 V 350 M390 222 H 490 V 270"/>
             <path class="line-fw" d="M55 350 H 700"/>
             <path class="line-sol" d="M70 470 H 560 L 640 440 H 700"/>
-            <path class="line-res" d="M700 395 L 800 440 H 900 M900 440 L 960 380 H 1010 M900 440 H 1010 M900 440 L 960 500 H 1010"/>
+            <path class="line-res" d="M700 420 H 1050 M700 450 H 840 L 870 420 M930 420 V 294 M1010 420 V 280 H 1050 M1010 420 V 480 H 1050"/>
           </g>
 
           <g class="metro-line-names">
@@ -5110,13 +5110,13 @@ qed</code></pre>
             <text class="name-dom" x="70" y="246">DOMAIN</text>
             <text class="name-fw" x="70" y="326">FRAMEWORK</text>
             <text class="name-sol" x="70" y="446">SOLVER</text>
-            <text class="name-res" x="748" y="404">RESULT</text>
+            <text class="name-res" x="722" y="504">RESULT</text>
           </g>
 
           <g class="metro-stations">
             <a class="metro-station" href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst" data-name="pstep" data-theory="Voblint_VIMP.VIMP_Proc" data-info="The source semantics: one step rewrites the rest of the program, the store and the caller frames.">
               <circle cx="70" cy="70" r="8"/><text x="70" y="96">pstep</text></a>
-            <a class="metro-station" href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst" data-name="cstep" data-theory="Voblint_CFG.CFG_Exec" data-info="Graph execution: a node, a store and a stack of return points.">
+            <a class="metro-station metro-detail" href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst" data-name="cstep" data-theory="Voblint_CFG.CFG_Exec" data-info="Graph execution: a node, a store and a stack of return points.">
               <circle cx="190" cy="70" r="8"/><text x="190" y="96">cstep</text></a>
             <a class="metro-station" href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst" data-name="valid_activation_trace" data-theory="Voblint_CFG.Activation_Trace_Def" data-info="Activation traces: each records one activation's path, with its callers and finished callees nested inside.">
               <circle cx="320" cy="70" r="8"/><text x="320" y="96">valid_activation_trace</text></a>
@@ -5125,23 +5125,25 @@ qed</code></pre>
 
             <a class="metro-station" href="Voblint/Voblint_Compile/VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile_prog%7Cconst" data-name="compile_prog" data-theory="Voblint_Compile.VIMP_Proc_to_CFG" data-info="The compiler from VIMP procedures to a graph with entry and result nodes per procedure.">
               <circle cx="70" cy="165" r="8"/><text x="70" y="191">compile_prog</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst" data-name="csim" data-theory="Voblint_Compile.Simulation_Relation" data-info="The simulation relation: which source configuration matches which graph configuration, always with the same store.">
+            <a class="metro-station metro-detail" href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst" data-name="csim" data-theory="Voblint_Compile.Simulation_Relation" data-info="The simulation relation: which source configuration matches which graph configuration, always with the same store.">
               <circle cx="210" cy="165" r="8"/><text x="210" y="191">csim</text></a>
             <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact" data-name="csim_step" data-theory="Voblint_Compile.Simulation_Preservation" data-info="Forward simulation: one source step is matched by zero or more CFG steps.">
               <circle cx="350" cy="165" r="8"/><text x="350" y="191">csim_step</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_run_has_activation_trace%7Cfact" data-name="source_run_has_activation_trace" data-theory="Voblint_Compile.Source_To_Trace" data-info="Interchange of semantics and compiler: every source run has a matching graph configuration and a valid activation trace ending there.">
               <rect x="569" y="58" width="22" height="120" rx="11"/><text x="560" y="124" text-anchor="end">source_run_has_activation_trace</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_node_collect%7Cfact" data-name="source_reaches_node_collect" data-theory="Voblint_Result.Source_Activation_Sound" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
-              <circle cx="900" cy="165" r="11"/><text x="900" y="147">source_reaches_node_collect</text></a>
+              <circle cx="820" cy="165" r="11"/><text x="820" y="147">source_reaches_node_collect</text></a>
 
             <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Ops.html#Nonrelational_Ops.nonrelational_ops%7Ctype" data-name="nonrelational_ops" data-theory="Voblint_Nonrelational.Nonrelational_Ops" data-info="All a numeric domain writes: one bundle of value operations. An evaluator for expressions, two comparison queries, the refinement operations guards use, min and max, and the top value.">
               <circle cx="70" cy="270" r="8"/><text x="70" y="296">nonrelational_ops</text></a>
             <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale" data-name="sound_nonrelational_ops" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="The certificate, proved once per domain: the evaluator and min/max are sound, refining never drops a store the condition admits, and the queries answer truthfully. The transfers, the guard filter, procedure entry and the check classifier are built from the bundle, and their soundness follows from this one certificate.">
               <circle cx="230" cy="270" r="8"/><text x="230" y="296">sound_nonrelational_ops</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact" data-name="tf_st_for_commute" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="The executable transfer the analyzer runs and the one the proofs reason about are built from the same bundle. This theorem shows they agree on every live state, so there is no second implementation to keep in step.">
+            <a class="metro-station metro-detail" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact" data-name="tf_st_for_commute" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="The executable transfer the analyzer runs and the one the proofs reason about are built from the same bundle. This theorem shows they agree on every live state, so there is no second implementation to keep in step.">
               <circle cx="390" cy="270" r="8"/><text x="390" y="296">tf_st_for_commute</text></a>
             <a class="metro-station" href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact" data-name="order_spec_sound" data-theory="Voblint_Analysis_Relational.Rel_Order_Local" data-info="The order analysis joins without a bundle. It records pairs x ≤ y instead of one value per variable, and proves its local specification sound directly.">
               <circle cx="390" cy="222" r="8"/><text x="390" y="248">order_spec_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Exec/DG_Local_State_Exec_Refinement.html#DG_Local_State_Exec_Refinement.dg_domain_exec.exec_local_spec_sound%7Cfact" data-name="exec_local_spec_sound" data-theory="Voblint_Exec.DG_Local_State_Exec_Refinement" data-info="The executable refinement: the local specification the exported code runs, built from the same bundle over finite default dictionaries, is itself a sound local specification. So the analysis contract holds for the code, not only for its specification.">
+              <circle cx="490" cy="310" r="8"/><text x="478" y="314" text-anchor="end">exec_local_spec_sound</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst" data-name="sound_local_spec" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses: what every analysis the analyzer can select proves about its transfers, its query answers, procedure entry and return. The numeric domains get it from their certificate; the order analysis proves it by hand. A local specification reads and publishes no globals.">
               <circle cx="490" cy="270" r="11"/><text x="512" y="275" text-anchor="start">sound_local_spec</text></a>
 
@@ -5149,7 +5151,7 @@ qed</code></pre>
               <circle cx="55" cy="350" r="8"/><text x="55" y="376">dg_spec</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.analysis_contract%7Clocale" data-name="analysis_contract" data-theory="Voblint_Framework.DG_Spec_Sound" data-info="The boundary of the proof: a dg_spec with a soundness assumption per transfer. Equations, routing and solver soundness are proved once for any analysis meeting it. An analysis that uses globals, such as the order domain of Rel_Order_Domain, meets it directly, without a local specification.">
               <circle cx="160" cy="350" r="8"/><text x="160" y="376">analysis_contract</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Indexed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
+            <a class="metro-station metro-detail" href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Indexed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
               <circle cx="285" cy="350" r="8"/><text x="285" y="376">routed_node_rhs</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routing_adequate%7Cfact" data-name="routing_adequate" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
               <circle cx="415" cy="350" r="8"/><text x="415" y="376">routing_adequate</text></a>
@@ -5158,32 +5160,38 @@ qed</code></pre>
 
             <a class="metro-station" href="Unsorted/TD/Basics_side.html#Basics_side.strategy_tree%7Ctype" data-name="strategy_tree" data-theory="TD.Basics_side" data-info="Right-hand sides as trees of queries, side effects and answers.">
               <circle cx="70" cy="470" r="8"/><text x="70" y="496">strategy_tree</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Solver/Strategy_Tree_Program.html#Strategy_Tree_Program.sp_bind%7Cconst" data-name="sp_bind" data-theory="Voblint_Solver.Strategy_Tree_Program" data-info="The do-notation that builds strategy trees.">
+            <a class="metro-station metro-detail" href="Voblint/Voblint_Solver/Strategy_Tree_Program.html#Strategy_Tree_Program.sp_bind%7Cconst" data-name="sp_bind" data-theory="Voblint_Solver.Strategy_Tree_Program" data-info="The do-notation that builds strategy trees.">
               <circle cx="230" cy="470" r="8"/><text x="230" y="496">sp_bind</text></a>
             <a class="metro-station" href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.solve%7Cconst" data-name="solve" data-theory="TD.TD_side_upd_rule" data-info="The vendored, verified top-down solver with side effects, in the locale that takes the global update rule as a parameter. This is the solver every analysis here runs.">
               <circle cx="390" cy="470" r="8"/><text x="390" y="496">TD solve</text></a>
             <a class="metro-station" href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact" data-name="partial_post_solution" data-theory="TD.TD_side_upd_rule" data-info="The vendored solver's own promise, and the fact each domain's registration uses: whatever the global update rule, a terminating solve answers with a post-solution.">
               <circle cx="560" cy="470" r="8"/><text x="560" y="496">partial_post_solution</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Exec/Routed_Exec_Refinement.html#Routed_Exec_Refinement.routed_domain_exec.pp_st%7Cfact" data-name="pp_st" data-theory="Voblint_Exec.Routed_Exec_Refinement" data-info="The executable carrier: the solver runs the buffered form of the equation generator, and this carries its post-solution to the form the framework's soundness is stated over.">
+            <a class="metro-station metro-detail" href="Voblint/Voblint_Exec/Routed_Exec_Refinement.html#Routed_Exec_Refinement.routed_domain_exec.pp_st%7Cfact" data-name="pp_st" data-theory="Voblint_Exec.Routed_Exec_Refinement" data-info="The executable carrier: the solver runs the buffered form of the equation generator, and this carries its post-solution to the form the framework's soundness is stated over.">
               <circle cx="640" cy="440" r="8"/><text x="632" y="424" text-anchor="middle">pp_st</text></a>
 
             <a class="metro-station" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact" data-name="activation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The induction over traces, with no solver and no domain in it: any cover meeting five local obligations contains every store an activation reaches.">
               <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
             <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
-              <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
+              <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="360" text-anchor="start">activation_collect_dg_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
-              <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_covers%7Cfact" data-name="run_voblint_covers" data-theory="Voblint_CLI.Analysis_Certified" data-info="The report run_voblint returns contains, at every node, every store the collecting semantics has there, for every activation list, update rule and context policy. All three terminals are proved from it, so DEAD and SAFE need no source run.">
-              <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_covers</text></a>
+              <circle cx="810" cy="420" r="8"/><text x="810" y="408" text-anchor="middle">fun_route_result_node_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_policy_of_terminates%7Cfact" data-name="entry_state_policy_of_terminates" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The entry-state route: fix a terminated solve and read the policy off it. Every valid trace then carries one of its contexts, and each context's stores lie in the state solved for it. The functional route above needs no such policy.">
+              <circle cx="780" cy="450" r="8"/><text x="780" y="476">entry_state_policy_of_terminates</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_contexts%7Cfact" data-name="run_voblint_contexts" data-theory="Voblint_CLI.Analysis_Certified" data-info="The common point of the results: for the policy the configuration runs with, every valid activation trace carries a context, and every context's stores lie in the report. Both routes lead here; the context-free coverage and the per-context spine both start here.">
+              <circle cx="930" cy="420" r="11"/><text x="930" y="446">run_voblint_contexts</text></a>
+            <a class="metro-station" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_covers%7Cfact" data-name="run_voblint_covers" data-theory="Voblint_CLI.Analysis_Certified" data-info="The report run_voblint returns contains, at every node, every store the collecting semantics has there, for every activation list, update rule and context policy. All three terminals are proved from it, so DEAD and SAFE need no source run.">
+              <circle cx="1010" cy="420" r="8"/><text x="1018" y="400" text-anchor="start">run_voblint_covers</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact" data-name="run_voblint_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere. PROVED is the only terminal stated at a source run, so it is the only one routed through here.">
-              <rect x="949" y="352" width="22" height="56" rx="11"/><text x="960" y="340" text-anchor="middle">run_voblint_source_sound</text></a>
+              <rect x="999" y="258" width="22" height="44" rx="11"/><text x="965" y="250" text-anchor="start">run_voblint_source_sound</text></a>
 
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_spine%7Cfact" data-name="run_voblint_spine" data-theory="Voblint_CLI.Analysis_Certified" data-info="The chain with its contexts kept, for every configuration: a source run's store lies in the collecting semantics of a context its activation trace carries, under the policy the configuration runs with; the contexts together are the collecting semantics, and the report and its verdicts contain them. It follows from run_voblint_contexts and the source bridge, as run_voblint_source_sound follows from run_voblint_contexts through run_voblint_covers.">
+              <rect x="900" y="266" width="60" height="28" rx="6"/><text x="930" y="285">SPINE</text></a>
             <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it. It reaches the hub through run_voblint_source_sound, and uses the compiler a second time on top of that: csim_next_check_edge says the check the source is about to run is an edge at the matched node, which no result-line fact can know.">
-              <rect x="1010" y="366" width="76" height="28" rx="6"/><text x="1048" y="385">PROVED</text></a>
+              <rect x="1050" y="266" width="76" height="28" rx="6"/><text x="1088" y="285">PROVED</text></a>
             <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check. Proved forwards from run_voblint_covers, not through the source bridge: that bridge runs forwards, placing each run at its node, so it cannot be read backwards into no run reaching a given node.">
-              <rect x="1010" y="426" width="76" height="28" rx="6"/><text x="1048" y="445">DEAD</text></a>
+              <rect x="1050" y="406" width="76" height="28" rx="6"/><text x="1088" y="425">DEAD</text></a>
             <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Analysis_Certified" data-info="No diagnostic means no division by zero in any reached store. Stated at the node, over the collecting semantics, so it needs the semantics line but not the source bridge.">
-              <rect x="1010" y="486" width="76" height="28" rx="6"/><text x="1048" y="505">SAFE</text></a>
+              <rect x="1050" y="466" width="76" height="28" rx="6"/><text x="1088" y="485">SAFE</text></a>
           </g>
         </svg>
 
@@ -5203,7 +5211,8 @@ qed</code></pre>
           to each other on a line says only that two stations belong to the same layer. The map
           follows the session structure: the semantics line lives in <code>Voblint_VIMP</code>
           and <code>Voblint_CFG</code>, the compiler in <code>Voblint_Compile</code>, the domain
-          line in <code>Voblint_Nonrelational</code> and, for its branch,
+          line in <code>Voblint_Nonrelational</code>, for its executable refinement
+          <code>Voblint_Exec</code>, and, for its branch,
           <code>Voblint_Analysis_Relational</code>, the framework line in
           <code>Voblint_Framework</code>, the solver in the
           vendored <code>TD</code> session, <code>Voblint_Solver</code> and
@@ -5223,6 +5232,21 @@ qed</code></pre>
           purpose: the bridge runs forwards, placing each run at the nodes it is observed at (<code>p, s0 ⊢ … ⊳ v</code>), so it
           cannot be read backwards into &ldquo;no run reaches this node&rdquo;. That claim is proved
           forwards from the hub, at every collected store.
+        </p>
+        <p>
+          The result line splits once per kind of context policy. Policies that
+          compute a context from the call alone go through
+          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact"><code>fun_route_result_node_sound</code></a>;
+          entry-state contexts, read off the solved result, go through
+          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_policy_of_terminates%7Cfact"><code>entry_state_policy_of_terminates</code></a>.
+          A second endpoint,
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_spine%7Cfact"><code>run_voblint_spine</code></a>,
+          keeps the contexts that <code>run_voblint_source_sound</code> erases: per
+          policy, it places a run's store in the collecting semantics of one context
+          its activation trace carries. It is an interchange of the compiler and
+          result lines like the headline, and both branch from
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_contexts%7Cfact"><code>run_voblint_contexts</code></a>,
+          where the two routes rejoin.
         </p>
         </figcaption>
       </figure>

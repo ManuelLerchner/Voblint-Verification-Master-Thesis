@@ -279,6 +279,12 @@ allow = [
   "refinement_round_is_progressive",
   # named in index.html
   "entry_state_lookup_sound_of_terminates",
+  # named in index.html (the entry-state route of the result section)
+  "entry_state_node_collect_eq_Union_of_terminates",
+  # named in 08-equations.typ, index.html, THEOREM_MAP.md
+  "entry_state_policy_of_terminates",
+  # named in 10-results.typ, index.html, THEOREM_MAP.md, RUN_VOBLINT_INTERFACE.md
+  "run_voblint_spine",
   # named in THEOREM_MAP.md, GLOSSARY.md
   "fun_route_report_proved_sound",
   # named in THEOREM_MAP.md
@@ -291,16 +297,10 @@ allow = [
   "compiled_call_string_vars_finite",
   # named in RUN_VOBLINT_INTERFACE.md, index.html
   "run_voblint_arithmetic_intra_safe",
-  # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
-  "run_voblint_call_string_chain",
-  # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
-  "run_voblint_entry_state_chain",
   # named in README.md, render_text.ml
   "run_voblint_labelled_check_sound",
   # named in README.md, THEOREM_MAP.md
   "run_voblint_report_contract",
-  # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
-  "run_voblint_unit_chain",
   # named in THEOREM_MAP.md, RUN_VOBLINT_INTERFACE.md
   "DEAD_not_exact",
   # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
