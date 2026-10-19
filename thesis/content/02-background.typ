@@ -141,7 +141,7 @@ throughout.
 == Control-flow graphs and the collecting semantics <sec:collecting>
 
 An analysis describes the states a program can be in at each of its points, so
-the points are made explicit first. A _control-flow graph_ has the program
+the points are made explicit first. A _control-flow graph_ (CFG) has the program
 points as nodes and an edge for every way control can pass from one point to
 the next, labeled with the assignment or condition executed on the way.
 @fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
@@ -178,7 +178,7 @@ Collecting, for every program point, the stores of all executions that reach
 it gives the _collecting semantics_ $cal(C)$ @cousot77[§4] @mine17[§3.4],
 which maps every program point $v$ to the set $cal(C)(v)$ of stores reached
 there. For
-programs with procedures, @ch:traces defines Voblint's version over execution
+programs with procedures, @ch:traces defines Voblint's version over activation
 traces (#isaconst("node_collect")).
 
 The collecting semantics is the exact answer an analysis approximates. An
@@ -197,10 +197,10 @@ $a lle b$ means that $a$ is at least as precise as $b$ @nipkow14[Def. 10.23].
 For sets of concrete states, the order is inclusion. Isabelle writes the order
 as $<=$, and the listings taken from the theories keep this symbol.
 
-Two descriptions reaching a point along different paths must be combined into
+Two descriptions reaching a point along different paths must be joined into
 one that covers both. Their _join_ $a ljoin b$ is the least upper bound, the
 most precise element above both (#isalocale("semilattice_sup")). At the loop
-head, the value before the loop and the value after the body are combined this
+head, the value before the loop and the value after the body are joined this
 way. Dually, the _meet_ $a lmeet b$ is the greatest lower bound. An analysis
 uses it at a branch to restrict the incoming value to the values the condition
 admits. If the analysis knew only $absval(ivl(0, 10))$ at $h$, entering the body would
@@ -216,7 +216,7 @@ every subset $X$ @nipkow14[Def. 13.1] @mine17[Def. 2.5].
 Voblint does not need a complete lattice. Its solver requires only a join
 semilattice with a least element (#isalocale("bounded_semilattice_sup_bot"))
 that carries the widening and narrowing operators of @sec:widening. The solver
-combines two values at a time, whenever a new value reaches an unknown, so
+joins two values at a time, whenever a new value reaches an unknown, so
 joins need to exist only for pairs. Joins of infinite sets would not help an
 executable analyzer anyway, since it computes only with finite representations.
 
@@ -376,7 +376,7 @@ keep the states from both predecessors (#isathm("gamma_sup_ub1"),
 ) <fig:transfer-square>
 
 Sound transfer functions make every post-fixpoint that contains the initial
-states a sound result @mine17[Thm. 2.8]. The standard argument works with
+configurations a sound result @mine17[Thm. 2.8]. The standard argument works with
 _configurations_, each a program point together with a store, so that one
 relation $->$ describes every step of the program. With the set $I$ of initial
 configurations, the reachable configurations form the least fixpoint of
@@ -402,7 +402,7 @@ Analyzers, however, typically keep one abstract state per program point @rival20
 or per point and context (@sec:interproc). The element $a$ then becomes a
 family of abstract states, and the condition $sh(f)(a) lle a$ becomes one
 inequality for each of these states, as the next section describes. Voblint's proof
-uses the same principle on a set of execution traces defined inductively as a
+uses the same principle on a set of activation traces defined inductively as a
 least fixpoint, and proceeds by induction over its rules.
 
 == Analyses as constraint systems <sec:constraints>
@@ -500,8 +500,8 @@ which loses the bound $5$ of the loop condition `i < 5`.
 The branch into the body restricts $absval(ivl(0, +infinity))$ to $absval(ivl(0, 4))$, the body
 yields $absval(ivl(1, 5))$, and evaluating the head again gives
 $absval(ivl(0, 0)) ljoin absval(ivl(1, 5)) = absval(ivl(0, 5))$. A widened iteration only grows and would not
-take this smaller value. A _narrowing_ lets it descend. It combines the
-current value $a$ with a candidate $b lle a$ and returns a value between the
+take this smaller value. A _narrowing_ lets it descend. It maps the
+current value $a$ and a candidate $b lle a$ to a value between the
 two @cousot77[§9.3.4] @cousot92plilp[§4]:
 $ b lle a narrow b lle a. $
 In the counting loop, the interval narrowing reaches $absval(ivl(0, 5))$, but in general,
@@ -563,14 +563,14 @@ separates the _activations_ of a procedure, each execution from its call to
 its return, by a _calling context_, an abstraction of how the activation was
 reached @aho06[§7.2.1]. Sharir and Pnueli distinguish call strings, which
 record recent call sites, from the functional approach, which relates abstract
-entry and return states @sharir81. Context-sensitive constraint systems use
+entry and exit states @sharir81. Context-sensitive constraint systems use
 unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3]. With
 contexts that record the argument at entry, `bump` gets one copy of its
 unknowns for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the results $6$ and $5$.
 
 At a call, such an analysis computes the abstract state in which the callee is
 entered, which also determines the callee's context. At the return, it
-combines the callee's result with the caller's state before the call, as
+combines the callee's exit state with the caller's state before the call, as
 Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",
@@ -659,7 +659,7 @@ later, every unknown that read it is _destabilized_ and evaluated again. The
 unknowns at which a read closes a cycle are the solver's _widening points_
 @seidl21. TD detects them while it solves @apinis16[§4], so they need not
 coincide with the loop heads of the control-flow graph. At a widening point, it
-combines the old and the new value with warrowing. The
+updates the old value with the new one by warrowing. The
 #link(playground-link(_counting-loop, trace: "verbose"))[playground] replays this run on the counting loop step by step. Contributions published to a
 global unknown are merged into its value by an _update rule_
 (#isalocale("update_rule")), which keeps one record per _origin_, the unknown whose right-hand side
@@ -671,7 +671,7 @@ To solve on demand, TD has to discover which unknowns a right-hand side reads.
 In the counting loop, these reads are fixed. In general, a
 right-hand side may choose the next unknown from a value it has already read.
 At a procedure call, for instance, the callee context to read is known only
-once the caller's value has been read. The verified solver therefore receives
+once the caller's value has been read. The verified TD solver therefore receives
 every right-hand side as a _strategy tree_
 (#isatype("strategy_tree", thy: "Basics_side")), a small program that reads
 one unknown at a time and makes every read and every side effect explicit:

@@ -216,7 +216,8 @@ and the analyzer of Franceschino et al. runs in a browser @franceschino21.
 Interprocedural analyses have also been verified in Isabelle before
 @lammich07afp @wasserrab09afp @breitner10afp. None of these entries claims an
 extracted analyzer, however, and none of their semantics represents one
-activation with its caller chain, the object Voblint's context relation reads.
+activation with its caller chain, the object Voblint's context relation
+#isaconst("activation_context_rel") reads.
 
 == Verified solvers and termination results <sec:rel-solvers>
 
@@ -230,7 +231,8 @@ $"TD"_"side"$, which accepts contributions to global unknowns, verify it
 against a generic interface for update rules, prove five update rules of
 Stemmler et al. @stemmler25 sound, and refine the solver to executable code.
 For updates without widening and narrowing, they also prove that a terminating
-solve returns the least partial post-solution. CompCert similarly hides its
+solve returns the least partial post-solution, minimal in both valuation and
+solved set. CompCert similarly hides its
 intraprocedural dataflow solvers behind a module type whose clients rely only
 on fixpoint properties of the result @compcertKildall @laspina25.
 
@@ -242,7 +244,7 @@ paper that their side-effecting solver terminates when side effects target
 only unknowns without a right-hand side and only finitely many unknowns are
 encountered @seidl21[§9, Thm. 5]. Their result assumes widening and narrowing
 operators whose iterations stabilize @seidl21[§3], so it does not carry over to
-the joining update rules, which never widen. Schulze Frielinghaus et al. give
+the joining rules, which never widen. Schulze Frielinghaus et al. give
 a local solver that terminates on every non-recursive program
 @schulzefrielinghaus18, and both programs whose solves exceed their time limits
 in @sec:eval-precision are recursive.
@@ -250,9 +252,9 @@ in @sec:eval-precision are recursive.
 Voblint includes a copy of the solver of @tilscher26, whose algorithm, update
 rules, and proofs belong to that work, and connects its certificate
 #isaconst("part_post_solution", thy: "Basics_side") to the program. The
-certificate implies coverage of the concrete traces, and compiler correctness
-transfers the coverage to source executions. The solver Voblint runs warrows every local
-unknown at a widening point, so the least-solution theorem does not apply, and
+certificate implies coverage of the concrete traces, and correctness of the
+VIMP-to-CFG translation transfers the coverage to source executions. The
+solver Voblint runs warrows every local unknown at a widening point, so the least-solution theorem does not apply, and
 Voblint uses only partial correctness and claims no optimality
 (@sec:update-rules).
 
@@ -263,10 +265,10 @@ the callee and returns to the caller. Sharir and Pnueli distinguish two
 classical answers @sharir81. The functional approach computes input-output
 relations for procedures, and the call-string approach tags information with
 the history of calls that led to it. Voblint's call-string policy follows the
-second approach, and its entry-state policy, which indexes a callee's results
-by its entered state, resembles a functional approach tabulated per input. At
+second approach, and its entry-state policy, which indexes a callee's exit states
+by its entry state, resembles a functional approach tabulated per input. At
 the return, Voblint combines the caller's state before the call with the
-callee's result (@sec:calls), the shape of the return function of
+callee's exit state (@sec:calls), the shape of the return function of
 #cite(<knoop92>, form: "prose", supplement: [§4.1]). Reps et al. solve such
 problems precisely when the facts are finite and the transfer functions
 distributive @reps95, whereas Voblint requires neither and proves no precision
@@ -277,7 +279,7 @@ history before abstracting states @rival07. Rival and Mauborgne define both
 partitions and coverings, in which one trace may belong to several indices,
 and present calling-context sensitivity as one such indexing. They also note
 that the function mapping tokens to tokens in a covering may be replaced by a
-relation @rival07[Rem. 3.2.4]. Voblint's context-indexed collecting semantics
+relation @rival07[Rem. 3.2.4]. Voblint's activation collecting semantics
 is a covering of this relational kind, since a context policy may admit one
 activation in several contexts. Voblint mechanizes the indexing over
 activation traces and proves that the solved, routed result bounds the
@@ -312,9 +314,9 @@ with the framework interface of Goblint's
 )[constraint generator]
 at revision #raw(alignment.revision.slice(0, 8)) by source inspection. There,
 a call runs the analysis's `enter`, selects the callee context from the
-entered state, publishes the callee entry, and combines the callee's exit with
+entry state, publishes it, and combines the callee's exit state with
 the caller. Voblint's equations have the same four steps, with enter and
-combine from the D/G specification and the context chosen by the routing
+combine from the analysis (#isatype("dg_spec")) and the context chosen by the context
 policy. The project site's side-by-side comparison
 (#link(site("#goblint"))[site]) lists #alignment.rows.len() Goblint
 constructs. Of these, #alignment-count("modeled") are modeled,
@@ -322,12 +324,12 @@ constructs. Of these, #alignment-count("modeled") are modeled,
 modeled. No row claims that the two compute the same fixpoint.
 
 Where Voblint simplifies Goblint, its results do not carry over directly. For
-instance, Voblint publishes the callee entry to a global seed, which the
-entry's local unknown reads back, whereas Goblint writes the local entry
-directly. Under the warrowing rules the seed itself can be widened, so widening applies
+instance, Voblint publishes the entry state to a global seed, which the
+entry's local unknown reads back, whereas Goblint publishes it to the local entry
+unknown directly. Under the warrowing rules the seed itself can be widened, so widening applies
 at a different place than in Goblint, and it is not proved which of the two
 is more precise. Voblint also resolves call targets statically, and its
-analyses share one combined state and one query kind without globals, whereas
+analyses share one product state and one query kind without globals, whereas
 Goblint's MCP also passes events, spawns, and per-analysis globals. No agreement rate between
 the verdicts of the two analyzers is reported, since the corpus has not been
 run through Goblint and the adapted fixtures record Goblint's annotations only
@@ -337,9 +339,9 @@ Goblint's MCP (@sec:coop-mcp) also answers a query cycle with the top element
 and caches answers per transfer
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml")[`mCP.ml`]
 at revision `5320a6b7`). Voblint's combination follows this design and adds a
-proof obligation per analysis that quantifies over every sound query channel.
+proof obligation per analysis that quantifies over every channel that holds.
 Unlike a reduced product @cousot79 @rival20[§5.1.2], which Int uses
-(@sec:reduced-product), the combined state keeps separate carriers and
+(@sec:reduced-product), the product state keeps separate carriers and
 exchanges facts only through answers, so no reduction operator has to be
 proved for a pair of analyses. Verasco threads its channels so that the second
 domain can query the state the first has just computed @jourdan15[§7], whereas
@@ -384,7 +386,7 @@ only as constraints that no solver computes @dabrowski09[§7]. This concrete
 semantics, which carries contexts and is parameterized by a context policy, is
 the closest precedent for Voblint's. Voblint's differs in three respects. Its
 contexts are admitted by a relation, the totality condition
-#isaconst("call_context_total_on") makes the context-indexed collection
+#isaconst("call_context_total_on") makes the activation collecting semantics
 exhaustive (#isathm("node_collect_eq_Union_activation_collect")), and the
 indexing is connected to an executable solver.
 
@@ -395,6 +397,6 @@ Tilscher et al. @tilscher26, its update rules from Stemmler et al.
 Apinis et al. @apinis12, widening, narrowing, and the reduced product from
 Cousot and Cousot @cousot77 @cousot79, its activation traces from the local
 traces of Schwarz et al. @schwarz21, and its architecture from Goblint. As far as the author is aware, the connection between these parts has not been mechanized
-before, namely a soundness proof that leads from a source semantics, through a
-context-indexed collecting semantics over activation traces, to a
-side-effecting constraint system and its verified solver.
+before, namely a soundness proof that leads from a source semantics, through the
+activation collecting semantics, which indexes activation traces by context, to a
+side-effecting constraint system and its verified TD solver.

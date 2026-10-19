@@ -26,7 +26,7 @@ program points, and generates its equations from the graph
 proof. If soundness held only for the graph, the compiler would stay outside
 the theorem, and a verdict would say nothing about the source program. This
 chapter closes the gap with the first link of the soundness chain. Every
-source run of a well-formed program is matched by a graph run that holds the
+source execution of a well-formed program is matched by a graph execution that holds the
 same store (@sec:csim). The program of @fig:program-to-equations, in which
 `main` calls `bump(5)` and `bump(4)`, serves as the running example.
 
@@ -246,7 +246,7 @@ In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
 expression grammar above. A check states a condition for the analyzer to
 decide (@sec:verdicts) and does not influence the execution. It behaves like
-#skipC whatever value $e$ has, so it neither stops the run nor refines the
+#skipC whatever value $e$ has, so it neither stops the execution nor refines the
 store. Its constructor also carries the source position, which only the report
 uses, to name the check.
 
@@ -335,7 +335,7 @@ programs whose calls cannot step or whose results are undefined. It requires
 that
 
 - every call names either a declared procedure with matching arity or a
-  library function with suitable arguments and a destination,
+  library call with suitable arguments and a destination,
 - formals are distinct valid locals, and `main` is declared, takes no
   arguments, and contains no #keyw("return") (@sec:pstep),
 - bodies contain no runtime markers #ctor("Restore") or #ctor("Unwind"),
@@ -419,13 +419,13 @@ value $0$.
 The root activation is modeled without a #ctor("Restore"), since `main` has no
 caller to return to, and a bare #ctor("Unwind") has no step
 (#isathm("pstep_Unwind_stuck")). This is why the source contract rejects
-#keyw("return") in `main` (#isaconst("no_return")). A source run starts from
+#keyw("return") in `main` (#isaconst("no_return")). A source execution starts from
 the configuration $(#isaconst("main_body") thin Pi, s_0, [])$, with an initial
 store $s_0$ in #isaconst("cinit_stores") (@sec:vimp-vs-c).
 
 Just as Nipkow and Klein show that well-typed programs do not get stuck
 @nipkow14[§9.1.2], Voblint proves that well-formed VIMP programs do not. Otherwise,
-claims about the points after a stuck run would hold vacuously. For a program satisfying
+claims about the points after a stuck execution would hold vacuously. For a program satisfying
 #isaconst("wf_source_program"), every reachable configuration has either
 finished, as #skipC with an empty frame stack, or can step:
 
@@ -448,7 +448,7 @@ to transitions. #isaconst("pstep") offers neither in a usable form. Its only
 notion of location is the command that remains to run. Without recursion, only finitely many distinct residual commands arise,
 because a loop may run arbitrarily often, but its unfolding revisits the same
 command forms. Recursion is different, because a recursive call can nest
-another #ctor("Restore") wrapper at every call depth. Residual commands
+another #ctor("Restore") marker at every call depth. Residual commands
 therefore do not form the finite, fixed set of locations that Voblint needs. An assignment is also not a transition between fixed program points. Inside a sequence, it steps through the rule
 #isathm("pstep.Seq2"), which rebuilds the surrounding residual command. So the same assignment is executed by a different derivation inside every surrounding command.
 Finally, nothing names the entry of a procedure, its result, or the point where
@@ -471,8 +471,8 @@ that knows nothing about programs then solves this system. The solver
 needs no knowledge of calls, because a call contributes right-hand sides and
 side effects to the same system (@ch:equations). The price is two extra
 proof layers. This chapter must prove by a simulation that the compiler
-preserves the program's runs, and @ch:traces must say what the inequalities
-mean for those runs. In return, the argument about programs
+preserves the program's executions, and @ch:traces must say what the inequalities
+mean for those executions. In return, the argument about programs
 ends at a solver-independent certificate, a post-solution on the solved set
 (@sec:certificate).
 
@@ -491,7 +491,7 @@ ends at a solver-independent certificate, a post-solution on the solved set
   the callee (by #isaconst("wf_cfg")), and the node $k$ where the caller
   resumes. Nodes (#isatype("cfg_node")) are $ctor("Statement") thin n$,
   $ctor("FunctionEntry") thin p$, or $ctor("FunctionResult") thin p$.
-  The field #isaconst("cfg_entry") holds the root node.
+  The field #isaconst("cfg_entry") holds the entry node.
 ]
 
 The call information $ctor("CallEdge") thin italic("dst") thin
@@ -518,7 +518,7 @@ share, so recursion needs no copies of nodes. A shared result node cannot know
 where to continue, and in a compiled graph, no edge leaves it. The call edge
 records that place instead, as its continuation $k$. After a return, execution
 resumes at the continuation saved in the frame, and an analysis connects the
-callee's result to the correct caller through the call edge. The matching
+callee's exit state to the correct caller through the call edge. The matching
 caller is explicit in the graph, so no separate return-to-call matching is
 needed. A completed program ends at
 $ctor("FunctionResult") thin #raw("main")$ (#isaconst("cfg_exit")), so there
@@ -562,7 +562,7 @@ $t$ and no edge $t -> h$. A #skipC branch adds no node, and its guard edge
 leads to $k$.
 
 Calls and returns leave the current fragment. A call $x = q(overline(e))$ of a
-declared procedure $q$ adds no local edge. It becomes a single call tuple in
+declared procedure $q$ adds no local edge. It becomes a single call edge in
 #isaconst("calls"), from the call site $n$ to the callee's entry, with $k$ as
 its continuation. A library call finishes in one step (@sec:vimp) and
 compiles to a local edge to $k$ instead. A #keyw("return") becomes an
@@ -582,7 +582,7 @@ so in a body that always returns, $r$ and its edge are dead code.
 $ctor("FunctionResult") thin p$ is therefore a return edge.
 
 These rules give every compiled graph a fixed shape. Call edges always enter a
-procedure entry, no local edge enters one, and every return edge ends at the
+entry node, no local edge enters one, and every return edge ends at the
 result node of its own procedure. The structural contract #isaconst("wf_cfg")
 collects these properties, and every compiled graph satisfies it without
 premises (#isathm("compile_prog_wf")). The graph's entry is
@@ -623,9 +623,9 @@ executable analyzer.
     $ctor("Statement") thin n$, and $sans("entry")_p$, $sans("exit")_p$ are
     $ctor("FunctionEntry") thin p$, $ctor("FunctionResult") thin p$. As in
     @fig:program-to-equations, solid gray arrows are #isaconst("intra") edges,
-    and dashed purple arrows are #isaconst("calls") tuples. Dotted connectors
+    and dashed purple arrows are #isaconst("calls") edges. Dotted connectors
     and thin blue arrows are not edges. Dotted connectors show the continuation
-    of a call tuple. Thin blue arrows show where execution continues after a
+    of a call edge. Thin blue arrows show where execution continues after a
     result node. Each procedure has one copy of its nodes, whatever the
     recursion depth. Reserved node numbers without edges,
     such as $sans("pp") thin 4$, are not nodes of the graph.],
@@ -642,11 +642,11 @@ $italic("ps")$ of the procedures to compile, while `main` is compiled
 separately from #isaconst("main_body"). The executable analyzer reads this
 list off the parsed declarations (#isaconst("prog_procs")). The list must
 agree with the table. If it misses a declared procedure, a call to it reaches
-an entry node that no edge leaves, and the graph run stops where the source
-run continues. If it names a procedure twice, the procedure is compiled into
+an entry node that no edge leaves, and the graph execution stops where the source
+execution continues. If it names a procedure twice, the procedure is compiled into
 two blocks that share its entry node, and the node blocks of different
 procedures are no longer disjoint, which later proofs rely on
-(#isathm("compile_procs_member_frag")). The input contract of the compiler,
+(#isathm("compile_procs_member_frag")). The source contract of the compiler,
 #isaconst("wf_compile_input") $cal(G)$ $Pi$ $italic("ps")$, therefore adds to
 #isaconst("wf_source_program") that $italic("ps")$ lists every declared
 procedure except `main` exactly once.
@@ -655,7 +655,7 @@ procedure except `main` exactly once.
 
 The compiler produces a static object. To say that it preserves the behavior
 of a program, the graph needs an execution of its own, which @sec:csim then
-compares with #isaconst("pstep"). Within one procedure, a run simply follows
+compares with #isaconst("pstep"). Within one procedure, an execution simply follows
 edges, so a node and a store would describe its state. Calls break this
 picture. A call edge leads to the callee's entry, but the callee ends at its
 result node, which all callers share and which no edge leaves (@sec:cfg). The
@@ -670,7 +670,7 @@ continues at $k$.
   #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[
     A graph configuration (#isatype("cconf")) is a triple of a node, a store,
     and a stack of frames (#isatype("cframe")), each a triple of a continuation
-    node, an optional result variable, and the caller's store.
+    node, an optional destination, and the caller's store.
     The step relation #isaconst("cstep") is written
     #isai("\<G>, g \<turnstile> \<kappa> \<rightarrow>\<^sub>c \<kappa>'"), and
     #isai("\<rightarrow>\<^sub>c\<^sup>*") is its closure.
@@ -692,13 +692,13 @@ change the store through #isaconst("call_enter") and
 @ch:traces, #isaconst("cstep") is defined for an arbitrary graph, not only for
 compiled ones.
 
-== Compilation preserves source runs <sec:csim>
+== Compilation preserves source executions <sec:csim>
 
 So far, #isaconst("pstep") and #isaconst("cstep") are two separate
 definitions. One describes source programs, the other arbitrary graphs, and
 nothing yet says that a compiled graph behaves like its program. The soundness
 theorem is stated over #isaconst("pstep"), but the analysis solves equations
-generated from the graph, so every source run must be matched by a run of the
+generated from the graph, so every source execution must be matched by an execution of the
 compiled graph that holds the same store at corresponding points. This is proved with a _forward simulation_, a
 relation between source and graph configurations that every source step
 preserves.
@@ -712,8 +712,8 @@ in lockstep. Some source steps only rearrange the command, such as unfolding a
 loop into a conditional, discarding a finished #skipC, or propagating
 #ctor("Unwind") past the commands it skips. They have no graph counterpart, so
 the graph answers one source step with zero or more steps. Only this direction
-is proved. An analysis that covers every graph run from the entry (@ch:traces)
-then also covers every source run, so soundness needs no converse.
+is proved. An analysis that covers every graph execution from the entry (@ch:traces)
+then also covers every source execution, so soundness needs no converse.
 
 === Simulation relation and step matching <sec:csim-step>
 
@@ -721,8 +721,7 @@ then also covers every source run, so soundness needs no converse.
   #isaconst("csim"), written
   #isai("\<Pi>, g, p \<turnstile> (c, s, frs) \<approx> (v, s, stk)"), relates a
   source configuration to a graph configuration holding the same store, where
-  $p$ is the procedure of the outermost activation, `main` for a run of the
-  program.
+  $p$ is the procedure of the outermost activation, `main` for a program run.
 ]
 
 #{
@@ -733,10 +732,10 @@ then also covers every source run, so soundness needs no converse.
 The relation has three rules. Each rule relates one activation at a time.
 Its residual command must be what remains of a procedure body, and the graph
 node must be where the compiler placed that residual
-(#isaconst("control_at"), #isaconst("compiled_at")). $sans("Base")$ covers a
-run without suspended callers, where both stacks are empty. $sans("Nested")$
+(#isaconst("control_at"), #isaconst("compiled_at")). $sans("Base")$ covers an
+execution without suspended callers, where both stacks are empty. $sans("Nested")$
 adds one suspended caller to both sides. In the source, the caller's remaining
-work follows the #ctor("Restore") marker in the running command. In the graph,
+work follows the #ctor("Restore") marker in the residual command. In the graph,
 it lies at the continuation node of the new frame. A further premise locates
 the call that suspended the caller, so that the inner activation runs the body
 of the procedure this call names. $sans("Returning")$ covers the moment after a
@@ -744,7 +743,7 @@ callee finishes. The graph is already at the callee's result node, while the
 source still has to reach the #ctor("Restore") marker (#isaconst("pop_ready")).
 
 The relation is useful only if it still holds after every step of the source
-run. Suppose the source is about to run `x = x + 1;` and the relation places it
+execution. Suppose the source is about to run `x = x + 1;` and the relation places it
 at node $v$. The source executes the assignment and continues with the rest of
 its command. The graph follows the assignment edge out of $v$ to the node where
 the compiler placed that rest, and both now hold the same new store. When the
@@ -764,19 +763,19 @@ The following theorem states that the graph can always follow in this way.
 The theorem has two premises beyond the related pair and the source step.
 #isaconst("procs_embedded") $Pi$ $g$ says that the body of every declared
 procedure lies in $g$ with its entry and return edges. #isaconst("return_safe")
-$c$ says that the running command returns only inside an activation that a
+$c$ says that the residual command returns only inside an activation that a
 call opened, the runtime form of the rule that `main` contains no
 #keyw("return") (@sec:pstep). Both premises hold for every well-formed program
 (#isathm("procs_embedded_compile_prog"),
 #isathm("wf_compile_input_return_safe")), and every source step preserves the
 second (#isathm("return_safe_pstep")). By induction on the run,
-#isathm("csim_star") extends the theorem to finite source runs, as in
+#isathm("csim_star") extends the theorem to finite source executions, as in
 CompCert's simulation diagrams @leroy09[§4.3].
 
 The initial source configuration is related to the node after the
 #isaconst("EA_Body") edge of `main` (#isathm("compile_prog_main_base")).
-Every finite source run of a well-formed program is therefore matched by a
-graph run from the entry that reaches corresponding nodes with the same store. This gives the first inclusion of the soundness chain of
+Every finite source execution of a well-formed program is therefore matched by a
+graph execution from the entry that reaches corresponding nodes with the same store. This gives the first inclusion of the soundness chain of
 @fig:intro-nest.
 
 === Locating source configurations at graph nodes #thy-badge("Voblint_Compile", "Elaborated_Compilation") <sec:at-node>
@@ -786,7 +785,7 @@ The simulation names no node for a source configuration taken on its own.
 nodes, while a source configuration carries only its residual command. The
 residual does not determine the node either, because equal commands can occur
 at different places. In `if (b) { x = 1; } else { x = 1; }`, the residual
-`x = 1` is related to both branch nodes. The node therefore has to come from
+`x = 1` is related to both branch nodes. The node must come from
 the run.
 
 This is why every command carries an annotation (@sec:vimp). A parsed program
@@ -795,9 +794,9 @@ leaves it empty, and the proof fills it in. The program's _elaboration_
 emits for it. The elaboration compiles to the same graph
 (#isathm("compile_prog_elab_pt")), and on it,
 #isaconst("point", thy: "Elaborated_Compilation") reads the related node off
-the residual's annotation (#isathm("csim_point_compile_prog")). Every run of a
+the residual's annotation (#isathm("csim_point_compile_prog")). Every source execution of a
 well-formed program is the _erasure_ (#isaconst("erase")) of a run of its
-elaboration (#isathm("psteps_lift")), so the node can be read off the lifted
+elaboration (#isathm("psteps_lift")), so the node can be read off the elaborated
 run.
 
 #definition(name: [Observed at a node], isa: "at_node", cmd: "fun")[
@@ -811,7 +810,7 @@ run.
 == Adequacy of VIMP relative to C <sec:vimp-vs-c>
 
 Every source-level guarantee in this thesis is interpreted against the
-executions of #isaconst("pstep"), the reference semantics of VIMP, so no
+executions of #isaconst("pstep"), the source semantics of VIMP, so no
 guarantee can show that #isaconst("pstep") describes the intended language.
 This can only be argued, and this section collects the argument.
 @tab:vimp-vs-c compares VIMP with C11 @iso-c11 (committee draft N1570)
@@ -840,7 +839,7 @@ is not complete, so C may differ from VIMP in further places.
       [initial values], [globals $0$, `main`'s locals arbitrary],
       [static $0$, automatic indeterminate (#c11("6.7.9p10"))],
       [callee locals], [$0$ on every entry], [indeterminate (#c11("6.7.9p10"))],
-      [checks], [never stop the run, never refine],
+      [checks], [never stop the execution, never refine],
       [`assert` aborts on $0$ unless `NDEBUG` (#c11("7.2p1"), #c11("7.2.1.1"))],
       [`min`, `max`], [library calls (#isaconst("special_table"))], [no counterpart],
       [`main`], [no explicit `return`], [`return` gives the exit status (#c11("5.1.2.2.3"))],

@@ -52,7 +52,7 @@ This thesis builds Voblint, an executable analyzer whose answers are
 proved to hold for every execution of the analyzed program. Like these
 projects, it names the assumptions under which its proof holds. Voblint draws
 its boundary at
-the source language. Its main theorem starts from _source executions_, the
+the source language. Its end-to-end soundness theorem starts from _source executions_, the
 executions of a program under the small-step semantics #isaconst("pstep") of
 Voblint's input language VIMP. Every later representation, from the
 control-flow graph to the solver's result, is connected to source executions by
@@ -127,7 +127,7 @@ exclude a zero divisor. @fig:intro-answers shows a run in the
 #verdict("REFUTED") are the _definite_ verdicts, and #verdict("UNKNOWN") claims
 nothing. Only #verdict("DEAD") makes a claim about reachability, and
 #verdict("REFUTED") is not a verified counterexample. Voblint offers several abstract domains and context policies
-(@ch:instances), and the run shown uses intervals without calling contexts.
+(@ch:instances), and the run shown uses intervals and the unit context policy.
 
 #let _ans-warn = check-row("intro-answers", cond: "WARNING")
 #let _ans-proved = check-row("intro-answers", cond: "0 <= p && p <= 100")
@@ -202,7 +202,7 @@ nothing. Only #verdict("DEAD") makes a claim about reachability, and
   kind: image,
   placement: none,
   caption: [One analyzer run on a clamp function, as the browser playground
-    shows it, with the interval domain and no calling contexts. The analysis
+    shows it, with the interval domain and the unit context policy. The analysis
     covers every value of `t` at once. The screenshot opens the run in the
     playground (claim #claim-ref("intro-answers"), fixture
     #fixture("24-site-figures/precision/48-clamp_every_answer.vimp")).],
@@ -266,7 +266,7 @@ calling context.
 Goblint defines its analyses independently of the solvers that compute their
 results, and Voblint follows this architecture @vojdani16 @seidl26. The
 interface between the two is a side-effecting constraint system @seidl03
-@apinis12 @seidl26. Such a system relates unknown abstract values by
+@apinis12 @seidl26. Such a system relates unknown abstract states by
 inequalities, and the inequality of one unknown may also contribute to other
 unknowns. Because this architecture is modular, it also suits a proof. The
 soundness argument about programs needs only one fact about the solver, namely
@@ -276,18 +276,18 @@ flow-insensitive information, such as the values of global variables, in one
 unknown to which every program point contributes. They also serve calling
 contexts. Under some context policies, a callee's contexts become known only
 while the system is solved, so each call contributes its entry state to the
-callee instead of the callee listing its callers in advance (@sec:side-effects). For the solver itself, a proof already exists. The top-down
+callee instead of the callee listing its callers in advance (@sec:side-effects). For the solver itself, a proof already exists. The top-down (TD)
 solver that Goblint uses, including its extension to side effects, has been formalized
 and proved partially correct in Isabelle/HOL @stade24 @tilscher26. When it
 terminates, it returns values that satisfy the inequalities of the queried
 unknown and of every unknown it transitively reads
-(#isaconst("part_post_solution", thy: "Basics_side")). Whether the constraint
+(#isaconst("part_post_solution", thy: "Basics_side")). Whether the equation
 system describes the program, and whether the verdicts read off its solution
 hold, lies outside that theorem.
 
 The solver theorem, however, says nothing about programs. To connect a program
-to its constraint system, every abstract state must be compared with the
-concrete states it describes. Calling contexts make this comparison hardest,
+to its equation system, every abstract state must be compared with the
+concrete stores it describes. Calling contexts make this comparison hardest,
 since the per-context abstract states of an analyzer have no counterpart in an
 ordinary concrete semantics.
 Suppose `main` calls `bump(5)` and `bump(4)`, and `bump` returns its argument
@@ -314,9 +314,9 @@ its machine-checked soundness proof, available at
 and archived on Zenodo @voblint. The proof closes the gaps of
 @sec:state-of-art with a chain of inclusions at every program point, from
 source executions to the reported verdicts (@fig:intro-nest). Each step may add
-states that no execution reaches, which costs precision, but it must not lose a
-reachable state. Errors such as a compiler that drops an edge or a return to
-the wrong caller would lose such a state, and the proof excludes them.
+stores that no execution reaches, which costs precision, but it must not lose a
+reachable store. Errors such as a compiler that drops an edge or a return to
+the wrong caller would lose such a store, and the proof excludes them.
 
 #figure(
   {
@@ -355,13 +355,13 @@ the wrong caller would lose such a state, and the proof excludes them.
             (#isathm("node_collect_eq_Union_activation_of_has_context"), @ch:traces)],
           ring(
             vb.called,
-            [Graph runs],
-            [stores that #isaconst("cstep") runs of the compiled graph hold at $v$
+            [Graph executions],
+            [stores that #isaconst("cstep") executions of the compiled graph hold at $v$
               (@ch:program-model)],
             ring(
               vb.neutral,
               [Source executions],
-              [stores that #isaconst("pstep") runs reach (@ch:program-model)],
+              [stores that #isaconst("pstep") executions reach (@ch:program-model)],
               none,
             ),
           ),
@@ -372,9 +372,9 @@ the wrong caller would lose such a state, and the proof excludes them.
   kind: image,
   placement: none,
   caption: [Soundness at a program point $v$ as nested sets. A valid trace
-    records, besides the stores of a graph run, which call created each
-    activation, and every graph run is represented by one. Splitting the node
-    collecting semantics by context loses no store. The source-level
+    records, besides the stores of a graph execution, which call created each
+    activation, and every graph execution is represented by one. Splitting the node
+    collecting semantics by context loses no store. The end-to-end soundness
     theorem chains these inclusions for every report the analyzer returns
     (#isathm("run_voblint_source_sound"), @ch:results).],
 ) <fig:intro-nest>
@@ -384,7 +384,7 @@ formalized and others so far only described on paper or implemented. Its
 overall design mirrors Goblint's architecture inside Isabelle/HOL, without
 formalizing Goblint's implementation or C (@sec:rel-goblint). To the author's
 knowledge, no prior mechanized analyzer connects a source semantics, through a
-context-indexed collecting semantics, to a side-effecting constraint system and
+activation collecting semantics, indexed by context, to a side-effecting constraint system and
 its verified solver (@sec:rel-summary). Within this design, the formalization makes five contributions.
 
 - _End-to-end soundness._ The theorem connects the obligations of single
@@ -400,7 +400,7 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
   per-context states of an analysis their concrete counterpart. Each trace
   follows one procedure activation and records which activation called it, so
   the contexts of a call can be read off the concrete execution. Splitting the
-  concrete states by context then loses no execution (@sec:contract). The
+  concrete stores by context then loses no execution (@sec:contract). The
   semantics may admit several contexts for one call, so that an analysis can
   split a call into cases, for instance, one per path-sensitive state. The
   shipped analyses use at most one context per caller context (@sec:contexts).
@@ -418,7 +418,7 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
 - _Needed assumptions and nonempty results._ The kernel cannot tell whether a
   theorem assumes too much or concludes too little. Further theorems therefore
   show that the analyzer gives definite verdicts on concrete programs
-  (@sec:nonvacuity). Dropping the totality condition admits answers that concrete executions
+  (@sec:nonvacuity). Dropping the obligation #oblig("TOTAL") admits answers that concrete executions
   contradict (@sec:contract), and one
   domain obligation rejects a defect that occurred in Goblint
   (@sec:eval-1161). Concrete programs show what each mechanism gains
@@ -429,7 +429,7 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
 Not every part of the delivered analyzer is covered by the proof
 (@fig:intro-trust). _End-to-end_ means that the proof reaches from source
 executions under #isaconst("pstep") to the result of the analysis function,
-while the parser, the printing adapters, and the trusted foundation lie outside
+while the parser, the handwritten OCaml for printing, and the trusted foundation lie outside
 it. Nor does the proof cover Goblint itself, only the parts of its architecture
 that Voblint isolates, over a small language with recursive procedures.
 
@@ -482,7 +482,7 @@ that Voblint isolates, over a small language with recursive procedures.
       ),
       arrow,
       grid.cell(align: bottom, zone(vb.unproved, [unverified output], dash: "dashed")[
-        #u[adapters, \ state printing]
+        #u[handwritten OCaml, \ state printing]
       ]),
       grid.cell(colspan: 5, zone(vb.trusted, [trusted foundation])[
         Isabelle kernel · code generator and target mappings · OCaml and WebAssembly
@@ -502,7 +502,7 @@ The theorem has the following limits.
   integers are unbounded, division by zero is defined, and a callee's locals
   start at 0. Therefore, a verdict
   does not always hold for a C program with the same text (@sec:vimp-vs-c).
-  Voblint checks assertions and division by zero, while Goblint also checks
+  Voblint covers checks (`__voblint_check`) and division by zero, while Goblint also checks
   overflows, data races, memory
   safety, memory leaks, and program termination @saan26phd[§3.3].
 - _Adequacy and trusted components._ It is argued, but not proved, that #isaconst("pstep") models the intended language (@sec:vimp-vs-c). The parser, the code generator, and the target
@@ -540,10 +540,10 @@ the chapter that presents each line.
     and @ch:traces), #metro-line(metro.comp)[Compiler], the compiler and its
     simulation (#partref(<part:over-approx>), @ch:program-model),
     #metro-line(metro.dom)[Domain], what a domain proves and how the analyses
-    combine (#partref(<part:analyses>), @ch:domains to @ch:cooperation, and the
+    cooperate (#partref(<part:analyses>), @ch:domains to @ch:cooperation, and the
     order analysis of @ch:instances), #metro-line(metro.fw)[Framework], the
     analysis contract, routing and coverage (@ch:traces, @ch:analysis-interface
-    and @ch:equations), #metro-line(metro.sol)[Solver], the verified solver
+    and @ch:equations), #metro-line(metro.sol)[Solver], the verified TD solver
     (#partref(<part:verdicts>), @ch:solving), and #metro-line(metro.res)[Result],
     from the solved equations to the verdicts (#partref(<part:verdicts>),
     @ch:equations and @ch:results). Wide markers are interchanges, where a theorem uses the
@@ -554,15 +554,15 @@ the chapter that presents each line.
     (#isathm("run_voblint_dead_check_unreached")) and for SAFE, which says that a division without a
     #verdict("WARNING") never divides by zero (#isathm("run_voblint_arithmetic_safe")). The terminal
     for #verdict("PROVED") (#isathm("run_voblint_check_sound")) goes through the
-    source-level theorem
+    end-to-end soundness theorem
     #isathm("run_voblint_source_sound"), which also uses the compiler line to
-    place a source run at a graph node. A second branch uses the compiler line
+    place a source execution at a graph node. A second branch uses the compiler line
     in the same way for the chain that keeps the contexts.],
 ) <fig:metro>
 
 #partref(<part:problem>) consists of this introduction and @ch:background,
 which recalls abstract interpretation, constraint systems, calling contexts,
-side-effecting constraint systems, and the verified top-down solver.
+side-effecting constraint systems, and the verified TD solver.
 
 #partref(<part:over-approx>) fixes what an analysis must over-approximate:
 source programs and their graphs (@ch:program-model) and activation traces with
@@ -570,17 +570,17 @@ the coverage contract (@ch:traces). The contract reduces soundness to five
 local obligations about a _cover_, one set of stores per node and context, and
 every later part works toward a cover that meets them.
 
-#partref(<part:analyses>) states what domains, analyses, and combinations of
-analyses must prove (@ch:domains to @ch:cooperation). A domain proves its value
-operations sound once, an analysis supplies abstract transfer functions with
+#partref(<part:analyses>) states what domains, analyses, and cooperating analyses
+must prove (@ch:domains to @ch:cooperation). A domain proves its primitives
+sound once, an analysis supplies abstract transfer functions with
 the analysis contract, and cooperating analyses prove conditions on the answers
 they exchange.
 
 #partref(<part:verdicts>) builds the equations, solves them, and composes the
-source-level theorem (@ch:equations to @ch:results). Every post-solution of the
-equations induces a cover that meets the contract (@ch:equations), the verified
+end-to-end soundness theorem (@ch:equations to @ch:results). Every post-solution of the
+equations induces a cover that meets the contract (@ch:equations), the verified TD
 solver returns such a post-solution whenever it terminates (@ch:solving), and
-the report read off it is sound for every source run (@ch:results).
+the report read off it is sound for every source execution (@ch:results).
 
 #partref(<part:instances>) instantiates the theorem (@ch:instances), follows
 #isaconst("run_voblint") to the delivered tools and their trust boundary

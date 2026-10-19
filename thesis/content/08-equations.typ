@@ -66,7 +66,7 @@ the program entry, the transfer along each local edge into $v$, the result of
 each call that returns to $v$, and, at a procedure entry, the entry states that
 calls publish to it. An entry state is the abstract state in which the callee
 starts, for example with its formal parameters bound to the abstract values of
-the call's arguments (@sec:calls). Along an edge inside a procedure, the
+the call's arguments (@sec:calls). Along a local edge, the
 activation keeps its context (@sec:contexts), so the second source applies the
 transfer to the predecessor's value in the same context $c$. A callee, however,
 runs in a context of its own.
@@ -90,7 +90,7 @@ that each source describes. Publications to analysis globals
 this join.
 
 At a call, the analyzer chooses the callee's context with a _routing_ function
-$ctxh(u, c, e)$ of the call node $u$, the caller context $c$, and the entry
+$ctxh(u, c, e)$ of the call site $u$, the caller context $c$, and the entry
 state $e$. Under entry-state contexts the choice depends on $e$, which is
 known only while the equations are solved. The set of calls that contribute to
 a particular callee context is therefore not known in advance, and the
@@ -191,7 +191,7 @@ its entry state to the callee as a side effect (@sec:side-effects).
     The right-hand side of the continuation $(italic("pp3"), c_0)$ reads the
     caller's value, applies enter, routes the entry state $e_1$ to $c_1$,
     publishes it to the seed of `bump` in $c_1$ (purple, dashed), reads the
-    result in the same context and joins the combined state into its own value.
+    exit state in the same context and joins the combined state into its own value.
     Blue boxes are local unknowns, the purple box is a global unknown, white
     boxes are steps of the right-hand side, and gray frames group the unknowns
     of one procedure in one context.],
@@ -203,14 +203,14 @@ callee. It reads the caller's value at $(italic("pp2"), c_0)$ and applies
 enter (@sec:calls), which yields an _entry pair_ of a resume state $q_1$ and an
 entry state $e_1$ that binds $n$ to $absval(ivl(5, 5))$. The entry state selects the
 callee context $c_1 = [[5, 5]]$. The equation publishes $e_1$ to that context,
-reads the result $r_1$ of `bump` in $c_1$, and joins
+reads the exit state $r_1$ of `bump` in $c_1$, and joins
 $sh("combine")(q_1, r_1)$ into its own value. The equation of the second
 call's continuation, $(italic("pp4"), c_0)$, does the same with
 $c_2 = [[4, 4]]$. The two calls thus use separate copies of `bump`, and the
 first result stays exactly 6.
 
 In this protocol, the caller's equation publishes the entry state to the callee
-and reads the callee's result. The verified solver, however, accepts side effects
+and reads the callee's exit state. The verified TD solver, however, accepts side effects
 only to global unknowns (@sec:eq-seed-global), so a call cannot publish to the
 local unknown of the callee's entry directly. Each callee entry $p$ and context
 $c'$ therefore has a global unknown, the _seed_
@@ -220,14 +220,14 @@ $(ctor("FunctionEntry") thin p, c')$ reads it. A call with several callees, or
 an enter that returns several entry pairs, routes and publishes each pair
 separately.
 
-Since a caller reads nothing of the callee except its result, a recursive call
-needs no special treatment. Its equation reads a result that in turn depends on
+Since a caller reads nothing of the callee except its exit state, a recursive call
+needs no special treatment. Its equation reads an exit state that in turn depends on
 the caller's own unknowns, so the dependencies form a cycle. The solver handles
 this cycle like the cycle of a loop and widens at the unknown where a read
 closes it (@sec:td).
 
 The right-hand side handles one special case. A call whose entry state is
-bottom publishes nothing and does not read the callee's result. No store enters the callee in that case, and the read would
+bottom publishes nothing and does not read the callee's exit state. No store enters the callee in that case, and the read would
 only make the solver evaluate the callee's body from a state that describes no
 store. Goblint's normal-call transfer
 #link(
@@ -242,15 +242,15 @@ classified as bottom is required to have an empty concretization
 Every call is assigned a callee context twice. The equations choose one from
 the abstract entry state, and the concrete semantics of @ch:traces chooses one
 from the concrete call, through the context policy $italic("adm")$ of
-@sec:contexts. The unknowns of a context only receive what the equations send
+@sec:contexts. The unknowns of a context only receive what the equations publish
 there, but they must describe every concrete activation that the policy admits
 in it. The two choices must therefore agree. In the running example, the
 policy admits the activation of `bump` with $n = 5$ in the context $[[5, 5]]$,
-and the call `bump(5)` sends an entry state with $n = 5$ to the same context.
+and the call `bump(5)` publishes an entry state with $n = 5$ to the same context.
 In general, whenever the policy admits a concrete call in a context, the
-equations must send an entry pair that describes the call to that context
-(@fig:eq-adequacy). For a caller store $s$ that the caller's solved value
-describes and the store $s'$ in which the callee starts:
+equations must publish an entry pair that describes the call to that context
+(@fig:eq-adequacy). For a caller store $s$ that the caller's solved state
+describes and the entered store $s'$:
 $
   italic("adm") "admits" c' "for" (s, s') quad ==> quad & "some entry pair" (q, e) "is routed to" c' \
                                                         & "with" s in conc(q) "and" s' in conc(e).
@@ -324,15 +324,15 @@ This condition is called _adequacy_
 (#isathm("routed_context.routing_adequate", thy: "Routed_Context", display: "routing_adequate")).
 It also requires the callee's entry unknown in $c'$ to be in the solved set.
 #oblig("CALL") and #oblig("RETURN") rely on adequacy, because the call
-publishes $e$ and its continuation reads the callee's result in the same
+publishes $e$ and its continuation reads the callee's exit state in the same
 context $c'$. Adequacy says nothing about a call to which $italic("adm")$
-assigns no context. Such a call would disappear from the context-indexed
+assigns no context. Such a call would disappear from the activation
 collecting semantics, which #oblig("TOTAL") of @sec:contract rules out. The
 second condition, _totality_
 (#isathm("routed_context.routing_total", thy: "Routed_Context", display: "routing_total")),
 is what #oblig("TOTAL") asks of the generated equations. It requires
 $italic("adm")$ to admit at least one context for every concrete call from a
-store that the caller's solved value describes. Both conditions are premises of
+store that the caller's solved state describes. Both conditions are premises of
 the soundness theorem and are proved once for each context policy.
 
 #figure(
@@ -360,7 +360,7 @@ the soundness theorem and are proved once for each context policy.
     equations route the entry state $e$, and why the two agree. $u dot c$ prepends the
     site, $"take"_k$ keeps the first $k$ entries, $e|_"formals"$ lists the
     formals' values in $e$, and an entry pair
-    $(q, e)$ of the caller's solved value covers $(s, s')$ when
+    $(q, e)$ of the caller's solved state covers $(s, s')$ when
     $s in conc(q)$ and $s' in conc(e)$. Unit and call strings are
     _functional_ policies, since they choose the context without reading
     abstract states.],
@@ -450,7 +450,7 @@ routing keep them apart.
     grid(
       columns: (1fr, 1fr, 1fr, 1fr),
       column-gutter: 4pt,
-      _policy("ctx-demo-none", [no contexts]),
+      _policy("ctx-demo-none", [unit]),
       _policy("ctx-demo-k1", [call strings, $k = 1$]),
       _policy("ctx-demo-k2", [call strings, $k = 2$]),
       _policy("ctx-demo-entry", [entry states]),
@@ -472,14 +472,14 @@ on the abstract entry state, so the concrete call alone does not determine it.
 
 The entry-state policy (#isaconst("routed_entry_context_rel")) therefore reads
 the context of a concrete call from the solution at that call. It admits a
-context exactly when the equations, at this call node and in this caller
+context exactly when the equations, at this call site and in this caller
 context, route an entry pair that describes the call to it. Suppose the
 caller's solved state at a call `bump(x)` says $x in [4, 5]$. The equations
 publish $n |-> absval(ivl(4, 5))$ to $[[4, 5]]$, so a run that passes this call with
 $x = 4$ is admitted in $[[4, 5]]$ and not in $[[4, 4]]$. At another call whose
 solved state says $x in [4, 4]$, the equations route to $[[4, 4]]$, and a run
-with $x = 4$ through that call is admitted there. The policy thus copies the
-routing of the equations call by call. Every admitted context has received an
+with $x = 4$ through that call is admitted there. The policy thus copies
+the equations' routing call by call. Every admitted context has received an
 entry state that describes the call, which is adequacy. Entry coverage
 (@sec:calls) guarantees such an entry pair for every call from a store that the
 caller's solved state describes, which is totality.
@@ -497,7 +497,7 @@ caller's solved state describes, which is totality.
     [#oblig("INIT")], [the initial state at the program entry covers the initial stores],
     [#oblig("INTRA")], [the transfer along each local edge is sound],
     [#oblig("CALL")], [the routed entry state covers the entered store (adequacy)],
-    [#oblig("RETURN")], [the callee's result is combined soundly in the same context (adequacy)],
+    [#oblig("RETURN")], [the exit state is combined soundly in the same context (adequacy)],
     [#oblig("TOTAL")], [every covered call is admitted in some context (totality)],
     table.hline(),
   ),
@@ -511,7 +511,7 @@ Each obligation of @ch:traces is met by one part of the generated equations
 domain and context policy. Its locale
 #isalocale("routed_context") assumes a post-solution $sol$ on a solved set
 closed under local edges and call continuations, the
-#isalocale("analysis_contract") of @ch:analysis-interface, a sound bottom test,
+#isalocale("analysis_contract") of @ch:analysis-interface, a sound emptiness test,
 a sound callee resolution, and adequate and total routing. The theorem adds that the program entry
 is solved in the initial context and that the initial state $d_0$ describes the initial stores $S_0$.
 #theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[

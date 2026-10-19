@@ -34,7 +34,7 @@ as Sign or Interval denotes a set of integers, $conc(a) subset.eq ZZ$. An
 abstract state $d$, in contrast, denotes a set of stores,
 $conc(d) subset.eq (#isatype("vname") -> ZZ)$ (@sec:domain-states). An
 arbitrary lattice of abstract values is not enough, for two reasons. First,
-the order must agree with the meaning. The solver only proves inequalities
+the order must agree with the concretization. The solver only proves inequalities
 $a lle b$ in the abstract order, while the obligations of @ch:traces are
 inclusions between sets. The law
 $ a lle b ==> conc(a) subset.eq conc(b) $
@@ -44,14 +44,14 @@ lattice's bottom element. The interval pair $absval(ivl(5, 3))$, whose lower bou
 exceeds its upper bound, is such a value. An analyzer that recognizes only the
 bottom element as empty misses it. This is still sound, since the analyzer
 then assumes more stores than exist, but it costs precision. After the next
-join, the information that a program point is dead is gone
+join, the information that a program point is unreachable is gone
 (@sec:nonrel-state).
 
 This chapter derives what a domain must provide. The solver needs operations
 it can compute with, the soundness proof needs laws that turn the solver's
 inequalities into inclusions between sets of stores, and the analyzer needs to
-recognize every value that denotes no integer, so that a dead program point
-stays dead.
+recognize every value that denotes no integer, so that an unreachable program point
+stays unreachable.
 
 #let _snode(pos, name, body) = node(pos, text(size: 8pt, body), name: name, inset: 3pt)
 #let _order = 0.7pt + vb.neutral
@@ -745,7 +745,7 @@ $absval(ivl(1, 5))$ is true, $absval(ivl(0, 0))$ is false, and $absval(ivl(0, 5)
 
 == Answering checks with three-valued queries <sec:queries>
 
-An assertion `__voblint_check(c)` asks whether $c$ holds in every store that
+A check `__voblint_check(c)` asks whether $c$ holds in every store that
 reaches its program point. The analysis must answer this from the abstract
 state there alone. Voblint answers it through queries, as does Goblint's
 #link(
@@ -807,7 +807,7 @@ One proof covers every domain. The answer _true_ certifies that $c$ holds in
 every store the state describes, _false_ that it holds in none, and _unknown_
 makes no claim (#isathm("check_query_sound")). #isalocale("sound_check_query")
 combines the queries with forward evaluation. An analysis passes these answers
-to its partners and to the verdicts as answers to the query
+to the analyses it runs with and to the verdicts as answers to the query
 #isaconst("EvalInt") of @sec:coop-queries (@sec:coop-mcp, @sec:verdicts).
 
 For example, the condition `x <= y && y != 0` is answered from $"less"(hat(y), hat(x))$ and
@@ -876,8 +876,8 @@ It costs precision, however, as the following program shows.
 }))
 
 In this program, $y$ ends up as $|x|$, so the check always holds. Without
-refinement, both arms keep $x |-> ltop$, $y$ becomes $ltop$, and the state
-cannot show that the check holds. Backward refinement runs the condition in
+guard filtering, both arms keep $x |-> ltop$, $y$ becomes $ltop$, and the state
+cannot show that the check holds. The guard filter runs the condition in
 reverse, as in the backward abstract interpretation of tests by Cousot
 @cousot99[§§8.5, 10.1] and the backward analysis of Nipkow and Klein
 @nipkow14[§13.7].
@@ -918,7 +918,7 @@ $j$ to $absval(ivl(2, 9))$ but not $i$ from above (claim
 #block(breakable: false)[
   #lemma(name: [Sound guard filter], isa: "bfilter_sound")[
     If a store $s$ lies in $conc(d)$ and the guard $e$ has truth value
-    #isai("res") at $s$, then $s$ lies in the meaning of the filtered state.
+    #isai("res") at $s$, then $s$ lies in the concretization of the filtered state.
   ]
 
   #proved("bfilter_sound")
@@ -952,7 +952,7 @@ functions, because the primitives determine every edge
     column-gutter: 1.2em,
     row-gutter: 0.75em,
     [assignment `x = e`], $d |-> d[x |-> asem(e) thin d]$,
-    [guard $b$, required value $r$], [the refinement of @sec:branches for $b$ and $r$],
+    [guard $b$, required value $r$], [the guard filter of @sec:branches for $b$ and $r$],
     [#keyw("return") $e$], $d |-> d[#isaconst("ret_var") |-> asem(e) thin d]$,
     [entry with formals $overline(x)$, arguments $overline(e)$],
     [every local set to $ltop$, globals kept, then $overline(x) |-> asem(overline(e)) thin d$],
@@ -965,7 +965,7 @@ $d[x |-> absval(ivl(1, 10))]$. The interpretation of
 once, so the domains of @ch:instances mainly define their values and
 primitives and prove the primitive laws. The analyzer runs the same primitives
 on a finite representation of states, and their soundness carries over to the
-exported code without a further proof (#isathm("exec_local_spec_sound"),
+generated code without a further proof (#isathm("exec_local_spec_sound"),
 @sec:represented-function).
 
 #figure(
@@ -981,13 +981,13 @@ exported code without a further proof (#isathm("exec_local_spec_sound"),
     has a heavier border and lists its instances. A superscript #mono-mark
     marks an interface with a monotone strengthening, and an interpretation
     that proves it (#isalocale("mono_nonrelational_ops")). Color gives where a
-    node is declared: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored
+    node is declared: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored TD
     solver, #swatch(vb.voblint) Voblint.],
 ) <fig:domain-carrier>
 
 == Carriers without least upper bounds <sec:excluded-carriers>
 
-The interface asks more of a carrier than an order with a join. The verified
+The interface asks more of a carrier than an order with a join. The verified TD
 solver requires a #isalocale("bounded_semilattice_sup_bot")
 (#isalocale("TD_side_upd_rule")), whose join is the _least_ upper bound, and
 the framework's proofs use this leastness as well

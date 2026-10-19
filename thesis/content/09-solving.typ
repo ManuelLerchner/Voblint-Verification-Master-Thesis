@@ -28,7 +28,7 @@ valuation a post-solution only on its solved set, so the theorem requires this
 set to contain the program entry and every unknown that an execution can reach
 from it. This chapter shows that the analyzer obtains such a solved set and
 post-solution. Voblint solves the equations with the
-verified top-down solver of Tilscher et al. @tilscher26, which is proved
+verified TD solver of Tilscher et al. @tilscher26, which is proved
 partially correct. To use it, Voblint first brings the equations into the form the
 solver accepts and then derives the premises about the solved set from the
 solver's correctness theorem.
@@ -52,19 +52,21 @@ or reads (@sec:update-rules). The adapters change the equations, not the solver.
     table.hline(),
     [*the equations need*], [*the solver provides*], [*adapter*],
     table.hline(stroke: 0.5pt),
-    [value-dependent reads], [strategy trees], [call tree (@sec:eq-trees)],
-    [a write to a local unknown], [writes to globals only], [seed (@sec:eq-seed-global)],
+    [value-dependent reads], [strategy trees], [strategy tree (@sec:eq-trees)],
+    [publish to local unknowns], [publish to globals only], [seed (@sec:eq-seed-global)],
     [two value types], [one value type], [product (@sec:global-unknowns)],
-    [two writes to one target], [updates that may not stabilize], [buffering (@sec:update-rules)],
+    [publish twice to one target],
+    [updates that may not stabilize],
+    [buffering (@sec:update-rules)],
     table.hline(),
   ),
   placement: none,
   caption: [The requirements of the equations of Apinis et al. and Goblint, the
-    alternative the vendored solver provides, and the adapter that closes each gap. A
-    call chooses the result it reads from the caller's state, writes the
+    alternative the vendored TD solver provides, and the adapter that closes each gap. A
+    call chooses the result it reads from the caller's state, publishes the
     callee's entry state to a local unknown, keeps local states and analysis
-    globals in different domains, and may write one seed twice in one
-    evaluation. The solver accepts such writes but updates after each one,
+    globals in different domains, and may publish to one seed twice in one
+    evaluation. The solver accepts such publications but updates after each one,
     and under warrowing these updates may not stabilize.],
 ) <tab:eq-adapters>
 
@@ -76,12 +78,12 @@ example, the continuation $(italic("pp3"), c_0)$ first reads the caller
 $(italic("pp2"), c_0)$. From that value it computes the entry state
 $n = absval(ivl(5, 5))$, which determines the context $c_1$ and thus the result it reads
 next, $(ctor("FunctionResult") thin italic("bump"), c_1)$.
-The vendored solver accepts a right-hand side only as a strategy tree, which
+The vendored TD solver accepts a right-hand side only as a strategy tree, which
 issues one read at a time and passes each value read to a continuation
 (@sec:td). Every right-hand side of Voblint is such a tree. For a local edge
 the tree reads the predecessor and applies the transfer. For a call it chains reads whose
 continuations choose the next read from the value received. In the notation of
-@sec:td, the contribution of
+@sec:td, the value of
 a call at $u$ in context $c$ (#isaconst("rhs_call")) is the value of the tree
 $t_"call"$,
 $
@@ -93,7 +95,7 @@ $
 The tree first reads the caller's state $d$ at the call site and computes the
 entry pair $(q, e) = enterh(d)$ and the callee context $c' = ctxh(u, c, e)$.
 It then publishes the entry state $e$ for the callee's entry in $c'$, reads
-the callee's result $r$, and answers $sh("combine")(q, r)$, the abstract state
+the callee's exit state $r$, and answers $sh("combine")(q, r)$, the abstract state
 of the caller once the call has returned. #isaconst("routed_call_program") implements
 this tree and additionally handles bottom entry states and several callees or
 entry pairs.
@@ -109,7 +111,7 @@ Apinis et al. push the entry state directly into the callee's entry
 $(ctor("FunctionEntry") thin p, c')$ @apinis12[§6], and Goblint does the same
 with its local side effect `sidel`
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L244")[`constraints.ml`]).
-That entry, however, is a local unknown, and the vendored solver's
+That entry, however, is a local unknown, and the vendored TD solver's
 #ctor("Side") accepts only global unknowns. Allowing local targets would mean
 changing the solver and redoing its correctness proof.
 
@@ -129,7 +131,7 @@ from this widening.
 
 A local unknown holds an abstract state of the analysis's local domain, and an
 analysis global holds a value of its global domain (@sec:shared-facts). The
-vendored solver, however, has a single value type $'d$ for all unknowns, so Voblint
+vendored TD solver, however, has a single value type $'d$ for all unknowns, so Voblint
 stores both kinds in their product: every unknown holds a pair #isatype("dg_state") of
 a local and a global half, #isaconst("dg_local") and #isaconst("dg_global"),
 uses one half and leaves the other at $lbot$ (@tab:eq-carrier). Order and join
@@ -137,7 +139,7 @@ on pairs work componentwise, so the solver's requirements on the value type
 follow from those on the two halves. The half an unknown uses depends on what it stores, not on
 whether the solver treats it as global. A seed, for example, is a global
 unknown, because calls publish to it, but it stores an entry state, which is a
-local value.
+local state.
 
 #figure(
   table(
@@ -176,9 +178,10 @@ generic interface for them and prove five rules sound against it
 @tilscher26.
 
 The rules differ in what they keep per _origin_, the right-hand side that
-sent a contribution (@sec:td), and in whether they widen. _Join_ joins every
-contribution into the value, and _join per origin_ reports the join of each
-origin's latest contribution. _Warrow_ and _warrow per origin_ warrow toward
+published a contribution (@sec:td), and in whether they widen. Of the two
+_joining rules_, _join_ joins every contribution into the value, and _join per
+origin_ reports the join of each origin's latest contribution. Of the three
+_warrowing rules_, _warrow_ and _warrow per origin_ warrow toward
 the same join or per origin, and _bounded narrowing_ additionally limits how
 often an origin may switch from widening to narrowing. @fig:update-rules runs
 all five on one sequence of contributions. In #isaconst("run_voblint") the rule
@@ -221,8 +224,8 @@ rule is more precise on every program, and @sec:eval-precision compares them.
       stroke: none,
       inset: (x: 4pt, y: 2.6pt),
       table.hline(stroke: 0.5pt),
-      [*rule*, vendored update], [*1:* A sends #r("[0,3]")], [*2:* B sends #r("[4,4]")],
-      [*3:* A sends #r("[1,1]")], [*4:* A sends #r("[0,8]")],
+      [*rule*, vendored update], [*1:* A publishes #r("[0,3]")], [*2:* B publishes #r("[4,4]")],
+      [*3:* A publishes #r("[1,1]")], [*4:* A publishes #r("[0,8]")],
       table.hline(stroke: 0.4pt),
       ..names.zip(_rule-steps).map(((n, row)) => (n, ..row.map(cell))).flatten(),
       table.hline(stroke: 0.5pt),
@@ -239,14 +242,14 @@ rule is more precise on every program, and @sec:eval-precision compares them.
 
 One right-hand side can publish to the same global unknown twice, for example
 when two calls that resume at the same node are routed to the same callee
-context and write the same seed. The equations read two writes to one target
+context and publish to the same seed. The equations read two publications to one target
 $g$ as one bound:
 $
   #ctor("Side") (g, a); #ctor("Side") (g, b)
   quad "means" quad
   sol(g) lge a ljoin b.
 $
-The vendored solver, however, applies the update rule at every #ctor("Side").
+The vendored TD solver, however, applies the update rule at every #ctor("Side").
 A per-origin rule (@sec:td) therefore records first $a$ and then
 $a union.sq b$, so in every re-evaluation the recorded contribution shrinks
 and grows back. Under warrowing the shrinking step narrows, the growing step
@@ -260,12 +263,12 @@ Voblint joins them as well. #isaconst("buffer_sides") collects the
 publications of a right-hand side and joins those to the same target until a
 flush point. Where several calls return at a node, it flushes only when the
 right-hand side answers. Elsewhere it flushes before every local read, so that
-an entry state reaches the callee before the callee's result is demanded, as
+an entry state reaches the callee before the callee's exit state is demanded, as
 in Goblint's normal-call transfer
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245")[`constraints.ml`]).
 The buffered generator #isaconst("routed_node_rhs_buffered"), which the
 analyzer runs, answers the same join as the direct generator of
-@sec:eq-call. Under widening update rules the timing can change the computed
+@sec:eq-call. Under warrowing rules the timing can change the computed
 result, though not the equations it solves. @sec:outlook-extending discusses a
 solver extension that would make seeds and buffering unnecessary.
 
@@ -303,7 +306,7 @@ is solving reads it @seidl21 @tilscher26. It thus discovers contexts as it
 goes, and whether it returns depends on how many unknowns it reaches. Under
 entry-state contexts a recursion can demand unboundedly many
 (@sec:eval-precision). The existing termination theorems do
-not apply to Voblint (@sec:rel-solvers), so the end-to-end theorem
+not apply to Voblint (@sec:rel-solvers), so the end-to-end soundness theorem
 (@sec:headline) is a partial-correctness result about every report the
 analyzer returns.
 
@@ -317,10 +320,10 @@ returns must lie in it, and the executable code must compute the same result
 as the solver defined in the logic. Voblint therefore keeps the
 solver as a parameter of the analysis. The analysis locale
 #isalocale("dg_analysis") extends #isalocale("certified_solver"), which states
-the four facts, and #isathm("td_certified_solver") proves them for the vendored
+the four facts, and #isathm("td_certified_solver") proves them for the verified TD
 solver under every update rule.
 
-The verified solver states its guarantee as the certificate
+The verified TD solver states its guarantee as the certificate
 #isaconst("part_post_solution", thy: "Basics_side") of @sec:side-effects, over
 the equation system $T$, the valuation #sol and the solved set `vars`:
 
@@ -352,7 +355,7 @@ and (C2), through the closure argument above, give a solved set that contains
 the program entry and is closed under execution steps. The remaining premises
 of the theorem there concern the analysis and the routing, which earlier
 chapters discharge. For every solve that returns, the solved states therefore
-cover the context-indexed collecting semantics
+cover the activation collecting semantics
 (#isathm("entry_state_activation_collect_sound_of_terminates")), and the five
 obligations of @ch:traces hold as @tab:eq-obligations shows. @ch:results turns
 these states into verdicts.

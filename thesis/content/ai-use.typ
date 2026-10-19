@@ -52,16 +52,16 @@ locale boundaries had stabilized, many of the remaining proof obligations were
 short and were discharged with substantial agent assistance.
 
 The assistants' output was not reliable on its own. Agents proposed incorrect
-lemmas and, in one case, introduced a premise into the end-to-end theorem that
+lemmas and, in one case, introduced a premise into the end-to-end soundness theorem that
 no program satisfied, making the theorem vacuous until the solver run was
 redesigned. Audits of theorem statements and full batch builds exposed these
 errors. The non-vacuity instances of @sec:nonvacuity now demonstrate that the
-premises of the main theorems can be satisfied.
+premises of the end-to-end soundness theorem and its companions can be satisfied.
 
 Agents also wrote much of the tooling around the formalization, such as the
-command-line interface, the website, and the regression suite with its ports of
+command-line tool, the project site, and the regression corpus with its ports of
 Goblint regression tests. They also wrote the checks that keep the theories, the
-generated material, the analyzer, the website, and this thesis consistent
+generated material, the analyzer, the project site, and this thesis consistent
 (@sec:voblint-repo). These checks proved especially useful because they replaced
 repeated manual inspection with conditions that every change had to satisfy, and
 they exposed errors that manual reading had missed.
@@ -119,7 +119,7 @@ generator (@fig:intro-trust). This establishes the stated propositions
 relative to their definitions and assumptions, but does not establish that those
 definitions faithfully capture the intended language or analysis. Definitions
 and theorem statements were therefore also checked against example programs, the
-regression suite, and the documented differences between VIMP and C11.
+regression corpus, and the documented differences between VIMP and C11.
 Related-work claims were checked against the cited sources, often with agent
 assistance and subsequent author review.
 

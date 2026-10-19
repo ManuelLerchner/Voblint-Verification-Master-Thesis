@@ -25,7 +25,7 @@ The preceding chapters stated what a domain, an analysis, and a combination of
 analyses must prove, and @ch:results showed that every report is sound
 whichever analyses produced it. This chapter introduces and describes the analyses that Voblint currently
 implements. A user selects among the
-numeric domains Sign, Interval, Parity, and Congruence, their reduced product
+non-relational domains Sign, Interval, Parity, and Congruence, their reduced product
 Int, and a relational order analysis. The chapter compares the four base
 domains on one loop, then describes how Int lets them exchange facts and how
 the order analysis tracks relations between variables, which shows that the
@@ -103,7 +103,7 @@ supplies its operations as the record #isatype("nonrelational_ops"), and proves
 them sound once
 (#isalocale("sound_nonrelational_ops")). From this proof, a generic construction
 derives the transfer functions of @ch:analysis-interface together with their
-executable versions, and makes the domain a sound component of the combined
+executable versions, and makes the domain a sound component of the product
 state of @ch:cooperation
 (#isathm("sound_nonrelational_ops.dg_analysis_execI")). The only further
 obligation concerns the initial state, which must describe the initial stores.
@@ -228,7 +228,7 @@ facts only through answers to queries, where a transfer asks one. Int is a
 single domain whose value holds all four components, and it reduces after
 every arithmetic operation and guard. A fact such as "odd" therefore sharpens
 the interval stored in the value itself, inside expression evaluation, and not
-just the answer to one question. Goblint draws the same line. Its integer
+just the answer to one query. Goblint draws the same line. Its integer
 domains form one value domain inside its base analysis, whereas its MCP
 combines whole analyses.
 
@@ -258,7 +258,7 @@ narrowing, however, Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5503dec/src/cdomain/value/cdomains/int/intDomTuple.ml#L421-L431",
 )[`IntDomTuple`]
-performs a reduction that Voblint cannot mirror. The verified solver requires the narrowing
+performs a reduction that Voblint cannot mirror. The verified TD solver requires the narrowing
 $a narrow b$ of values $b lle a$ to lie between $b$ and $a$ (@sec:widening).
 Reduction only makes a value smaller, so it can push the narrowed value below
 $b$ and break this law
@@ -355,18 +355,18 @@ store it as a list.
 
 The emptiness
 test only compares with #ctor("RelBot") (#isathm("is_empty_relc_gamma")).
-Unlike the pointwise form, the carrier has a single representation of
+Unlike the pointwise state, the carrier has a single representation of
 unreachability, so it needs no lifting.
 
 A relational state stores no value per variable, so it cannot evaluate an
-expression to an abstract value, and its transfers work on the constraints
+expression to an abstract value, and its transfers work on the pairs
 directly. An assignment to $x$ invalidates every relation that involves $x$,
 so it forgets every pair that mentions $x$. New relations come from guards. On
 the true arm of `if (x < y)`, the analysis knows that $x$ is smaller than $y$
 and records this by meeting its state with $absval(ctor("RelC"){x <= y})$
-(#isaconst("assume_step")). Since the carrier stores only weak orders, it
+(#isaconst("assume_step")). Since the carrier stores only non-strict pairs, it
 keeps $x <= y$ and loses the strictness, which costs precision but not
-soundness. The refinement meets the same soundness statement as the
+soundness. This guard filter meets the same soundness statement as the
 numeric guard filter of @sec:branches (#isathm("relc_branch_step_sound")). The type
 instantiates the solver's classes and #isalocale("executable_domain") of
 @fig:domain-carrier, but it is not a numeric domain.
@@ -377,8 +377,8 @@ instantiates the solver's classes and #isalocale("executable_domain") of
 section builds the order analysis on top of it and demonstrates it on a
 program. After an
 assignment has forgotten the pairs involving the changed variable, it asks the
-shared query channel how the new value relates to each variable, and
-every active analysis, the order analysis included, may contribute an answer
+shared channel how the new value relates to each variable, and
+every selected analysis, the order analysis included, may give an answer
 (@sec:coop-mcp). In the program below, the guard `x < y` tells Interval
 nothing about either variable, so it keeps
 #state("order-alone-interval", "12:5") and reports
@@ -416,10 +416,10 @@ both, because it treats a variable as ordered with itself, so it records
 answers #verdict("order-alone-interval", "20:3").
 
 The base domains record different properties, Int lets them share these
-facts, and the order analysis proves relations that no domain over single
-variables can express. In practice, a user need not choose between them. The
-combined state and the query channel of @ch:cooperation let Int and the order
+facts, and the order analysis proves relations that no non-relational
+domain can express. In practice, a user need not choose between them. The
+product state and the channel of @ch:cooperation let Int and the order
 analysis run together. They exchange facts
-through queries, and every check is decided by the meet of their answers. Activating both gets the most out of the analyses Voblint currently
+through queries, and every check is decided by the meet of their answers. Selecting both gets the most out of the analyses Voblint currently
 ships, although no theorem guarantees that a combination is more precise than
 its parts (@sec:coop-mcp).

@@ -35,7 +35,7 @@ call itself. The function below has one equation for the empty list
 Since every HOL function is total, Isabelle proves that such a recursion
 terminates @nipkow14[§2.3.4]. A function may also be defined without this
 proof. Its equations then hold only on its _domain_, the arguments on which
-the recursion terminates, as for the vendored solver and its domain
+the recursion terminates, as for the verified TD solver and its domain
 #isaconst("solve_dom", thy: "TD_side_upd_rule").
 
 // The explanation and the theorem it introduces stay on one page.
@@ -43,7 +43,7 @@ the recursion terminates, as for the vendored solver and its domain
   A theorem declares its variables and their types after #isai("fixes"),
   introduces abbreviations local to the statement after #isai("defines"), lists
   its premises after #isai("assumes") and states its conclusion after
-  #isai("shows"). The source-level theorem of @sec:headline uses all four:
+  #isai("shows"). The end-to-end soundness theorem of @sec:headline uses all four:
   // deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
   #proved("run_voblint_source_sound")
 ]

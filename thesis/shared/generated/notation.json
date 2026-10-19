@@ -286,8 +286,8 @@
       "id": "dgs_skip",
       "group": "operator",
       "kind": "notation",
-      "reads": "the _op_ transfer of specification _S_",
-      "meaning": "the edge transfers of a D/G specification, one field per program construct, each named after the Goblint {Spec} method it answers to",
+      "reads": "the _op_ transfer of analysis _S_",
+      "meaning": "the edge transfers of an analysis _S_ ({dg_spec}), one field per program construct, each named after the Goblint {Spec} method it answers to",
       "forms": [
         {
           "const": "dgs_skip",
@@ -408,8 +408,8 @@
       "id": "dgs_enter",
       "group": "operator",
       "kind": "notation",
-      "reads": "the call-boundary transfers of specification _S_",
-      "meaning": "entry into a callee, answering (continuation, callee entry) pairs, and the two stages of the return: the environment stage and the assignment of the result",
+      "reads": "the call-boundary transfers of analysis _S_",
+      "meaning": "entry into a callee, answering entry pairs (resume state, entry state), and the two stages of the return: the environment stage and the assignment of the result",
       "forms": [
         {
           "const": "dgs_enter",
@@ -466,7 +466,7 @@
       "id": "combine_collect_abs",
       "group": "operator",
       "kind": "notation",
-      "reads": "the abstract return of _σe_ into _σc_",
+      "reads": "the abstract return of _r_ into _q_",
       "meaning": "the abstract counterpart of the concrete return on abstract states: caller locals, callee globals, and the callee's result written to the destination",
       "forms": [
         {
@@ -475,7 +475,7 @@
             "kind": "const",
             "name": "combine_collect_abs"
           },
-          "symbol": "combine\\<^sup>\\<sharp> \\<G> dst \\<sigma>c \\<sigma>e",
+          "symbol": "combine\\<^sup>\\<sharp> \\<G> dst q r",
           "mixfix": "combine\\<^sup>\\<sharp>",
           "declaration": "definition",
           "scope": "global",
@@ -493,7 +493,7 @@
       "group": "operator",
       "kind": "notation",
       "reads": "the computed callee context",
-      "meaning": "the routing policy's abstract context function: the callee context the equations compute from an abstract entry value",
+      "meaning": "the routing function: the callee context the equations compute from an abstract entry state",
       "forms": [
         {
           "const": "route",
@@ -561,7 +561,7 @@
       "id": "declared_global",
       "group": "operator",
       "kind": "convention",
-      "reads": "the globals classifier",
+      "reads": "the global-variable classifier",
       "meaning": "the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter",
       "forms": [
         {
@@ -720,7 +720,7 @@
       "group": "set",
       "kind": "notation",
       "reads": "the stores report _res_ describes at _v_",
-      "meaning": "the stores some state the analysis report holds at point _v_, under any of its contexts, describes",
+      "meaning": "the stores some state the analysis report holds at node _v_, under any of its contexts, describes",
       "forms": [
         {
           "const": "report_sem",
@@ -746,7 +746,7 @@
       "group": "set",
       "kind": "notation",
       "reads": "the stores the verdicts of _res_ at _v_ hold in",
-      "meaning": "the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false",
+      "meaning": "the stores in which every definite verdict the analysis report gives at node _v_ holds: a proved condition is true, a refuted one false",
       "forms": [
         {
           "const": "verdict_stores",

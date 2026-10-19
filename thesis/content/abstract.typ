@@ -7,7 +7,7 @@
 An abstract interpreter over-approximates a program's executions, so any
 property that holds for the over-approximation holds in every run. Goblint, an
 abstract interpreter for C, builds a control-flow graph of the program,
-translates the graph into a system of equations over abstract values, and solves
+translates the graph into a system of equations over abstract states, and solves
 that system with a generic fixpoint solver @vojdani16 @seidl26. Its guarantee
 therefore depends on four conditions: a control-flow graph that simulates the
 source program, equations that over-approximate its executions in every calling
@@ -18,8 +18,8 @@ condition had been verified @stade24 @tilscher26.
 Voblint is an Isabelle/HOL formalization of a context-sensitive
 interprocedural analyzer. Its soundness proof covers all four conditions for
 VIMP, a small C-like language with global and local integer variables and
-recursive procedures with parameters and return values. The main theorem states
-that if the analyzer returns a report, the report covers every store that a
+recursive procedures with parameters and return values. The end-to-end soundness theorem states
+that every report the analyzer returns covers every store that a
 finite execution of the program reaches from an initial store, and that every
 #verdict("PROVED") or #verdict("REFUTED") verdict at the corresponding program
 point holds for that store. This is partial correctness, since termination of
@@ -31,7 +31,7 @@ connects a source semantics, through a context-indexed collecting semantics, to
 a side-effecting constraint system and its verified solver.
 
 The main difficulty is modeling context sensitivity. A context-sensitive
-analyzer computes a separate invariant for each program point and calling
+analyzer computes a separate abstract state for each program point and calling
 context. Soundness proofs usually compare them with the collecting semantics,
 the stores reachable at each program point. This semantics, however, merges the
 stores of all calls to a procedure, so it cannot say which stores a given
@@ -44,20 +44,20 @@ together equal the collecting semantics.
 
 The proof is modular and follows Goblint's architecture. Domains, context
 policies, analyses, and the solver each have their own proof obligations, and
-one soundness theorem combines them. A numeric domain only has to implement a
+one soundness theorem composes them. A numeric domain only has to implement a
 shared interface and prove its abstract operations sound. The framework builds
 transfer functions from these operations and proves them sound once for all
 domains, as in Nipkow and Klein's generic abstract interpreter
-@nipkow14[§13.5]. The main theorem holds for every offered choice of analysis,
+@nipkow14[§13.5]. This theorem holds for every offered choice of analysis,
 context policy, and placement of program globals.
 
-The analysis function is exported to OCaml, runs in a command-line interface and
+The analysis function is exported to OCaml, runs in a command-line tool and
 a
 #link(site("playground.html"))[browser
-  playground], and is tested on #stat("corpus.cases") regression programs. Proofs
-by evaluation show that the main theorem is non-vacuous on concrete programs.
+  playground], and is tested on #stat("corpus.cases") regression fixtures. Proofs
+by evaluation show that the theorem is non-vacuous on concrete programs.
 
-The analyzer runs inside unverified hand-written OCaml glue and driver code,
+The analyzer runs inside unverified handwritten OCaml glue and driver code,
 including the parser and the rendering. This code, Isabelle's code
 generator, and the OCaml and WebAssembly toolchains are trusted and tested
 conventionally using unit and regression tests. Because the theorem concerns VIMP, VIMP's differences from

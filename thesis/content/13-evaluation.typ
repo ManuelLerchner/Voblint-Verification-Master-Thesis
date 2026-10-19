@@ -25,7 +25,7 @@ also trusts the code generator (@fig:intro-trust).
 == The soundness theorems are not vacuous #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
 
 A theorem whose premises can never hold together is true but says nothing. The
-end-to-end theorem has three premises: an initial store, a source run from it,
+end-to-end soundness theorem has three premises: an initial store, a source execution from it,
 and an #isaconst("Analysed") answer. The last one needs care, because the
 analyzer answers only if its solve terminates, and termination is not proved in
 general (@sec:certificate). The direct way to show that the premises are
@@ -34,7 +34,7 @@ consistent is to exhibit a program that meets all of them, as
 assumptions of a formal model.
 
 Here, the two-call program of @fig:program-to-equations is analyzed with
-Interval, entry-state contexts, and warrowing. The theory builds a source run
+Interval, entry-state contexts, and the _warrow_ update rule. The theory builds a source execution
 that returns from `bump(5)` and `bump(4)` and stops before the first check.
 Evaluation shows that the analyzer answers and that both checks are
 #verdict("PROVED"). With these facts, #isathm("nv_source_certified")
@@ -47,9 +47,9 @@ that no run reaches a node rather than that a condition holds there. A second
 program sets `x = 1` and guards a check by `x < 0`. The analyzer marks the
 check #verdict("DEAD"), and #isathm("nv_dead_unreached") instantiates
 #isathm("run_voblint_dead_check_unreached") to show that the collecting
-semantics at that node is empty. In all three instances, the source runs are
+semantics at that node is empty. In all three instances, the source executions are
 proved by rule application, while `eval` computes the compiled graphs and the
-analyzer's answers. The main theorems therefore do not hold vacuously, since
+analyzer's answers. The end-to-end soundness theorem and its companions therefore do not hold vacuously, since
 each applies to at least one program on which the solve actually terminates.
 
 == The obligations reject a real Goblint bug <sec:eval-1161>
@@ -128,8 +128,8 @@ check and proves the second.
   },
   kind: image,
   caption: [Goblint's regression test for #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] in VIMP, and the
-    verdict and state at each check with Congruence alone and with the Int
-    product, both without contexts. Concretely, `c % 2` evaluates to $-1$ on
+    verdict and state at each check with Congruence alone and with Int, both
+    under the unit context policy. Concretely, `c % 2` evaluates to $-1$ on
     both executions.],
 ) <fig:goblint-1161>
 
@@ -140,7 +140,7 @@ single programs whose concrete behavior is known.
 
 Earlier chapters already showed precise answers. Narrowing recovers the bound of the counting loop after widening
 (@sec:widening), entry-state contexts keep the two calls of `bump` apart
-(@fig:eq-policies), and only the reduced product proves `v == 51` on the
+(@fig:eq-policies), and only Int proves `v == 51` on the
 stride-2 loop (@fig:stride2). Analyses that cooperate through queries decide
 checks that each leaves unknown alone (@ch:cooperation,
 #isathm("order_asks_needs_both")). Beyond these, the corpus holds
@@ -212,7 +212,7 @@ and #claim-ref("cost-down-k100")). Nearly the whole cost is thus paid before
 any precision is gained.
 
 With entry-state contexts, the number of contexts need not even be finite.
-Under the unit context and under bounded call strings, a compiled program has
+Under the unit context policy and bounded call strings, a compiled program has
 finitely many unknowns (#isathm("compiled_unit_vars_finite"),
 #isathm("compiled_call_strings_finite")). Entry-state contexts under Interval
 have no such bound. A recursion that changes its argument at every
@@ -256,25 +256,25 @@ programs. Every check holds in every execution, so each #verdict("UNKNOWN") in
 the table is lost precision. The first two rules only join contributions to a
 global unknown, and the last three also widen them.
 
-In the first row, `p(1)` and `p(2)` publish to the same entry seed. Warrow
+In the first row, `p(1)` and `p(2)` publish to the same seed. _Warrow_
 joins the two contributions before widening, so the second looks like growth,
 and the upper bound of `x` jumps to $+infinity$. The per-origin rules widen each
 call site's contribution separately, and since each site writes one constant,
 nothing grows. The joining rules never widen and keep $absval(ivl(1, 2))$ as
-well. The call in a loop shows the same pattern, and again only Warrow loses
+well. The call in a loop shows the same pattern, and again only _warrow_ loses
 the bound.
 
-The two recursions separate the joining rules from the widening ones. On the
+The two recursions separate the joining rules from the warrowing ones. On the
 growing recursion, the argument grows without bound, and the joining rules give
 no answer within the limit. Their solve is expected to diverge, although the
-timeout alone does not show this. The widening rules stop at
+timeout alone does not show this. The warrowing rules stop at
 $absval(ivl(0, +infinity))$, which suffices for `x >= 0`. On the shrinking
-recursion, in contrast, per-origin warrowing widens the recursive call's own
+recursion, in contrast, _warrow per origin_ widens the recursive call's own
 contribution to $-infinity$, so `a + 2` may be zero and the division loses all
-information. Warrow keeps the lower bound, which the author attributes to its joining in
+information. _Warrow_ keeps the lower bound, which the author attributes to its joining in
 `main`'s argument $-1$ first, and the joining rules keep
-$absval(ivl(-1, 9))$. No rule is therefore best on every row. Bounded
-narrowing, at its default bound 5, matches per-origin warrowing on all four
+$absval(ivl(-1, 9))$. No rule is therefore best on every row. _Bounded
+narrowing_, at its default bound 5, matches _warrow per origin_ on all four
 programs.
 
 #figure(
@@ -322,7 +322,7 @@ programs.
     )
   },
   kind: table,
-  caption: [Update rules on four programs (Interval, no contexts, bounded
+  caption: [Update rules on four programs (Interval, unit context policy, bounded
     narrowing at bound 5), as on the #link(site("#globals"))[project site]. Each
     cell gives the verdict and state at the row's check, and its button opens
     the run. "No answer in 5 s": stopped by `--timeout 5`.],

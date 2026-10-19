@@ -85,8 +85,8 @@ the order analysis knows at that point (@fig:mcp-step).
       party((1, 0), [channel], color: vb.accent),
       party((2, 0), [Order \ $x lt.eq y, y lt.eq x$]),
       msg((0, 1), (1, 1), [asks #isaconst("EvalInt") $(x == y)$]),
-      msg((0, 2), (1, 2), [contributes $absval(ivl(0, 1))$]),
-      msg((2, 2), (1, 2), [contributes $1$], side: right),
+      msg((0, 2), (1, 2), [answers $absval(ivl(0, 1))$]),
+      msg((2, 2), (1, 2), [answers $1$], side: right),
       node((1, 3), text(size: 7pt)[$absval(ivl(0, 1)) lmeet 1 = 1$], fill: white, inset: 2pt),
       msg((1, 4), (0, 4), [$1$], side: right),
       party((0, 5), [Interval after \ $z = absval(ivl(1, 1))$]),
@@ -97,8 +97,8 @@ the order analysis knows at that point (@fig:mcp-step).
   caption: [One step of Interval and the order analysis at `z = (x == y)` in
     the program above (schematic). Interval's assignment asks #isaconst("EvalInt") $(x == y)$. The channel
     asks the handler of every analysis and gives Interval the meet of their
-    contributions. Each analysis updates only its own part
-    of the state. The final states match the analyzer run
+    answers. Each analysis updates only its own field
+    of the product state. The final states match the analyzer run
     #verdict("coop-eq-both", "16:7") with #state("coop-eq-both", "16:7").],
 ) <fig:mcp-step>
 
@@ -106,15 +106,16 @@ Goblint solves this with its
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml",
 )[_master control program_]
-(MCP). The activated analyses run side by side, each on its own part of one
-combined state, and a transfer may ask all activated analyses a question
+(MCP). The selected analyses run side by side, each on its own part of one
+product state, and a transfer may ask all selected analyses a question
 through the manager's `ask` function. Goblint has no machine-checked argument that these exchanges are sound. A
 proof, however, has a modularity problem. If Interval's assignment is proved
 sound using the order analysis's invariant, the two proofs are coupled, every
 new pair of analyses needs a new proof, and adding an analysis reopens old
 ones. This chapter describes how each analysis instead gets one proof
-obligation that does not mention its partners, and why analyses meeting it
-combine into one analysis that meets the analysis contract of @sec:sound-core.
+obligation that does not mention the analyses it runs with, and why analyses
+meeting it combine into one analysis that meets the analysis contract of
+@sec:sound-core.
 
 == Queries, answers, and channels #thy-badge("Voblint_Framework", "Analysis_Query") <sec:coop-queries>
 
@@ -143,17 +144,17 @@ several analyses work together:
   thy("query_algebra")
 }
 The top answer $ltop$ holds at every store, so
-an analysis that cannot answer a question answers $ltop$ and claims nothing.
-If two answers hold at a store, so does their meet, so a question asked of all
+an analysis that cannot answer a query answers $ltop$ and claims nothing.
+If two answers hold at a store, so does their meet, so a query asked of all
 analyses can be answered by the meet of their answers. In the example, when asked #isaconst("EvalInt") $(x == y)$ after both guards, Interval answers
 $absval(ivl(0, 1))$, which holds at every store, and the order analysis answers $1$.
 Their meet is $absval(ivl(0, 1)) lmeet 1 = 1$, so $x = y$. Goblint's `MCP.query'` combines answers the
 same way, as formalized by Apinis @apinis14[§5.5].
 
-A transfer may need answers to several questions. Instead of answering each
-question separately, the framework passes the transfer one function that
+A transfer may need answers to several queries. Instead of answering each
+query separately, the framework passes the transfer one function that
 answers every query, a _channel_ $italic("ch")$ of type #isatype("channel"),
-and the transfer applies it to the questions it needs. A single premise about
+and the transfer applies it to the queries it needs. A single premise about
 the channel then covers all answers the transfer uses. A channel _holds_ at a store $s$ if every answer it
 gives holds at $s$:
 #{
@@ -190,12 +191,12 @@ In the example, only the stores with $x = y$ remain, because the answer $1$ is
 false at all others. At these stores, $e$ evaluates to $1$, so the analysis's
 own assignment of the literal $1$ is sound for $e$ as well
 (#isathm("ask_assign_sound")). The proof never mentions the order analysis
-and works with every partner whose answers hold.
+and works with any analyses whose answers hold.
 
 An analysis without analysis globals is written as a _local specification_
 (#isatype("local_spec")). It bundles the operations of @sec:calls, each taking
 a channel, with a handler #isaconst("ls_query") that answers queries about a
-state, so that the analysis can serve as a partner itself.
+state, so that the analysis can answer queries from the analyses it runs with.
 
 #{
   show raw.where(block: true): set text(size: 6.5pt)
@@ -211,7 +212,7 @@ operations satisfy the laws of the analysis contract (@sec:sound-core), each
 under the assumption that its channels hold, as for the transfer above. This
 amounts to a monotone concretization and one law per operation
 (#isathm("sound_local_spec_iff")). The edge and combine laws correspond to
-those of the contract, and the enter law to entry coverage. The handler adds
+those of the analysis contract, and the enter law to entry coverage. The handler adds
 a law of its own. Its answers about a state $x$ must hold at every store of
 $conc(x)$ at which its own channel holds (#isaconst("sound_query")), and the
 analyses rely on one another only through this law. Verasco proves each
@@ -222,8 +223,9 @@ applies the same form of proof to Goblint's queries.
 == Combining analyses into one sound analysis #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
 
 The analyses cannot be solved one after another, because each may need the
-other's facts at the same program point and context. In the program below, the exchange runs in both directions, here between the order analysis and Int, the product
-of the numeric domains (@sec:reduced-product).
+other's facts at the same program point and context. In the program below, the
+exchange runs in both directions, here between the order analysis and Int, the
+reduced product (@sec:reduced-product).
 
 #let _z(name) = claim-check(name, "z == 1")
 #listing(lang: "c", claim: "coop-mutual-both", ```
@@ -249,21 +251,21 @@ is #verdict-chip(_z("coop-mutual-both").at(3)) (claims
 The framework therefore runs all selected analyses as a
 single analysis whose abstract state is a tuple with one field per analysis.
 For the solver,
-the tuple is one abstract value per node and context like any other. It is ordered, joined, and widened field by field (#isatype("analysis_product")),
+the tuple is one abstract state per node and context like any other. It is ordered, joined, and widened field by field (#isatype("analysis_product")),
 so each field evolves as it would alone, except that its transfers may ask the
 other fields. If one selected field shows that a node is unreachable, the whole
-tuple does (#isaconst("mcp_norm")).
+product state does (#isaconst("mcp_norm")).
 
-The combined state #isatype("mcp_st") has one field per analysis the analyzer
+The product state #isatype("mcp_st") has one field per analysis the analyzer
 ships, and a run uses the fields of the analyses the user selects
-(@fig:mcp-combine). The tuple describes a store if every selected field does:
+(@fig:mcp-combine). The product state describes a store if every selected field does:
 #{
   show raw.where(block: true): set text(size: 6.5pt)
   thy("mcp_gamma")
 }
 Here, $Gamma$ is the list of concretizations of the selected fields. Each
-$gamma_i in Gamma$ reads its own field of $x$, so $gamma_i (x)$ is the meaning
-that field contributes.
+$gamma_i in Gamma$ reads its own field of $x$, so $gamma_i (x)$ is the
+concretization of that field.
 #figure(
   {
     set text(size: 7.5pt)
@@ -320,7 +322,7 @@ that field contributes.
         corner-radius: 3pt,
         name: <band>,
       ),
-      node((0, -0.9), lab[combined state $x$], stroke: none),
+      node((0, -0.9), lab[product state $x$], stroke: none),
       cell(
         (1, -1.6),
         <chan>,
@@ -336,22 +338,22 @@ that field contributes.
         label: lab[same for all],
         label-side: left,
       ),
-      node((2, -0.9), lab[combined state $x'$], stroke: none),
+      node((2, -0.9), lab[product state $x'$], stroke: none),
     )
   },
   kind: image,
   placement: none,
   caption: [One step of the combination (schematic). Each component reads its
-    own field of the combined state $x$ and writes its own field of $x'$, and
+    own field of the product state $x$ and writes its own field of $x'$, and
     the components run in turn. All components receive the same channel
     $italic("ch")$ (blue).],
 ) <fig:mcp-combine>
 
 A local specification that runs on one field is called a _component_. Each
 component reads and writes only its own field, through a _lens_
-(#isaconst("lens_of")) that takes the field out of the combined state and puts
+(#isaconst("lens_of")) that takes the field out of the product state and puts
 a new value back, as Goblint's MCP hands each analysis its own part of the
-combined state. A component therefore leaves the concretizations of all other
+product state. A component therefore leaves the concretizations of all other
 fields unchanged (#isathm("field_frame")), which makes the components
 _independent_ (#isaconst("mcp_independent")). #isaconst("mcp_combine") runs the
 components in turn, gives each of them the same channel, and meets the answers of
@@ -379,4 +381,4 @@ its proof never mentions the analyses it runs with. Their combination meets the
 analysis contract and decides the check of the opening example. Adding an
 analysis requires only its own proof, and the proofs of the others stay
 unchanged. @ch:equations discharges the obligations of @ch:traces for any
-analysis that meets the contract, the combination included.
+analysis that meets the analysis contract, the combination included.

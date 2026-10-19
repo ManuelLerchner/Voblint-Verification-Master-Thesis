@@ -54,7 +54,7 @@ two, the proved function has to become a program. Its abstract states are
 mathematical functions, which code cannot compute with, so they are first
 replaced by finite representations (@sec:represented-function). Isabelle's
 code generator then exports #isaconst("run_voblint") to OCaml
-(@sec:codegen), and an unverified shell parses the source text and displays
+(@sec:codegen), and an unverified shell of handwritten OCaml parses the source text and displays
 the report (@sec:ocaml-boundary). The change of representation is proved
 to preserve the theorem. The code generator and the shell are not proved
 correct, so the guarantee for the running tool also rests on them, as
@@ -65,7 +65,7 @@ correct, so the guarantee for the running tool also rests on them, as
 To export #isaconst("run_voblint") as code, every function it calls must be
 computable. Most of the development already is, since its datatypes and
 recursive functions translate directly into a functional program, but the
-concretizations and the function states do not. The concretization $conc$ maps an abstract value to a possibly infinite set of integers, and in general
+concretizations and the pointwise states do not. The concretization $conc$ maps an abstract value to a possibly infinite set of integers, and in general
 no program can compute such a set. The analyzer does not need to, because
 $conc$ only states what a value means. This is why the domain interface
 separates #isalocale("executable_domain") from the classes and locales
@@ -73,7 +73,7 @@ below it in @fig:domain-carrier, which add $conc$ and its laws. Code
 generation exports the executable part together with each domain's operation
 record, and the rest serves only the proofs.
 
-The function states of @ch:domains are total functions on
+The pointwise states of @ch:domains are total functions on
 infinitely many variable names, so the solver could not even test whether two
 of them are equal. Following Concrete Semantics @nipkow14[§13.6], an
 _executable state_ (#isatype("default_st")) instead stores a default value and
@@ -86,12 +86,12 @@ reads #ltop. Since several lists describe the same state, a quotient type
 @huffman13 identifies the lists that answer every lookup alike. Order and
 equality then depend only on the defaults and the finitely many listed names,
 and every operation is computed on exactly these. Each operation therefore
-agrees with its counterpart on function states, and the soundness results of
+agrees with its counterpart on pointwise states, and the soundness results of
 @ch:analysis-interface carry over to the code that runs
 (#isathm("exec_local_spec_sound")).
 
-With concretizations left to the proofs and function states replaced, nothing
-else stands in the way. The vendored solver already comes with an executable
+With concretizations left to the proofs and pointwise states replaced, nothing
+else stands in the way. The verified TD solver already comes with an executable
 version, #isaconst("solve_c", thy: "TD_side_upd_rule"), which Tilscher et al.
 refine from its definition @tilscher26, and @sec:certificate shows that every
 run of it that returns satisfies the solver's correctness theorem. The values of the numeric domains (@sec:instances-supply) and the
@@ -110,7 +110,7 @@ Both delivered tools call this module through the facade
 generated module unchanged. Every analysis result is therefore computed by generated
 code.
 
-The command-line tool links the module with handwritten adapters into a native
+The command-line tool links the module with the handwritten OCaml into a native
 program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the
 same code to WebAssembly, which a web worker in the reader's browser calls
 (@fig:build). Both tools thus run the generated code of #isaconst("run_voblint") up to the code generator and the compilers
@@ -122,7 +122,7 @@ same code to WebAssembly, which a web worker in the reader's browser calls
   caption: [How the generated #isaconst("run_voblint") reaches the browser. Build:
     #isacmd("export_code") writes #isaconst("run_voblint") into
     `Voblint_Generated.ml`, which `dune` and #raw("wasm_of_ocaml", lang: "sh")
-    compile with the handwritten adapters into a WebAssembly bundle. Run: a web
+    compile with the handwritten OCaml into a WebAssembly bundle. Run: a web
     worker calls the bundle and returns the answer as JSON. Adapted from the
     project site.],
 ) <fig:build>
@@ -133,14 +133,14 @@ same code to WebAssembly, which a web worker in the reader's browser calls
   str(calc.round(r.before.mean_s / r.after.mean_s, digits: 0))
 }
 
-The exported module has #stat("generated_ocaml") lines and follows the proofs rather than the
+The generated module has #stat("generated_ocaml") lines and follows the proofs rather than the
 habits of OCaml programmers, which makes it hard to read. Type classes become records of operations passed
 as arguments, finite sets and maps become lists that every lookup scans, and
 the solver keeps its valuation as a chain of closures, one per update.
 
 The code that runs is a small part of the development (@tab:sizes). Code
-export keeps only the definitions that #isaconst("run_voblint") depends on and
-drops every proof, so the theories and the imported part of the solver shrink
+generation keeps only the definitions that #isaconst("run_voblint") depends on and
+drops every proof, so the theories and the imported part of the vendored TD solver shrink
 to the generated module. The handwritten OCaml around this module is smaller
 still. Of the code that runs, it is the only part that has to be checked by
 hand, alongside the trusted code generator and OCaml compiler.
@@ -162,7 +162,7 @@ hand, alongside the trusted code generator and OCaml compiler.
       link(site("Voblint/index.html"))[Isabelle theories],
       [#stat("isabelle.lines") lines],
       [proved, #stat("isabelle.theories") theories],
-      link(site("Unsorted/TD/index.html"))[vendored solver, imported part],
+      link(site("Unsorted/TD/index.html"))[vendored TD solver, imported part],
       [#stat("solver.used.lines") lines],
       [proved by Tilscher et al. @tilscher26],
       link(repo-blob + "cli")[handwritten OCaml],
@@ -179,7 +179,7 @@ hand, alongside the trusted code generator and OCaml compiler.
     are measured on the repository at build time.],
 ) <tab:sizes>
 
-The proofs say nothing about running time, and the exported code can be very
+The proofs say nothing about running time, and the generated code can be very
 inefficient. Profiling revealed one case. A sampling profile of a program of
 256 chained assignments attributed most of the CPU time to a single
 function. The generated
@@ -191,22 +191,22 @@ without changing any theorem (#isathm("init_publications_code")), and on the sam
 procedures of eight statements #_speedup("procs512") times faster, in one
 measurement each
 (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded]).
-Finding further inefficiencies and improving the exported code is future work.
+Finding further inefficiencies and improving the generated code is future work.
 
 == Tracing solver steps without changing the proofs #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 To explain a run, the command-line tool and the playground can trace the
-solver's steps. The trace records when each unknown is queried, which update
+solver's steps. The solver trace records when each unknown is queried, which update
 destabilizes which unknown, and where widening applies. Goblint's tracing of
 its top-down solvers reports the same events. Tracing must leave the definitions and proofs of
-the vendored solver @tilscher26 untouched. Voblint therefore adds tracing only to the equations
+the vendored TD solver @tilscher26 untouched. Voblint therefore adds tracing only to the equations
 that code generation translates. Every traced equation reports each step
 through one constant, #isaconst("trace_event"), which is defined as the unit
 value $()$ and so does nothing in the logic. Each traced equation is thus
 provably equal to the one it replaces (for example
 #isathm("solve_rec_c_traced")). Isabelle's code generator takes the
 equations it translates from a set of _code equations_, which a theory may
-change. The theory removes the vendored solver's equations from this set
+change. The theory removes the vendored TD solver's equations from this set
 (`[code del]`) and declares the traced ones instead (`[code]`), so the
 vendored definitions and proofs stay untouched, and one generated analyzer
 serves traced and untraced runs alike. A #isacmd("code_printing") declaration then tells the code generator to emit,
@@ -218,7 +218,7 @@ solver's values alone.
 The command-line tool prints the events with `--trace`, and the playground
 replays them step by step on the solved graph (@fig:replay-still). The replay
 shows the order of the solve, which the solved values alone hide, such as when
-a call creates a new callee context. The trace itself is unverified, but it
+a call creates a new callee context. The solver trace itself is unverified, but it
 never feeds back into a result, so a report computed with tracing on is the
 same report as without it.
 
@@ -227,19 +227,19 @@ same report as without it.
 == Unverified parsing, rendering, and playground <sec:ocaml-boundary>
 
 The generated #isaconst("run_voblint") works on a syntax tree and returns a
-typed answer, whereas a user writes program text and reads a report.
-Handwritten, unverified code bridges both ends. On the input side, an
-`ocamllex` lexer and a Menhir parser turn the program text into an
+typed answer, whereas a user writes source text and reads a report.
+Unverified handwritten OCaml bridges both ends. On the input side, an
+`ocamllex` lexer and a Menhir parser turn the source text into an
 #isatype("imp_prog") and record each check's source position in its label. On
 the output side, the generated #isaconst("render_report") turns the report's
-states into text, and handwritten code either prints the command-line report,
+states into text, and handwritten OCaml either prints the command-line report,
 placing each check at the position its label carries, or serializes the answer
 as JSON, from which the playground draws the graph and marks the verdicts and
 diagnostics in the editor. The command-line tool and the playground share the
 parser, the generated module, and the code that turns a request into an
 analysis configuration. They differ only in their surroundings, since the
 command-line tool manages processes and files and the playground's worker
-exchanges JSON with the page. The code export maps HOL's integers to
+exchanges JSON with the page. The code generator maps HOL's integers to
 arbitrary-precision Zarith integers, as VIMP requires (@sec:vimp-vs-c).
 
 @fig:shell shows, for the program below, the call that #isaconst("run_voblint")
@@ -278,7 +278,7 @@ the states into text, serialized as for the playground.
 
 The #link(site("playground.html"))[playground] runs the analyzer in the
 browser. Its toolbar sets the configuration of #isaconst("run_voblint") and
-switches the tracer of @sec:tracing, and the source-level theorem covers every
+toggles the tracing of @sec:tracing, and the end-to-end soundness theorem covers every
 configuration it can select (#isathm("run_voblint_source_sound")).
 @fig:pg-overview shows one run.
 
@@ -295,7 +295,7 @@ configuration it can select (#isathm("run_voblint_source_sound")).
     "solve-replay-still",
     width: 72%,
     [one step of the solver replay for the calls of `bump`: the
-      graph shows each unknown's value at this step, and the trace beside it
+      graph shows each unknown's value at this step, and the solver trace beside it
       marks the step's line. Settings #playground-settings("solve-replay-still")],
   ),
   <fig:replay-still>,

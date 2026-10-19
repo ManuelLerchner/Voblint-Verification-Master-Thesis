@@ -71,7 +71,7 @@ the text. The markers below appear throughout the text.
       "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
       label: "01-unbounded_…",
     )],
-    [A blue monospace file name marks a program of the regression corpus,
+    [A blue monospace file name marks a fixture of the regression corpus,
       linked to its file in the repository.],
     [#signval("+"), $absval(ivl(1, 9))$, #absval(raw("1+2ℤ"))],
     [A light purple background marks an abstract value, as opposed to a

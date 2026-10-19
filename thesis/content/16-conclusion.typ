@@ -6,20 +6,20 @@
 Analyzers such as Goblint report facts about every execution of a program, yet
 their soundness usually rests on testing (@ch:intro). This thesis shows that
 the soundness of a Goblint-style analyzer with calling contexts, side effects,
-and a verified solver can be machine-checked from source executions to the
-verdicts of the exported function. The result holds for a scalar language with
+and a verified TD solver can be machine-checked from source executions to the
+verdicts of the analysis function. The result holds for a scalar language with
 recursive procedures and is a partial-correctness result, so it covers every answer the analyzer returns. For a user, a
 #verdict("PROVED") verdict thus holds in every covered execution that reaches
 the check, instead of resting on the tests the analyzer has passed.
 
-The end-to-end theorem holds for every report #isaconst("run_voblint") returns,
-under every configuration it offers (@sec:headline). Activation traces give
+The end-to-end soundness theorem holds for every report #isaconst("run_voblint") returns,
+under every analysis configuration it offers (@sec:headline). Activation traces give
 contexts a concrete meaning, and splitting the collected stores by context
 loses no execution (@sec:contract). Domains, context policies, cooperating
 analyses, and the solver each meet their own obligations, and generic theorems
-compose them (@sec:eq-discharge). The proved function is the analyzer that the
+compose them (@sec:eq-discharge). The analysis function is the analyzer that the
 command-line tool and the playground run (@ch:executable). Finally, the
-premises of the main theorems can hold, and the remainder obligation rejects a
+premises of the end-to-end theorem and its variants can hold, and the remainder obligation rejects a
 real defect (@ch:evaluation). On concrete programs, the evaluation also shows
 that neither contexts nor update rules have a setting that is best everywhere
 (@sec:eval-precision).
@@ -60,7 +60,7 @@ favor of the activation traces of @ch:traces. A
 explains this change, and an earlier
 #link(repo-blob + "docs/history/ACTIVATION_SEMANTICS_MODEL_DECISION.md")[decision study]
 had judged the alternatives by their fidelity to Goblint and by whether
-the concrete semantics stays independent of the analysis. Local and global values, call strings, the
+the concrete semantics stays independent of the analysis. Local state and analysis globals, call strings, the
 relational domain, and finally cooperating analyses were then each added on top
 of this foundation without major rewrites of it. Each larger change followed a written
 plan, and more than a hundred of these documents remain in the repository's
@@ -72,7 +72,7 @@ fixed, agents wrote many of the proofs. They also largely wrote the software
 around the formalization, including the browser playground (@ch:executable), the
 regression corpus with its ports of Goblint tests, the source tooling
 `isar-tools` (@sec:isar-tools), and the checks that keep the theories, the
-analyzer, the website, and this thesis consistent (@sec:voblint-repo). This
+analyzer, the project site, and this thesis consistent (@sec:voblint-repo). This
 tooling, `isar-tools` in particular, proved valuable for maintaining a codebase
 that kept growing throughout the project (@sec:isar-tools). Without this help, the work would likely have been limited to the core theorems. Collaborating with agents proved effective for moving the formalization
 forward, and the same approach suits future extensions. A change to the
@@ -116,7 +116,7 @@ the evidence for precision rests on examples. No precision or completeness theor
 corpus is small and its expected verdicts were set by hand (@sec:eval-corpus),
 and no agreement rate with Goblint is measured (@sec:rel-goblint).
 
-Neither limit weakens the soundness theorem itself. Both instead mark where the
+Neither limit weakens the end-to-end soundness theorem itself. Both instead mark where the
 result currently stops, and each names a direction in which Voblint can be extended.
 
 == Extending Voblint towards C and Goblint <sec:outlook-extending>

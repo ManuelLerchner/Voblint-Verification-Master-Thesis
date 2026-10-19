@@ -21,13 +21,13 @@ not the agent, decide whether the repository is consistent.
 == The repository
 
 One repository holds everything this thesis describes: the Isabelle theories,
-a submodule reference to the vendored solver, the exported analyzer with its
+a submodule reference to the vendored TD solver, the exported analyzer with its
 command-line tool and playground, the regression corpus, and the sources of
 this thesis. Each release is archived on Zenodo with a citable DOI @voblint,
 and the project site hosts the playground, the explainer, and the rendered
 theories that every Isabelle name in this thesis links to.
 
-The vendored solver of Tilscher et al. @tilscher26 carries four changes made
+The vendored TD solver of Tilscher et al. @tilscher26 carries four changes made
 for this thesis, each proposed upstream and none changing the algorithm. They
 restore the build under Isabelle2025-2 @td15, remove the stabilization
 assumptions from the classes #isalocale("widening") and
@@ -78,10 +78,10 @@ printer, so the unverified parser (@fig:intro-trust) and the syntax the proofs
 use come from one language description. An analysis manifest names each
 analysis, its value type, and the theories that prove it sound. From it, a
 generator writes the registration of each numeric domain
-(@sec:instances-supply) and the combined state of @ch:cooperation, and Isabelle
+(@sec:instances-supply) and the product state of @ch:cooperation, and Isabelle
 checks every generated proof. The generator exists because this repetition
 lies outside what a theory can express. Each domain is registered once per
-context policy and update rule, and the combined state has one field per
+context policy and update rule, and the product state has one field per
 analysis, each of a different type. A dependently typed logic could express
 such a heterogeneous structure inside the logic @chlipala13cpdt[ch. 9], but
 HOL's simple types cannot.
@@ -157,7 +157,7 @@ HOL's simple types cannot.
         (1, 4.5),
         link(
           repo-blob + "src/Executable_Surface/CLI/generated/MCP_Carrier.thy",
-        )[combined state of all analyses],
+        )[product state of all analyses],
         <m2>,
       ),
       gen(<m>, <m1>),
