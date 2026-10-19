@@ -21,7 +21,7 @@
   cells
 }
 
-= What a Report Guarantees <ch:results>
+= From Solutions to Verdicts <ch:results>
 
 This chapter answers what the analyzer's output guarantees about the
 executions of the source program. Solving the equation system of
@@ -176,7 +176,7 @@ state at $v$ describes satisfies every definite verdict at $v$, that is,
 verdict is the join of its states' verdicts, which holds for every report
 #isaconst("run_voblint") returns (#isathm("run_voblint_consistent")).
 
-== The chain at one check <sec:chain>
+== The soundness chain at one check <sec:chain>
 
 Let $"res"$ be a report #isaconst("run_voblint") returns for a program $p$,
 $g$ = #isaconst("prog_cfg") $p$ its compiled graph, $cal(G)$ =

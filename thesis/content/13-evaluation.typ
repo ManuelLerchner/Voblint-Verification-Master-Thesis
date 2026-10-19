@@ -61,7 +61,7 @@ semantics at that node is empty. The source runs are proved by rule application,
 cover a definite truth verdict, #verdict("PROVED"), and the reachability
 verdict #verdict("DEAD").
 
-== Do the obligations exclude real errors? <sec:eval-1161>
+== Obligations against real errors <sec:eval-1161>
 
 _Evidence: machine-checked, and executable against a defect documented
 upstream._ The coverage contract and the domain obligations are long, so a
@@ -142,7 +142,7 @@ $[-7, -5]$, refutes the first check, and proves the second.
     both executions.],
 ) <fig:goblint-1161>
 
-== Precision, cost, and modularity on concrete programs <sec:eval-precision>
+== Precision, cost, and modularity <sec:eval-precision>
 
 The theorem says nothing about precision, since an analyzer that answers
 #verdict("UNKNOWN") everywhere satisfies it (#isathm("unknown_everywhere_sound")). We therefore show on concrete programs what each mechanism gains. Each example below fixes the concrete behavior first, then

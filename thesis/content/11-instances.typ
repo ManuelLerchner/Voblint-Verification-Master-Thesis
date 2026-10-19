@@ -413,7 +413,7 @@ The order analysis runs on the relational state of @sec:rel-state. After an
 assignment has forgotten the pairs involving the changed variable, it asks the
 shared query channel how the new value relates to each variable, and
 every active analysis, the order analysis included, may contribute an answer
-(@sec:coop-catalogue). In the program below, the guard `x < y` tells Interval
+(@sec:coop-mcp). In the program below, the guard `x < y` tells Interval
 nothing about either variable, so it keeps
 #state("order-alone-interval", "12:5") and reports
 #verdict("order-alone-interval", "12:5") at the first check. The order

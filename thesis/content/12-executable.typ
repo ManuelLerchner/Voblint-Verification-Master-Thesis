@@ -142,7 +142,7 @@ represented function, as the specification's collapse requires, and a state
 it keeps is nonempty, which is where the numeric transfer commutes
 (#isaconst("live_default_st")).
 
-== From theorem to code #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
+== Code generation #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 The previous section replaced function states with carriers, and
 @sec:termination replaced the solver's domain predicate with the executable

@@ -6,14 +6,14 @@
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, ppoint, snapshot-var
 #import "../lib/claims.typ": claim-ref
 
-= What an Analysis Supplies <ch:analysis-interface>
+= From Domains to Analyses <ch:analysis-interface>
 
 @ch:domains ended with laws about one abstract state. Its order agrees with
 its meaning, and its operations over-approximate the concrete ones. The
 obligations of @ch:traces, however, speak about edges, calls, and contexts, so
-something must say what an analysis does at each step of a program. For a
-non-relational domain, @sec:domain-contract gave one answer, since its
-primitives determine every edge. That answer does not cover every analysis. A
+something must say what an analysis does at each step of a program. The
+non-relational domains of @ch:domains settle this through their primitives,
+which determine every edge (@sec:domain-contract). Other analyses need more. A
 relational analysis does not store one value per variable (@sec:rel-state), an
 analysis may keep facts that belong to no program point, and analyses may need
 each other's facts to be precise (@ch:cooperation). Calls, moreover, need more
@@ -40,8 +40,7 @@ supplies, for each action $a$, an abstract transfer $asem(a)$. The transfer is
 sound if it loses no successor:
 $ s in conc(d) and s' in #isai("edge_step a s") ==> s' in conc(asem(a) thin d). $
 This is the abstract counterpart of the obligation #oblig("INTRA") of
-@ch:traces for one edge. The interface has one transfer per kind of action,
-named after the corresponding method of Goblint's `Spec`.
+@ch:traces for one edge.
 
 A call cannot be handled by one such transfer. After it returns, the caller's
 own locals are the ones from before the call, while the globals and the result
@@ -195,8 +194,7 @@ solver @seidl26[§6]. Voblint adopts this design. Its transfer (#isatype("man_tr
 #isaconst("man_global") $v$ and publishes $d$ to it with #isaconst("man_sideg") $v$ $d$. As a result, the equations of @ch:equations depend on an analysis
 global only where a transfer actually reads it. A transfer that is a pure function of the local state reads only the state at
 the edge's source and publishes nothing
-(#isathm("sp_compile_transfer_program_local_transfer")). By default, the
-numeric analyses are of this kind.
+(#isathm("sp_compile_transfer_program_local_transfer")).
 
 With analysis globals, a local state alone no longer fixes which stores it
 describes, because its meaning may depend on their values. The analysis
@@ -254,10 +252,13 @@ run ends with `y = 1`. Flow-sensitively, Sign carries #signval("+") from
 `set`'s exit into `get`'s entry and derives #signval(_mf("y")) (claim
 #claim-ref("mixed-flow-sign")). In sequential VIMP, the flow-insensitive
 placement can thus cost precision.
-The placement suits multithreaded programs, where the simplest thread-modular
-analysis keeps shared globals flow-insensitively @seidl26[§1, Ex. 4] @saan26phd[§5.3.1].
 
-Like Goblint and Apinis et al. @apinis12[§5] @seidl26[§3], the analyzer keeps
-one unknown per program global. The placement meets the analysis contract for the analyzer's combined state
-(#isathm("keyed_split_contract"), #isathm("mcp_keyed_dg_analysis")), so
-#isathm("run_voblint_source_sound") covers it.
+The flow-insensitive placement matters beyond this example. Another thread may
+write a shared global at any point, so the simplest thread-modular analysis
+keeps shared globals flow-insensitively @seidl26[§1, Ex. 4] @saan26phd[§5.3.1]. More generally, mixed flow-sensitivity
+lets an analysis choose per fact whether precision at each program point is
+worth a value per point and context.
+The placement is proved to meet the analysis contract for the analyzer's
+combined state (#isathm("keyed_split_contract")), so the source-level theorem
+covers both placements, and a future extension with threads can build on a
+verified flow-insensitive core.

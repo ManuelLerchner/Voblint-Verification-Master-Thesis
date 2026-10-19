@@ -142,7 +142,7 @@ stronger transfer functions than the order analysis could also answer the
 numeric analyses at branches (@sec:relational). Further query kinds would each
 need a truth relation, and analyses with their own globals would need the
 combination to keep these globals apart, as Goblint's MCP does
-(@sec:coop-catalogue).
+(@sec:coop-mcp).
 
 Every shipped analysis answers a single entry pair per call, although the
 interface admits several (@sec:calls). Path-sensitive analyses that split a
@@ -170,7 +170,7 @@ many unknowns and a widening that stabilizes, a law the vendored class
 
 Each new analysis only has to meet its own obligations, which mention neither
 the other analyses nor contexts, the solver, or the equations
-(@sec:coop-catalogue). This suits development with
+(@sec:coop-mcp). This suits development with
 AI agents (see #link(<ai-use>)[the statement on the use of generative AI]).
 Formal verification and agents complement each other here. An agent may
 propose definitions and proofs, but Isabelle checks every proof, and the batch

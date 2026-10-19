@@ -931,8 +931,8 @@ as the interval analysis of Nipkow and Klein does @nipkow14[§13.8.3].
 
 == The complete domain interface #thy-badge("Voblint_Nonrelational", "Nonrelational_Transfer") <sec:domain-contract>
 
-The chapter opening asked what a domain must provide. @fig:domain-carrier
-collects the answer, which has two parts. The _carrier operations_ serve the
+A domain provides two groups of operations, which @fig:domain-carrier shows
+with their laws. The _carrier operations_ serve the
 solver: the order, the join, bottom and top, widening and narrowing, the
 emptiness test, and the printer, tied to the concretization by the laws of
 @sec:domain-carrier-laws. The _primitives_ mirror the program's own

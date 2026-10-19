@@ -24,12 +24,12 @@ below refer to this baseline:
 | # | Chapter | # | Chapter |
 | --- | --- | --- | --- |
 | 1 | Introduction | 9 | Solving the Equations |
-| 2 | Background | 10 | What a Report Guarantees |
+| 2 | Background | 10 | From Solutions to Verdicts |
 | 3 | Programs and Control-Flow Graphs | 11 | Five Domains and an Order Analysis |
 | 4 | Traces and the Coverage Contract | 12 | From Theorem to Tool |
 | 5 | Abstract Domains | 13 | Evaluation |
-| 6 | What an Analysis Supplies | 14 | Related Work |
-| 7 | How Analyses Cooperate | 15 | Conclusion |
+| 6 | From Domains to Analyses | 14 | Related Work |
+| 7 | Cooperating Analyses | 15 | Conclusion |
 | 8 | Equations, Contexts, and Routing | A | `isar-tools` |
 
 Sections are named by their Typst labels, which survive moves.
@@ -215,9 +215,9 @@ and 2 appendices.
     it completes the non-relational interface, it is on the proof path (F-1),
     and the level order (idea, theorem, encoding) is respected because it comes
     after the interface is complete.
-- **Ch. 6: What an Analysis Supplies.** Unchanged in boundaries (pass 2 already put
+- **Ch. 6: From Domains to Analyses.** Unchanged in boundaries (pass 2 already put
   the meaning of the contract before its encoding).
-- **Ch. 7: How Analyses Cooperate.** Unchanged. The mutual Int/Order example moves
+- **Ch. 7: Cooperating Analyses.** Unchanged. The mutual Int/Order example moves
   here from Ch. 13 (R-21), so the claim "analyses cannot be solved one after
   another" is shown where it is made.
 
@@ -228,7 +228,7 @@ and 2 appendices.
   (if the build passes) as the formal form of the non-circularity argument.
 - **Ch. 9: Solving the Equations.** Update rules before buffering (R-7). The
   certificate narrative stays last.
-- **Ch. 10: What a Report Guarantees.** *Question:* What does the user read, and why
+- **Ch. 10: From Solutions to Verdicts.** *Question:* What does the user read, and why
     is each verdict sound? Reordered: report (`sec:report`), verdicts
     (`sec:verdicts`), **the chain** (`sec:chain`, now presenting
     `run_voblint_spine` as the per-policy, context-explicit statement with the
@@ -454,15 +454,15 @@ Part III Building Sound Analyses
   5  Abstract Domains
      5.1–5.7 as now (quirks cut; DefExc folded into 5.7)
      5.8 Executable states                                (sec:represented-function, from Ch. 12)
-  6  What an Analysis Supplies                            (unchanged)
-  7  How Analyses Cooperate                               (+ mutual example from Ch. 13)
+  6  From Domains to Analyses                            (unchanged)
+  7  Cooperating Analyses                               (+ mutual example from Ch. 13)
 Part IV  From Analyses to Verdicts
   8  Equations, Contexts, and Routing                     (+ corollary display)
   9  Solving the Equations                                (update rules before buffering)
-  10 What a Report Guarantees
+  10 From Solutions to Verdicts
      10.1 From solution to report                        (sec:report)
      10.2 Verdicts                                       (sec:verdicts)
-     10.3 The chain at one check                         (sec:chain, spine as its theorem)
+     10.3 The soundness chain at one check                      (sec:chain, spine as its theorem)
      10.4 The source-level theorem                       (sec:headline)
      10.5 What a verdict says about executions           (sec:verdict-meaning, + closing)
 Part V   Instances, Implementation, and Evaluation

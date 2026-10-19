@@ -553,7 +553,7 @@ interface → one paragraph: the interface also admits non-pointwise states
 (relational state, defined in Ch. 11) and excludes carriers without least
 upper bounds (DefExc).
 
-### Chapter 6: What an Analysis Supplies
+### Chapter 6: From Domains to Analyses
 
 #### Overarching story (actual) (Ch. 6)
 
@@ -594,7 +594,7 @@ globals: environments `γ(d, e)`, the manager, and the placement of program
 globals → the Isabelle locale reading (τ, `dg_state`, `key`) moved to Ch. 8
 or Ch. 9 where those objects are defined.
 
-### Chapter 7: How Analyses Cooperate
+### Chapter 7: Cooperating Analyses
 
 #### Overarching story (actual) (Ch. 7)
 
@@ -690,7 +690,7 @@ Need a post-solution → certificate (what the solver guarantees, C1-C4) →
 backward/forward → adapters: trees, seeds, product, *update rules, then
 buffering* → example solve → termination as the scope of the guarantee.
 
-### Chapter 10: What a Report Guarantees
+### Chapter 10: From Solutions to Verdicts
 
 #### Overarching story (actual) (Ch. 10)
 
