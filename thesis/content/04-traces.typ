@@ -435,7 +435,7 @@ strings bounded to the $k$ most recent call sites, and entry-state contexts
 partial tabulation, which tabulates procedure summaries only for the calling
 contexts the analysis meets @saan26phd[§3.3] @schwarz25phd[§5, p. 110]. Unlike
 bounded call strings, they need not form a finite set, so the analysis may not
-terminate (@sec:termination). The traces themselves store no context, since
+terminate (@sec:certificate). The traces themselves store no context, since
 the concrete semantics should not change with the analysis. The policy is
 instead a parameter of the theorems, which therefore hold for every policy. It
 may even be defined from the analysis result, as the entry-state policy is

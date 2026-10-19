@@ -27,7 +27,7 @@ This chapter answers what the analyzer's output guarantees about the
 executions of the source program. Solving the equation system of
 @ch:equations with the solver of @ch:solving yields an abstract state for
 every pair of a CFG node and a context the solver reached, and a value for
-every global unknown. By @sec:cert-forward, these states cover every
+every global unknown. By @sec:certificate, these states cover every
 execution. A user, however, reads neither states nor contexts. The user reads
 a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
@@ -96,7 +96,7 @@ program, a store, and a stack of frames, so there is no context it could be
 compared with. A user asks what holds at a program point, whichever call led there, and
 a guarantee per CFG node answers exactly this question. Inside the proof the
 contexts still matter: each per-context state over-approximates the activation
-collecting semantics of its context (@sec:cert-forward), and the chain of
+collecting semantics of its context (@sec:certificate), and the chain of
 @sec:chain passes through this fact. The report keeps the per-context states
 for inspection, and the Analysis view displays them.
 
@@ -408,7 +408,7 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
     analyzer returned a report. Input validity and solver termination are
     therefore not separate premises (@sec:report), and the theorem is a
     partial-correctness result: termination is not proved for every program
-    (@sec:termination).
+    (@sec:certificate).
 ]
 
 The conclusions are stated at graph nodes, but a source configuration names
@@ -525,6 +525,6 @@ contexts split without loss (@ch:traces), every context's stores lie in the
 state the solver returned for it (@ch:equations, @ch:solving), and the report
 and its verdicts contain those states. Each verdict therefore holds for every
 covered execution that reaches its check, for every configuration the
-analyzer offers and every report it returns. @sec:termination and
+analyzer offers and every report it returns. @sec:certificate and
 @sec:trust-boundary state what the theorems do not cover: termination and the
 components outside the proof.

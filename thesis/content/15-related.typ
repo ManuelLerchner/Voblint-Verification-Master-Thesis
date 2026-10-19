@@ -127,7 +127,7 @@ and a generic solver computes their solution. Verasco reanalyzes functions at ev
 possible recursive call (@tab:state-of-art, @jourdan15[§4]). Its extracted
 analyzer runs with unbounded fuel, and termination is proved only on paper
 @jourdan16phd[§§3.1.2, 4.3.1], so its theorem, like Voblint's
-(@sec:termination), covers only the results it returns.
+(@sec:certificate), covers only the results it returns.
 Both state the soundness of abstract operations through their concretization.
 
 The earlier value analysis of Blazy et al. @blazy13 does not verify
@@ -309,12 +309,27 @@ Stemmler et al. @stemmler25 sound, and refine the solver to executable
 code. For precise updates without widening and narrowing, they also prove that
 the solver returns the least partial post-solution, provided it terminates and
 the equation system satisfies their monotonicity conditions.
-Tilscher et al. @tilscher26jar treat the termination of the solver without
-side effects; @sec:termination explains why these results do not apply to
-Voblint's equations.
+Tilscher et al. @tilscher26jar prove termination for top-down solvers without
+side effects over a finite type of unknowns. The solver with separate widening
+and narrowing phases terminates given widening and narrowing operators whose
+iterations are ultimately stable @tilscher26jar[Thm. 2], and the warrowing
+solver additionally needs a precise widening and monotonic right-hand sides and
+dependencies @tilscher26jar[Cor. 1]. Voblint's unknowns pair nodes of an
+infinite type with contexts, so these theorems apply to none of its
+configurations (@sec:certificate). Seidl and Vogler prove on paper that their
+side-effecting solver terminates on every system in which side effects target
+only unknowns without a right-hand side, as long as only finitely many unknowns
+are encountered @seidl21[§9, Thm. 5], for widening and narrowing operators
+whose iteration sequences are ultimately stable @seidl21[§3]. The joining
+update rules never widen, so this result does not carry over to them. For
+partial tabulation over abstract calling contexts, Schulze Frielinghaus et al.
+give a local solver that terminates on every non-recursive program, even over
+lattices with infinite ascending or descending chains
+@schulzefrielinghaus18. Both programs that exceed their time limits in
+@sec:eval-precision are recursive.
 
 Voblint includes a copy of the solver of @tilscher26. The algorithm, the update rules, and their proofs belong to that work. The copy carries local
-refactorings, such as renamings and an interface theory (@sec:upstream-td). Voblint gives the equations their
+refactorings, such as renamings and an interface theory (@sec:voblint-repo). Voblint gives the equations their
 meaning: the certificate #isaconst("part_post_solution", thy: "Basics_side")
 implies coverage of the concrete traces, and compiler correctness transfers the
 coverage to source executions. The solver Voblint runs warrows every local
@@ -360,7 +375,7 @@ Contexts also determine how many unknowns a solve creates. The context lifters
 of Erhard et al. @erhard25 bound the number of contexts on the fly and
 guarantee finitely many contexts whenever the solver updates each unknown
 finitely often @erhard25[Abstract]. Voblint's entry-state policy has no such bound, which is one reason the
-termination of the solve is not proved (@sec:termination).
+termination of the solve is not proved (@sec:certificate).
 
 == Goblint, local traces, and thread-modular analysis <sec:rel-goblint>
 

@@ -145,7 +145,7 @@ it keeps is nonempty, which is where the numeric transfer commutes
 == Code generation #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 The previous section replaced function states with carriers, and
-@sec:termination replaced the solver's domain predicate with the executable
+@sec:certificate replaced the solver's domain predicate with the executable
 #isaconst("solve_c", thy: "TD_side_upd_rule"). Every function that
 #isaconst("run_voblint") uses therefore has code equations, and Isabelle's
 code generator @haftmann10 can export it. One #isacmd("export_code")
@@ -286,7 +286,7 @@ whenever #isaconst("run_voblint") returns an #ctor("Analysed") report.
 
 To explain a run, the command-line tool and the playground can trace the
 solver's steps: which unknown is queried when, which update destabilizes which
-unknown (@tab:eq-trace), where widening applies, as Goblint's tracing of its
+unknown, where widening applies, as Goblint's tracing of its
 top-down solvers reports them. Tracing must leave the definitions and proofs of
 the vendored solver @tilscher26 untouched. Voblint therefore supplies traced
 versions of its code equations that report each
@@ -314,7 +314,7 @@ shows one step of the replay.
   playground-figure(
     "solve-replay-still",
     width: 72%,
-    [one step of the solver replay for the calls of `bump` (@tab:eq-trace): the
+    [one step of the solver replay for the calls of `bump`: the
       graph shows each unknown's value at this step, and the trace beside it
       marks the step's line. Settings #playground-settings("solve-replay-still")],
   ),
@@ -350,12 +350,29 @@ it writes. Deterministic tooling around the agent made its work usable at this s
 the checks, not the agent, decide whether the repository is consistent.
 
 Everything this thesis describes is published in one repository: the Isabelle
-theories, a submodule reference to the vendored solver, whose repository is
-private (@sec:upstream-td), the exported analyzer with its command-line tool and playground, the
+theories, a submodule reference to the vendored solver, the exported analyzer with its command-line tool and playground, the
 regression corpus, and the sources of this thesis. Each release is archived on
 Zenodo with a citable DOI @voblint. The project site hosts the
 playground, the explainer, and the rendered theories that every Isabelle name in
 this thesis links to.
+
+The vendored copy of the solver of Tilscher et al. @tilscher26 carries four
+changes made for this thesis. Each was proposed upstream, and none changes the
+algorithm. The first restores the build under Isabelle2025-2 @td15. The second
+removes the well-foundedness assumptions from the solver's
+#isalocale("widening") and #isalocale("narrowing") classes @td13. They say that
+widening and narrowing stabilize, which only termination proofs use, so a
+domain need not provide a stabilizing widening (@sec:domain-carrier-laws). The
+third renames short record fields and constructors, such as `c`, `W` and `N`,
+that took these names away from downstream theories, and adds one interface
+theory per solver family @td14. The fourth adds facts about the solver's own
+definitions that Voblint had proved on its side @td16, among them
+#isathm("solve_dom_of_solve_c") and #isathm("finite_stabl_solve"), which
+#isathm("td_certified_solver") uses (@sec:certificate). At the time of writing,
+all four pull requests await review. The solver's repository is private and
+accessible only by invitation, so the development cannot yet be built from
+public sources alone. There are plans to publish the solver in the Archive of
+Formal Proofs.
 
 A development of this size drifts when one fact is written down twice. The
 repository therefore keeps a few sources and derives everything else from them

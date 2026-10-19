@@ -83,7 +83,7 @@ as CIL would join the parser in the trust boundary unless it is verified.
 
 The first limits concern what the theorem covers. It is a partial-correctness
 result and covers every answer the analyzer returns. Termination is not proved for the solve or for the reduction of Int, and regression programs
-exist whose solves do not finish (@sec:termination, @sec:reduced-product). The
+exist whose solves do not finish (@sec:eval-precision, @sec:reduced-product). The
 theorem concerns VIMP, a scalar language without pointers, heap, or memory model. VIMP has unbounded integers, defined division by zero, and zero-initialized callee locals, so a verdict about a VIMP program does not
 transfer to a C program with the same text (@sec:vimp-vs-c). We argue, but do not prove, that #isaconst("pstep") models the intended language. The
 simulation from source runs to graph runs and the representation of graph runs
@@ -162,7 +162,7 @@ have to be redone for local side effects.
 
 A termination theorem would guarantee an answer for every program. The
 existing total-correctness results do not apply to any configuration of
-Voblint (@sec:termination). Following them, such a theorem would need finitely
+Voblint (@sec:certificate). Following them, such a theorem would need finitely
 many unknowns and a widening that stabilizes, a law the vendored class
 #isalocale("warrowing") does not state (@sec:widening).
 

@@ -577,7 +577,7 @@ $
 The #isaconst("EA_Body") edge marks the start of an activation and changes no
 store. The return edge from $r$ carries no value. It is emitted for every body,
 so in a body that always returns, $r$ and its edge are dead code.
-@sec:cert-forward explains why the compiler keeps them. Every edge into
+@sec:certificate explains why the compiler keeps them. Every edge into
 $ctor("FunctionResult") thin p$ is therefore a return edge.
 
 These rules give every compiled graph a fixed shape. Call edges always enter a

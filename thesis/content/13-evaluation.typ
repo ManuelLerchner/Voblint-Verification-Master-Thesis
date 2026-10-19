@@ -252,10 +252,24 @@ fixture header attributes the loss to the recursive call's own contribution:
 per-origin warrowing widens it to $-infinity$, `a + 2` may then be zero, and
 the division loses all information. We attribute Warrow's result to the fact that it joins in `main`'s argument $-1$ first, which keeps the lower bound. On the growing recursion the joining
 rules give no answer within the limit. The argument grows without bound, so we
-expect, without a proof, that their solve diverges (@sec:termination); the
-timeout alone does not show this (@sec:trust-boundary). Bounded narrowing, at
-its default bound 5, reaches the verdicts of per-origin warrowing on all four
-programs.
+expect, without a proof, that their solve diverges, although the timeout alone
+does not show this (@sec:trust-boundary). Bounded narrowing, at its default
+bound 5, reaches the verdicts of per-origin warrowing on all four programs.
+
+*Termination.* _Evidence: proved for finite context spaces, executable for
+divergence._ Under the unit context the unknowns of a compiled program form a
+finite set (#isathm("compiled_unit_vars_finite")), and bounded call strings
+over a compiled program form a finite space
+(#isathm("compiled_call_strings_finite")). Under entry-state contexts with
+Interval, a recursion that changes its argument at every level demands a fresh
+context at every level, and widening bounds the values of existing unknowns
+but not their number (#fixture(
+  "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
+  label: "01-unbounded_context_chain_diverges",
+)). The solve exceeds its time limit, and we expect, without proof, that it
+diverges. Goblint's configuration for the SV-COMP competition avoids this
+explosion by omitting intervals from the contexts of recursive functions
+@saan26phd[§3.4.3].
 
 
 *Queries between analyses.* _Evidence: executable, and evaluated._ The two

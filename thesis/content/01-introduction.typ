@@ -503,7 +503,7 @@ The theorem has the following limits (@sec:limitations).
 - _Adequacy and trusted components._ We argue, but do not prove, that #isaconst("pstep") models the intended language (@sec:vimp-vs-c). The parser, the code generator, and the target
   toolchains lie outside the proof (@sec:trust-boundary).
 - _Partial correctness._ The theorem covers every report the analyzer returns.
-  Termination of the solve is not proved for every program (@sec:termination).
+  Termination of the solve is not proved for every program (@sec:certificate).
 - _Precision and cost._ No completeness or general precision ordering is
   proved (@sec:eval-precision). The executable uses the same data
   representations as the proofs. We report no systematic time or memory
