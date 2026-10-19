@@ -6,7 +6,7 @@
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, ppoint, snapshot-var
 #import "../lib/claims.typ": claim-ref
 
-= From Domains to Analyses <ch:analysis-interface>
+= The Analysis Interface <ch:analysis-interface>
 
 @ch:domains ended with laws about one abstract state. Its order agrees with
 its meaning, and its operations over-approximate the concrete ones. The
@@ -29,7 +29,7 @@ about it, so that the framework can discharge the obligations of @ch:traces
 once for every analysis. An analysis supplies a record of abstract operations,
 and the analysis contract states what they preserve.
 
-== Transfers at edges and calls <sec:calls>
+== Edge transfers and the enter/combine protocol <sec:calls>
 
 An ordinary edge of the control-flow graph carries an action $a$, such as an
 assignment or a guard, whose concrete meaning #isaconst("edge_step") is fixed
@@ -115,7 +115,7 @@ Like Goblint's `enter`, enter may return several pairs, one per path in
 Goblint's #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/lifters/specLifters.ml#L722")[path-sensitivity lifter] @apinis14[§5.7]. The analyses
 shipped with Voblint return one, so path-sensitive analyses remain future work.
 
-== The analysis contract #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:sound-core>
+== Local soundness laws of an analysis <sec:sound-core>
 
 The operations of @sec:calls say how an analysis propagates abstract states.
 They do not by themselves guarantee that these states cover the concrete
@@ -166,12 +166,13 @@ callee's final store $t$, the combined state describes the store in which the
 caller continues. Transfers that also use facts without a program point need a
 more general form of these laws, which @sec:analysis-globals states.
 
-== Facts without a program point <sec:shared-facts>
-
-=== Analysis globals #thy-badge("Voblint_Framework", "DG_Manager") <sec:analysis-globals>
+== Facts shared across program points <sec:shared-facts>
 
 Not every fact belongs to one program point. An analysis may keep, for
 example, one range for a global variable `g` that holds throughout the run.
+
+=== Reading and publishing analysis globals #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:analysis-globals>
+
 Seidl et al. describe a Goblint analysis with two domains @seidl26[§6]. The
 local domain $D_L$ holds facts per program point and context, and $D_G$ holds
 the values of _analysis globals_, which are unknowns without a program point. An assignment to `g`
@@ -221,7 +222,7 @@ transfer returns and what it publishes, and #isaconst("combine_out") and
 #isaconst("combine_pub") are the same for combine. An analysis without
 analysis globals ignores $e$ and meets the three laws of @sec:sound-core.
 
-=== Program globals: flow-sensitive or flow-insensitive #thy-badge("Voblint_Framework", "DG_Keyed_Split_Spec") <sec:mixed-flow>
+=== Where program globals are stored #thy-badge("Voblint_Framework", "DG_Keyed_Split_Spec") <sec:mixed-flow>
 
 The contract leaves open where program globals are kept. By default, program globals are part of the local state,
 as in Goblint's default base analysis for single-threaded programs

@@ -116,7 +116,7 @@ ones. This chapter describes how each analysis instead gets one proof
 obligation that does not mention its partners, and why analyses meeting it
 combine into one analysis that meets the analysis contract of @sec:sound-core.
 
-== Questions and answers #thy-badge("Voblint_Framework", "Analysis_Query") <sec:coop-queries>
+== Queries, answers, and channels #thy-badge("Voblint_Framework", "Analysis_Query") <sec:coop-queries>
 
 The analyses must agree on what a question means and on what an answer
 claims. A _query_ asks for a fact about the stores a state describes. Voblint
@@ -164,7 +164,7 @@ By the two laws, the channel answering $ltop$ everywhere holds at every store,
 and the pointwise meet of two channels that hold at $s$ holds at $s$
 (#isathm("query_algebra.channel_holds_inf")).
 
-== Proving an analysis against any channel #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-channels>
+== Proving each analysis against true answers #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-channels>
 
 Interval's assignment in @fig:mcp-step uses the wrapper
 #isaconst("ask_assign"), which any analysis can put around its assignment
@@ -219,7 +219,7 @@ transfer function under the hypothesis that the channels it receives are
 correct @jourdan15[§7], following Astrée @cousot07astree[§§5.3, 6], and Voblint
 applies the same form of proof to Goblint's queries.
 
-== Many analyses over one state #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
+== Combining analyses into one sound analysis #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
 
 The analyses cannot be solved one after another, because each may need the
 other's facts at the same program point and context. In the program below, the exchange runs in both directions, here between the order analysis and Int, the product

@@ -463,7 +463,7 @@ stays dead.
   })
 }
 
-== The meaning of an abstract value #thy-badge("Voblint_Domain", "Abstract_Domain") <sec:domain-carrier-laws>
+== Numeric domains and their concretization laws #thy-badge("Voblint_Domain", "Abstract_Domain") <sec:domain-carrier-laws>
 
 The two requirements of the chapter opening become laws on the carrier of a
 domain (@sec:abs-int), which Voblint represents as an Isabelle type $A$ of
@@ -517,7 +517,7 @@ standard one of @sec:widening, except that widening with $lbot$ returns the
 other operand (#isaconst("widen_ivl_core")), and the narrowing refines only
 infinite bounds (#isaconst("narrow_ivl_td")).
 
-== From values to stores <sec:domain-states>
+== Abstract states as sets of stores <sec:domain-states>
 
 A numeric domain describes the possible values of one variable. The
 obligations of @ch:traces, however, are stated over sets of stores. A store
@@ -584,7 +584,7 @@ relational state of the order analysis instantiates the solver's classes and
 remaining sections of this chapter develop the non-relational case, and
 @sec:rel-state presents the relational one.
 
-== A non-relational state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
+== Pointwise states and the unreachable state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
 
 A non-relational state is represented pointwise. It replaces the integer of a
 store by an abstract value:
@@ -716,7 +716,7 @@ From then on #ctor("Bot") stays #ctor("Bot"). A transfer applied to
 unreachable program point thus keeps the value #ctor("Bot"), and the analysis
 can report it as unreachable.
 
-== Evaluating expressions #thy-badge("Voblint_Domain", "Forward_Domain") <sec:domain-forward>
+== Forward evaluation and truth tests #thy-badge("Voblint_Domain", "Forward_Domain") <sec:domain-forward>
 
 The carrier operations serve the solver. The analysis additionally needs
 operations that mirror the program's own arithmetic, comparisons, and branch conditions. They are called the domain's _primitives_. This section
@@ -743,7 +743,7 @@ $ivl(l, u)$ if the interval excludes $0$, that is, $u < 0$ or $l > 0$, and
 $"Some"("false")$ if $l = u = 0$. Otherwise, it returns $"None"$. So
 $absval(ivl(1, 5))$ is true, $absval(ivl(0, 0))$ is false, and $absval(ivl(0, 5))$ is undecided.
 
-== Answering queries <sec:queries>
+== Answering checks with three-valued queries <sec:queries>
 
 An assertion `__voblint_check(c)` asks whether $c$ holds in every store that
 reaches its program point. The analysis must answer this from the abstract
@@ -850,7 +850,7 @@ the conjunction (@fig:query-tree).
     #_q.verdict.],
 ) <fig:query-tree>
 
-== Learning from a guard #thy-badge("Voblint_Domain", "Backward_Domain") <sec:branches>
+== Refining states at branch guards #thy-badge("Voblint_Domain", "Backward_Domain") <sec:branches>
 
 When the analysis enters a branch, it knows whether the condition held. On the
 true arm of `if (0 < x)`, for example, $x$ is positive. Ignoring this knowledge is sound, since the
@@ -929,7 +929,7 @@ Interval and Sign, for
 instance, do not invert arithmetic and cannot learn $x < 4$ from `x + 1 < 5`,
 as the interval analysis of Nipkow and Klein does @nipkow14[§13.8.3].
 
-== The complete domain interface #thy-badge("Voblint_Nonrelational", "Nonrelational_Transfer") <sec:domain-contract>
+== The domain interface and its derived transfers #thy-badge("Voblint_Nonrelational", "Nonrelational_Transfer") <sec:domain-contract>
 
 A domain provides two groups of operations, which @fig:domain-carrier shows
 with their laws. The _carrier operations_ serve the
@@ -985,7 +985,7 @@ exported code without a further proof (#isathm("exec_local_spec_sound"),
     solver, #swatch(vb.voblint) Voblint.],
 ) <fig:domain-carrier>
 
-== Carriers outside the interface <sec:excluded-carriers>
+== Carriers without least upper bounds <sec:excluded-carriers>
 
 The interface asks more of a carrier than an order with a join. The verified
 solver requires a #isalocale("bounded_semilattice_sup_bot")

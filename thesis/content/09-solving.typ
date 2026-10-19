@@ -33,7 +33,7 @@ partially correct. To use it, Voblint first brings the equations into the form t
 solver accepts and then derives the premises about the solved set from the
 solver's correctness theorem.
 
-== Adapting the equations to the solver <sec:eq-encoding>
+== Encoding the equations for the solver <sec:eq-encoding>
 
 The solver accepts a right-hand side only as a strategy tree, uses one value
 type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, along the lines of Apinis et al.
@@ -42,7 +42,7 @@ and Goblint, needs four things this interface does not offer
 form, and this section explains why each adaptation is needed. Buffering is the
 only adapter applied to a right-hand side after it is built. It changes when
 publications are issued but not what the right-hand side computes, publishes,
-or reads (@sec:eq-buffer). The adapters change the equations, not the solver.
+or reads (@sec:update-rules). The adapters change the equations, not the solver.
 
 #figure(
   table(
@@ -55,7 +55,7 @@ or reads (@sec:eq-buffer). The adapters change the equations, not the solver.
     [value-dependent reads], [strategy trees], [call tree (@sec:eq-trees)],
     [a write to a local unknown], [writes to globals only], [seed (@sec:eq-seed-global)],
     [two value types], [one value type], [product (@sec:global-unknowns)],
-    [two writes to one target], [updates that may not stabilize], [buffering (@sec:eq-buffer)],
+    [two writes to one target], [updates that may not stabilize], [buffering (@sec:update-rules)],
     table.hline(),
   ),
   placement: none,
@@ -68,7 +68,7 @@ or reads (@sec:eq-buffer). The adapters change the equations, not the solver.
     and under warrowing these updates may not stabilize.],
 ) <tab:eq-adapters>
 
-=== Dynamic reads #thy-badge("Voblint_Framework", "Routed_Call_Programs") <sec:eq-trees>
+=== Value-dependent reads as strategy trees #thy-badge("Voblint_Framework", "Routed_Call_Programs") <sec:eq-trees>
 
 A local edge always reads the same unknown, its predecessor. A call, in
 contrast, chooses what to read from values it has already read. In the running
@@ -98,7 +98,7 @@ of the caller once the call has returned. #isaconst("routed_call_program") imple
 this tree and additionally handles bottom entry states and several callees or
 entry pairs.
 
-=== Local entries <sec:eq-seed-global>
+=== Publishing entry states to global seeds <sec:eq-seed-global>
 
 In $t_"call"$ the caller pushes the entry state to the callee with a
 #ctor("Side") step. Otherwise, the equation of the callee's entry would have
@@ -125,7 +125,7 @@ reports #_cli("pg-contexts-none", "a == 6", 3) for `a == 6` with
 #_cli("pg-contexts-none", "a == 6", 4), whose lower bound $-infinity$ comes
 from this widening.
 
-=== One value type #thy-badge("Voblint_Framework", "DG_State") <sec:global-unknowns>
+=== Local and global values in one product #thy-badge("Voblint_Framework", "DG_State") <sec:global-unknowns>
 
 A local unknown holds an abstract state of the analysis's local domain, and an
 analysis global holds a value of its global domain (@sec:shared-facts). The
@@ -166,7 +166,7 @@ Voblint uses the product because its componentwise lattice structure keeps
 the Isabelle proofs simple, at the price of an unused #lbot half in every
 unknown.
 
-== Merging contributions to global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
+== Update rules for global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
 
 A global unknown such as a seed receives contributions from several places.
 The solver merges each new contribution into the value it holds, and this
@@ -237,8 +237,6 @@ rule is more precise on every program, and @sec:eval-precision compares them.
     rules.],
 ) <fig:update-rules>
 
-=== Repeated publications #thy-badge("Voblint_Solver", "Strategy_Tree_Side_Buffering") <sec:eq-buffer>
-
 One right-hand side can publish to the same global unknown twice, for example
 when two calls that resume at the same node are routed to the same callee
 context and write the same seed. The equations read two writes to one target
@@ -271,7 +269,7 @@ analyzer runs, answers the same join as the direct generator of
 result, though not the equations it solves. @sec:outlook-extending discusses a
 solver extension that would make seeds and buffering unnecessary.
 
-== The guarantee of a terminating solve <sec:certificate>
+== Solver certificates and partial correctness <sec:certificate>
 
 The soundness theorem of @sec:eq-discharge needs a post-solution on a set of
 unknowns that contains the program entry and is closed under execution steps.

@@ -128,7 +128,7 @@
   content((0, 8.4), text(9.5pt)[$ltop$])
 })
 
-= Background <ch:background>
+= Abstract Interpretation and Solvers <ch:background>
 
 @sec:state-of-art ended with a plan. Each step from source executions to the
 verdicts should relate two sets of concrete stores, so that a proof can check
@@ -138,7 +138,7 @@ analysis describes the same behavior more coarsely, and finally how a solver
 computes this description. One small counting loop serves as the example
 throughout.
 
-== Executions and the collecting semantics <sec:collecting>
+== Control-flow graphs and the collecting semantics <sec:collecting>
 
 An analysis describes the states a program can be in at each of its points, so
 the points are made explicit first. A _control-flow graph_ has the program
@@ -245,7 +245,7 @@ $lfp f$. As long as $f$ is sound, every post-fixpoint that includes the initial
 states is already a sound result (@sec:abs-int). The verified solver that Voblint reuses therefore
 does not assume monotonicity (@sec:widening).
 
-== Abstract interpretation <sec:abs-int>
+== Concretization and sound transfer functions <sec:abs-int>
 
 The correctness of an abstract result needs a meaning for its elements. Let $U$ be
 a set of concrete objects, such as integers or stores (#isatype("store")),
@@ -405,7 +405,7 @@ inequality for each of these states, as the next section describes. Voblint's pr
 uses the same principle on a set of execution traces defined inductively as a
 least fixpoint, and proceeds by induction over its rules.
 
-== Constraint systems <sec:constraints>
+== Analyses as constraint systems <sec:constraints>
 
 An analysis needs an abstract state at every program point, and the state at
 one point depends on the states at its predecessors. The analysis therefore
@@ -551,7 +551,7 @@ Voblint uses is not proved,
 so the laws they state do not make the solver terminate. Within these laws, the
 choice of widening and narrowing affects only precision and termination.
 
-== Procedures and calling contexts <sec:interproc>
+== Context-sensitive analysis of procedures <sec:interproc>
 
 The counting loop has no procedures. With procedures, the analysis must decide
 which abstract state a callee's body starts from. Take the calls `bump(5)` and
@@ -639,7 +639,7 @@ _certificate_, the property #isaconst("part_post_solution", thy: "Basics_side"),
 which requires the bounds above only on a set of unknowns that contains the
 query and is closed under the local reads of its right-hand sides.
 
-== The verified top-down solver <sec:td>
+== The verified top-down solver and its guarantee <sec:td>
 
 // The counting loop of fig:counting-loop, for the playground link below.
 #let _counting-loop = "i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"

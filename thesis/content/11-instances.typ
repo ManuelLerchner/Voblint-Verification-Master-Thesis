@@ -19,7 +19,7 @@
 #let state(name, loc) = absval(raw(claim-row(name, loc).state))
 
 
-= Five Domains and an Order Analysis <ch:instances>
+= Numeric and Relational Analyses <ch:instances>
 
 The preceding chapters stated what a domain, an analysis, and a combination of
 analyses must prove, and @ch:results showed that every report is sound
@@ -31,7 +31,7 @@ domains on one loop, then describes how Int lets them exchange facts and how
 the order analysis tracks relations between variables, which shows that the
 framework is not limited to one value per variable.
 
-== The non-relational domains <sec:instances-supply>
+== Four non-relational numeric domains <sec:instances-supply>
 
 The four base domains, Sign #thy-badge("Voblint_Domain", "Sign_Lattice"),
 Interval #thy-badge("Voblint_Domain", "Interval_Lattice"), Parity
@@ -107,8 +107,6 @@ executable versions, and makes the domain a sound component of the combined
 state of @ch:cooperation
 (#isathm("sound_nonrelational_ops.dg_analysis_execI")). The only further
 obligation concerns the initial state, which must describe the initial stores.
-
-== One loop, five answers <sec:stride2>
 
 The loop below is the fixture #fixture("12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp", label: "05-mine_ex410_stride2_parity.vimp"),
 adapted from Goblint's regression test #link("https://github.com/goblint/analyzer/blob/d155e9e/tests/regression/56-witness/29-mine-tutorial-ex4.10.c")[`56-witness/29-mine-tutorial-ex4.10.c`]
@@ -186,7 +184,7 @@ but nothing about its size, and Sign knows only that $v$ is positive. Every
 answer is sound, yet none of the four proves `v == 51`. Only Int, which puts
 the bound and the oddness together, does (@sec:reduced-product).
 
-== The reduced product #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
+== Combining the domains in a reduced product #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
 
 An Int value (#isatype("int_dom")) holds one value of each base domain and
 stands for the integers that all four allow. Running the four side by side
@@ -267,7 +265,7 @@ $b$ and break this law
 (#isathm("post_narrow_refinement_would_violate_narrow_ge")). Goblint is not bound by the law, because no proof constrains its lattices,
 and its answers may thus be more precise.
 
-== A relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
+== Order constraints as a relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
 
 #let _order = 0.7pt + vb.neutral
 None of the earlier domains can express that $x <= y$, because each describes the
@@ -373,7 +371,7 @@ numeric guard filter of @sec:branches (#isathm("relc_branch_step_sound")). The t
 instantiates the solver's classes and #isalocale("executable_domain") of
 @fig:domain-carrier, but it is not a numeric domain.
 
-== The order analysis #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
+== Proving order relations between variables #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
 
 @sec:rel-state introduced the relational state as an abstract domain. This
 section builds the order analysis on top of it and demonstrates it on a

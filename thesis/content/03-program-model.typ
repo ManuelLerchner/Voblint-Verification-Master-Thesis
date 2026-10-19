@@ -9,7 +9,7 @@
 #import "../lib/theorems.typ": corollary, definition, example, lemma, theorem
 #import "../lib/cfg-graphs.typ": dot-edge-line, dot-label, dot-node-line, sum-graph
 
-= Programs and Control-Flow Graphs <ch:program-model>
+= VIMP and Its Control-Flow Graphs <ch:program-model>
 
 @ch:background analyzed a single loop through its control-flow graph. The
 soundness theorem, however, should talk about the programs a user writes, and
@@ -146,7 +146,7 @@ same store (@sec:csim). The program of @fig:program-to-equations, in which
     that @ch:equations generates around the first call.],
 ) <fig:program-to-equations>
 
-== VIMP, and what it leaves out <sec:vimp>
+== VIMP syntax and well-formed programs <sec:vimp>
 
 VIMP (@fig:vimp-island) is a small imperative language with C-like syntax
 that the formalization analyzes. It is kept small because every construct needs a
@@ -355,7 +355,7 @@ although the callee may still diverge. C11 makes using the value of a call that
 falls through undefined (#c11("6.9.1p12")). Without the condition, VIMP would
 silently store the $0$ that the reset on entry left in #isaconst("ret_var").
 
-== Executing a source program #thy-badge("Voblint_VIMP", "VIMP_Proc") <sec:pstep>
+== Small-step source semantics #thy-badge("Voblint_VIMP", "VIMP_Proc") <sec:pstep>
 
 An _operational semantics_ defines the meaning of a program by how it
 executes. A _small-step_ operational semantics does so one step at a time. A
@@ -436,9 +436,12 @@ library call has a result (#isathm("special_result_ex")).
 
 == The procedure-aware control-flow graph <sec:graph>
 
+The source semantics executes a program by rewriting the command that remains
+to run. The analysis works on a procedure-aware control-flow graph instead,
+whose nodes are the program points that carry abstract states and whose local
+edges and call edges carry the transfers.
 
-
-=== Why a graph <sec:why-graph>
+=== Why the analysis needs program points <sec:why-graph>
 
 An analysis attaches abstract states to program points and transfer functions
 to transitions. #isaconst("pstep") offers neither in a usable form. Its only
@@ -473,7 +476,7 @@ mean for those runs. In return, the argument about programs
 ends at a solver-independent certificate, a post-solution on the solved set
 (@sec:certificate).
 
-=== Nodes and edges #thy-badge("Voblint_CFG", "CFG_Def") <sec:cfg>
+=== Nodes, local edges, and call edges #thy-badge("Voblint_CFG", "CFG_Def") <sec:cfg>
 
 #definition(name: [Control-flow graph], isa: "cfg", cmd: "record")[
   A graph $g$ is a record of type #isatype("cfg"):
@@ -521,13 +524,13 @@ needed. A completed program ends at
 $ctor("FunctionResult") thin #raw("main")$ (#isaconst("cfg_exit")), so there
 is no separate global exit node.
 
-== Compilation <sec:compilation>
+== Compiling VIMP to a graph <sec:compilation>
 
 The compiler turns a VIMP program into a procedure-aware graph. Its design
 decides which program points exist, and the simulation of @sec:csim relies on
 how it lays out the code of each command.
 
-=== Compiling a command #thy-badge("Voblint_Compile", "VIMP_Proc_to_CFG") <sec:compile>
+=== Compiling commands with continuations #thy-badge("Voblint_Compile", "VIMP_Proc_to_CFG") <sec:compile>
 
 To emit the edges of a command, a compiler has to know where control goes
 after it. Compilers commonly pass this target down, so that each statement
@@ -648,7 +651,7 @@ procedures are no longer disjoint, which later proofs rely on
 #isaconst("wf_source_program") that $italic("ps")$ lists every declared
 procedure except `main` exactly once.
 
-=== Graph execution #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
+=== Executing a graph with a frame stack #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
 
 The compiler produces a static object. To say that it preserves the behavior
 of a program, the graph needs an execution of its own, which @sec:csim then
@@ -689,7 +692,7 @@ change the store through #isaconst("call_enter") and
 @ch:traces, #isaconst("cstep") is defined for an arbitrary graph, not only for
 compiled ones.
 
-== Relating the two executions <sec:csim>
+== Compilation preserves source runs <sec:csim>
 
 So far, #isaconst("pstep") and #isaconst("cstep") are two separate
 definitions. One describes source programs, the other arbitrary graphs, and
@@ -712,7 +715,7 @@ the graph answers one source step with zero or more steps. Only this direction
 is proved. An analysis that covers every graph run from the entry (@ch:traces)
 then also covers every source run, so soundness needs no converse.
 
-=== Matching each source step <sec:csim-step>
+=== Simulation relation and step matching <sec:csim-step>
 
 #definition(name: [Simulation relation], isa: "csim", cmd: "inductive")[
   #isaconst("csim"), written
@@ -776,7 +779,7 @@ Every finite source run of a well-formed program is therefore matched by a
 graph run from the entry that reaches corresponding nodes with the same store. This gives the first inclusion of the soundness chain of
 @fig:intro-nest.
 
-=== Observing a configuration at a node <sec:at-node>
+=== Locating source configurations at graph nodes #thy-badge("Voblint_Compile", "Elaborated_Compilation") <sec:at-node>
 
 The simulation names no node for a source configuration taken on its own.
 @ch:results needs one, because the analyzer's verdicts are stated at graph
@@ -805,7 +808,7 @@ run.
   along two paths can be observed at two nodes.
 ]
 
-== Scope and adequacy of the source semantics <sec:vimp-vs-c>
+== Adequacy of VIMP relative to C <sec:vimp-vs-c>
 
 Every source-level guarantee in this thesis is interpreted against the
 executions of #isaconst("pstep"), the reference semantics of VIMP, so no

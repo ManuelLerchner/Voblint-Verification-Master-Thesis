@@ -61,7 +61,7 @@ argument instead of a proof. That argument states which fragment of C it models,
 from C11 (@sec:vimp-vs-c), and why no existing verified semantics serves as the
 anchor.
 
-== From executions to static guarantees <sec:intro-static>
+== Sound static analysis and its verdicts <sec:intro-static>
 
 Software is usually checked by testing. A failing test demonstrates a bug, but
 a passing test suite has observed only finitely many executions
@@ -208,7 +208,7 @@ nothing. Only #verdict("DEAD") makes a claim about reachability, and
     #fixture("24-site-figures/precision/48-clamp_every_answer.vimp")).],
 ) <fig:intro-answers>
 
-== The gap Voblint closes <sec:state-of-art>
+== What existing analyzers and proofs leave open <sec:state-of-art>
 
 Most abstract interpreters in practical use have no machine-checked soundness
 proof and rely on testing instead. Livshits et al. know of no realistic
@@ -424,7 +424,7 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
   (@sec:eval-1161). Concrete programs show what each mechanism gains
   (@sec:eval-precision).
 
-== Scope and limitations <sec:intro-scope>
+== Scope and limits of the guarantee <sec:intro-scope>
 
 Not every part of the delivered analyzer is covered by the proof
 (@fig:intro-trust). _End-to-end_ means that the proof reaches from source
@@ -513,13 +513,13 @@ The theorem has the following limits.
   proved (@sec:eval-precision). The executable uses the same data
   representations as the proofs. No systematic time or memory evaluation
   is reported, only the speedup from one fixed performance defect
-  (@sec:generated-code).
+  (@sec:codegen).
 - _Goblint and evidence._ The correspondence to Goblint is architectural, and
   no theorem transfers to Goblint's implementation (@sec:rel-goblint). The
   regression corpus is small and was written or adapted for this work
   (@sec:eval-corpus).
 
-== Roadmap <sec:roadmap>
+== Thesis outline along the proof chain <sec:roadmap>
 
 The nested sets of @fig:intro-nest say what the theorem claims. @fig:metro
 shows how the proof establishes it. Each line groups the results of one layer

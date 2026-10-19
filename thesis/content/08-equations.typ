@@ -22,7 +22,7 @@
   raw(cells.at(col))
 }
 
-= Equations, Contexts, and Routing <ch:equations>
+= Context-Indexed Equations and Routing <ch:equations>
 
 @ch:traces reduced soundness to a cover, which assigns to every node $v$
 and context $c$ a set of stores #isai("cover v c"), and stated five local
@@ -45,7 +45,7 @@ must also determine which context of the callee it enters. Under entry-state
 policies, this context is computed from the abstract state at the call, which
 is known only while the equations are being solved.
 
-== Unknowns and right-hand sides #thy-badge("Voblint_Framework", "DG_Indexed_Generator") <sec:eq-call>
+== Context-indexed unknowns and call equations #thy-badge("Voblint_Framework", "DG_Indexed_Generator") <sec:eq-call>
 
 Separate contexts give the activations of `bump(5)` and `bump(4)` separate
 copies of `bump`, so the first result stays exactly $6$ (@sec:interproc).
@@ -237,7 +237,7 @@ bottom entry states in the same way. Skipping them is sound because a state
 classified as bottom is required to have an empty concretization
 (#isathm("routed_context.is_bot_sound", thy: "Routed_Context", display: "is_bot_sound")).
 
-== Routing and context policies #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-routing>
+== Routing that agrees with the context policy #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-routing>
 
 Every call is assigned a callee context twice. The equations choose one from
 the abstract entry state, and the concrete semantics of @ch:traces chooses one
@@ -484,7 +484,7 @@ entry state that describes the call, which is adequacy. Entry coverage
 (@sec:calls) guarantees such an entry pair for every call from a store that the
 caller's solved state describes, which is totality.
 
-== Soundness of the generated system #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
+== Post-solutions satisfy the coverage contract #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 
 #figure(
   table(

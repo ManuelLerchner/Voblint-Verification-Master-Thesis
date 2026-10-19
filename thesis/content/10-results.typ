@@ -32,7 +32,7 @@ a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
 from the solution and why every verdict in it is sound.
 
-== The analyzer and its report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
+== The analyzer function and its report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 
 The constructions of the previous chapters are packaged behind one HOL
 function, #isaconst("run_voblint"). It takes an analysis configuration and a
@@ -78,7 +78,7 @@ point, whichever call led there. Inside the proof, each per-context state
 still bounds the activation collecting semantics of its context
 (@sec:certificate).
 
-== Verdicts <sec:verdicts>
+== Computing check verdicts from the report <sec:verdicts>
 
 The command-line tool prints the report through its checks: each check at $v$
 receives one of four verdicts, #verdict("PROVED"), #verdict("REFUTED"),
@@ -151,7 +151,7 @@ one of these states describes satisfies every definite verdict there. Thus
 (#isathm("analysis_report_verdicts_sound")) for every report that
 #isaconst("run_voblint") returns (#isathm("run_voblint_consistent")).
 
-== The soundness chain at one check <sec:chain>
+== Four inclusions from source run to verdict <sec:chain>
 
 Let $"res"$ be a report #isaconst("run_voblint") returns for a program $p$,
 $g$ = #isaconst("prog_cfg") $p$ its compiled graph, $cal(G)$ =
@@ -329,7 +329,7 @@ with $n in [1, 3]$. Its state #absval(raw(_m2)) also admits $3$ and $5$, and the
 is #verdict(_v2), the only sound answer, since the run with $x = 1$ satisfies
 it and the runs with $x = 2$ and $x = 3$ violate it.
 
-== The source-level theorem #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:headline>
+== Source-level soundness of the analyzer #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:headline>
 
 The chain of @sec:chain argues about one store at one node, and each of its
 steps is a separate theorem about an intermediate set of stores. A user of the
@@ -395,7 +395,7 @@ reaches is thus collected, covered by the report and consistent with its
 verdicts at every node where the run is observed. This is the chain of
 @sec:chain read at one store.
 
-== Verdicts as statements about executions #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
+== What verdicts and diagnostics guarantee #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
 By the theorem of @sec:headline, the four verdicts make the following
 statements about _covered executions_, the finite runs of `main` from an

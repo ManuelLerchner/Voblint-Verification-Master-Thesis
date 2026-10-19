@@ -45,7 +45,7 @@
   "open"
 } else if path.starts-with(_checks + ".#.") { "full" } else { "fold" }
 
-= From Theorem to Tool <ch:executable>
+= The Executable Analyzer <ch:executable>
 
 @ch:results proved that every report #isaconst("run_voblint") returns is
 sound. A user, however, does not evaluate a HOL function. The user writes
@@ -60,7 +60,7 @@ to preserve the theorem. The code generator and the shell are not proved
 correct, so the guarantee for the running tool also rests on them, as
 @fig:intro-trust shows.
 
-== Making abstract states executable <sec:represented-function>
+== Finite representations of abstract states <sec:represented-function>
 
 To export #isaconst("run_voblint") as code, every function it calls must be
 computable. Most of the development already is, since its datatypes and
@@ -97,7 +97,7 @@ refine from its definition @tilscher26, and @sec:certificate shows that every
 run of it that returns satisfies the solver's correctness theorem. The values of the numeric domains (@sec:instances-supply) and the
 states of the order analysis (@sec:rel-state) are finite data already.
 
-== Code generation #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
+== Exporting the analyzer to OCaml and WebAssembly #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 With these replacements, every function that #isaconst("run_voblint") uses
 has code equations, and Isabelle's
@@ -133,11 +133,7 @@ same code to WebAssembly, which a web worker in the reader's browser calls
   str(calc.round(r.before.mean_s / r.after.mean_s, digits: 0))
 }
 
-== The generated code <sec:generated-code>
-
-The exported module,
-#link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`],
-has #stat("generated_ocaml") lines and follows the proofs rather than the
+The exported module has #stat("generated_ocaml") lines and follows the proofs rather than the
 habits of OCaml programmers, which makes it hard to read. Type classes become records of operations passed
 as arguments, finite sets and maps become lists that every lookup scans, and
 the solver keeps its valuation as a chain of closures, one per update.
@@ -197,7 +193,7 @@ measurement each
 (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded]).
 Finding further inefficiencies and improving the exported code is future work.
 
-== Tracing the exported solver #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
+== Tracing solver steps without changing the proofs #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 To explain a run, the command-line tool and the playground can trace the
 solver's steps. The trace records when each unknown is queried, which update
@@ -228,7 +224,7 @@ same report as without it.
 
 
 #pagebreak(weak: true)
-== The unverified shell <sec:ocaml-boundary>
+== Unverified parsing, rendering, and playground <sec:ocaml-boundary>
 
 The generated #isaconst("run_voblint") works on a syntax tree and returns a
 typed answer, whereas a user writes program text and reads a report.

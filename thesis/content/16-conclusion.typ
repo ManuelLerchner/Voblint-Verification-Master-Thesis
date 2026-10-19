@@ -24,7 +24,7 @@ real defect (@ch:evaluation). On concrete programs, the evaluation also shows
 that neither contexts nor update rules have a setting that is best everywhere
 (@sec:eval-precision).
 
-== Approach and lessons <sec:building>
+== How the formalization was built <sec:building>
 
 Goblint's architecture served as the specification to follow. Each construct was compared with Goblint's sources and papers at a pinned
 revision, and the decision to model it, simplify it, or leave it out was
@@ -80,7 +80,7 @@ definitions makes Isabelle report every proof it breaks, at whichever layer, so
 an agent can work through the failures while a reviewer checks the new
 definitions.
 
-== Implications for Goblint <sec:outlook-goblint>
+== Relevance to Goblint and limitations <sec:limitations>
 
 The proofs do not show that Goblint is correct, since they concern
 Voblint's definitions and the correspondence with Goblint is architectural
@@ -94,8 +94,6 @@ fixture and as a counterexample theorem, as the congruence remainder was
 could be checked against the obligation that its counterpart meets before the
 change lands in Goblint. Conversely, a verified component exported as
 OCaml could replace its unverified counterpart in Goblint.
-
-== Limitations <sec:limitations>
 
 For Goblint's developers, however, the current formalization is still largely
 a proof of concept. It lacks many concepts that their work depends on, such as
@@ -121,7 +119,7 @@ and no agreement rate with Goblint is measured (@sec:rel-goblint).
 Neither limit weakens the soundness theorem itself. Both instead mark where the
 result currently stops, and each names a direction in which Voblint can be extended.
 
-== Outlook <sec:outlook-extending>
+== Extending Voblint towards C and Goblint <sec:outlook-extending>
 
 Both limits point to the same next step. Voblint would have to be extended
 towards the language and the analyses that Goblint's developers work with. Some analyses and concepts could be added to the current proof of concept

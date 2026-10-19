@@ -8,7 +8,7 @@
 #import "../lib/figures.typ": verdict
 
 
-= Analysis Strength and Precision <ch:evaluation>
+= Evaluation of Strength and Precision <ch:evaluation>
 
 @ch:results proved that every report #isaconst("run_voblint") returns is
 sound. A machine-checked theorem can still hold for uninteresting reasons. Its
@@ -22,7 +22,7 @@ and how the code outside the theorem is tested. Several facts below concern one
 fixed program and are proved by `eval`, which runs generated code and therefore
 also trusts the code generator (@fig:intro-trust).
 
-== The premises can hold #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
+== The soundness theorems are not vacuous #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
 
 A theorem whose premises can never hold together is true but says nothing. The
 end-to-end theorem has three premises: an initial store, a source run from it,
@@ -52,7 +52,7 @@ proved by rule application, while `eval` computes the compiled graphs and the
 analyzer's answers. The main theorems therefore do not hold vacuously, since
 each applies to at least one program on which the solve actually terminates.
 
-== The obligations exclude real errors <sec:eval-1161>
+== The obligations reject a real Goblint bug <sec:eval-1161>
 
 Non-vacuity does not show that the obligations are strong enough to reject a
 wrong analysis. One way to test them is against a real error. @ch:intro opened
@@ -133,15 +133,26 @@ check and proves the second.
     both executions.],
 ) <fig:goblint-1161>
 
-== Precision on concrete programs <sec:eval-precision>
+== Measuring precision on concrete programs <sec:eval-precision>
 
 The theorem says nothing about precision, so the examples below measure it on
 single programs whose concrete behavior is known.
 
+Earlier chapters already showed precise answers. Narrowing recovers the bound of the counting loop after widening
+(@sec:widening), entry-state contexts keep the two calls of `bump` apart
+(@fig:eq-policies), and only the reduced product proves `v == 51` on the
+stride-2 loop (@fig:stride2). Analyses that cooperate through queries decide
+checks that each leaves unknown alone (@ch:cooperation,
+#isathm("order_asks_needs_both")). Beyond these, the corpus holds
+#stat("corpus.kinds.precision") fixtures that pin a definite verdict
+(@sec:eval-corpus). Searching the
+#link(site("playground.html"))[playground]'s examples for "precision" lists
+them.
+
 #let _k99 = claim-snapshot("cost-down-k99")
 #let _k100 = claim-snapshot("cost-down-k100")
 
-=== Contexts <sec:eval-contexts>
+=== Precision and cost of calling contexts <sec:eval-contexts>
 
 Contexts trade analysis time for precision. In the program of @fig:ctx-nest,
 `f` passes its argument on to `g`, and `main` calls `f` with a positive and a
@@ -214,7 +225,7 @@ diverge. Goblint's configuration for the SV-COMP competition avoids this
 explosion by omitting intervals from the contexts of recursive functions
 @saan26phd[§3.4.3].
 
-=== Update rules <sec:eval-rules>
+=== Comparing the update rules for global unknowns <sec:eval-rules>
 
 #let _verdict(key, rule, cond) = {
   let name = "rules-" + key + "-" + rule
@@ -317,20 +328,7 @@ programs.
     the run. "No answer in 5 s": stopped by `--timeout 5`.],
 ) <fig:rules-programs>
 
-=== Further precise answers <sec:eval-coop>
-
-Earlier chapters already showed precise answers. Narrowing recovers the bound of the counting loop after widening
-(@sec:widening), entry-state contexts keep the two calls of `bump` apart
-(@fig:eq-policies), and only the reduced product proves `v == 51` on the
-stride-2 loop (@fig:stride2). Analyses that cooperate through queries decide
-checks that each leaves unknown alone (@ch:cooperation,
-#isathm("order_asks_needs_both")). Beyond these, the corpus holds
-#stat("corpus.kinds.precision") fixtures that pin a definite verdict
-(@sec:eval-corpus). Searching the
-#link(site("playground.html"))[playground]'s examples for "precision" lists
-them.
-
-== Tests of the unverified parts <sec:eval-corpus>
+== Testing the unverified components <sec:eval-corpus>
 
 The theorem stops at the generated analyzer, so the handwritten OCaml around it
 (@tab:sizes) is tested rather than proved. A

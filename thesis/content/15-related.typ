@@ -12,7 +12,7 @@ adds. The literature was found through web and OpenAlex searches. AI agents supp
 to checking each claim against its source
 (#link(<ai-use>)[statement on the use of generative AI]).
 
-== Analyzers in practical use <sec:rel-practice>
+== Unverified analyzers for C <sec:rel-practice>
 
 Most analyzers applied to real C programs have no machine-checked soundness
 proof, and they differ from Voblint most in how they treat procedures.
@@ -88,7 +88,7 @@ seven of the analyzers had soundness issues, MOPSA among them
     @fig:intro-trust.],
 ) <tab:production-analyzers>
 
-== Verified analyzers: Verasco and the CompCert line
+== Verified analyzers in the CompCert line
 
 CompCert and Verasco state their theorems about the tool that users run, and
 Voblint follows their pattern for a language with recursive procedures and
@@ -126,7 +126,7 @@ solver whose partial correctness is proved @tilscher26. The checker leaves the
 iteration heuristics free and tests every result at run time. A verified
 solver needs no such test, but its proof holds for that one algorithm.
 
-== Mechanized abstract interpretation <sec:rel-mechanized>
+== Mechanized abstract interpreters <sec:rel-mechanized>
 
 Abstract interpreters have been mechanized in several provers.
 @tab:state-of-art compares those most closely related to Voblint. Their proofs
@@ -218,7 +218,7 @@ Interprocedural analyses have also been verified in Isabelle before
 extracted analyzer, however, and none of their semantics represents one
 activation with its caller chain, the object Voblint's context relation reads.
 
-== Verified fixpoint solvers <sec:rel-solvers>
+== Verified solvers and termination results <sec:rel-solvers>
 
 A verified solver guarantees a property of its result for arbitrary
 equations, and the analyzer must give the equations their meaning. Hofmann et
@@ -256,7 +256,7 @@ unknown at a widening point, so the least-solution theorem does not apply, and
 Voblint uses only partial correctness and claims no optimality
 (@sec:update-rules).
 
-== Context sensitivity and trace partitioning
+== Calling contexts and trace partitioning
 
 An interprocedural analysis must decide how information about a call reaches
 the callee and returns to the caller. Sharir and Pnueli distinguish two
@@ -288,12 +288,12 @@ unknown finitely often @erhard25[Abstract]. Voblint's entry-state policy has
 no such bound, which is one reason the termination of the solve is not proved
 (@sec:certificate).
 
-== Goblint, local traces, and thread-modular analysis <sec:rel-goblint>
+== Goblint and its local-trace semantics <sec:rel-goblint>
 
 Voblint follows Goblint's architecture and adapts the local-trace semantics of
 Schwarz et al. to procedure activations.
 
-=== Architecture
+=== Correspondence with Goblint's architecture
 
 Side-effecting constraint systems let one equation both define a local unknown
 and publish contributions to global unknowns @seidl03 @apinis12. Seidl et al.
@@ -345,7 +345,7 @@ proved for a pair of analyses. Verasco threads its channels so that the second
 domain can query the state the first has just computed @jourdan15[§7], whereas
 Voblint's answers describe the predecessor state only, as Goblint's do.
 
-=== Local traces and contexts
+=== Digests and the context relation
 
 Local traces give each thread of a concurrent program a semantics against which
 thread-modular analyses are proved sound and compared @schwarz21, later
@@ -370,7 +370,7 @@ so Voblint's groups may overlap. Second, a digest is updated at every step of a
 trace, whereas an activation's contexts are fixed when it is called, so
 Voblint distinguishes activations only by how they were entered.
 
-== Where Voblint sits <sec:rel-summary>
+== Closest precedents and inherited parts <sec:rel-summary>
 
 Two mechanized analyzers come closest to Voblint's combination of mixed flow
 sensitivity and calling contexts. Cachera et al. @cachera05 combine a flow-insensitive heap with flow-sensitive
