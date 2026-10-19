@@ -1,0 +1,10 @@
+tests/regression/17-call-string/known-imprecision/06-depth1_sign_merges_nested_callee.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----------
+16:3      pp7    0 < x      UNKNOWN  sign: x=⊤
+17:3      pp8    y < 0      UNKNOWN  sign: y=⊤

@@ -234,8 +234,8 @@ AI agents (see #link(<ai-use>)[the statement on the use of generative AI]).
 Formal verification and agents complement each other here. An agent may
 propose definitions and proofs, but Isabelle checks every proof, and the batch
 build and the drift checks of @sec:voblint-repo reject anything that does not check.
-Counterexample theorems for weakened obligations (@sec:eval-1161,
-@sec:discussion) act as negative tests. Human review can therefore concentrate
+Counterexample theorems for a weakened obligation or a defective operator
+(@sec:contract, @sec:eval-1161) act as negative tests. Human review can therefore concentrate
 on what no proof settles: whether the base definitions and the obligations state
 the intended meaning (@sec:vimp-vs-c), and whether the trusted base of
 @fig:intro-trust is acceptable.

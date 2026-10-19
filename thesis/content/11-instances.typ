@@ -140,9 +140,10 @@ $v = 51$, so every check holds.
 
 #let _v(dom, loc) = verdict("dom-stride2-" + dom, loc)
 // The domain column already names the domain, so the cell drops the printer's prefix.
-#let _s-cell(dom, loc) = absval(raw(
-  claim-row("dom-stride2-" + dom, loc).state.split(": ").slice(1).join(": "),
-))
+#let _s-cell(dom, loc) = {
+  let s = claim-row("dom-stride2-" + dom, loc).state.split(": ").slice(1).join(": ")
+  absval(raw(if dom == "parity" { parity-name(s) } else { s }))
+}
 #let _adds = (
   sign: [sign of a value; finite],
   interval: [bounds; infinite ascending chains],

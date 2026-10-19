@@ -418,8 +418,8 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
 - _Needed assumptions and nonempty results._ The kernel cannot tell whether a
   theorem assumes too much or concludes too little. Further theorems therefore
   show that the analyzer gives definite verdicts on concrete programs
-  (@sec:nonvacuity). Two selected conditions cannot be dropped without admitting answers
-  that concrete executions contradict, and one
+  (@sec:nonvacuity). Dropping the totality condition admits answers that concrete executions
+  contradict (@sec:contract), and one
   domain obligation rejects a defect that occurred in Goblint
   (@sec:eval-1161). Concrete programs show what each mechanism gains
   (@sec:eval-precision).

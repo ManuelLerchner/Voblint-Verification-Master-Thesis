@@ -936,3 +936,27 @@ argv = [
 ]
 json_path = "raw"
 why = "Chapter 12, the shell figure: the call run_voblint receives and the answer it returns, as the browser adapter serializes them."
+
+[claims.ctx-nest-k1]
+argv = [
+  "--analysis",
+  "sign",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/17-call-string/known-imprecision/06-depth1_sign_merges_nested_callee.vimp",
+]
+why = "Evaluation, contexts: at call-string depth 1 the two activations of g share a context, and neither sign check is proved."
+
+[claims.ctx-nest-k2]
+argv = [
+  "--analysis",
+  "sign",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "2",
+  "tests/regression/17-call-string/precision/05-callstring_graph_sign.vimp",
+]
+why = "Evaluation, contexts: at call-string depth 2 the two activations of g keep their own contexts, and both sign checks are PROVED."

@@ -1,0 +1,10 @@
+tests/regression/17-call-string/precision/05-callstring_graph_sign.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------
+169:3     pp7    0 < x      PROVED   sign: x=+
+170:3     pp8    y < 0      PROVED   sign: y=-

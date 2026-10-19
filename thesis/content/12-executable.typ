@@ -142,8 +142,12 @@ habits of OCaml programmers, which makes it hard to read. Type classes become re
 as arguments, finite sets and maps become lists that every lookup scans, and
 the solver keeps its valuation as a chain of closures, one per update.
 
-The code that runs is a small part of the development (@tab:sizes), which the
-explainer draws as an #link(site("index.html#limits"))[iceberg].
+The code that runs is a small part of the development (@tab:sizes). Code
+export keeps only the definitions that #isaconst("run_voblint") depends on and
+drops every proof, so the theories and the imported part of the solver shrink
+to the generated module. The handwritten OCaml around this module is smaller
+still. Of the code that runs, it is the only part that has to be checked by
+hand, alongside the trusted code generator and OCaml compiler.
 
 #figure(
   {
@@ -196,9 +200,9 @@ Finding further inefficiencies and improving the exported code is future work.
 == Tracing the exported solver #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 To explain a run, the command-line tool and the playground can trace the
-solver's steps: which unknown is queried when, which update destabilizes which
-unknown, where widening applies, as Goblint's tracing of its
-top-down solvers reports them. Tracing must leave the definitions and proofs of
+solver's steps. The trace records when each unknown is queried, which update
+destabilizes which unknown, and where widening applies. Goblint's tracing of
+its top-down solvers reports the same events. Tracing must leave the definitions and proofs of
 the vendored solver @tilscher26 untouched. Voblint therefore adds tracing only to the equations
 that code generation translates. Every traced equation reports each step
 through one constant, #isaconst("trace_event"), which is defined as the unit
@@ -213,24 +217,14 @@ serves traced and untraced runs alike. A #isacmd("code_printing") declaration th
 in place of #isaconst("trace_event"), a call to the handwritten OCaml function
 `Solver_trace_hook.emit`. The hook receives a suspended event and builds it
 only when tracing is on, so an untraced run records nothing. The hook joins the trusted base and must return, raise nothing, and leave the
-solver's values alone. The mapping exists only for OCaml. Proofs by
-evaluation run on Isabelle's own evaluation target, where #isaconst("trace_event")
-keeps its definition, so they execute the same traced equations without any
-hook.
+solver's values alone.
 
-The events follow the solver's operations. A trace records when a right-hand
-side is evaluated and which local or global unknown it queries, each update of
-a local or global value together with its old and new value, the side effects
-a right-hand side publishes, the callee context a call is routed to, and every
-unknown that an update destabilizes. The command-line tool prints these events
-with `--trace`, and the playground
-replays them step by step on the solved graph (@fig:replay-still).
-The replay shows the order of the solve, which the solved values alone hide. A
-reader can follow how a call creates a new callee context, at which unknown
-widening sets in, and why an unknown is evaluated again after a side effect has
-destabilized it. Both are unverified observations. The
-trace never feeds back into a result, and a report computed with tracing on
-is the same report as without it.
+The command-line tool prints the events with `--trace`, and the playground
+replays them step by step on the solved graph (@fig:replay-still). The replay
+shows the order of the solve, which the solved values alone hide, such as when
+a call creates a new callee context. The trace itself is unverified, but it
+never feeds back into a result, so a report computed with tracing on is the
+same report as without it.
 
 
 #pagebreak(weak: true)

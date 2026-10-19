@@ -55,7 +55,6 @@ NUMBER = re.compile(r"(?<![\w.,-])(?:\d{1,3}(?:,\d{3})+|\d{2,}|\d+%)(?![\w,]|\.\
 # no longer matches anything is reported, so the list cannot outlive its text.
 ALLOW: dict[tuple[str, str], str] = {
     # Goblint pull request and issue numbers, not counts.
-    ("13-evaluation.typ", "1161"): "Goblint pull request number",
     # Size of the profiled example program, not a repository count.
     # Drawing coordinates of a figure, not a count.
     ("02-background.typ", "11"): "tick range of the number line in fig:concretization",
