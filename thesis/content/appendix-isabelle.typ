@@ -27,20 +27,15 @@ not be computable. Below, $forall x$ ranges over all variables:
 // deps: preview -- shown for its syntax; @sec:nonrel-state introduces abstract states.
 #thy("gamma_state")
 A #isai("fun") may instead give one equation per constructor pattern and may
-call itself, and Isabelle proves that the recursion terminates. The function below has one equation
-for the empty list #isai("[]") and one for a list #isai("q # qs") with head
-#isai("q") and tail #isai("qs"). Its result type #isai("'b option") has the
-values #isai("None") and #isai("Some y"), which #isai("case") distinguishes:
+call itself. The function below has one equation for the empty list
+#isai("[]") and one for a list #isai("q # qs"), and its result type
+#isai("'b option") has the values #isai("None") and #isai("Some y"):
 // deps: preview -- shown for its syntax; @sec:reduced-product uses it.
 #thy("first_deciding")
-
-Every HOL function is total, so an ordinary recursive definition needs a
-termination proof. Otherwise a definition such as $f(n) = f(n) + 1$ would yield
-$0 = 1$ @nipkow14[§2.3.4]. Isabelle's function package can also define a
-recursive function without one. The result is still a total HOL constant, but
-its defining equations are proved only on its _domain_, the arguments on which
-the recursion terminates, and theorems about it assume membership in that
-domain. The vendored solver is defined this way, with the domain
+Since every HOL function is total, Isabelle proves that such a recursion
+terminates @nipkow14[§2.3.4]. A function may also be defined without this
+proof. Its equations then hold only on its _domain_, the arguments on which
+the recursion terminates, as for the vendored solver and its domain
 #isaconst("solve_dom", thy: "TD_side_upd_rule").
 
 // The explanation and the theorem it introduces stay on one page.
@@ -62,11 +57,9 @@ type @haftmann07. The class #isalocale("widening") fixes an operator, written
 infix as $widen$, after #isai("fixes") and states its laws after
 #isai("assumes"):
 #thy("widening")
-The annotation #isai("(infixl \"\<nabla>\" 65)") declares $widen$ as
-left-associative infix notation with precedence 65, and #isai("'a :: order")
-restricts the type variable to types with an order. Each assumption carries a
-name, such as #isai("widen_ge1"), by which proofs cite it. A type has at most
-one instance of each class.
+Here #isai("'a :: order") restricts the type variable to types with an order,
+and each assumption carries a name, such as #isai("widen_ge1"), by which proofs
+cite it. A type has at most one instance of each class.
 
 A _locale_ fixes parameters and assumptions in the same syntax, and
 interpreting it for concrete parameters proves the assumptions and yields its
@@ -82,15 +75,12 @@ implication, and $A ==> B ==> C$ reads "from $A$ and $B$, infer $C$".
 _Rule induction_ proves a property of every element with one case
 per rule. The set below has a base rule and a step rule:
 #thy("reach")
-Later chapters define execution relations such as #isaconst("pstep") and
+The chapters define execution relations such as #isaconst("pstep") and
 #isaconst("cstep") by rules and write the reflexive–transitive closure of a
 step relation $->$ as $scripts(->)^*$.
 
-_Code equations_ determine what code generation emits @haftmann10. One
-#isacmd("export_code") declaration emits OCaml from them, and
-#isacmd("code_printing") maps a constant to target-language code, such as
-integers to OCaml's arbitrary-precision numbers. The generated code is trusted,
-not proved (@fig:intro-trust). Theories are grouped into _sessions_, which
-Isabelle builds and checks as units, and which later chapters cite as the home
+_Code equations_ determine what code generation emits @haftmann10. One #isacmd("export_code") declaration emits OCaml from them, and the
+generated code is trusted, not proved (@fig:intro-trust). Theories are grouped into _sessions_, which
+Isabelle builds and checks as units, and which the chapters cite as the home
 of a construction. The control-flow graph, for instance, lives in
 #isasession("Voblint_CFG"), which builds on #isasession("Voblint_VIMP").

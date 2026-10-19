@@ -72,7 +72,9 @@ fixed, agents wrote many of the proofs. They also largely wrote the software
 around the formalization, including the browser playground (@ch:executable), the
 regression corpus with its ports of Goblint tests, the source tooling
 `isar-tools` (@sec:isar-tools), and the checks that keep the theories, the
-analyzer, the website, and this thesis consistent (@sec:voblint-repo). Without this help, the work would likely have been limited to the core theorems. Collaborating with agents proved effective for moving the formalization
+analyzer, the website, and this thesis consistent (@sec:voblint-repo). This
+tooling, `isar-tools` in particular, proved valuable for maintaining a codebase
+that kept growing throughout the project (@sec:isar-tools). Without this help, the work would likely have been limited to the core theorems. Collaborating with agents proved effective for moving the formalization
 forward, and the same approach suits future extensions. A change to the
 definitions makes Isabelle report every proof it breaks, at whichever layer, so
 an agent can work through the failures while a reviewer checks the new

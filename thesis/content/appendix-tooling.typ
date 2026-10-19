@@ -1,78 +1,94 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/code.typ": isa, isacmd, isaconst, isalocale, isathm, repo-blob, site
 #import "../lib/theme.typ": vb
+#import "../lib/stats.typ": stat
 
 = Repository and Tooling <sec:voblint-repo>
 
-The generated analyzer is only as current as the theories it was exported from,
-and the claims of this thesis are only as current as the statements and outputs
-they quote. Keeping these consistent as the development changes is
-engineering, not proof. A formalization of this size needs work around the
-proof assistant as well as inside it. Its theories must be formatted and checked for unfinished proofs,
-its names must stay consistent with the prose that cites them, and a new
-contributor must be able to install everything the build needs. For Isabelle,
-comparatively little project-level tooling is available outside the distribution itself.
-Isabelle users have noted the resulting gap as well, for instance in a
-comment on a recent blog post by Paulson @paulson26lean, which observes that
-Isabelle's own development uses almost no standard tooling @halbgefressen26.
-
-The need for such tooling grows with AI assistance. Many proofs and a large share of the
-surrounding code of this development were written by agents (see #link(<ai-use>)[the statement on the use of generative AI]). An agent can
-produce a plausible change quickly, but it cannot be trusted to keep the
-cross-references of a large development consistent, and a reviewer cannot read every line
-it writes. Deterministic tooling around the agent made its work usable at this scale. An agent's change counts as done only when these checks pass, so
-the checks, not the agent, decide whether the repository is consistent.
+The theories, the exported analyzer, the project site, and this thesis quote
+one another. The analyzer is exported from the theories, the thesis cites
+their names and statements, and both the site and the thesis quote the
+analyzer's output. Every change to the theories can therefore make another
+part stale, and keeping them consistent is engineering work outside the proof.
+Isabelle offers comparatively little project-level tooling for this beyond its
+distribution, a gap that users have noted as well @paulson26lean
+@halbgefressen26. The need grew with AI assistance. Agents wrote many proofs
+and much of the surrounding code (#link(<ai-use>)[statement on the use of
+  generative AI]), and a reviewer cannot read every line they produce. A change
+therefore counts as done only when deterministic checks pass, so the checks,
+not the agent, decide whether the repository is consistent.
 
 == The repository
 
-Everything this thesis describes is published in one repository: the Isabelle
-theories, a submodule reference to the vendored solver, the exported analyzer with its command-line tool and playground, the
-regression corpus, and the sources of this thesis. Each release is archived on
-Zenodo with a citable DOI @voblint. The project site hosts the
-playground, the explainer, and the rendered theories that every Isabelle name in
-this thesis links to.
+One repository holds everything this thesis describes: the Isabelle theories,
+a submodule reference to the vendored solver, the exported analyzer with its
+command-line tool and playground, the regression corpus, and the sources of
+this thesis. Each release is archived on Zenodo with a citable DOI @voblint,
+and the project site hosts the playground, the explainer, and the rendered
+theories that every Isabelle name in this thesis links to.
 
-The vendored copy of the solver of Tilscher et al. @tilscher26 carries four
-changes made for this thesis. Each was proposed upstream, and none changes the
-algorithm. The first restores the build under Isabelle2025-2 @td15. The second
-removes the well-foundedness assumptions from the solver's
-#isalocale("widening") and #isalocale("narrowing") classes @td13. They say that
-widening and narrowing stabilize, which only termination proofs use, so a
-domain need not provide a stabilizing widening (@sec:domain-carrier-laws). The
-third renames short record fields and constructors, such as `c`, `W` and `N`,
-that took these names away from downstream theories, and adds one interface
-theory per solver family @td14. The fourth adds facts about the solver's own
-definitions that Voblint had proved on its side @td16, among them
-#isathm("solve_dom_of_solve_c") and #isathm("finite_stabl_solve"), which
-#isathm("td_certified_solver") uses (@sec:certificate). At the time of writing,
-all four pull requests await review. The solver's repository is private and
-accessible only by invitation, so the development cannot yet be built from
-public sources alone. There are plans to publish the solver in the Archive of
-Formal Proofs.
+The vendored solver of Tilscher et al. @tilscher26 carries four changes made
+for this thesis, each proposed upstream and none changing the algorithm. They
+restore the build under Isabelle2025-2 @td15, remove the stabilization
+assumptions from the classes #isalocale("widening") and
+#isalocale("narrowing"), which only termination proofs use @td13
+(@sec:domain-carrier-laws), rename short field and constructor names that
+clashed with downstream theories @td14, and add facts about the solver's
+definitions, such as #isathm("solve_dom_of_solve_c"), that
+#isathm("td_certified_solver") uses @td16 (@sec:certificate). At the time of
+writing, all four pull requests await review. The solver's repository is
+private, so the development cannot yet be built from public sources alone,
+and there are plans to publish the solver in the Archive of Formal Proofs.
+
+== OCaml packages on conda-forge
+
+#let _cf = json("/shared/generated/conda-forge.json").packages
+#let _cf-ready = _cf.values().filter(p => p.available).len()
+#let _pr(n) = "https://github.com/conda-forge/staged-recipes/pull/" + str(n)
+
+The repository currently relies on several package managers.
+#link("https://pixi.sh")[Pixi] installs Python and the conda-forge packages
+and runs every task, opam installs the OCaml toolchain of the exported
+analyzer and its browser build, and Isabelle is installed separately. The goal
+is a single Pixi file from which one `pixi install` sets up everything. For the
+OCaml side, this requires every package the analyzer builds with on
+conda-forge for all supported platforms. Until recently, however, conda-forge
+carried the OCaml compiler and only a handful of tools, such as Dune and
+Menhir, and almost none of the libraries below them.
+
+Alongside this thesis, considerable effort went into changing this, together
+with other conda-forge contributors. A #link(_pr(34872))[recipe for ten base
+  libraries], from `csexp` to `yojson`, has been merged, and Apple Silicon builds
+were enabled for each of them. Two fixes to the Dune package have been merged,
+and recipes for `ppxlib` and `sedlex` and an update of Zarith are under
+review. `isar-tools` itself #link(_pr(34960))[installs from conda-forge]. Of
+the #_cf.len() packages in the
+#link(repo-blob + "manifests/conda-forge-ocaml.toml")[toolchain manifest],
+#_cf-ready are now available on conda-forge, and the others, among them
+`js_of_ocaml` and `ocamlformat`, still come from opam. As far as the author is
+aware, this is the first larger effort to bring OCaml libraries to
+conda-forge.
 
 == Derived files and checks
 
-A development of this size drifts when one fact is written down twice. The
-repository therefore keeps a few sources and derives everything else from them
-(@fig:pipeline). One grammar file yields the Isabelle syntax of VIMP, the
-analyzer's parser and its printer. The parser lies outside the proof and hands
-the proved analyzer its syntax tree (@fig:intro-trust), but it and the
-Isabelle syntax are generated from the same language description. An
-analysis manifest names each analysis, its value type and the theories that
-prove it sound. From it, a generator writes the registration of each numeric domain (@sec:instances-supply) and the combined state of @ch:cooperation, and
-Isabelle checks every generated proof. The generator exists because the
-repetition lies outside what a theory can express: each domain is registered
-once per context policy it supports, for every update rule, and the combined
-state has one field per analysis, of differing types. With dependent types, a heterogeneous list indexed
-by these types could express it inside the logic @chlipala13cpdt[ch. 9]; HOL's
-simple types cannot. #isaconst("run_voblint") itself reaches OCaml through
-#isacmd("export_code") (@sec:codegen). Because the derived files are checked
-against their sources, a stale name, statement, or quoted output fails the build
-instead of reaching the reader (@fig:pipeline).
+When the same information is maintained by hand in several files, the copies
+tend to diverge after a change. The repository therefore keeps a few sources and derives everything else from them (@fig:pipeline). One
+grammar file yields the Isabelle syntax of VIMP, the analyzer's parser, and its
+printer, so the unverified parser (@fig:intro-trust) and the syntax the proofs
+use come from one language description. An analysis manifest names each
+analysis, its value type, and the theories that prove it sound. From it, a
+generator writes the registration of each numeric domain
+(@sec:instances-supply) and the combined state of @ch:cooperation, and Isabelle
+checks every generated proof. The generator exists because this repetition
+lies outside what a theory can express. Each domain is registered once per
+context policy and update rule, and the combined state has one field per
+analysis, each of a different type. A dependently typed logic could express
+such a heterogeneous structure inside the logic @chlipala13cpdt[ch. 9], but
+HOL's simple types cannot.
 
 #figure(
   {
-    set text(size: 7.5pt)
+    set text(size: 6.5pt)
     set par(first-line-indent: 0pt, justify: false)
     let src(pos, body, name) = node(
       pos,
@@ -103,7 +119,7 @@ instead of reaching the reader (@fig:pipeline).
       label-side: center,
     )
     diagram(
-      spacing: (14mm, 2.5mm),
+      spacing: (12mm, 1.2mm),
       src(
         (0, 1),
         link(repo-blob + "manifests/vimp-grammar.yaml")[grammar \ `vimp-grammar.yaml`],
@@ -175,125 +191,55 @@ instead of reaching the reader (@fig:pipeline).
     published site.],
 ) <fig:pipeline>
 
-This thesis is held to the same discipline. Each Isabelle name in its Typst
-sources goes through a helper that a check resolves against the theories and
-links to the rendered theories. Theorem statements are lifted from the theories
-and compared with what the built session proves, quoted analyzer results are rerun against the analyzer, each VIMP listing's playground link is decoded
-from the PDF and compared with the listing, and repository figures come from a
-measurement script. A rename, a changed statement, or a changed result
-therefore fails the build, and another check warns when the text shows a
-statement before the entities it uses.
+This thesis is held to the same discipline. Every Isabelle name in its sources
+goes through a helper that a check resolves against the theories and links to
+the rendered theories. Theorem statements are lifted from the theories and
+compared with what the built session proves, quoted analyzer results are rerun,
+each VIMP listing's playground link is decoded from the PDF and compared with
+the listing, and repository figures come from a measurement script. A rename,
+a changed statement, or a changed result therefore fails the build instead of
+reaching the reader.
 
-The checks run in layers ordered by cost (@fig:gates), from hooks triggered by
-the staged files to continuous integration, which reruns the checks on a fresh
-runner, reusing cached results for unchanged inputs, together with the tests of
-@sec:eval-corpus. Only the main branch is deployed, and only after the rendered
-theories, the formalization PDF, and this thesis build. All layers invoke the same-named Pixi tasks, and a further check keeps the local `verify` task and
-continuous integration from diverging.
+#pagebreak(weak: true)
+== Maintaining the formalization: `isar-tools` <sec:isar-tools>
 
-#figure(
-  {
-    set text(size: 7pt)
-    set par(first-line-indent: 0pt, justify: false)
-    let gate(pos, title, items, name) = node(
-      pos,
-      [*#title* \ #items.join(linebreak())],
-      name: name,
-      stroke: 0.6pt + vb.neutral,
-      fill: white,
-      corner-radius: 2pt,
-      inset: 4pt,
-      width: 25mm,
-    )
-    let end(pos, body, name) = node(
-      pos,
-      body,
-      name: name,
-      stroke: 0.6pt + vb.accent,
-      fill: vb.accent.lighten(92%),
-      corner-radius: 2pt,
-      inset: 4pt,
-    )
-    let step(a, b) = edge(a, b, "-|>", stroke: 0.6pt + vb.neutral)
-    diagram(
-      spacing: (3.5mm, 0mm),
-      end((0, 0), [change], <c>),
-      gate(
-        (1, 0),
-        link(repo-blob + ".lefthook.yaml")[pre-commit],
-        ([drift of derived files], [formatters], [`isar` checks, thesis references]),
-        <a>,
-      ),
-      gate(
-        (2, 0),
-        link(repo-blob + ".lefthook.yaml")[pre-push],
-        ([exported OCaml current], [claims and facts], [thesis build]),
-        <b>,
-      ),
-      gate(
-        (3, 0),
-        link(repo-blob + ".github/workflows/ci.yml")[CI],
-        ([session build], [regression and property tests], [thesis PDF]),
-        <d>,
-      ),
-      gate(
-        (4, 0),
-        link(repo-blob + ".github/workflows/ci.yml")[deploy (main)],
-        ([site with playground], [Pages deploy], [published links]),
-        <e>,
-      ),
-      end(
-        (5, 0),
-        link(site(""))[website],
-        <w>,
-      ),
-      step(<c>, <a>),
-      step(<a>, <b>),
-      step(<b>, <d>),
-      step(<d>, <e>),
-      step(<e>, <w>),
-    )
-  },
-  kind: image,
-  placement: none,
-  caption: [The layers of checks between a change and the published site, with
-    representative checks; the published links are checked after deployment.
-    Each box links to its configuration.],
-) <fig:gates>
+Isabelle checks that every proof goes through, but a successful build says
+little about how well a development is maintained. A lemma that no proof
+cites, an import that another import already brings in, a constant written out
+next to the notation the project gave it, or a locale assumption that no proof
+uses all leave the build green. Documentation that quotes formal statements or
+links to the rendered theories can also fall out of date without affecting the
+build. In a development of #stat("isabelle.theories") theories, such problems
+accumulate.
 
-The source tooling these checks build on is described next.
+#link("https://github.com/ManuelLerchner/isar-tools")[`isar-tools`]
+@isartools, written for this thesis and published separately, addresses them.
+The command-line tool reads theory and `ROOT` files the way Isabelle's build
+finds them and never runs Isabelle itself, so it answers in seconds, fits a
+pre-commit hook, and also works on theories that do not yet build. Related
+tools cover parts of this ground. The Isabelle Linter checks proof style inside
+Isabelle @isabellelinter, and `isabelle-query` answers source-level queries
+about declarations, dependencies, and unfinished proofs @isabellequery.
 
-== Source tooling: `isar-tools` <sec:isar-tools>
+The tool has three parts. `isar fmt` changes only layout. `isar check` offers
+about fifty checks in groups. Checks for unfinished proofs and unreached
+theories run by default, and checks for unused or duplicated lemmas, unused
+locale assumptions, or terms written out next to their notation run when
+named. This repository runs the default groups and several named ones, among
+them documentation coverage and the locale check below. `isar project`, the
+part that matters most for this thesis, exposes sessions, theories, and
+declarations to other tools. `isar project extract` keeps the quoted theorem
+statements in sync with their sources, `isar project notation` generates the
+notation tables of the thesis and the explainer, and `isar project anchors`
+resolves the links into the rendered theories. A change that would leave the
+thesis inconsistent with the formalization therefore fails the build.
 
-Isabelle checks what a theory means, but not how a project is maintained: whether
-every theory is reached by a session, whether a proof was left unfinished,
-whether two lemmas state the same fact, or whether a locale still says what it
-said before a rename.
-#link("https://github.com/ManuelLerchner/isar-tools")[`isar-tools`] @isartools
-answers such questions from the sources alone. Written for this thesis and
-published separately, it reads sources, build logs, and rendered HTML as text
-and never runs Isabelle, so it also reads theories that do not yet check and
-runs all its checks in a pre-commit hook.
-
-Its formatter is designed to change only layout. Its checks, grouped by topic,
-report unfinished and unclosed proofs, theories no session reaches, malformed `ROOT` files, and, when named, unused or duplicated lemmas, unused imports, leftover proof-search commands, and broken links. This repository runs all of them. Project views list the sessions, the import graph, the class and locale hierarchy, and every named declaration, and statistics report sizes and
-proof counts. An extraction layer was built for the remaining tooling of this
-repository, in particular to keep the website and this thesis in sync with the
-theories: the theorem statements of this thesis come from
-`isar project extract`, the notation tables of the thesis and the explainer
-from `isar project notation`, and the links into the rendered theories from
-`isar project anchors`. Among related tools, the Isabelle Linter
-@isabellelinter runs inside Isabelle and lints proof style, and
-`isabelle-query` @isabellequery parses the sources without Isabelle and
-answers queries about entries, call graphs, and `sorry`s.
-
-=== A silent failure in locale headers
-
-One check addresses a mistake the batch build cannot see. Inside the header of
-a `locale`, an identifier Isabelle does not know is read as a free variable and
-generalized. An assumption that cites a renamed or misspelled constant
-therefore still builds, but now quantifies over an arbitrary function. In the theory below, the assumption cites a misspelling of the constant defined
-above it, and `isar check locales` reports the identifier.
+Some findings concern mistakes that Isabelle accepts. Inside a locale header,
+Isabelle reads an unknown identifier as a free variable and generalizes it. An
+assumption that cites a renamed or misspelled constant therefore still builds,
+but it now quantifies over an arbitrary function and states a different
+specification. In the theory below, the assumption cites a misspelling of the
+constant defined above it, and `isar check locales` reports the identifier.
 
 #{
   set par(first-line-indent: 0pt, justify: false)
@@ -312,14 +258,19 @@ above it, and `isar check locales` reports the identifier.
     )),
   )
 }
-
 A test reruns the check on this
-#link(repo-blob + "thesis/shared/code/isar-locale")[theory]. The check flags identifiers in a locale header that appear to be neither
-parameters nor locally bound and have no matching declaration. It approximates
-Isabelle's inner syntax lexically and is therefore a heuristic.
+#link(repo-blob + "thesis/shared/code/isar-locale")[theory]. The check
+approximates Isabelle's inner syntax lexically, so its report is a warning to
+inspect and does not prove an error.
 
-=== A hidden cost: re-elaborated theories
+A second kind of finding concerns build time. A session inherits the heaps of
+its parent sessions, but a library theory outside that ancestry is elaborated
+again in every session that imports it. `isar stats build` reads the time each
+theory took from a verbose build log and reports such repetitions, and
+continuous integration enforces a budget per library session. In this
+repository, repeated elaboration once cost 19% of a clean build.
 
-A second problem also leaves the build green. A session inherits only the
-heaps of its parent chain, so a library theory that is not an ancestor is elaborated again in every session that imports it. In this repository, this once cost 19% of a clean build. `isar stats build` finds it in a build log, and
-continuous integration enforces a budget per library session.
+All of these checks work on the sources and complement Isabelle. They point to
+suspicious patterns and structural problems, and they may report false
+positives or miss problems. Whether a theory is formally correct is still
+decided by the Isabelle build alone.
