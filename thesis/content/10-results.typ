@@ -30,9 +30,7 @@ reached, as well as a value for each global unknown. By @sec:certificate, these 
 execution. A user, however, reads neither states nor contexts. The user reads
 a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
-from the solution and why every verdict in it is sound. Neither verdict claims its
-check is reached. #verdict("PROVED") says the condition holds whenever a run
-reaches the check, and #verdict("REFUTED") says that it fails there (@sec:verdict-meaning).
+from the solution and why every verdict in it is sound.
 
 == From solution to report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 
