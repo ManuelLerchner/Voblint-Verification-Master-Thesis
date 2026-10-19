@@ -460,7 +460,7 @@ Part IV  From Analyses to Verdicts
   8  Equations, Contexts, and Routing                     (+ corollary display)
   9  Solving the Equations                                (update rules before buffering)
   10 From Solutions to Verdicts
-     10.1 From solution to report                        (sec:report)
+     10.1 The analyzer and its report                     (sec:report)
      10.2 Verdicts                                       (sec:verdicts)
      10.3 The soundness chain at one check                      (sec:chain, spine as its theorem)
      10.4 The source-level theorem                       (sec:headline)
