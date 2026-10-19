@@ -1,6 +1,8 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig, thy-badge
+#import "../lib/code.typ": (
+  isaconst, isai, isalocale, isathm, isatype, listing, oblig, site, thy-badge,
+)
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, verdict as verdict-chip

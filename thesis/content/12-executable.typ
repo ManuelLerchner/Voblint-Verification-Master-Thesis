@@ -271,9 +271,7 @@ uses.
 ) <fig:shell>
 
 The
-#link(
-  "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html",
-)[playground]
+#link(site("playground.html"))[playground]
 is a static page. Its toolbar selects the configuration argument of
 #isaconst("run_voblint") and, independently, whether the surrounding tracer is
 on. #isathm("run_voblint_source_sound") quantifies over that configuration
@@ -566,7 +564,7 @@ continuous integration from diverging.
       ),
       end(
         (5, 0),
-        link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/")[website],
+        link(site(""))[website],
         <w>,
       ),
       step(<c>, <a>),

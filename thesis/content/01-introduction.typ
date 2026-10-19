@@ -1,4 +1,6 @@
-#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, oblig
+#import "../lib/code.typ": (
+  fixture, isaconst, isalocale, isathm, isatype, listing, oblig, rebase, site,
+)
 #import "../lib/figures.typ": check-row, partref, verdict
 #import "../lib/sources.typ": proved
 #import "../lib/math.typ": *
@@ -120,7 +122,7 @@ many contexts, the analysis may not finish in practice.
 Voblint answers every check that the user writes into the source program as
 `__voblint_check(e)`. It also warns at every division and remainder where it cannot
 exclude a zero divisor. @fig:intro-answers shows a run in the
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
+#link(site("playground.html"))[browser
   playground] together with what each answer guarantees. #verdict("PROVED") and
 #verdict("REFUTED") are the _definite_ verdicts, and #verdict("UNKNOWN") claims
 nothing. Only #verdict("DEAD") makes a claim about reachability, and
@@ -156,7 +158,10 @@ nothing. Only #verdict("DEAD") makes a claim about reachability, and
       columns: (56%, 1fr),
       column-gutter: 8pt,
       align: horizon,
-      link(_ans-run.url, image("/shared/generated/playground/" + _ans-run.image, width: 100%)),
+      link(rebase(_ans-run.url), image(
+        "/shared/generated/playground/" + _ans-run.image,
+        width: 100%,
+      )),
       table(
         columns: (auto, auto, 1fr),
         align: (right + horizon, left + horizon, left + horizon),
@@ -527,7 +532,7 @@ the chapter that presents each line.
   placement: auto,
   caption: [A map of the proof with its interior definitions omitted. The
     #link(
-      "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#proof-map",
+      site("index.html#proof-map"),
     )[project site]
     shows it interactively, with every station linked to its theory. Each line
     groups the results of one layer: #metro-line(metro.sem)[Semantics], the

@@ -249,9 +249,12 @@ def playground_links(page_links: dict[str, set[str]]) -> dict[str, set[str]]:
 
 
 def split(url: str) -> tuple[str, str]:
-    """Path without query, and the decoded fragment."""
+    """Path without query, and the decoded fragment if it names an anchor."""
     parsed = urllib.parse.urlsplit(url)
-    return parsed.path, urllib.parse.unquote(parsed.fragment)
+    # `#code=...` is state the playground decodes, not an element id;
+    # check_playground validates it.
+    fragment = "" if "=" in parsed.fragment else parsed.fragment
+    return parsed.path, urllib.parse.unquote(fragment)
 
 
 def anchor_present(body: str, fragment: str) -> bool:

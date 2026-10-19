@@ -231,7 +231,7 @@ its transfer functions and their soundness (@sec:instances-supply).
   kind: table,
   caption: [Update rules on four programs (Interval, no contexts; bounded
     narrowing at its default bound 5), as on the
-    #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site],
+    #link(site("#globals"))[project site],
     where each cell opens its run in the playground. Each cell is
     the verdict and state of the check row. Every check holds in every execution, so an #verdict("UNKNOWN") is lost
     precision. "No answer in 5 s" means the command-line `--timeout 5` stopped

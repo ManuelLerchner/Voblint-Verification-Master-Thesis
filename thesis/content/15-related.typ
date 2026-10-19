@@ -400,7 +400,7 @@ callee context from the entered state, publishes the callee entry, and combines
 the callee's exit with the caller. Voblint's equations have the same four
 steps, with enter and combine from the D/G specification and the context
 chosen by the routing policy. The project site's side-by-side comparison
-(#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#goblint")[site])
+(#link(site("#goblint"))[site])
 lists #alignment.rows.len() Goblint constructs:
 #alignment-count("modeled") are modeled, #alignment-count("simplified")
 simplified, and #alignment-count("absent") not modeled. No row claims that the

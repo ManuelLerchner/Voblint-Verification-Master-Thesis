@@ -3,7 +3,7 @@
 // render the same file, so edit `shared/notation.toml` (reading and meaning)
 // or the theories (everything else), never the rendered table.
 #import "theme.typ": vb
-#import "code.typ": entity, isai, isalocale
+#import "code.typ": entity, isai, isalocale, site-url
 
 #let notation = json("/shared/generated/notation.json")
 #let _links = json("/shared/generated/links.json")
@@ -27,7 +27,7 @@
   let page = f.href.split("#").first()
   linebreak()
   // The same theory style as the anchor index of appendix B.1.
-  link(_links.base + page, text(font: "DejaVu Sans Mono", size: 7pt, fill: vb.neutral, f.theory))
+  link(site-url + page, text(font: "DejaVu Sans Mono", size: 7pt, fill: vb.neutral, f.theory))
 }
 
 #let _cells(e) = {

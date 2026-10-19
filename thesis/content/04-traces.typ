@@ -204,7 +204,7 @@ $#isaconst("sink_node") thin t$ the node of its last entry,
 $#isaconst("sink_store") thin t$ that entry's store, and
 $#isaconst("caller_of") thin t$ the caller that created the activation, which
 a $ctor("Root")$ does not have. The
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#observers")[explainer page] shows these observers interactively on a
+#link(site("index.html#observers"))[explainer page] shows these observers interactively on a
 run of the program of @fig:flat-nested.
 
 Each trace represents the history of one activation up to a program point, so
@@ -413,9 +413,7 @@ local step keeps the contexts of the trace
 the contexts its caller had before the call
 (#isathm("activation_context_rel_Resume_iff")). An activation may therefore
 carry several contexts or none. The
-#link(
-  "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#settings",
-)[explainer page]
+#link(site("index.html#settings"))[explainer page]
 draws, for each policy, the contexts that the analyzer creates for one program.
 
 #block(breakable: false)[

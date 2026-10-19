@@ -1,4 +1,5 @@
 #import "theme.typ": vb
+#import "code.typ": site-url
 // Notation library. Only mathematical notation lives here, and each symbol is
 // the one the theories print: gamma for every concretization (overloaded by
 // type), the semantic brackets for evaluation, the lattice order and operations, function-
@@ -56,7 +57,7 @@
   let name = if type(x) != str { "" } else if thy == none { x } else { thy + "." + x }
   let key = "ctor:" + name
   if _ctor-links.base != "" and key in _ctor-links.links {
-    link(_ctor-links.base + _ctor-links.links.at(key), body)
+    link(site-url + _ctor-links.links.at(key), body)
   } else { body }
 }
 // Math only: the class restores the operator spacing that text drops.
