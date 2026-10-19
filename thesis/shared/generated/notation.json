@@ -827,8 +827,8 @@
       "id": "routed_context.cover",
       "group": "shorthand",
       "kind": "locale_abbreviation",
-      "reads": "the stores claimed at _v_ in _ctx_",
-      "meaning": "proof-local shorthand for applying {\\<gamma>\\<^sub>M} to the value the published reader holds at (_v_, _ctx_), the claim handed to the coverage locale; it is not a separate semantic operation",
+      "reads": "the stores covered at _v_ in _ctx_",
+      "meaning": "proof-local shorthand for applying {\\<gamma>\\<^sub>M} to the value the published reader holds at (_v_, _ctx_), the cover handed to the coverage locale; it is not a separate semantic operation",
       "forms": [
         {
           "const": "cover",

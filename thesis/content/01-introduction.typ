@@ -588,4 +588,5 @@ the report read off it is sound for every source run (@ch:results).
 
 #partref(<part:assessment>) compares Voblint with prior work (@ch:related) and
 concludes (@ch:conclusion). @sec:isabelle explains the Isabelle syntax of the
-listings, and @sec:isar-tools describes the source tooling built for this work.
+listings, @app:notation lists the notation, and @sec:isar-tools describes the
+source tooling built for this work.

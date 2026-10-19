@@ -63,6 +63,7 @@
   include "content/acknowledgements.typ"
   include "content/abstract.typ"
   include "content/ai-use.typ"
+  include "content/reading-guide.typ"
 })
 
 #show outline.entry.where(level: 1): part-outline-entry
@@ -110,6 +111,7 @@
 #set heading(numbering: "A.1.")
 #counter(heading).update(0)
 #include "content/appendix-isabelle.typ"
+#include "content/appendix-notation.typ"
 #include "content/appendix-tooling.typ"
 
 // -------------------------------------------------------------- back matter -
