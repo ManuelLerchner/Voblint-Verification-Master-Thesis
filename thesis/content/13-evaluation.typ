@@ -69,7 +69,7 @@ reader may ask whether each is needed. For two coverage conditions the
 theories give a counterexample. Reading a callee's result at the caller's
 context meets the remaining obligations (#isathm("ret_weak_obligations")) but
 misses a store a run reaches (#isathm("return_at_caller_context_unsound")).
-Dropping #oblig("TOTAL") admits a claim that meets the others
+Dropping #oblig("TOTAL") admits a cover that meets the others
 (#isathm("tot_weak_obligations")) but misses a store collected at a
 continuation (#isathm("total_dropped_unsound"), @sec:contract). These are conditions we
 selected, so they do not show that every premise of the development is needed.

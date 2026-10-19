@@ -562,8 +562,8 @@ side-effecting constraint systems, and the verified top-down solver.
 #partref(<part:over-approx>) fixes what an analysis must over-approximate:
 source programs and their graphs (@ch:program-model) and activation traces with
 the coverage contract (@ch:traces). The contract reduces soundness to five
-local obligations about one claim per node and context, and every later part
-works toward a claim that meets them.
+local obligations about a _cover_, one set of stores per node and context, and
+every later part works toward a cover that meets them.
 
 #partref(<part:analyses>) states what domains, analyses, and combinations of
 analyses must prove (@ch:domains to @ch:cooperation). A domain proves its value
@@ -573,7 +573,7 @@ they exchange.
 
 #partref(<part:verdicts>) builds the equations, solves them, and composes the
 source-level theorem (@ch:equations to @ch:results). Every post-solution of the
-equations induces a claim that meets the contract (@ch:equations), the verified
+equations induces a cover that meets the contract (@ch:equations), the verified
 solver returns such a post-solution whenever it terminates (@ch:solving), and
 the report read off it is sound for every source run (@ch:results).
 

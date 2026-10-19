@@ -476,9 +476,9 @@ to local checks.
 
 An analysis result is sound if, at every node $v$ and in every context $c$,
 it accounts for the stores of the activation collecting semantics
-#isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). We state this over a _claim_ #isai("cover") $v$ $c$, a set of
-stores for each node and context. Since valid
-traces grow by only four rules, it suffices to check the claim against each
+#isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). We state this over a _cover_, a function #isai("cover") that assigns a set of
+stores to each node and context. Since valid
+traces grow by only four rules, it suffices to check the cover against each
 rule once. The _coverage contract_ does this with one local obligation per rule,
 each mentioning only stores. For a call edge from $u$ into procedure $p$ with
 continuation $k$, it requires
@@ -501,12 +501,12 @@ continuation $k$, it requires
   )
 ]
 Here "$c'$ admitted from $s$" means that the policy admits $c'$ for the call
-from $s$ in context $c$ (#isaconst("admits_call_context")). #oblig("INIT") puts the initial stores into the claim at the entry. Each
-of the other three follows one kind of step. If the claim contains the
+from $s$ in context $c$ (#isaconst("admits_call_context")). #oblig("INIT") puts the initial stores into the cover at the entry. Each
+of the other three follows one kind of step. If the cover contains the
 stores before the step, it must also contain the store after it. In the running
-example under entry-state contexts, #oblig("CALL") requires the claim for the
+example under entry-state contexts, #oblig("CALL") requires the cover at the
 entry of `bump` in context $[[5, 5]]$ to contain the entered store with
-$n = 5$, and #oblig("RETURN") requires the claim at the continuation in `main`
+$n = 5$, and #oblig("RETURN") requires the cover at the continuation in `main`
 to contain the store in which `a` holds $6$. @fig:contract shows the
 obligations at one call, together with a fifth, #oblig("TOTAL").
 
@@ -552,16 +552,16 @@ obligations at one call, together with a fifth, #oblig("TOTAL").
 
 #oblig("TOTAL") closes a gap that the other four obligations leave.
 #oblig("CALL") and #oblig("RETURN") only speak about the contexts that the
-policy admits. If a call from a store in the claim gets no context at all, both
-hold vacuously, and nothing puts the store after the return into the claim at
+policy admits. If a call from a store in the cover gets no context at all, both
+hold vacuously, and nothing puts the store after the return into the cover at
 the continuation. The resumed caller, however, still carries its contexts there
-(#isathm("resume_keeps_context")), so the claim can miss a store that the
+(#isathm("resume_keeps_context")), so the cover can miss a store that the
 program reaches (#isathm("total_dropped_unsound")). #oblig("TOTAL") therefore requires the
 policy to admit at least one callee context for every call from a store
 $s in #isai("cover u c")$ (#isaconst("call_context_total_on")). It asks only
-about stores in the claim, because entry-state policies admit no context for
+about stores in the cover, because entry-state policies admit no context for
 the stores that the analysis excludes (@sec:contexts). Call strings and the
-context-insensitive policy meet #oblig("TOTAL") for every claim (#isathm("call_context_total_on_of_fun")). For
+context-insensitive policy meet #oblig("TOTAL") for every cover (#isathm("call_context_total_on_of_fun")). For
 entry-state contexts, it follows from the coverage of the analysis's entry
 (@sec:eq-routing).
 
@@ -578,22 +578,22 @@ traces, in which each obligation discharges its rule.
 
 #block(breakable: false)[
   #theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
-    If the claim meets the five obligations of
+    If the cover meets the five obligations of
     #isalocale("activation_coverage"), then for every node $v$ and context $c$, the activation collecting semantics
-    at $v$ and $c$ is contained in the claim #isai("cover v c").
+    at $v$ and $c$ is contained in #isai("cover v c").
   ]
 
   #proved("activation_collect_sound")
 ]
 
 The theorem bounds each context separately. Since #oblig("TOTAL") gives every
-valid trace a context, the claims of all contexts together contain the whole
+valid trace a context, the sets of all contexts together contain the whole
 node collecting semantics:
 
 #block(breakable: false)[
-  #corollary(name: [Claims cover the collection], isa: "node_collect_covered")[
+  #corollary(name: [The cover contains the collection], isa: "node_collect_covered")[
     Under the five coverage obligations, every store of the node collecting
-    semantics at $v$ lies in the claim #isai("cover v c") of some context $c$.
+    semantics at $v$ lies in #isai("cover v c") for some context $c$.
   ]
 
   #proved("node_collect_covered")
@@ -603,7 +603,7 @@ This completes the concrete half of the soundness argument. Every store that a
 finite source execution reaches appears in a graph run (@ch:program-model),
 as the final store of a valid trace (@sec:source-bridge), in the activation
 collecting semantics of the trace's contexts (@sec:contexts), and hence in
-every claim that meets the coverage contract. An analysis therefore never has
+every cover that meets the coverage contract. An analysis therefore never has
 to reason about whole runs. It only has to
 produce sets of stores that each kind of step preserves. The following
 chapters build such analyses from abstract domains (@ch:domains), transfer

@@ -23,9 +23,9 @@
 
 = Abstract Domains <ch:domains>
 
-@ch:traces reduced soundness to five obligations on a claim. A claim assigns
+@ch:traces reduced soundness to five obligations on a cover, which assigns
 each node and context a set of stores. The obligations are local conditions,
-and together they guarantee that the claim contains every store that an execution in that context reaches at the node (#isathm("activation_collect_sound")). These sets
+and together they guarantee that the cover contains every store that an execution in that context reaches at the node (#isathm("activation_collect_sound")). These sets
 are arbitrary and usually infinite. An analyzer, however, computes with finite
 abstract values, and its solver (@sec:td) compares, joins, widens, and narrows them without
 knowing what they mean. Recall from @sec:abs-int that an abstract value $a$
