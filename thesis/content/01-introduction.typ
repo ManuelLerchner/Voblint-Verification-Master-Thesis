@@ -168,7 +168,7 @@ nothing. Only #verdict("DEAD") makes a claim about reachability, and
         stroke: none,
         inset: (x: 3pt, y: 2.5pt),
         table.hline(stroke: 0.5pt),
-        [*Line*], [*Answer*], [*What it guarantees*],
+        [*Line*], [*Answer*], [*Guarantee*],
         table.hline(stroke: 0.4pt),
         // Rows in source order, so the table reads top to bottom like the program.
         ..(
@@ -492,7 +492,7 @@ that Voblint isolates, over a small language with recursive procedures.
   },
   placement: none,
   caption: [Where the proof starts and stops, for accepted programs whose solve
-    terminates (@sec:trust-boundary). The adequacy of #isaconst("pstep") is
+    terminates. The adequacy of #isaconst("pstep") is
     argued (@sec:vimp-vs-c).],
 ) <fig:intro-trust>
 
@@ -506,7 +506,7 @@ The theorem has the following limits (@sec:limitations).
   overflows, data races, memory
   safety, memory leaks, and program termination @saan26phd[§3.3].
 - _Adequacy and trusted components._ We argue, but do not prove, that #isaconst("pstep") models the intended language (@sec:vimp-vs-c). The parser, the code generator, and the target
-  toolchains lie outside the proof (@sec:trust-boundary).
+  toolchains lie outside the proof (@fig:intro-trust).
 - _Partial correctness._ The theorem covers every report the analyzer returns.
   Termination of the solve is not proved for every program (@sec:certificate).
 - _Precision and cost._ No completeness or general precision ordering is
@@ -588,5 +588,5 @@ the report read off it is sound for every source run (@ch:results).
 
 #partref(<part:assessment>) compares Voblint with prior work (@ch:related) and
 concludes (@ch:conclusion). @sec:isabelle explains the Isabelle syntax of the
-listings, @app:notation lists the notation, and @sec:isar-tools describes the
-source tooling built for this work.
+listings, @app:notation lists the notation, and @sec:voblint-repo describes the repository, its
+checks, and the source tooling built for this work.

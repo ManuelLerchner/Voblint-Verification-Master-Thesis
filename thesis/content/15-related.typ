@@ -88,7 +88,7 @@ including MOPSA @kaindlstorfer24[p. 326, Tab. 2; p. 329].
     checked. _End to end_ means from source
     executions to the verdicts of the exported function, for every answer it
     returns (partial correctness) and with the trusted components of
-    @sec:trust-boundary.],
+    @fig:intro-trust.],
 ) <tab:production-analyzers>
 
 
@@ -109,7 +109,7 @@ Coq's extraction together with the Caml compiler and run-time system
 @leroy09[§5].
 Voblint's guarantee has the same shape: a theorem
 about the function the tool runs, code generated from the prover, and an
-explicit list of trusted components (@sec:trust-boundary). Compiler correctness
+explicit list of trusted components (@fig:intro-trust). Compiler correctness
 preserves the behavior of a program. Analyzer soundness only over-approximates
 it, so a coarser result remains sound.
 
@@ -505,8 +505,7 @@ Tilscher et al. @tilscher26, its update rules from Stemmler et al.
 @stemmler25, side-effecting constraint systems from Seidl et al. @seidl03 and
 Apinis et al. @apinis12, widening, narrowing, and the reduced product from
 Cousot and Cousot @cousot77 @cousot79, its activation traces from the local
-traces of Schwarz et al. @schwarz21, and its architecture from Goblint. What
-we did not find mechanized elsewhere is the connection between these parts: a
-soundness proof that leads from a source semantics, through a context-indexed
+traces of Schwarz et al. @schwarz21, and its architecture from Goblint. We did not find the connection between
+these parts mechanized elsewhere, namely a soundness proof that leads from a source semantics, through a context-indexed
 collecting semantics over activation traces, to a side-effecting constraint
 system and its verified solver.

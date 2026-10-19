@@ -492,7 +492,7 @@ caller's solved state describes, which is totality.
     align: (left, left),
     stroke: none,
     table.hline(),
-    [*obligation*], [*what the generated equations provide*],
+    [*obligation*], [*guarantee of the generated equations*],
     table.hline(stroke: 0.5pt),
     [#oblig("INIT")], [the initial state at the program entry covers the initial stores],
     [#oblig("INTRA")], [the transfer along each local edge is sound],

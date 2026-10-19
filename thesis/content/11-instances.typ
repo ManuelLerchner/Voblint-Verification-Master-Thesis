@@ -250,7 +250,7 @@ changes.
 
 In the generated OCaml, the default mode iterates without a termination proof,
 so on some input the analyzer might not return. Soundness is unaffected, since
-the theorem only speaks about returned reports (@sec:trust-boundary).
+the theorem only speaks about returned reports (@fig:intro-trust).
 
 Int reduces the result of every arithmetic operation and of the guard filter,
 but not the result of a join, a widening, or a narrowing, which all work

@@ -57,7 +57,6 @@ ALLOW: dict[tuple[str, str], str] = {
     # Goblint pull request and issue numbers, not counts.
     ("13-evaluation.typ", "1161"): "Goblint pull request number",
     # Size of the profiled example program, not a repository count.
-    ("12-executable.typ", "256"): "chained assignments in the profiled program",
     # Drawing coordinates of a figure, not a count.
     ("02-background.typ", "11"): "tick range of the number line in fig:concretization",
     # Colour lightening in cetz figure code, whose `line` calls trip the heuristic.

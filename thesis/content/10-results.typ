@@ -23,7 +23,7 @@
 
 = From Solutions to Verdicts <ch:results>
 
-This chapter answers what the analyzer's output guarantees about the
+This chapter derives the guarantees of the analyzer's output for the
 executions of the source program. Solving the equations of @ch:equations
 (@ch:solving) gives an abstract state for each CFG node and context the solver
 reached, as well as a value for each global unknown. By @sec:certificate, these states cover every
@@ -346,7 +346,7 @@ proof.
 The theorem is about #isaconst("run_voblint") itself, the constant that code
 generation exports. It therefore concerns the analyzer that the command-line
 tool and the playground run, up to the trusted code generator and target
-toolchains (@sec:codegen, @sec:trust-boundary).
+toolchains (@sec:codegen, @fig:intro-trust).
 #theorem(name: [Source-level soundness of the analyzer], isa: "run_voblint_source_sound")[
   #proved("run_voblint_source_sound")
 ]
@@ -395,7 +395,7 @@ reaches is thus collected, covered by the report and consistent with its
 verdicts at every node where the run is observed. This is the chain of
 @sec:chain read at one store.
 
-== What a verdict says about executions #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
+== Verdicts as statements about executions #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
 By the theorem of @sec:headline, the four verdicts make the following
 statements about _covered executions_, the finite runs of `main` from an
@@ -434,4 +434,4 @@ nonzero in every store collected at $v$
 These theorems complete the chain of @fig:intro-nest. Each verdict holds for
 every covered execution that reaches its check, in every configuration.
 Termination (@sec:certificate) and the components outside the proof
-(@sec:trust-boundary) are not covered.
+(@fig:intro-trust) are not covered.

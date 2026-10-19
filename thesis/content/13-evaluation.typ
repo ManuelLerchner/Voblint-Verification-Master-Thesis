@@ -31,7 +31,7 @@ normalization by evaluation, which also extends trust beyond the kernel,
 admitted a proof of `False` @paulson26broken. An _executable_ result records that one
 program, run with fixed analysis settings, produces one answer. Its run also
 passes through the parser and renderer outside the theorem
-(@sec:trust-boundary). A _source inspection_ or _repository measurement_
+(@fig:intro-trust). A _source inspection_ or _repository measurement_
 supports statements about the structure or size of the development.
 
 == Non-vacuity #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
@@ -254,7 +254,7 @@ per-origin warrowing widens it to $-infinity$, `a + 2` may then be zero, and
 the division loses all information. We attribute Warrow's result to the fact that it joins in `main`'s argument $-1$ first, which keeps the lower bound. On the growing recursion the joining
 rules give no answer within the limit. The argument grows without bound, so we
 expect, without a proof, that their solve diverges, although the timeout alone
-does not show this (@sec:trust-boundary). Bounded narrowing, at its default
+does not show this (@fig:intro-trust). Bounded narrowing, at its default
 bound 5, reaches the verdicts of per-origin warrowing on all four programs.
 
 *Termination.* _Evidence: proved for finite context spaces, executable for
@@ -284,7 +284,7 @@ check is proved only with both analyses.
 == Tests of the unverified parts <sec:eval-corpus>
 
 _Evidence: executable, and repository measurement._ For Voblint's handwritten
-code around the generated analyzer (@sec:trust-boundary), tests are the only
+code around the generated analyzer (@fig:intro-trust), tests are the only
 project-local evidence. The theories under
 #link(repo-blob + "src")[`src/`] contain #stat("isabelle.lines") physical lines
 in #stat("isabelle.theories") files, including comments and document text but excluding generated theories, and

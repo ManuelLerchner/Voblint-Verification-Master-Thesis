@@ -59,8 +59,8 @@ or reads (@sec:eq-buffer). The adapters change the equations, not the solver.
     table.hline(),
   ),
   placement: none,
-  caption: [What the equations of Apinis et al. and Goblint require, what the
-    vendored solver provides instead, and the adapter that closes each gap. A
+  caption: [The requirements of the equations of Apinis et al. and Goblint, the
+    alternative the vendored solver provides, and the adapter that closes each gap. A
     call chooses the result it reads from the caller's state, writes the
     callee's entry state to a local unknown, keeps local states and analysis
     globals in different domains, and may write one seed twice in one
@@ -271,7 +271,7 @@ analyzer runs, answers the same join as the direct generator of
 result, though not the equations it solves. @sec:outlook-extending discusses a
 solver extension that would make seeds and buffering unnecessary.
 
-== What a terminating solve guarantees <sec:certificate>
+== The guarantee of a terminating solve <sec:certificate>
 
 The soundness theorem of @sec:eq-discharge needs a post-solution on a set of
 unknowns that contains the program entry and is closed under execution steps.

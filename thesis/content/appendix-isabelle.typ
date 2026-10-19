@@ -90,7 +90,7 @@ _Code equations_ determine what code generation emits @haftmann10. One
 #isacmd("export_code") declaration emits OCaml from them, and
 #isacmd("code_printing") maps a constant to target-language code, such as
 integers to OCaml's arbitrary-precision numbers. The generated code is trusted,
-not proved (@sec:trust-boundary). Theories are grouped into _sessions_, which
+not proved (@fig:intro-trust). Theories are grouped into _sessions_, which
 Isabelle builds and checks as units, and which later chapters cite as the home
 of a construction. The control-flow graph, for instance, lives in
 #isasession("Voblint_CFG"), which builds on #isasession("Voblint_VIMP").

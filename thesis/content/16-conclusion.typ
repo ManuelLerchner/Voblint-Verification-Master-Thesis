@@ -93,7 +93,7 @@ to analysis globals. #isaconst("rel_order_spec") is therefore selectable only in
 its local form, and one update rule serves every global unknown of a run
 (@sec:mixed-flow, @sec:relational, @sec:update-rules).
 
-The delivered tools rest on the trusted components of @sec:trust-boundary, and
+The delivered tools rest on the trusted components of @fig:intro-trust, and
 every theorem proved by evaluation trusts the code generator. No test runs VIMP
 programs concretely, since the development has no executable form of
 #isaconst("pstep"). No systematic time or memory evaluation is reported, only
@@ -179,7 +179,7 @@ Counterexample theorems for weakened obligations (@sec:eval-1161,
 @sec:discussion) act as negative tests. Human review can therefore concentrate
 on what no proof settles: whether the base definitions and the obligations state
 the intended meaning (@sec:vimp-vs-c), and whether the trusted base of
-@sec:trust-boundary is acceptable.
+@fig:intro-trust is acceptable.
 
 The same division applies beyond single analyses. Extending the framework with
 a construct from C, or with a Goblint feature such as path-sensitive entry

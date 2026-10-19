@@ -463,7 +463,7 @@ stays dead.
   })
 }
 
-== What an abstract value means #thy-badge("Voblint_Domain", "Abstract_Domain") <sec:domain-carrier-laws>
+== The meaning of an abstract value #thy-badge("Voblint_Domain", "Abstract_Domain") <sec:domain-carrier-laws>
 
 The two requirements of the chapter opening become laws on the carrier of a
 domain (@sec:abs-int), which Voblint represents as an Isabelle type $A$ of
@@ -972,7 +972,7 @@ exported code without a further proof (#isathm("exec_local_spec_sound"),
   domain-tree("carrier"),
   kind: image,
   placement: top,
-  caption: [What a non-relational domain supplies over its carrier type
+  caption: [The operations and laws of a non-relational domain over its carrier type
     #raw("'a"), down to the soundness locale #isalocale("sound_nonrelational_ops")
     an analysis interprets. Each class (solid) or locale (dashed) lists the
     operations and laws it declares, which the declarations below it inherit.

@@ -115,7 +115,7 @@ attributable to them.
 
 Isabelle/HOL accepts every theorem in the development. Proofs by evaluation,
 used for some facts about fixed programs, additionally rely on Isabelle's code
-generator (@sec:trust-boundary). This establishes the stated propositions
+generator (@fig:intro-trust). This establishes the stated propositions
 relative to their definitions and assumptions, but does not establish that those
 definitions faithfully capture the intended language or analysis. Definitions
 and theorem statements were therefore also checked against example programs, the

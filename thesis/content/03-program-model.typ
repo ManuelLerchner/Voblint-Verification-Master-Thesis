@@ -270,7 +270,7 @@ global variables (#isaconst("declared_global_vars")). Its procedure table
 procedure is the declaration named `main`, and #isaconst("main_body") is its
 body. @fig:vimp-ast shows the running example in this form. The formal
 development starts from this parsed program, and the parser lies outside the
-theorem (@sec:trust-boundary).
+theorem (@fig:intro-trust).
 
 // The tree is read from the parser's own output (claim ast-contexts), the JSON
 // the playground hands to the analyzer, so it cannot drift from the frontend.
