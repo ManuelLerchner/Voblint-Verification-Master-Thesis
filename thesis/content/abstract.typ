@@ -1,3 +1,4 @@
+#import "../lib/code.typ": site
 #import "../lib/stats.typ": stat
 #import "../lib/figures.typ": verdict
 
@@ -49,7 +50,7 @@ context policy, and placement of program globals.
 
 The analysis function is exported to OCaml, runs in a command-line interface and
 a
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
+#link(site("playground.html"))[browser
   playground], and is tested on #stat("corpus.cases") regression programs. Proofs
 by evaluation show that the main theorem is non-vacuous on concrete programs.
 

@@ -232,7 +232,7 @@ $#isaconst("sink_node") thin t$ the node of its last entry,
 $#isaconst("sink_store") thin t$ that entry's store, and
 $#isaconst("caller_of") thin t$ the caller that created the activation, which
 a $ctor("Root")$ does not have. The
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#observers")[explainer page] shows these observers interactively on a
+#link(site("index.html#observers"))[explainer page] shows these observers interactively on a
 run of the program of @fig:flat-nested.
 
 Each trace represents the history of one activation up to a program point, so
@@ -290,7 +290,7 @@ three rules correspond to the three rules of #isaconst("cstep"). Intra appends
 a step along a local edge. Call starts a new trace that holds the caller, where
 #isaconst("cstep") pushes a frame. Ret builds a third trace that holds caller
 and callee, where #isaconst("cstep") pops the frame.
-The #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics")[explainer page] animates the source execution,
+The #link(site("index.html#semantics"))[explainer page] animates the source execution,
 the graph execution, and the activation trace side by side for one program.
 
 The ret rule applies when a callee trace has reached a result node
@@ -472,9 +472,7 @@ activation carries the initial context #isai("c\<^sub>0"). A called activation
 carries a context $c'$ if its caller carries some context $c$ and $c'$ lies in
 the set that $italic("adm")$ admits for the call from $c$. A resumed activation carries
 the contexts that the caller had before the call. The
-#link(
-  "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#settings",
-)[explainer page]
+#link(site("index.html#settings"))[explainer page]
 draws, for each policy, the contexts that the analyzer creates for one program, with every copy of a procedure labeled by its context.
 
 #block(breakable: false)[
