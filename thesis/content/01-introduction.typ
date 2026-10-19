@@ -1,4 +1,6 @@
-#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, oblig
+#import "../lib/code.typ": (
+  fixture, isaconst, isalocale, isathm, isatype, listing, oblig, rebase, site,
+)
 #import "../lib/figures.typ": check-row, partref, verdict
 #import "../lib/sources.typ": proved
 #import "../lib/math.typ": *
@@ -106,7 +108,7 @@ Voblint answers every check that the user writes into the source program as a
 statement `__voblint_check(e);`. It also warns at every arithmetic operation
 where it cannot exclude a hazard: a zero divisor, a signed overflow, or a
 conversion that changes a value. @fig:intro-answers shows a run in the
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
+#link(site("playground.html"))[browser
   playground] together with what each answer guarantees. Only #verdict("DEAD")
 makes a claim about reachability, and #verdict("REFUTED") is not a verified
 counterexample. Each run fixes an analysis configuration. It consists of the
@@ -146,7 +148,10 @@ contexts.
       columns: (56%, 1fr),
       column-gutter: 8pt,
       align: horizon,
-      link(_ans-run.url, image("/shared/generated/playground/" + _ans-run.image, width: 100%)),
+      link(rebase(_ans-run.url), image(
+        "/shared/generated/playground/" + _ans-run.image,
+        width: 100%,
+      )),
       table(
         columns: (auto, auto, 1fr),
         align: (right + horizon, left + horizon, left + horizon),

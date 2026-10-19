@@ -12,10 +12,14 @@ out="$root/Lerchner_Master_Thesis.pdf"
 strict=1
 [ "${1:-}" = "--allow-warnings" ] && strict=0
 
+# SITE_URL points the PDF's site links at a preview instead of the published site.
+set --
+[ -n "${SITE_URL:-}" ] && set -- --input "site-url=${SITE_URL%/}/"
+
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 
-if ! typst compile --root "$root" --font-path "$root/assets/fonts" \
+if ! typst compile --root "$root" --font-path "$root/assets/fonts" "$@" \
      "$root/thesis.typ" "$out" 2>"$log"; then
   cat "$log" >&2
   exit 1

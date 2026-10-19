@@ -1,7 +1,7 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": (
-  c11, fixture, isacmd, isaconst, isai, isalocale, isathm, isatype, listing, thy-badge,
+  c11, fixture, isacmd, isaconst, isai, isalocale, isathm, isatype, listing, site, thy-badge,
 )
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": *
@@ -652,7 +652,7 @@ differ in how they compute the value and whether they widen:
   switch to narrowing still applies one narrowing step, but further smaller
   contributions of that origin are ignored until it grows again.
 @fig:update-rules runs all five on one sequence of contributions, and the
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site]
+#link(site("#globals"))[project site]
 runs them on a program with several shared callee entries. In the analyzer,
 the rule decides how a callee's entry state accumulates across call sites and,
 with flow-insensitive program globals (@sec:mixed-flow), how a global

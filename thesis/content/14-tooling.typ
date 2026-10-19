@@ -1,4 +1,4 @@
-#import "../lib/code.typ": isa, isacmd, isaconst, isai, isalocale, isathm, repo-blob
+#import "../lib/code.typ": isa, isacmd, isaconst, isai, isalocale, isathm, repo-blob, site
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
 #import "../lib/claims.typ": claim-ref
@@ -197,7 +197,7 @@ after the rendered theories, the formalization PDF, and this thesis build.
       ),
       end(
         (5, 0),
-        link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/")[website],
+        link(site(""))[website],
         <w>,
       ),
       step(<c>, <a>),

@@ -565,7 +565,7 @@ to its target. Evaluation needs no kinds, but this conversion does, so for a
 procedure table #isai("\<Pi>") and configurations $c$, $c'$ a step is written
 #isai("\<kappa>, \<Pi> \<turnstile> c \<rightarrow>\<^sub>p c'"), and
 #isai("\<rightarrow>\<^sub>p\<^sup>*") is its closure.#footnote[The
-  #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics")[explainer page] animates the source execution, the graph execution and the
+  #link(site("index.html#semantics"))[explainer page] animates the source execution, the graph execution and the
   activation trace of @ch:traces side by side for one program.]
 
 A call evaluates the actuals in the caller's store, resets every local of the

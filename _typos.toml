@@ -12,8 +12,9 @@ extend-exclude = [
 ]
 
 [default]
-# The thesis carries a German title alongside the English one.
-extend-ignore-re = ["title-de: .*"]
+# The thesis carries a German title alongside the English one. A playground
+# link's #code= fragment is a compressed program in base64url.
+extend-ignore-re = ["title-de: .*", "#code=[A-Za-z0-9_-]+"]
 
 [default.extend-words]
 # Isabelle's theorem keyword and antiquotation.

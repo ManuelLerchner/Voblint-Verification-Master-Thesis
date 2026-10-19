@@ -277,7 +277,7 @@ lower bound there, the graph has #_k99.clusters.len() copies, and the check is
   kind: table,
   caption: [Verdict and state of each row's check under five update rules
     (Interval, no contexts, bounded narrowing at its default bound 5), as on the
-    #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site],
+    #link(site("#globals"))[project site],
     where each cell opens its run in the playground. Except in the growing
     recursion, every check holds in every execution. "No answer in 5 s" means
     the command-line `--timeout 5` stopped the solve.],

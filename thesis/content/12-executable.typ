@@ -156,9 +156,7 @@ answer that cross this boundary.
 ) <fig:shell>
 
 The
-#link(
-  "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html",
-)[playground]
+#link(site("playground.html"))[playground]
 is a static page whose toolbar selects the configuration argument of
 #isaconst("run_voblint"), over which #isathm("run_voblint_source_sound")
 quantifies, and whether the solver's steps are traced (@fig:pg-overview).

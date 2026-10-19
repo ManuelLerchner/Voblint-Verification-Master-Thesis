@@ -436,7 +436,7 @@ to the call edges, with the entered store that the edge's entry transfer
 ]
 
 The contexts of an activation are thus fixed when it is created.#footnote[The
-  #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#settings")[explainer page] draws, for each policy, the contexts that the analyzer
+  #link(site("index.html#settings"))[explainer page] draws, for each policy, the contexts that the analyzer
   creates for one program.] Since a return continues exactly the caller that
 created the callee, the result of a callee that carries $c'$ flows back only
 to the callers whose calls admitted $c'$. A claim for a context therefore needs

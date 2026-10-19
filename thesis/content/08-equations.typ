@@ -1,6 +1,8 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig, thy-badge
+#import "../lib/code.typ": (
+  isaconst, isai, isalocale, isathm, isatype, listing, oblig, site, thy-badge,
+)
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, verdict as verdict-chip
@@ -219,7 +221,7 @@ A caller's equation reads no unknown of the callee other than its result, so
 a recursive call needs no special treatment. Its cycle of dependencies is
 handled like that of a loop, with a widening point where a read closes it
 (@sec:td). The explainer's
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#replay")[solver replay] animates this protocol.
+#link(site("index.html#replay"))[solver replay] animates this protocol.
 
 If the bottom test of the analysis classifies the entry state as empty, no
 store enters the callee, so the call
