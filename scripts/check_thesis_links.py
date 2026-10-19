@@ -126,6 +126,14 @@ def pages_base() -> str:
 # different entities is caught instead of silently linked to one of them.
 DEFINITIONS: dict[tuple[str, str], set[str]] = {}
 SCOPES: set[str] = set()
+# Unqualified locale and class names: `context dg_analysis begin` in another
+# theory anchors its facts as `<Theory>.dg_analysis.<fact>`.
+SCOPE_NAMES: set[str] = set()
+
+
+def _add_scope(qualified: str) -> None:
+    SCOPES.add(qualified)
+    SCOPE_NAMES.add(qualified.split(".")[-1])
 
 
 def _index_rel(index: dict[tuple[str, str], str], rel: str) -> None:
@@ -153,7 +161,7 @@ def _index_anchor(
         # A datatype scopes its constructors as a locale scopes its members,
         # so two datatypes with an `Answer` make `Answer` ambiguous.
         if kind in ("locale", "class", "type"):
-            SCOPES.add(qualified)
+            _add_scope(qualified)
         if kind in ("const", "type", "locale"):
             DEFINITIONS.setdefault((qualified.split(".")[-1], kind), set()).add(
                 qualified
@@ -206,10 +214,16 @@ def _interpretation_copy(entity: str) -> bool:
     `interpretation mcp_rule: dg_analysis ...` renders every fact of the locale
     again as `MCP_Analyses.mcp_rule.<fact>`, on a page that never states it. The
     declaration's own anchor is qualified by the locale, `DG_Analysis.dg_analysis.
-    <fact>`, so a qualifier that is not a known locale or class marks a copy.
+    <fact>`, or `DG_Live_Unknowns.dg_analysis.<fact>` from a locale context in
+    another theory, so a qualifier that names no known locale or class marks a
+    copy.
     """
     parts = unquote(entity).partition("|")[0].split(".")
-    return len(parts) >= 3 and ".".join(parts[:-1]) not in SCOPES
+    return (
+        len(parts) >= 3
+        and ".".join(parts[:-1]) not in SCOPES
+        and parts[-2] not in SCOPE_NAMES
+    )
 
 
 def _collect_scopes(rows: list[tuple[str, str, str]]) -> None:
@@ -220,7 +234,7 @@ def _collect_scopes(rows: list[tuple[str, str, str]]) -> None:
             "class",
             "type",
         ):
-            SCOPES.add(qualified)
+            _add_scope(qualified)
 
 
 def index_live(
@@ -587,14 +601,23 @@ def check_live(base_override: str | None, retries: int) -> int:
         if body is None:
             broken += [f"  {key}: {url} did not respond" for key, _ in entries]
             continue
-        for key, anchor in entries:
-            if not anchor:
-                continue
-            # The stored anchor is percent-encoded for the URL; the page holds
-            # the id HTML-escaped (dep\&lt;^sub&gt;L).
-            raw = html.escape(unquote(anchor), quote=False)
-            if f'id="{raw}"' not in body:
-                broken.append(f"  {key}: {url} has no anchor {raw}")
+        # The stored anchor is percent-encoded for the URL; the page holds
+        # the id HTML-escaped (dep\&lt;^sub&gt;L).
+        wanted = [
+            (key, html.escape(unquote(anchor), quote=False))
+            for key, anchor in entries
+            if anchor
+        ]
+        missing = [(k, raw) for k, raw in wanted if f'id="{raw}"' not in body]
+        # Right after a deployment the CDN may still serve the previous page;
+        # a fresh query string bypasses its cache.
+        for attempt in range(retries - 1):
+            if not missing:
+                break
+            time.sleep(2**attempt)
+            body = fetch(f"{url}?{time.time_ns()}", retries) or body
+            missing = [(k, raw) for k, raw in missing if f'id="{raw}"' not in body]
+        broken += [f"  {key}: {url} has no anchor {raw}" for key, raw in missing]
 
     if broken:
         print(
