@@ -587,11 +587,11 @@ text \<open>\<open>intra_step\<close> is the fragment of \<^const>\<open>pstep\<
 
 inductive intra_step ::
   "'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
-  IAssign [intro]: "intra_step \<Pi> (Assign i x a, s, frs) ((SKIP i), s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
+  IAssign [intro]: "intra_step \<Pi> (Assign i x a, s, frs) (SKIP i, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
 | ISpecial [intro]: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
              special_result sc s v \<Longrightarrow>
-             intra_step \<Pi> (Call i (Some x) q actuals, s, frs) ((SKIP i), s(x := v), frs)"
-| ICheck [intro]:  "intra_step \<Pi> (VIMP_Proc.gcom.Check i l b, s, frs) ((SKIP i), s, frs)"
+             intra_step \<Pi> (Call i (Some x) q actuals, s, frs) (SKIP i, s(x := v), frs)"
+| ICheck [intro]:  "intra_step \<Pi> (VIMP_Proc.gcom.Check i l b, s, frs) (SKIP i, s, frs)"
 | ISeq1 [intro]:   "intra_step \<Pi> (Seq (SKIP i) c2, s, frs) (c2, s, frs)"
 | ISeq2 [intro]:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
             intra_step \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs)"
@@ -601,7 +601,7 @@ inductive intra_step ::
   "intra_step \<Pi> (While i b c, s, frs) (If i b (Seq c (While i b c)) (SKIP i), s, frs)"
 
 
-inductive_cases intra_SkipE [elim!]:   "intra_step \<Pi> ((SKIP i), s, frs) y"
+inductive_cases intra_SkipE [elim!]:   "intra_step \<Pi> (SKIP i, s, frs) y"
 inductive_cases intra_AssignE [elim!]: "intra_step \<Pi> (Assign i x a, s, frs) y"
 inductive_cases intra_CheckE [elim!]:  "intra_step \<Pi> (VIMP_Proc.gcom.Check i l b, s, frs) y"
 inductive_cases intra_SeqE [elim]:    "intra_step \<Pi> (Seq c1 c2, s, frs) y"

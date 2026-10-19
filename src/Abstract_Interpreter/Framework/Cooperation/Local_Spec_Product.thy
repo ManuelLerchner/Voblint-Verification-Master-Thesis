@@ -78,7 +78,7 @@ begin
 definition widen_analysis_product ::
   "('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product"
 where
-  "widen_analysis_product p q = Product ((pleft p) \<nabla> (pleft q)) ((pright p) \<nabla> (pright q))"
+  "widen_analysis_product p q = Product ((pleft p) \<nabla> pleft q) ((pright p) \<nabla> pright q)"
 
 definition narrow_analysis_product ::
   "('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product"

@@ -68,24 +68,24 @@ definition widen_int_dom_ext :: "'a int_dom_scheme => 'a int_dom_scheme => 'a in
      int_dom.extend
        (int_dom.truncate
          (a\<lparr>
-           int_sign := ((int_sign a) \<nabla> (int_sign b)),
-           int_ivl := ((int_ivl a) \<nabla> (int_ivl b)),
-           int_parity := ((int_parity a) \<nabla> (int_parity b)),
-           int_congruence := ((int_congruence a) \<nabla> (int_congruence b))
+           int_sign := (int_sign a \<nabla> int_sign b),
+           int_ivl := (int_ivl a \<nabla> int_ivl b),
+           int_parity := (int_parity a \<nabla> int_parity b),
+           int_congruence := (int_congruence a \<nabla> int_congruence b)
          \<rparr>))
-       ((int_dom.more a) \<nabla> (int_dom.more b))"
+       (int_dom.more a \<nabla> int_dom.more b)"
 
 definition narrow_int_dom_ext :: "'a int_dom_scheme => 'a int_dom_scheme => 'a int_dom_scheme" where
   "((a :: 'a int_dom_scheme) \<Delta> b) =
      int_dom.extend
        (int_dom.truncate
          (a\<lparr>
-           int_sign := ((int_sign a) \<Delta> (int_sign b)),
-           int_ivl := ((int_ivl a) \<Delta> (int_ivl b)),
-           int_parity := ((int_parity a) \<Delta> (int_parity b)),
-           int_congruence := ((int_congruence a) \<Delta> (int_congruence b))
+           int_sign := (int_sign a \<Delta> (int_sign b)),
+           int_ivl := (int_ivl a \<Delta> (int_ivl b)),
+           int_parity := (int_parity a \<Delta> (int_parity b)),
+           int_congruence := (int_congruence a \<Delta> (int_congruence b))
          \<rparr>))
-       ((int_dom.more a) \<Delta> (int_dom.more b))"
+       (int_dom.more a \<Delta> (int_dom.more b))"
 
 lemma int_dom_extend_truncate_select [simp]:
   "int_sign (int_dom.extend (int_dom.truncate r) m) = int_sign r"
@@ -102,15 +102,15 @@ instance proof intro_classes
            "int_parity b <= int_parity a" "int_congruence b <= int_congruence a"
            "int_dom.more b <= int_dom.more a"
     using ba by (simp_all add: less_eq_int_dom_ext_def)
-  have s: "int_sign b <= ((int_sign a) \<Delta> (int_sign b))"
+  have s: "int_sign b <= (int_sign a \<Delta> (int_sign b))"
     by (rule narrow_ge[OF hb(1)])
-  have i: "int_ivl b <= ((int_ivl a) \<Delta> (int_ivl b))"
+  have i: "int_ivl b <= (int_ivl a \<Delta> (int_ivl b))"
     by (rule narrow_ge[OF hb(2)])
-  have p: "int_parity b <= ((int_parity a) \<Delta> (int_parity b))"
+  have p: "int_parity b <= (int_parity a \<Delta> (int_parity b))"
     by (rule narrow_ge[OF hb(3)])
-  have c: "int_congruence b <= ((int_congruence a) \<Delta> (int_congruence b))"
+  have c: "int_congruence b <= (int_congruence a \<Delta> (int_congruence b))"
     by (rule narrow_ge[OF hb(4)])
-  have m: "int_dom.more b <= ((int_dom.more a) \<Delta> (int_dom.more b))"
+  have m: "int_dom.more b <= (int_dom.more a \<Delta> (int_dom.more b))"
     by (rule narrow_ge[OF hb(5)])
   show "b <= (a \<Delta> b)"
     unfolding narrow_int_dom_ext_def less_eq_int_dom_ext_def
@@ -122,45 +122,45 @@ next
            "int_parity b <= int_parity a" "int_congruence b <= int_congruence a"
            "int_dom.more b <= int_dom.more a"
     using ba by (simp_all add: less_eq_int_dom_ext_def)
-  have s: "((int_sign a) \<Delta> (int_sign b)) <= int_sign a"
+  have s: "(int_sign a \<Delta> (int_sign b)) <= int_sign a"
     by (rule narrow_le[OF hb(1)])
-  have i: "((int_ivl a) \<Delta> (int_ivl b)) <= int_ivl a"
+  have i: "(int_ivl a \<Delta> (int_ivl b)) <= int_ivl a"
     by (rule narrow_le[OF hb(2)])
-  have p: "((int_parity a) \<Delta> (int_parity b)) <= int_parity a"
+  have p: "(int_parity a \<Delta> (int_parity b)) <= int_parity a"
     by (rule narrow_le[OF hb(3)])
-  have c: "((int_congruence a) \<Delta> (int_congruence b)) <= int_congruence a"
+  have c: "(int_congruence a \<Delta> (int_congruence b)) <= int_congruence a"
     by (rule narrow_le[OF hb(4)])
-  have m: "((int_dom.more a) \<Delta> (int_dom.more b)) <= int_dom.more a"
+  have m: "(int_dom.more a \<Delta> (int_dom.more b)) <= int_dom.more a"
     by (rule narrow_le[OF hb(5)])
   show "(a \<Delta> b) <= a"
     unfolding narrow_int_dom_ext_def less_eq_int_dom_ext_def
     using s i p c m by simp
 next
   fix a b :: "'a int_dom_scheme"
-  have s: "int_sign a <= ((int_sign a) \<nabla> (int_sign b))"
+  have s: "int_sign a <= (int_sign a \<nabla> int_sign b)"
     by (rule widen_ge1)
-  have i: "int_ivl a <= ((int_ivl a) \<nabla> (int_ivl b))"
+  have i: "int_ivl a <= (int_ivl a \<nabla> int_ivl b)"
     by (rule widen_ge1)
-  have p: "int_parity a <= ((int_parity a) \<nabla> (int_parity b))"
+  have p: "int_parity a <= (int_parity a \<nabla> int_parity b)"
     by (rule widen_ge1)
-  have c: "int_congruence a <= ((int_congruence a) \<nabla> (int_congruence b))"
+  have c: "int_congruence a <= (int_congruence a \<nabla> int_congruence b)"
     by (rule widen_ge1)
-  have m: "int_dom.more a <= ((int_dom.more a) \<nabla> (int_dom.more b))"
+  have m: "int_dom.more a <= (int_dom.more a \<nabla> int_dom.more b)"
     by (rule widen_ge1)
   show "a <= (a \<nabla> b)"
     unfolding widen_int_dom_ext_def less_eq_int_dom_ext_def
     using s i p c m by simp
 next
   fix a b :: "'a int_dom_scheme"
-  have s: "int_sign b <= ((int_sign a) \<nabla> (int_sign b))"
+  have s: "int_sign b <= (int_sign a \<nabla> int_sign b)"
     by (rule widen_ge2)
-  have i: "int_ivl b <= ((int_ivl a) \<nabla> (int_ivl b))"
+  have i: "int_ivl b <= (int_ivl a \<nabla> int_ivl b)"
     by (rule widen_ge2)
-  have p: "int_parity b <= ((int_parity a) \<nabla> (int_parity b))"
+  have p: "int_parity b <= (int_parity a \<nabla> int_parity b)"
     by (rule widen_ge2)
-  have c: "int_congruence b <= ((int_congruence a) \<nabla> (int_congruence b))"
+  have c: "int_congruence b <= (int_congruence a \<nabla> int_congruence b)"
     by (rule widen_ge2)
-  have m: "int_dom.more b <= ((int_dom.more a) \<nabla> (int_dom.more b))"
+  have m: "int_dom.more b <= (int_dom.more a \<nabla> int_dom.more b)"
     by (rule widen_ge2)
   show "b <= (a \<nabla> b)"
     unfolding widen_int_dom_ext_def less_eq_int_dom_ext_def

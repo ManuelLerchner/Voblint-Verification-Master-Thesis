@@ -47,7 +47,7 @@ subsection \<open>Bare Unwind is stuck\<close>
 
 text \<open>A lone \<^const>\<open>Unwind\<close> has no source step: only the \<^const>\<open>Seq\<close> rules propagate it, and
   the frame pop it is heading for fires on \<^term>\<open>Seq (Unwind j) (Restore i)\<close>.\<close>
-lemma pstep_Unwind_stuck: "\<not> \<G>, \<Pi> \<turnstile> ((Unwind i), s, frs) \<rightarrow>\<^sub>p x"
+lemma pstep_Unwind_stuck: "\<not> \<G>, \<Pi> \<turnstile> (Unwind i, s, frs) \<rightarrow>\<^sub>p x"
   by auto
 
 text \<open>
@@ -110,7 +110,7 @@ lemma unwinding_not_SKIP: "unwinding u \<Longrightarrow> \<not> is_SKIP u"
 lemma pop_ready_not_SKIP: "pop_ready w \<Longrightarrow> \<not> is_SKIP w"
   by (cases w rule: pop_ready.cases) auto
 
-lemma pop_ready_not_Unwind: "pop_ready w \<Longrightarrow> w \<noteq> (Unwind i)"
+lemma pop_ready_not_Unwind: "pop_ready w \<Longrightarrow> w \<noteq> Unwind i"
   by (cases w rule: pop_ready.cases) auto
 
 subsection \<open>Compile-into-\<open>g\<close> evidence for an active fragment\<close>
@@ -264,7 +264,7 @@ lemma head_call_seq_after [simp]:
 lemma head_call_not_SKIP: "head_call c \<Longrightarrow> \<not> is_SKIP c"
   by (cases c) auto
 
-lemma head_call_not_Unwind: "head_call c \<Longrightarrow> c \<noteq> (Unwind i)"
+lemma head_call_not_Unwind: "head_call c \<Longrightarrow> c \<noteq> Unwind i"
   by (cases c) auto
 
 lemma head_call_seq_after_form:
@@ -432,7 +432,7 @@ lemma control_at_not_returning:
   by (induction rule: control_at.induct) auto
 
 lemma control_at_not_unwind:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r \<noteq> (Unwind i)"
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r \<noteq> Unwind i"
   using control_at_not_returning by fastforce
 
 text \<open>\<open>is_returning\<close> classifies the active head.  The \<open>unwinding\<close> and \<open>pop_ready\<close> predicates

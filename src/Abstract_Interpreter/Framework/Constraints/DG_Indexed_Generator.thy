@@ -1016,10 +1016,10 @@ proof (unfold mono_sides_def, intro allI)
                        \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_program t s1 \<le> sides_of_program t s2"
       using intra_sides_mono comb_sides_mono extra_sides_mono
       by (auto simp: routed_contribution_programs_def)
-    have fold_le: "\<And>acc w. (sides_of_program (side_rhs_fold_dg acc
-                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s1)
-                  \<le> (sides_of_program (side_rhs_fold_dg acc
-                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s2)"
+    have fold_le: "\<And>acc w. sides_of_program (side_rhs_fold_dg acc
+                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s1
+                  \<le> sides_of_program (side_rhs_fold_dg acc
+                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s2"
       by (rule side_rhs_fold_dg_sides_mono[OF wf tree_sides_mono le])
     show "sides_of_rhs
             (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0 x) s1
@@ -1058,10 +1058,10 @@ proof (unfold mono_deps_def, intro allI)
     have fold_mono: "\<And>acc w. mono_tree_deps (sp_compile (side_rhs_fold_dg acc
                       (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))"
       by (rule side_rhs_fold_dg_mono_tree_deps[OF wf]) (rule tree_deps_mono)
-    have dsub: "\<And>acc w. (dep_program s1 (side_rhs_fold_dg acc
-                  (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))
-                \<subseteq> (dep_program s2 (side_rhs_fold_dg acc
-                  (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))"
+    have dsub: "\<And>acc w. dep_program s1 (side_rhs_fold_dg acc
+                  (routed_contribution_programs pred_sel site_sel route it cmb extra g c w))
+                \<subseteq> dep_program s2 (side_rhs_fold_dg acc
+                  (routed_contribution_programs pred_sel site_sel route it cmb extra g c w))"
       using fold_mono[unfolded mono_tree_deps_def] ord by blast
     show "dep (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) s1 x
             \<subseteq> dep (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) s2 x"
