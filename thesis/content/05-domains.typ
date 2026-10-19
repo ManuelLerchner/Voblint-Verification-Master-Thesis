@@ -40,7 +40,7 @@ inclusions between sets. The law
 $ a lle b ==> conc(a) subset.eq conc(b) $
 turns each such inequality into an inclusion (#isathm("gamma_mono"),
 @fig:sign-conc). Second, a value can denote no integer without being the
-lattice's bottom element. The interval pair $ivl(5, 3)$, whose lower bound
+lattice's bottom element. The interval pair $absval(ivl(5, 3))$, whose lower bound
 exceeds its upper bound, is such a value. An analyzer that recognizes only the
 bottom element as empty misses it. This is still sound, since the analyzer
 then assumes more stores than exist, but it costs precision. After the next
@@ -494,21 +494,21 @@ the order and join (#isaconst("less_eq_ivl"), #isaconst("sup_ivl")) are those
 of @sec:abs-int. Nipkow and Klein identify all empty pairs by a quotient type.
 Voblint's #isatype("ivl") is a plain datatype of bound pairs, so it must
 handle them itself. Every pair with $l > u$ is
-empty, and so are $ivl(+infinity, +infinity)$ and $ivl(-infinity, -infinity)$,
+empty, and so are $absval(ivl(+infinity, +infinity))$ and $absval(ivl(-infinity, -infinity))$,
 since no integer equals an infinite bound. The bottom value
-$lbot = ivl(+infinity, -infinity)$ is only one of these empty pairs. An empty
-pair such as $ivl(5, 3)$ denotes the same set as $lbot$, yet it is neither
+$lbot = absval(ivl(+infinity, -infinity))$ is only one of these empty pairs. An empty
+pair such as $absval(ivl(5, 3))$ denotes the same set as $lbot$, yet it is neither
 $lbot$ nor below it.
 
 The arithmetic operations build their results through
 #isaconst("normalize_ivl"), which replaces every empty pair by
-$lbot = ivl(+infinity, -infinity)$ and leaves nonempty pairs unchanged.
-Otherwise, $ivl(1, 0) + ivl(1, 1) = ivl(2, 1)$ would keep creating new empty values, and the solver, which tests whether a value changed (@sec:td), could
+$lbot = absval(ivl(+infinity, -infinity))$ and leaves nonempty pairs unchanged.
+Otherwise, $absval(ivl(1, 0)) + absval(ivl(1, 1)) = absval(ivl(2, 1))$ would keep creating new empty values, and the solver, which tests whether a value changed (@sec:td), could
 fail to stabilize. Normalizing never changes the denoted set
 (#isathm("normalize_ivl_gamma")), so it is sound wherever it is applied.
 
 The meet intersects the bounds and does not normalize, since $lbot$ would not
-be the greatest lower bound of, say, $ivl(0, 3)$ and $ivl(5, 9)$ in the order
+be the greatest lower bound of, say, $absval(ivl(0, 3))$ and $absval(ivl(5, 9))$ in the order
 on pairs (#isathm("meet_ivl_normalized_breaks_greatest")). An empty pair is
 therefore not necessarily $lbot$, and the emptiness test inspects the bounds
 (#isaconst("is_bottom_ivl")): a pair is empty if $l > u$, if its lower bound is
@@ -528,7 +528,7 @@ introduced in @sec:constraints, non-relational and relational states. A non-rela
 variable its own abstract value, and a relational one records how variables
 relate to each other. The two differ in what they can state. Take the stores with
 $0 <= x <= y <= 5$ (@fig:rel-vs-nonrel). The best non-relational description
-over intervals is ${x |-> ivl(0, 5), y |-> ivl(0, 5)}$. It shows $x >= 0$ and
+over intervals is ${x |-> absval(ivl(0, 5)), y |-> absval(ivl(0, 5))}$. It shows $x >= 0$ and
 $y <= 5$, but not $x <= y$, since it also admits $x = 5, y = 0$. A relational
 description that records $x <= y$ shows exactly that fact, but it bounds
 neither variable, so it also admits $x = y = -7$. Therefore, neither description is stronger than the other. Together, however, they describe exactly
@@ -728,8 +728,8 @@ of Nipkow and Klein @nipkow14[§13.5.3]. The abstract result $asem(e) thin d$ mu
 every concrete result (#isalocale("sound_evaluator")):
 $ s in conc(d) ==> sem(e)_e thin s in conc(asem(e) thin d). $
 Interval evaluates by interval arithmetic on the bounds (#isaconst("aval_ivl")).
-For example, if $d(x) = ivl(0, 9)$, Interval evaluates `x + 1` to
-$ivl(1, 10)$.
+For example, if $d(x) = absval(ivl(0, 9))$, Interval evaluates `x + 1` to
+$absval(ivl(1, 10))$.
 
 A condition is an expression too, and VIMP reads its value as a truth value,
 with nonzero meaning true. If the abstract value of a condition admits only
@@ -741,7 +741,7 @@ $ "tobool"(a) = "Some"(b) and i in conc(a) ==> (i != 0) = b. $
 Interval's test #isaconst("interval_tobool") returns $"Some"("true")$ for
 $ivl(l, u)$ if the interval excludes $0$, that is, $u < 0$ or $l > 0$, and
 $"Some"("false")$ if $l = u = 0$. Otherwise, it returns $"None"$. So
-$ivl(1, 5)$ is true, $ivl(0, 0)$ is false, and $ivl(0, 5)$ is undecided.
+$absval(ivl(1, 5))$ is true, $absval(ivl(0, 0))$ is false, and $absval(ivl(0, 5))$ is undecided.
 
 == Answering queries <sec:queries>
 
@@ -795,8 +795,8 @@ operands are evaluated in the same state, so for $x$ in $ivl(1, 2)$,
 #claim-ref("dom-disjunction-one-state")). Goblint is more precise here. CIL
 compiles `&&` and `||` into branches
 (#link("https://github.com/goblint/cil/blob/003821f1d4a95c758bb255080e9b91a22ea5df31/src/frontc/cabs2cil.ml#L5264-L5299")[`cabs2cil.ml`]),
-and where `x == 1` fails, Goblint's interval refinement narrows $ivl(1, 2)$ to
-$ivl(2, 2)$
+and where `x == 1` fails, Goblint's interval refinement narrows $absval(ivl(1, 2))$ to
+$absval(ivl(2, 2))$
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/baseInvariant.ml#L395-L410")[`baseInvariant.ml`],
 @saan26phd[§4.5.1, Rem. 8]). Voblint's interval inverse of a failed equality
 changes nothing (#isaconst("inv_eq_ivl")). Any other
@@ -843,7 +843,7 @@ the conjunction (@fig:query-tree).
   kind: image,
   placement: none,
   caption: [How #isaconst("check_query") answers a compound condition, in Sign
-    with #raw(_q.state) (claim #claim-ref("dom-query-tree-sign")). Each comparison becomes
+    with #absval(raw(_q.state)) (claim #claim-ref("dom-query-tree-sign")). Each comparison becomes
     one of the domain's two comparisons (blue), as $~>$ marks; the answer follows
     the colon. Negation flips a definite answer,
     and `&&` is true because both operands are, so the check is
@@ -897,10 +897,10 @@ sets. Voblint asks for less, namely an intersection that keeps every integer
 both operands share and lies below both (#isalocale("sound_intersection"), shown in
 @sec:isabelle). For Interval it is the normalized meet
 #isaconst("intersect_ivl"), which agrees with the meet on the operands below. In the program above, Interval
-refines $x$ to $ltop lmeet ivl(1, +infinity) = ivl(1, +infinity)$ on the true
+refines $x$ to $ltop lmeet absval(ivl(1, +infinity)) = absval(ivl(1, +infinity))$ on the true
 arm and to
-$ivl(-infinity, 0)$ on the false arm. Both arms then give $y$ a non-negative
-value, and the join yields #raw(_g.state).
+$absval(ivl(-infinity, 0))$ on the false arm. Both arms then give $y$ a non-negative
+value, and the join yields #absval(raw(_g.state)).
 
 The guard filter #isaconst("bfilter") takes a condition, the required truth
 value and a state, and applies the inverse operators along the structure of
@@ -911,8 +911,8 @@ the branch needs, since it never removes a store that satisfies the guard.
 The filter refines a conjunction from right to left. Each conjunct is applied
 once, to the state the conjuncts on its right have refined, and the filter does
 not iterate to a local fixpoint. The bounds that reach each variable can therefore depend on the order of the conjuncts. With Interval, `0 < i && i < j && j < 10`
-bounds $i$ to $ivl(1, 8)$ but not $j$ from below, and the reversed order bounds
-$j$ to $ivl(2, 9)$ but not $i$ from above (claim
+bounds $i$ to $absval(ivl(1, 8))$ but not $j$ from below, and the reversed order bounds
+$j$ to $absval(ivl(2, 9))$ but not $i$ from above (claim
 #claim-ref("dom-conjunct-order")).
 
 #block(breakable: false)[
@@ -959,8 +959,8 @@ functions, because the primitives determine every edge
   )
 ]
 Skips, procedure bodies, and checks leave the state unchanged. With Interval
-and $d(x) = ivl(0, 9)$, for instance, the edge `x = x + 1` yields
-$d[x |-> ivl(1, 10)]$. The interpretation of
+and $d(x) = absval(ivl(0, 9))$, for instance, the edge `x = x + 1` yields
+$d[x |-> absval(ivl(1, 10))]$. The interpretation of
 #isalocale("sound_nonrelational_ops") proves all of these transfers sound at
 once, so the domains of @ch:instances mainly define their values and
 primitives and prove the primitive laws. The analyzer runs the same primitives

@@ -464,7 +464,7 @@ the activation collecting semantics of context $[[5, 5]]$ at `bump`'s result nod
 $[[4, 4]]$. The node collecting semantics there contains both stores.
 
 Splitting by context makes the result more precise. A single abstract state
-for the result node must describe both stores, so an interval analysis can at best bound the result by $[5, 6]$. A state per context only has to describe the stores of
+for the result node must describe both stores, so an interval analysis can at best bound the result by $absval(ivl(5, 6))$. A state per context only has to describe the stores of
 its own context, $6$ in $[[5, 5]]$ and $5$ in $[[4, 4]]$. No store is lost as long as every valid trace carries a context. An analysis
 therefore needs one set of stores per node and context that contains the
 activation collecting semantics, and the next section reduces this requirement

@@ -86,15 +86,17 @@
 #let ctxh = sh("context")
 
 // =============================================================== domains ====
-// Sign values are constructors printed as +, ≥0, ...; the chip keeps them
-// apart from the operators and relations they share glyphs with.
-#let signval(x) = box(
+// The chip marks an abstract value. Sign values are constructors printed as
+// +, ≥0, ...; the chip keeps them apart from the operators and relations they
+// share glyphs with.
+#let absval(body) = box(
   fill: vb.type.lighten(90%),
   radius: 1.5pt,
   inset: (x: 1.5pt),
   outset: (y: 1.5pt),
-  ctor(x),
+  body,
 )
+#let signval(x) = absval(ctor(x))
 #let ivl(a, b) = $[#a, #b]$
 
 // =============================================================== helpers ====

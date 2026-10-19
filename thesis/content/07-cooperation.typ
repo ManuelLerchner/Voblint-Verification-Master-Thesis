@@ -18,7 +18,7 @@
   (verdict: row.at(3), state: if row.len() > 4 { row.at(4) } else { "" })
 }
 #let verdict(name, loc) = verdict-chip(claim-row(name, loc).verdict)
-#let state(name, loc) = raw(claim-row(name, loc).state)
+#let state(name, loc) = absval(raw(claim-row(name, loc).state))
 
 = Cooperating Analyses <ch:cooperation>
 
@@ -44,7 +44,7 @@ fun main() {
 A reader easily sees that the check holds in every run, since both guards hold
 at the assignment, so $x = y$ and `z` is $1$. No single analysis, however, can
 prove it. Interval keeps one range per variable. After the guards, both `x` and `y` are
-still unbounded, so `x == y` evaluates to $ivl(0, 1)$ and the check stays
+still unbounded, so `x == y` evaluates to $absval(ivl(0, 1))$ and the check stays
 #verdict("coop-eq-interval", "16:7") with #state("coop-eq-interval", "16:7").
 The order analysis (@sec:relational) is relational. Its state is a set of pairs $(x, y)$, each
 meaning that the value of $x$ is at most the value of $y$. After the guards, it
@@ -85,11 +85,11 @@ the order analysis knows at that point (@fig:mcp-step).
       party((1, 0), [channel], color: vb.accent),
       party((2, 0), [Order \ $x lt.eq y, y lt.eq x$]),
       msg((0, 1), (1, 1), [asks #isaconst("EvalInt") $(x == y)$]),
-      msg((0, 2), (1, 2), [contributes $ivl(0, 1)$]),
+      msg((0, 2), (1, 2), [contributes $absval(ivl(0, 1))$]),
       msg((2, 2), (1, 2), [contributes $1$], side: right),
-      node((1, 3), text(size: 7pt)[$ivl(0, 1) lmeet 1 = 1$], fill: white, inset: 2pt),
+      node((1, 3), text(size: 7pt)[$absval(ivl(0, 1)) lmeet 1 = 1$], fill: white, inset: 2pt),
       msg((1, 4), (0, 4), [$1$], side: right),
-      party((0, 5), [Interval after \ $z = ivl(1, 1)$]),
+      party((0, 5), [Interval after \ $z = absval(ivl(1, 1))$]),
     )
   },
   kind: image,
@@ -146,8 +146,8 @@ The top answer $ltop$ holds at every store, so
 an analysis that cannot answer a question answers $ltop$ and claims nothing.
 If two answers hold at a store, so does their meet, so a question asked of all
 analyses can be answered by the meet of their answers. In the example, when asked #isaconst("EvalInt") $(x == y)$ after both guards, Interval answers
-$ivl(0, 1)$, which holds at every store, and the order analysis answers $1$.
-Their meet is $ivl(0, 1) lmeet 1 = 1$, so $x = y$. Goblint's `MCP.query'` combines answers the
+$absval(ivl(0, 1))$, which holds at every store, and the order analysis answers $1$.
+Their meet is $absval(ivl(0, 1)) lmeet 1 = 1$, so $x = y$. Goblint's `MCP.query'` combines answers the
 same way, as formalized by Apinis @apinis14[§5.5].
 
 A transfer may need answers to several questions. Instead of answering each
@@ -171,7 +171,7 @@ Interval's assignment in @fig:mcp-step uses the wrapper
 $x := e$. The wrapper asks #isaconst("EvalInt") $e$. When the answer is one
 integer $n$, it runs the analysis's own assignment of the literal $n$, and
 otherwise, the assignment of $e$. At $z := (x == y)$, Interval receives $1$ and
-sets $z$ to $ivl(1, 1)$, which is right only if the answer is true. Proving
+sets $z$ to $absval(ivl(1, 1))$, which is right only if the answer is true. Proving
 that from the order analysis's invariant would couple the two proofs.
 
 Voblint avoids this coupling by separating two facts, that a transfer uses its

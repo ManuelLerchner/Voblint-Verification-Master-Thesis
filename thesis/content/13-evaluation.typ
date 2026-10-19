@@ -1,5 +1,6 @@
 #import "../lib/code.typ": *
 #import "../lib/stats.typ": stat
+#import "../lib/math.typ": absval, ivl
 #import "../lib/claims.typ": (
   claim-check, claim-ref, claim-snapshot, claim-timed-out, snapshot-verdict,
 )
@@ -89,13 +90,13 @@ In Voblint, the pre-fix remainder cannot be proved sound. The Congruence remaind
 must meet #isathm("congruence_mod_sound"): for any two concrete values, their
 remainder #isaconst("c_mod") lies in the concretization of the abstract
 remainder. #isaconst("c_mod") truncates toward zero, as C11 specifies
-(@sec:vimp-vs-c). The pre-fix answer, the constant $1$ for $(1 + 2ZZ) mod 2$,
+(@sec:vimp-vs-c). The pre-fix answer, the constant $1$ for $absval(1 + 2ZZ) mod 2$,
 violates the obligation at $-5$ (#isathm("prefix_congruence_mod_unsound")). The
 theorem holds for every abstract remainder that returns this constant. Pull request 1161 reports that Goblint's pre-fix operator returned it, so an
 obligation of this form would have rejected that operator as well. Our fixture transliterates the test into VIMP, whose remainder also
 truncates toward zero (@fig:goblint-1161). Congruence alone knows only
-$c in 1 + 2ZZ$ and decides neither check. Int also knows that $c$ lies in
-$[-7, -5]$, refutes the first check, and proves the second.
+$c in absval(1 + 2ZZ)$ and decides neither check. Int also knows that $c$ lies in
+$absval(ivl(-7, -5))$, refutes the first check, and proves the second.
 
 #figure(
   {

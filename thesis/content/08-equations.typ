@@ -201,7 +201,7 @@ its entry state to the callee as a side effect (@sec:side-effects).
 of its continuation, $(italic("pp3"), c_0)$, connects the caller and the
 callee. It reads the caller's value at $(italic("pp2"), c_0)$ and applies
 enter (@sec:calls), which yields an _entry pair_ of a resume state $q_1$ and an
-entry state $e_1$ that binds $n$ to $[5, 5]$. The entry state selects the
+entry state $e_1$ that binds $n$ to $absval(ivl(5, 5))$. The entry state selects the
 callee context $c_1 = [[5, 5]]$. The equation publishes $e_1$ to that context,
 reads the result $r_1$ of `bump` in $c_1$, and joins
 $sh("combine")(q_1, r_1)$ into its own value. The equation of the second
@@ -466,7 +466,7 @@ routing keep them apart.
 
 An entry-state context consists of the abstract values that the entry state
 $e$ gives the callee's formal parameters, written $e|_"formals"$. For
-`bump(n)` and an $e$ that binds $n$ to $[4, 5]$, the context is $[[4, 5]]$, a
+`bump(n)` and an $e$ that binds $n$ to $absval(ivl(4, 5))$, the context is $[[4, 5]]$, a
 list with one entry per formal. Unlike a call string, such a context depends
 on the abstract entry state, so the concrete call alone does not determine it.
 
@@ -475,7 +475,7 @@ the context of a concrete call from the solution at that call. It admits a
 context exactly when the equations, at this call node and in this caller
 context, route an entry pair that describes the call to it. Suppose the
 caller's solved state at a call `bump(x)` says $x in [4, 5]$. The equations
-publish $n |-> [4, 5]$ to $[[4, 5]]$, so a run that passes this call with
+publish $n |-> absval(ivl(4, 5))$ to $[[4, 5]]$, so a run that passes this call with
 $x = 4$ is admitted in $[[4, 5]]$ and not in $[[4, 4]]$. At another call whose
 solved state says $x in [4, 4]$, the equations route to $[[4, 4]]$, and a run
 with $x = 4$ through that call is admitted there. The policy thus copies the

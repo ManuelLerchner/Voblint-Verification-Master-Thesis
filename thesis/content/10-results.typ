@@ -6,7 +6,7 @@
 #import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": theorem
 #import "../lib/theme.typ": vb
-#import "../lib/math.typ": ctor, sem, setcomp
+#import "../lib/math.typ": absval, ctor, sem, setcomp
 #import "../lib/figures.typ": check-row, snapshot-var, verdict
 #import "../lib/claims.typ": claim-ref, claim-snapshot, snapshot-cluster-of, snapshot-verdict
 
@@ -325,7 +325,7 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
 holds for every admitted store in both, so its verdict is #verdict(_vge). The
 check `m == 2` sees the same sets, but the contexts disagree. The first call
 enters with $n = 1$, and the check is #verdict(_v1) there. The second enters
-with $n in [1, 3]$. Its state #raw(_m2) also admits $3$ and $5$, and the check
+with $n in [1, 3]$. Its state #absval(raw(_m2)) also admits $3$ and $5$, and the check
 is #verdict(_v2), the only sound answer, since the run with $x = 1$ satisfies
 it and the runs with $x = 2$ and $x = 3$ violate it.
 

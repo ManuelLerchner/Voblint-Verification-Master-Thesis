@@ -74,7 +74,7 @@ A local edge always reads the same unknown, its predecessor. A call, in
 contrast, chooses what to read from values it has already read. In the running
 example, the continuation $(italic("pp3"), c_0)$ first reads the caller
 $(italic("pp2"), c_0)$. From that value it computes the entry state
-$n = [5, 5]$, which determines the context $c_1$ and thus the result it reads
+$n = absval(ivl(5, 5))$, which determines the context $c_1$ and thus the result it reads
 next, $(ctor("FunctionResult") thin italic("bump"), c_1)$.
 The vendored solver accepts a right-hand side only as a strategy tree, which
 issues one read at a time and passes each value read to a continuation
@@ -197,10 +197,10 @@ rule is more precise on every program, and @sec:eval-precision compares them.
     let cell((lo, hi)) = {
       let v = "[" + lo + "," + hi + "]"
       if "∞" in lo or "∞" in hi {
-        text(fill: vb.unstable, weight: "bold", [#raw(v)#super[$nabla$]])
-      } else { raw(v) }
+        text(fill: vb.unstable, weight: "bold", [#absval(raw(v))#super[$nabla$]])
+      } else { absval(raw(v)) }
     }
-    let r(v) = raw(v)
+    let r(v) = absval(raw(v))
     let rule(name, c) = [#name \ #text(size: 8pt, c)]
     let names = (
       rule([join], isaconst("update_global_always_join")),
@@ -230,7 +230,7 @@ rule is more precise on every program, and @sec:eval-precision compares them.
   },
   kind: table,
   placement: auto,
-  caption: [One global unknown under each update rule, from #raw("⊥"), after
+  caption: [One global unknown under each update rule, from #absval(raw("⊥")), after
     four interval contributions from origins A and B, which separate the rules
     and come from no program. Widened bounds are bold and marked $nabla$. The
     cells are computed by #isathm("update_rules_example") from the vendored

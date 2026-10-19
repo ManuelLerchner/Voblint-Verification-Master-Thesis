@@ -104,13 +104,18 @@
   }
   circle(lfp-pt, radius: 0.12, fill: vb.proved, stroke: none)
   if extrapolate { circle(wide, radius: 0.1, fill: wcol, stroke: none) }
-  lbl((-0.25, 0.5), [$[0, 0]$], anchor: "east")
+  lbl((-0.25, 0.5), [$absval(ivl(0, 0))$], anchor: "east")
   if mode == "fix" {
-    lbl((-0.25, 1.7), [joins: $[0, 1], dots, [0, 4]$], anchor: "east", fill: vb.accent)
+    lbl(
+      (-0.25, 1.7),
+      [joins: $absval(ivl(0, 1)), dots, absval(ivl(0, 4))$],
+      anchor: "east",
+      fill: vb.accent,
+    )
   }
-  lbl((-0.3, 3.2), [least fixpoint $[0, 5]$], anchor: "east", fill: vb.proved)
+  lbl((-0.3, 3.2), [least fixpoint $absval(ivl(0, 5))$], anchor: "east", fill: vb.proved)
   if extrapolate {
-    lbl((1.45, 6.3), [$[0, +infinity]$])
+    lbl((1.45, 6.3), [$absval(ivl(0, +infinity))$])
     if mode == "warrow" {
       lbl((2.3, 2.75), [warrowing $widen narrow$], fill: wcol)
     } else {
@@ -183,8 +188,8 @@ which costs precision, but never fewer.
 
 == Lattices and fixpoints <sec:lattices>
 
-At $h$, the intervals $[0, 5]$ and $[0, 10]$ both contain every value $i$ takes
-there (the collecting semantics ${0, dots, 5}$), but $[0, 10]$ also admits
+At $h$, the intervals $absval(ivl(0, 5))$ and $absval(ivl(0, 10))$ both contain every value $i$ takes
+there (the collecting semantics ${0, dots, 5}$), but $absval(ivl(0, 10))$ also admits
 $i = 7$, which no execution reaches. A description is _more precise_ than
 another if it admits fewer states. Ordered sets make this comparison formal.
 In an ordered set $(lat(D), lle)$ (#isalocale("order")),
@@ -198,9 +203,9 @@ most precise element above both (#isalocale("semilattice_sup")). At the loop
 head, the value before the loop and the value after the body are combined this
 way. Dually, the _meet_ $a lmeet b$ is the greatest lower bound. An analysis
 uses it at a branch to restrict the incoming value to the values the condition
-admits. If the analysis knew only $[0, 10]$ at $h$, entering the body would
-restrict it to $[0, 10] lmeet [-infinity, 4] = [0, 4]$. Soundness does not need this
-refinement, since $[0, 10]$ itself is sound at $b$, but it makes the result
+admits. If the analysis knew only $absval(ivl(0, 10))$ at $h$, entering the body would
+restrict it to $absval(ivl(0, 10)) lmeet absval(ivl(-infinity, 4)) = absval(ivl(0, 4))$. Soundness does not need this
+refinement, since $absval(ivl(0, 10))$ itself is sound at $b$, but it makes the result
 more precise, and Goblint and Voblint both refine at branches. The least
 element $lbot$ lies below every element, and a top element $ltop$, if one
 exists, lies above every element. In abstract interpretation, $lbot$ describes
@@ -268,15 +273,15 @@ The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
 when $l' <= l$ and $u <= u'$. The join
 $[l, u] ljoin [l', u'] = [min(l, l'), max(u, u')]$ is the smallest interval
 containing both. An interval cannot have holes, so the join may contain values
-that neither operand contains: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
+that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet
 intersects the bounds. This is the textbook domain. Voblint's representation
 #isatype("ivl") admits every pair of bounds, so $lbot$ is one of several empty
 pairs (@sec:domain-carrier-laws).
 
-At the loop head, both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
-as is every interval that contains $[0, 5]$. An analysis aims for a precise one,
+At the loop head, both $absval(ivl(0, 5))$ and $absval(ivl(0, 10))$ are sound (@fig:concretization),
+as is every interval that contains $absval(ivl(0, 5))$. An analysis aims for a precise one,
 because a more precise element admits fewer values and so decides more checks:
-$[0, 5]$ proves `i <= 5` at the loop head, and $[0, 10]$ does not.
+$absval(ivl(0, 5))$ proves `i <= 5` at the loop head, and $absval(ivl(0, 10))$ does not.
 
 #figure(
   cetz.canvas(length: 0.62cm, {
@@ -298,25 +303,25 @@ $[0, 5]$ proves `i <= 5` at the loop head, and $[0, 10]$ does not.
     }
     content((10.9, -0.45), text(9pt)[$i$])
     // join of two points adds the values between them
-    row(1.2, [$conc([0, 0] ljoin [5, 5])$])
+    row(1.2, [$conc(absval(ivl(0, 0)) ljoin absval(ivl(5, 5)))$])
     bar(1.2, 0, 5, vb.muted)
     dot(0, 1.2, vb.neutral)
     dot(5, 1.2, vb.neutral)
     // a coarser sound value permits values no run has
-    row(2.3, [$conc([0, 10])$])
+    row(2.3, [$conc(absval(ivl(0, 10)))$])
     bar(2.3, 0, 10, vb.trusted)
     circle((7, 2.3), radius: 0.16, fill: white, stroke: 0.7pt + vb.unproved)
     content((7, 2.85), text(8pt, fill: vb.unproved)[permitted, never reached])
-    row(3.4, [$conc([0, 5])$])
+    row(3.4, [$conc(absval(ivl(0, 5)))$])
     bar(3.4, 0, 5, vb.proved)
     // the collecting semantics at the loop head
     row(4.5, [collecting semantics $cal(C)(h)$])
     for n in range(0, 6) { dot(n, 4.5, vb.accent) }
   }),
   placement: none,
-  caption: [Concretization of intervals at the loop head. Both $[0, 5]$ and
-    $[0, 10]$ contain the collecting semantics $cal(C)(h)$, and $[0, 10]$ also permits
-    $i = 7$. The join of $[0, 0]$ and $[5, 5]$ adds the values in between.],
+  caption: [Concretization of intervals at the loop head. Both $absval(ivl(0, 5))$ and
+    $absval(ivl(0, 10))$ contain the collecting semantics $cal(C)(h)$, and $absval(ivl(0, 10))$ also permits
+    $i = 7$. The join of $absval(ivl(0, 0))$ and $absval(ivl(5, 5))$ adds the values in between.],
 ) <fig:concretization>
 
 Much of abstract interpretation also assumes an abstraction function
@@ -341,7 +346,7 @@ $sh(f)(a)$ describes @cousot77[§6] @mine17[Def. 2.15] @rival20[§4.2.2]. The
 square of @fig:transfer-square thus commutes only up to inclusion. In the
 counting loop, the edge from $b$ to $t$ executes `i = i + 1`. Over $ZZ$, the
 interval transfer $[l, u] |-> [l + 1, u + 1]$ is sound for it, and applied to
-$[0, 4]$ it yields $[1, 5]$, which contains every successor $i = 1, dots, 5$.
+$absval(ivl(0, 4))$ it yields $absval(ivl(1, 5))$, which contains every successor $i = 1, dots, 5$.
 Soundness
 composes along paths
 @mine17[Thm. 2.6], and at control-flow joins the upper-bound laws of the join
@@ -414,14 +419,14 @@ its own abstract value.) With one unknown per program point of
 @fig:counting-loop, each unknown must cover what the edges entering its point
 produce:
 $
-  h & lge [0, 0] ljoin t, & quad b & lge h lmeet [-infinity, 4], \
-  t & lge b sh(+) [1, 1], & quad e & lge h lmeet [5, +infinity].
+  h & lge absval(ivl(0, 0)) ljoin t, & quad b & lge h lmeet absval(ivl(-infinity, 4)), \
+  t & lge b sh(+) absval(ivl(1, 1)), & quad e & lge h lmeet absval(ivl(5, +infinity)).
 $
-The assignment `i = 0` yields $[0, 0]$ at $h$, the condition `i < 5`
+The assignment `i = 0` yields $absval(ivl(0, 0))$ at $h$, the condition `i < 5`
 restricts the branch into the body, and its negation restricts the exit.
 Substituting $b$ and $t$ into the first inequality gives one for the loop head,
 $h lge f(h)$, with
-$ f(d) = [0, 0] ljoin ((d lmeet [-infinity, 4]) sh(+) [1, 1]), $
+$ f(d) = absval(ivl(0, 0)) ljoin ((d lmeet absval(ivl(-infinity, 4))) sh(+) absval(ivl(1, 1))), $
 whose post-fixpoints appear in @fig:lattice-fixpoints. A solution assigns an
 interval to every unknown such that all four inequalities hold, and
 @fig:loop-solutions shows two. Both contain the collecting semantics
@@ -436,7 +441,7 @@ valuation, and $sol$ is a _post-solution_ if
 $ rhs(x)(sol) lle sol(x) quad "for every unknown" x $
 (#isaconst("post_solution")), what the constraint-system literature calls a
 solution @saan26phd[§2.4.4]. For the loop head,
-$rhs(h)(sol) = [0, 0] ljoin sol(t)$. A post-solution is a post-fixpoint of all
+$rhs(h)(sol) = absval(ivl(0, 0)) ljoin sol(t)$. A post-solution is a post-fixpoint of all
 right-hand sides at once, so the argument of @sec:abs-int applies at every
 program point, and a post-solution bounds the reachable states everywhere. We
 use the term _constraint system_ for the general concept and the term _equation
@@ -447,10 +452,10 @@ requires inequalities.
 #subfigures(
   figure(
     _loop-cfg((
-      h: ($[0, 5]$, $[0, +infinity]$),
-      b: ($[0, 4]$, none),
-      t: ($[1, 5]$, none),
-      e: ($[5, 5]$, $[5, +infinity]$),
+      h: ($absval(ivl(0, 5))$, $absval(ivl(0, +infinity))$),
+      b: ($absval(ivl(0, 4))$, none),
+      t: ($absval(ivl(1, 5))$, none),
+      e: ($absval(ivl(5, 5))$, $absval(ivl(5, +infinity))$),
     )),
     caption: [two solutions on the graph],
   ),
@@ -466,7 +471,7 @@ requires inequalities.
   caption: [The counting loop's inequalities, solved by hand. (a) The least
     solution at each node of @fig:counting-loop and, in orange where it
     differs, a less precise solution. (b) Post-fixpoints of the loop-head
-    constraint (schematic, shaded), its least fixpoint $[0, 5]$, and the
+    constraint (schematic, shaded), its least fixpoint $absval(ivl(0, 5))$, and the
     Kleene iterates.],
   label: <fig:loop-constraints>,
 )
@@ -476,11 +481,11 @@ requires inequalities.
 An analysis should terminate in a reasonable time, even on a program whose
 executions do not terminate. With
 joins alone, successive abstract iterates can mirror successive loop
-iterations. At the example's loop head, joins take five increases after $[0,
-  0]$. For `i = 0; while (true) { i = i + 1; }`, the iteration over intervals with bounds
+iterations. At the example's loop head, joins take five increases after
+$absval(ivl(0, 0))$. For `i = 0; while (true) { i = i + 1; }`, the iteration over intervals with bounds
 in $ZZ$ never stabilizes, because these intervals have infinite ascending chains
 such as
-$ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
+$ absval(ivl(0, 0)) llt absval(ivl(0, 1)) llt absval(ivl(0, 2)) llt dots. $
 
 
 A _widening_ $a widen b$ replaces the update from the old value $a$ to the new
@@ -488,18 +493,18 @@ value $b$ by a guess that lies above both, which keeps the result sound
 (#isalocale("widening")). The standard
 interval widening replaces a growing bound by $+infinity$ @cousot77[§9.2]
 @mine17[§4.5.2], so widening at $h$ turns the first change there, from
-$[0, 0]$ to $[0, 1]$, into $[0, +infinity]$ at once. Propagated through the
+$absval(ivl(0, 0))$ to $absval(ivl(0, 1))$, into $absval(ivl(0, +infinity))$ at once. Propagated through the
 loop, this value yields the less precise solution of @fig:loop-solutions,
 which loses the bound $5$ of the loop condition `i < 5`.
 
-The branch into the body restricts $[0, +infinity]$ to $[0, 4]$, the body
-yields $[1, 5]$, and evaluating the head again gives
-$[0, 0] ljoin [1, 5] = [0, 5]$. A widened iteration only grows and would not
+The branch into the body restricts $absval(ivl(0, +infinity))$ to $absval(ivl(0, 4))$, the body
+yields $absval(ivl(1, 5))$, and evaluating the head again gives
+$absval(ivl(0, 0)) ljoin absval(ivl(1, 5)) = absval(ivl(0, 5))$. A widened iteration only grows and would not
 take this smaller value. A _narrowing_ lets it descend. It combines the
 current value $a$ with a candidate $b lle a$ and returns a value between the
 two @cousot77[§9.3.4] @cousot92plilp[§4]:
 $ b lle a narrow b lle a. $
-In the counting loop, the interval narrowing reaches $[0, 5]$, but in general,
+In the counting loop, the interval narrowing reaches $absval(ivl(0, 5))$, but in general,
 narrowing need not recover the least fixpoint. Both steps appear in
 @fig:widening-phases. The verified TD solver applies both operators in a single
 update, _warrowing_ (#isaconst("warrow")), shown in @fig:widening-warrow. It
@@ -520,10 +525,10 @@ narrows when the candidate lies below the current value and widens otherwise
   columns: (1fr, 1fr),
   placement: none,
   caption: [Extrapolation on the lattice of @fig:lattice-fixpoints. (a) Widening
-    jumps from $[0, 0]$ to the post-fixpoint $[0, +infinity]$, and narrowing then
-    recovers the least fixpoint $[0, 5]$. (b) Warrowing takes the same two
+    jumps from $absval(ivl(0, 0))$ to the post-fixpoint $absval(ivl(0, +infinity))$, and narrowing then
+    recovers the least fixpoint $absval(ivl(0, 5))$. (b) Warrowing takes the same two
     steps with one operator, which narrows when the candidate lies below the
-    current value and widens otherwise. Here both reach $[0, 5]$.],
+    current value and widens otherwise. Here both reach $absval(ivl(0, 5))$.],
   label: <fig:widening>,
 )
 
@@ -552,7 +557,7 @@ The counting loop has no procedures. With procedures, the analysis must decide
 which abstract state a callee's body starts from. Take the calls `bump(5)` and
 `bump(4)` of @ch:intro, where `bump` returns its argument plus one. With one
 unknown per program point, the entry of `bump` must cover both arguments, so
-over intervals its result is at best $[5, 6]$, and the analysis cannot show
+over intervals its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
 that the first call returns $6$. A context-sensitive analysis instead
 separates the _activations_ of a procedure, each execution from its call to
 its return, by a _calling context_, an abstraction of how the activation was
@@ -561,7 +566,7 @@ record recent call sites, from the functional approach, which relates abstract
 entry and return states @sharir81. Context-sensitive constraint systems use
 unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3]. With
 contexts that record the argument at entry, `bump` gets one copy of its
-unknowns for $[5, 5]$ and one for $[4, 4]$, with the results $6$ and $5$.
+unknowns for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the results $6$ and $5$.
 
 At a call, such an analysis computes the abstract state in which the callee is
 entered, which also determines the callee's context. At the return, it
@@ -620,8 +625,8 @@ partial map $rho$ of the contributions it publishes, joined per global
 unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a post-solution
 must bound both, $d lle sol(x)$ and $rho(g) lle sol(g)$ for every
 $g in op("dom")(rho)$. If the assignments
-`g = 5` and `g = 4` publish $[5, 5]$ and $[4, 4]$ to the unknown of a
-flow-insensitive global `g`, that unknown must bound their join $[4, 5]$. This
+`g = 5` and `g = 4` publish $absval(ivl(5, 5))$ and $absval(ivl(4, 4))$ to the unknown of a
+flow-insensitive global `g`, that unknown must bound their join $absval(ivl(4, 5))$. This
 describes what a right-hand side computes. The verified solver represents its
 evaluation by a strategy tree (@sec:td), so that it discovers reads and side
 effects while it solves.
@@ -707,13 +712,13 @@ loop and of a flow-insensitive assignment.
     row-gutter: 3mm,
     align: center + top,
     $h$, $b$, $t$, $e$, [`g = 5` after $u$],
-    _tree((($ctor("QueryL")(t)$, $v$), (_ans($[0, 0] ljoin v$), none))),
-    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet [-infinity, 4]$), none))),
-    _tree((($ctor("QueryL")(b)$, $v$), (_ans($v sh(+) [1, 1]$), none))),
-    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet [5, +infinity]$), none))),
+    _tree((($ctor("QueryL")(t)$, $v$), (_ans($absval(ivl(0, 0)) ljoin v$), none))),
+    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet absval(ivl(-infinity, 4))$), none))),
+    _tree((($ctor("QueryL")(b)$, $v$), (_ans($v sh(+) absval(ivl(1, 1))$), none))),
+    _tree((($ctor("QueryL")(h)$, $v$), (_ans($v lmeet absval(ivl(5, +infinity))$), none))),
     _tree((
       ($ctor("QueryL")(u)$, $v$),
-      ($ctor("Side")(g, [5, 5])$, none),
+      ($ctor("Side")(g, absval(ivl(5, 5)))$, none),
       (_ans($v$), none),
     )),
   ),
