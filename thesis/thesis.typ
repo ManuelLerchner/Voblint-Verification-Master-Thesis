@@ -93,7 +93,7 @@
 #include "content/06-analysis-interface.typ"
 #include "content/07-cooperation.typ"
 
-#part("From Analyses to Verdicts", lbl: <part:verdicts>)
+#part("Computing Sound Results", lbl: <part:verdicts>)
 #include "content/08-equations.typ"
 #include "content/09-solving.typ"
 #include "content/10-results.typ"

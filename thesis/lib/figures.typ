@@ -435,16 +435,19 @@
   link(loc)[Part #numbering("I", part-counter.at(loc).first())]
 }
 
-// The contents entry for a part: a bold, unnumbered group line without a page
-// number, set off from the chapters it groups. Every other level-1 entry is
-// left to the default.
+// The contents entry for a part: a muted label and title in tracked small
+// capitals, so parts read as groups rather than as further chapters.
+// It has no page number. Every other level-1 entry is left to the default.
 #let part-outline-entry(it) = {
   if it.element.supplement == [Part] {
     let n = part-counter.at(it.element.location()).first()
-    block(above: 13pt, below: 0pt, sticky: true, link(it.element.location(), text(
-      font: "Latin Modern Sans",
-      weight: "bold",
-    )[Part #numbering("I", n): #it.element.body]))
+    block(above: 15pt, below: 2pt, sticky: true, link(it.element.location(), {
+      text(0.75em, fill: vb.muted, tracking: 1.5pt)[PART #numbering("I", n)]
+      h(1em)
+      text(1.15em, fill: vb.muted, tracking: 1.5pt, font: "Latin Modern Roman Caps", lower(
+        it.element.body,
+      ))
+    }))
   } else {
     it
   }

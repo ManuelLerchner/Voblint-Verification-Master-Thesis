@@ -332,7 +332,7 @@
     }
     if it.level == 1 {
       // Sticky: a chapter line never ends a page apart from its first section.
-      block(above: 10pt, below: 12pt, sticky: true, link(el.location(), text(
+      block(above: 10pt, below: 10pt, sticky: true, link(el.location(), text(
         font: sans,
         weight: "bold",
         row,

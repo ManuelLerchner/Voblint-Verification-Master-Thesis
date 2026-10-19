@@ -1114,6 +1114,10 @@ source-level theorem). Chapters 5–7 never mention contexts, equations or the
 solver, so the analysis-specific obligations and the framework's obligations now
 form separate parts. The thesis has six parts.
 
+**2026-10-19 amendment (author request):** rename Part IV to "Computing Sound
+Results", because "From Analyses to Verdicts" nearly repeated the title of
+chapter 10, "From Solutions to Verdicts".
+
 **2026-09-21 amendment (author request):** insert *Engineering the Isabelle
 development* after analysis instances and before the executable-artifact chapter.
 It explains the locale inheritance, computational/semantic type-class split,
