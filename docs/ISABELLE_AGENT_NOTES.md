@@ -126,7 +126,7 @@ duplicate above at least announces itself. When a generator overwrites a theory
 at the *same* path under the *same* name -- no ROOT change, no duplicate, no
 exception -- nothing looks different: the node name is right, the file is where
 it belongs, and the session goes on serving the bytes it loaded. Diagnostics
-taken after `pixi run assembly-generate` describe the previous render, and because a
+taken after a generator run describe the previous render, and because a
 regeneration moves lines they cite offsets whose content has changed
 underneath. This was caught once by comparing the buffer against disk at a line
 the run had changed, and would otherwise have produced a confident report about

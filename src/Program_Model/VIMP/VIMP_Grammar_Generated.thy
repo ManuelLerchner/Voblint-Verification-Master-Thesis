@@ -42,6 +42,7 @@ nonterminal imp2_stmts_opt
 nonterminal imp2_actuals
 nonterminal imp2_formals
 nonterminal imp2_ids
+nonterminal imp2_kind
 
 syntax
   "_exp_var" :: "id_position => imp2_exp" ("_" 1000)
@@ -64,6 +65,15 @@ syntax
   "_exp_and" :: "imp2_exp => imp2_exp => imp2_exp" ("_ && _" [40, 41] 40)
   "_exp_or" :: "imp2_exp => imp2_exp => imp2_exp" ("_ || _" [30, 31] 30)
   "_exp_paren" :: "imp2_exp => imp2_exp" ("'( _ ')" [0] 1000)
+  "_exp_cast" :: "imp2_kind => imp2_exp => imp2_exp" ("'( _ ') _" 90)
+  "_kind_i8" :: imp2_kind ("i8")
+  "_kind_u8" :: imp2_kind ("u8")
+  "_kind_i16" :: imp2_kind ("i16")
+  "_kind_u16" :: imp2_kind ("u16")
+  "_kind_i32" :: imp2_kind ("i32")
+  "_kind_u32" :: imp2_kind ("u32")
+  "_kind_i64" :: imp2_kind ("i64")
+  "_kind_u64" :: imp2_kind ("u64")
   "_stmt_skip" :: imp2_stmt ("skip ;" 61)
   "_stmt_assign" :: "id_position => imp2_exp => imp2_stmt" ("_ = _ ;" [900, 0] 61)
   "_stmt_return" :: "imp2_exp => imp2_stmt" ("return _ ;" [0] 61)
@@ -96,21 +106,31 @@ structure Vimp_Grammar_Tr =
 struct
   val c_N      = "VIMP_Syntax.N"
   val c_V      = "VIMP_Syntax.V"
-  val c_Plus   = "VIMP_Syntax.exp.Plus"
-  val c_Minus  = "VIMP_Syntax.exp.Minus"
-  val c_Times  = "VIMP_Syntax.exp.Times"
-  val c_Div = "VIMP_Syntax.exp.Div"
-  val c_Mod = "VIMP_Syntax.exp.Mod"
+  val c_Plus   = "VIMP_Syntax.src_exp.Plus"
+  val c_Minus  = "VIMP_Syntax.src_exp.Minus"
+  val c_Times  = "VIMP_Syntax.src_exp.Times"
+  val c_Div = "VIMP_Syntax.src_exp.Div"
+  val c_Mod = "VIMP_Syntax.src_exp.Mod"
 
-  val c_Less   = "VIMP_Syntax.exp.Less"
-  val c_LessEq = "VIMP_Syntax.exp.LessEq"
-  val c_Greater = "VIMP_Syntax.exp.Greater"
-  val c_GreaterEq = "VIMP_Syntax.exp.GreaterEq"
-  val c_NotEq = "VIMP_Syntax.exp.NotEq"
-  val c_Eq     = "VIMP_Syntax.exp.Eq"
-  val c_Not    = "VIMP_Syntax.exp.Not"
-  val c_And    = "VIMP_Syntax.exp.And"
-  val c_Or     = "VIMP_Syntax.exp.Or"
+  val c_Less   = "VIMP_Syntax.src_exp.Less"
+  val c_LessEq = "VIMP_Syntax.src_exp.LessEq"
+  val c_Greater = "VIMP_Syntax.src_exp.Greater"
+  val c_GreaterEq = "VIMP_Syntax.src_exp.GreaterEq"
+  val c_NotEq = "VIMP_Syntax.src_exp.NotEq"
+  val c_Eq     = "VIMP_Syntax.src_exp.Eq"
+  val c_Not    = "VIMP_Syntax.src_exp.Not"
+  val c_And    = "VIMP_Syntax.src_exp.And"
+  val c_Or     = "VIMP_Syntax.src_exp.Or"
+  val c_Cast   = "VIMP_Syntax.src_exp.Cast"
+
+  val c_I8  = "Machine_Kind.ikind.I8"
+  val c_U8  = "Machine_Kind.ikind.U8"
+  val c_I16 = "Machine_Kind.ikind.I16"
+  val c_U16 = "Machine_Kind.ikind.U16"
+  val c_I32 = "Machine_Kind.ikind.I32"
+  val c_U32 = "Machine_Kind.ikind.U32"
+  val c_I64 = "Machine_Kind.ikind.I64"
+  val c_U64 = "Machine_Kind.ikind.U64"
 
   val c_SKIP   = "VIMP_Proc.gcom.SKIP"
   val c_Assign = "VIMP_Proc.gcom.Assign"
@@ -176,6 +196,18 @@ struct
     | dest_id_position _ _ (Free (s, _)) = s
     | dest_id_position _ _ t = raise TERM ("Vimp_Grammar_Tr: dest_id_position", [t])
 
+  fun kind_tr ctxt t =
+        (case Term.strip_comb t of
+           (Const ("_kind_i8", _), []) => K c_I8
+         | (Const ("_kind_u8", _), []) => K c_U8
+         | (Const ("_kind_i16", _), []) => K c_I16
+         | (Const ("_kind_u16", _), []) => K c_U16
+         | (Const ("_kind_i32", _), []) => K c_I32
+         | (Const ("_kind_u32", _), []) => K c_U32
+         | (Const ("_kind_i64", _), []) => K c_I64
+         | (Const ("_kind_u64", _), []) => K c_U64
+         | _ => raise TERM ("Vimp_Grammar_Tr: kind_tr", [t]))
+
   fun exp_tr ctxt t =
         (case Term.strip_comb t of
            (Const ("_exp_num", _), [n]) =>
@@ -208,6 +240,7 @@ struct
          | (Const ("_exp_and", _), [a0, a2]) => K c_And $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_or", _), [a0, a2]) => K c_Or $ (exp_tr ctxt a0) $ (exp_tr ctxt a2)
          | (Const ("_exp_paren", _), [a1]) => exp_tr ctxt a1
+         | (Const ("_exp_cast", _), [a1, a3]) => K c_Cast $ (kind_tr ctxt a1) $ (exp_tr ctxt a3)
          | _ => raise TERM ("Vimp_Grammar_Tr: exp_tr", [t]))
 
   fun actuals_tr ctxt (Const ("_actuals_one", _) $ x) = K c_Cons $ (exp_tr ctxt x) $ K c_Nil

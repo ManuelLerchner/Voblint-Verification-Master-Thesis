@@ -1,7 +1,9 @@
 tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp [parity]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+20:5      pp3    WARNING   possible signed integer overflow in +: v + 2
 
 Assertion checks
 Location  Point  Condition  Verdict  State

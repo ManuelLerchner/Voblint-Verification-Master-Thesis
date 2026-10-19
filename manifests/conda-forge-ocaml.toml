@@ -56,7 +56,7 @@ version = "1.9.8"
 tier = 1
 deps = ["ocaml"]
 for = ["native"]
-via = "update of ocaml-findlib-feedstock"
+via = "conda-forge/ocaml-findlib-feedstock#15"
 
 [package.ocaml-menhir]
 opam = "menhir"
@@ -71,7 +71,7 @@ version = "1.14"
 tier = 2
 deps = ["ocaml-findlib", "gmp"]
 for = ["native"]
-via = "update of ocaml-zarith-feedstock"
+via = "conda-forge/ocaml-zarith-feedstock#7"
 
 [package.ocaml-zarith-stubs-js]
 opam = "zarith_stubs_js"
@@ -79,7 +79,7 @@ version = "0.17.0"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser"]
-via = "needs an upstream release with the wasm runtime"
+via = "janestreet/zarith_stubs_js#16: needs a release with the wasm runtime"
 
 [package.ocaml-dune-build-info]
 opam = "dune-build-info"
@@ -87,7 +87,7 @@ version = "3.22.0"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["format"]
-via = "new output of ocaml-dune-feedstock"
+via = "deferred with ocamlformat: new output of ocaml-dune-feedstock"
 
 [package.ocaml-csexp]
 opam = "csexp"
@@ -95,7 +95,6 @@ version = "1.5.2"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["format"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-re]
 opam = "re"
@@ -103,7 +102,6 @@ version = "1.14.0"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["format"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-cmdliner]
 opam = "cmdliner"
@@ -111,7 +109,6 @@ version = "2.1.1"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser", "format"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-yojson]
 opam = "yojson"
@@ -119,7 +116,6 @@ version = "3.0.0"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-seq]
 opam = "seq"
@@ -127,7 +123,6 @@ version = "0.3.1"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-sexplib0]
 opam = "sexplib0"
@@ -135,7 +130,6 @@ version = "0.17.0"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-stdlib-shims]
 opam = "stdlib-shims"
@@ -143,7 +137,6 @@ version = "0.3.0"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-ppx-derivers]
 opam = "ppx_derivers"
@@ -151,7 +144,6 @@ version = "1.2.1"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-compiler-libs]
 opam = "ocaml-compiler-libs"
@@ -159,7 +151,6 @@ version = "0.17.0"
 tier = 2
 deps = ["ocaml-dune"]
 for = ["browser"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-gen]
 opam = "gen"
@@ -167,7 +158,6 @@ version = "1.1"
 tier = 3
 deps = ["ocaml-seq"]
 for = ["browser"]
-via = "conda-forge/staged-recipes#34872"
 
 [package.ocaml-ppxlib]
 opam = "ppxlib"
@@ -180,6 +170,7 @@ deps = [
   "ocaml-compiler-libs",
 ]
 for = ["browser"]
+via = "conda-forge/staged-recipes#35158"
 
 [package.ocaml-sedlex]
 opam = "sedlex"
@@ -187,6 +178,7 @@ version = "3.7"
 tier = 4
 deps = ["ocaml-ppxlib", "ocaml-gen"]
 for = ["browser"]
+via = "conda-forge/staged-recipes#35158"
 
 [package.ocamlformat]
 opam = "ocamlformat"
@@ -200,6 +192,7 @@ deps = [
   "ocaml-dune-build-info",
 ]
 for = ["format"]
+via = "deferred: stays on opam for now"
 
 [package.ocaml-js-of-ocaml-compiler]
 opam = "js_of_ocaml-compiler"

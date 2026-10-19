@@ -1,5 +1,8 @@
 # DG interface validation against Goblint's intended abstraction
 
+Status note (Stage 7): `analysis_contract` below is now the generic
+`ganalysis_contract` (`DG_Spec_Sound.thy`); the recommendation is unchanged.
+
 > **Status:** DELIVERED. Grounded in Goblint master source (`analyses.ml`,
 > `base.ml`, `constraints.ml`). **Recommendation: leave the DG interface
 > unchanged.** The local-only context routing in `analysis_contract` faithfully models

@@ -9,10 +9,10 @@
 // would be unsound. The standalone version is
 // 01-random/soundness/01-unknown_after_random.vimp.
 fun main() {
-  x = 5;
+  i32 x = 5;
   __voblint_check(0 < x); // PROVED
   x = 0 - 1;
   __voblint_check(0 < x); // REFUTED
-  y = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   __voblint_check(0 < y); // UNKNOWN
 }

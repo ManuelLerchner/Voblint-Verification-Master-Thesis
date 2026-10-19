@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  --------------------
-58:3      pp0    x <= 2     UNKNOWN  interval: x=[1,+∞]
+--------  -----  ---------  -------  --------------------------
+60:3      pp0    x <= 2     UNKNOWN  interval: x=[1,2147483647]

@@ -17,7 +17,16 @@ from pathlib import Path
 
 PARAM_RE = re.compile(r"^// PARAM: (.*)$")
 ARITHMETIC_HEADER = "// EXPECT-ARITHMETIC"
-ARITHMETIC_ENTRY_RE = re.compile(r"(WARN|ERROR) (division|remainder)-by-zero")
+# One entry per diagnostic: its severity and the hazard it reports.
+ARITHMETIC_HAZARDS = (
+    "division-by-zero",
+    "remainder-by-zero",
+    "signed-overflow",
+    "conversion-overflow",
+)
+ARITHMETIC_ENTRY_RE = re.compile(
+    r"(WARN|ERROR) (" + "|".join(ARITHMETIC_HAZARDS) + r")"
+)
 GRAPH_BEGIN = "// EXPECT-GRAPH-BEGIN"
 GRAPH_END = "// EXPECT-GRAPH-END"
 
@@ -51,7 +60,13 @@ SETTING_FLAGS = {
     "--int-refinement": "int_refinement",
     "--narrow-bound": "narrow_bound",
     "--program-globals": "program_globals",
+    "--signed-overflow": "signed_overflow",
 }
+
+# The settings of the analyzer's option table (option_specs in
+# cli/result/analysis_request.ml) by their Goblint path, which `--set PATH VALUE`
+# names and the browser takes as its settings argument.
+OPTION_PATHS = {"signed_overflow": "sem.int.signed_overflow"}
 
 # The bound voblint's bounded-narrowing rule takes when --narrow-bound is absent.
 DEFAULT_NARROW_BOUND = 5
@@ -82,6 +97,16 @@ def analysis_settings(args: list[str]) -> dict[str, object]:
 
         if flag in VALUED_OUTPUT_FLAGS:
             rest.pop(0)
+            continue
+
+        if flag == "--set":
+            if len(rest) < 2:
+                raise ValueError("PARAM flag '--set' expects PATH VALUE")
+            path, value = rest.pop(0), rest.pop(0)
+            keys = [k for k, p in OPTION_PATHS.items() if p == path]
+            if not keys:
+                raise ValueError(f"unknown PARAM option path {path!r}")
+            settings[keys[0]] = value
             continue
 
         if flag not in SETTING_FLAGS and flag not in RUNNER_FLAGS:

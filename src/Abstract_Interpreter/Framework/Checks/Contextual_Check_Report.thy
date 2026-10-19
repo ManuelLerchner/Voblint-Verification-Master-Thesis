@@ -46,7 +46,6 @@ abbreviation Dead :: contextual_verdict where
 abbreviation Decided :: "check_result \<Rightarrow> contextual_verdict" where
   "Decided r \<equiv> Lifted r"
 
-
 subsection \<open>Classifying one contextual point\<close>
 
 text \<open>
@@ -67,7 +66,7 @@ text \<open>
 \<close>
 
 fun classify_point ::
-  "(exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> exp \<Rightarrow> 'a lifted \<Rightarrow> contextual_verdict"
+  "('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> 'e \<Rightarrow> 'a lifted \<Rightarrow> contextual_verdict"
 where
   "classify_point classify c Bot = Dead"
 | "classify_point classify c (Lifted st) = Decided (classify c st)"
@@ -87,70 +86,12 @@ text \<open>
   nothing.
 \<close>
 
-fun bool_valued :: "exp \<Rightarrow> bool" where
-  "bool_valued (Not _) = True"
-| "bool_valued (And _ _) = True"
-| "bool_valued (Or _ _) = True"
-| "bool_valued (Less _ _) = True"
-| "bool_valued (LessEq _ _) = True"
-| "bool_valued (Greater _ _) = True"
-| "bool_valued (GreaterEq _ _) = True"
-| "bool_valued (Eq _ _) = True"
-| "bool_valued (NotEq _ _) = True"
-| "bool_valued _ = False"
-
-lemma aval_bool_valued:
-  "bool_valued e \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) then 1 else 0)"
-  by (cases e) auto
-
-definition check_truth_exp :: "exp \<Rightarrow> exp" where
-  "check_truth_exp c = (if bool_valued c then c else NotEq c (N 0))"
-
-lemma bool_valued_check_truth_exp [simp]: "bool_valued (check_truth_exp c)"
-  by (simp add: check_truth_exp_def)
-
-lemma aval_check_truth_exp:
-  "\<lbrakk>check_truth_exp c\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>c\<rbrakk>\<^sub>e s) then 1 else 0)"
-  by (auto simp: check_truth_exp_def dest: aval_bool_valued[of c s])
-
-abbreviation check_query_of :: "exp \<Rightarrow> query" where
-  "check_query_of c \<equiv> EvalInt (check_truth_exp c)"
-
 fun classify_answer :: "answer \<Rightarrow> contextual_verdict" where
   "classify_answer QBot = Dead"
 | "classify_answer a =
-     (if answer_const a = Some 1 then Decided Check_Proved
-      else if answer_const a = Some 0 then Decided Check_Refuted
+     (if answer_excludes 0 a then Decided Check_Proved
+      else if answer_excludes 1 a then Decided Check_Refuted
       else Decided Check_Unknown)"
-
-lemma classify_answer_proved:
-  assumes "classify_answer a = Decided Check_Proved"
-    and "eval_holds (check_query_of c) a s"
-  shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-proof -
-  have "answer_const a = Some 1"
-    using assms(1) by (cases a rule: classify_answer.cases)
-      (auto split: option.splits if_splits simp del: answer_const.simps)
-  from eval_holds_constD[OF assms(2) this] show ?thesis
-    by (simp add: aval_check_truth_exp split: if_splits)
-qed
-
-lemma classify_answer_refuted:
-  assumes "classify_answer a = Decided Check_Refuted"
-    and "eval_holds (check_query_of c) a s"
-  shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-proof -
-  have "answer_const a = Some 0"
-    using assms(1) by (cases a rule: classify_answer.cases)
-      (auto split: option.splits if_splits simp del: answer_const.simps)
-  from eval_holds_constD[OF assms(2) this] show ?thesis
-    by (simp add: aval_check_truth_exp split: if_splits)
-qed
-
-lemma classify_answer_dead:
-  assumes "classify_answer a = Dead"
-  shows "\<not> eval_holds (EvalInt e) a s"
-  using assms by (cases a) (auto split: if_splits)
 
 subsection \<open>Aggregating the contexts observed at one check\<close>
 
@@ -201,18 +142,6 @@ lemma aggregate_verdicts_eq_Dead_iff:
   shows "aggregate_verdicts vs = Dead \<longleftrightarrow> (\<forall>v \<in> vs. v = Dead)"
   using assms by (induction vs rule: finite_induct) simp_all
 
-text \<open>The opposite direction, for a report that has only one observation per
-  check and therefore no dead case to distinguish: every entry is
-  \<open>Decided\<close>. Deadness is not asserted either way --- such a report simply does
-  not carry the channel that would express it.\<close>
-
-definition decided_report ::
-  "check_report_entry list \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "decided_report = map (\<lambda>(u, cnd, r). (u, cnd, Decided r))"
-
-lemma length_decided_report [simp]: "length (decided_report rs) = length rs"
-  unfolding decided_report_def by simp
-
 subsection \<open>Whole-program contextual check report\<close>
 
 text \<open>
@@ -234,8 +163,8 @@ text \<open>
 \<close>
 
 definition classify_checks_ctx ::
-    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
-       \<Rightarrow> (pp \<times> exp \<times> ('ctx \<times> contextual_verdict) set) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> 'e \<times> ('ctx \<times> contextual_verdict) set) list" where
   "classify_checks_ctx g r classify =
      map (\<lambda>(u, a, v). (u, ea_check_cond a,
             (\<lambda>ctx. (ctx, classify_point classify (ea_check_cond a) (lookup_table r u ctx)))
@@ -243,8 +172,8 @@ definition classify_checks_ctx ::
        (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
 
 definition classify_checks_verdicts ::
-    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
-       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> 'e \<times> contextual_verdict) list" where
   "classify_checks_verdicts g r classify =
      map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs))) (classify_checks_ctx g r classify)"
 
@@ -270,8 +199,8 @@ lemma classify_checks_ctx_mem_iff:
          \<and> vs = (\<lambda>ctx. (ctx, classify_point classify c (lookup_table r v ctx))) ` table_contexts r v"
   unfolding classify_checks_ctx_def set_map set_filter
   using set_cfg_intra_list[OF assms]
-  by (auto simp: image_iff split: edge_action.splits)
-     (metis edge_action.collapse surjective_pairing)
+  by (auto simp: image_iff split: gedge_action.splits)
+     (metis gedge_action.collapse surjective_pairing)
 
 subsection \<open>Contextual proved/refuted soundness\<close>
 
@@ -324,7 +253,6 @@ proof
   with agg known show "v = Dead \<or> v = Decided r" by simp
 qed
 
-
 subsection \<open>One condition at one point, over its contexts\<close>
 
 text \<open>
@@ -334,7 +262,7 @@ text \<open>
 \<close>
 
 definition point_verdict ::
-    "('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> pp \<Rightarrow> exp
+    "('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> pp \<Rightarrow> 'e
        \<Rightarrow> contextual_verdict" where
   "point_verdict r classify v e =
      aggregate_verdicts

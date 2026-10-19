@@ -2,8 +2,9 @@
 // Sign proves weak signs after truncation without knowing either magnitude.
 // A nonzero remainder then refines its weak sign to a strict sign.
 fun main() {
-  n = __voblint_nondet_int();
-  d = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
+  i32 d = __voblint_nondet_int();
+  i32 q, r;
   if (n < 0 && d > 0) {
     q = n / d;
     r = n % d;

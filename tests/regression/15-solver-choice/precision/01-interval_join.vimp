@@ -2,6 +2,6 @@
 // Exercises the CLI's --globals flag. The default rule is warrow; join is
 // the non-default alternative -- same verdict here regardless of choice.
 fun main() {
-  x = 5;
+  i32 x = 5;
   __voblint_check(0 < x); // PROVED
 }

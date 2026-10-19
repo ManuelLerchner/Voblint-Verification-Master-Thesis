@@ -1,0 +1,10 @@
+thesis/shared/programs/kinds-i32.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition    Verdict  State
+--------  -----  -----------  -------  ----------------------------------
+5:3       pp3    x + y < 250  REFUTED  interval: x=[200,200], y=[100,100]
+6:3       pp4    z < 250      REFUTED  interval: z=[300,300]

@@ -1,9 +1,9 @@
 // PARAM: --analysis interval
 // Procedure call with a formal and a used return value.
-fun inc(n) {
+fun i32 inc(i32 n) {
   return n + 1;
 }
 fun main() {
-  r = inc(5);
+  i32 r = inc(5);
   __voblint_check(0 < r); // PROVED
 }

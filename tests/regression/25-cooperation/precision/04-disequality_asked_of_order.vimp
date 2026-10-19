@@ -5,11 +5,11 @@
 // Run together, the order analysis answers Interval's EvalInt (x != y) with the
 // exact integer 0, so Interval assigns [0,0] and proves the check.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (x <= y) {
     if (y <= x) {
-      z = (x != y);
+      i32 z = (x != y);
       __voblint_check(z == 0); // PROVED
     }
   }

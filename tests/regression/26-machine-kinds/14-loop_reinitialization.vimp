@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// A declaration in a loop body runs on every iteration. `c` is initialized
+// afresh each time, so it is 1 after its increment however often the loop ran.
+// `u` has no initializer: every iteration gives it an arbitrary u8 value, which
+// over-approximates C's indeterminate value, so `s` is bounded only by u8.
+fun main() {
+  i32 i = 0;
+  i32 s = 0;
+  while (i < 3) {
+    i32 c = 0;
+    c = c + 1;
+    __voblint_check(c == 1); // PROVED
+    u8 u;
+    s = u;
+    i32 t = i;
+    i = t + 1;
+  }
+  __voblint_check(i == 3); // PROVED
+  __voblint_check(s <= 255); // PROVED
+  __voblint_check(s == 0); // UNKNOWN
+}

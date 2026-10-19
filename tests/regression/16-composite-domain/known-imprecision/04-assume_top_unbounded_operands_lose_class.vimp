@@ -1,0 +1,27 @@
+// PARAM: --analysis int
+// 02-times_produces_congruence.vimp and 16-cross_component_emptiness.vimp
+// under the default assume_top. Concretely x * 2 is even and 2 * x + 1 odd
+// also after i32 wraparound, since 2 divides 2^32: y = 2 on the inner arm,
+// and z == 0 never holds.
+//
+// x is unbounded, so the interval cannot show that the products fit, no_ov
+// fails, and the congruence answers top. The interval alone keeps y in
+// [1,2] and z in [0,0], so y == 2 is UNKNOWN and the dead branch is entered
+// and its check REFUTED. assume_wraparound keeps both classes (the two
+// precision fixtures), and so does a bound on x
+// (../precision/22-assume_top_bounded_operands_keep_class.vimp).
+fun main() {
+  i32 x = __voblint_nondet_int();
+  i32 y = x * 2;
+  if (0 < y) {
+    if (y < 3) {
+      __voblint_check(y == 2); // UNKNOWN
+    }
+  }
+  i32 z = 2 * x + 1;
+  if (z >= 0) {
+    if (z <= 0) {
+      __voblint_check(false); // REFUTED
+    }
+  }
+}

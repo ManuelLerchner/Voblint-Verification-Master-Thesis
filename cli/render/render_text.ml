@@ -104,7 +104,7 @@ let render_report path analysis positions result =
         [
           Printf.sprintf "%d:%d" line col;
           node_label point;
-          Vimp_printer.string_of_exp cnd;
+          Typed_printer.string_of_texp cnd;
           label;
           state;
         ])

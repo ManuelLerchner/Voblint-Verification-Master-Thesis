@@ -17,7 +17,7 @@ text \<open>
   that branch to stay a total function, while the generated code keeps running
   the structural-equality loop. Every mode is proved reductive and
   concretization-preserving, but only \<open>Refine_Never\<close> and \<open>Refine_Once\<close> are
-  monotone --- \<open>refine_nonfixpoint_mono\<close> --- which is why callers that need
+  monotone (the first is the identity, the second \<open>refine_once_mono\<close>), which is why callers that need
   monotonicity carry the \<open>mode \<noteq> Refine_Fixpoint\<close> side condition.
 \<close>
 

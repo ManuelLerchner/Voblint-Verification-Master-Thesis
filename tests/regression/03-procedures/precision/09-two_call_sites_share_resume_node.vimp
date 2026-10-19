@@ -16,11 +16,12 @@
 // Reversing the branch polarity hides the ordering entirely, so this case pins
 // the polarity that exercised it, under --context none, where the default
 // Interval configuration reaches this shape.
-fun f(n) {
+fun i32 f(i32 n) {
   return n;
 }
 fun main() {
-  x = 5;
+  i32 x = 5;
+  i32 a;
   if (x < 2) {
     a = f(1);
   } else {

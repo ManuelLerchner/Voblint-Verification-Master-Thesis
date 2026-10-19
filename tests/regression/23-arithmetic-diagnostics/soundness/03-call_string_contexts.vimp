@@ -1,10 +1,10 @@
 // PARAM: --analysis interval --context call-string --context-depth 1 --globals warrow-per-origin
 // EXPECT-ARITHMETIC
 // Separate call histories contain both zero and nonzero divisors at the return.
-fun f(n) {
+fun i32 f(i32 n) {
   return 10 / n; // ARITH: WARN division-by-zero
 }
 fun main() {
-  x = f(0);
-  y = f(2);
+  i32 x = f(0);
+  i32 y = f(2);
 }

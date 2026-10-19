@@ -260,17 +260,6 @@ lemma traverse_fold_rhs_program_projected_mono:
   by (rule monoD[OF emb_mono])
      (rule fold_acc_projected_env_mono[OF prj_mono progs_mono])
 
-lemma sides_of_program_fold_rhs_program_projected_mono:
-  fixes ps :: "('x, 'g, 'd::bounded_semilattice_sup_bot, 'd) strategy_program list"
-  assumes wf: "\<forall>p \<in> set ps. sp_wf p"
-    and progs_mono: "\<And>p. p \<in> set ps \<Longrightarrow> sides_of_program p \<sigma>1 \<le> sides_of_program p \<sigma>2"
-  shows "sides_of_program (fold_rhs_program_projected prj emb acc ps) \<sigma>1
-       \<le> sides_of_program (fold_rhs_program_projected prj emb acc ps) \<sigma>2"
-  unfolding le_fun_def sides_of_program_fold_rhs_program_projected_char[OF wf]
-  using progs_mono
-  by (fastforce simp: le_fun_def
-        intro: order_trans[OF _ foldr_sup_member_le])
-
 lemma sides_of_program_fold_rhs_program_projected_acc_indep:
   fixes ps :: "('x, 'g, 'd::bounded_semilattice_sup_bot, 'd) strategy_program list"
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"
@@ -338,7 +327,6 @@ theorem dep_program_fold_rhs_program_char:
   unfolding fold_rhs_program_def
   by (rule dep_program_fold_rhs_program_projected_char[OF wf])
 
-
 subsection \<open>Dependency-property preservation\<close>
 
 text \<open>
@@ -360,13 +348,5 @@ lemma env_indep_deps_fold_rhs_program_projected:
   using assms
   unfolding env_indep_deps_def
   by (auto simp add: dep_program_fold_rhs_program_projected_char[OF wf]; blast)
-
-lemma mono_tree_deps_fold_rhs_program_projected:
-  assumes wf: "\<forall>p \<in> set ps. sp_wf p"
-    and "\<And>p. p \<in> set ps \<Longrightarrow> mono_tree_deps (sp_compile p)"
-  shows "mono_tree_deps (sp_compile (fold_rhs_program_projected prj emb acc ps))"
-  using assms
-  unfolding mono_tree_deps_def
-  by (fastforce simp: dep_program_fold_rhs_program_projected_char[OF wf])
 
 end

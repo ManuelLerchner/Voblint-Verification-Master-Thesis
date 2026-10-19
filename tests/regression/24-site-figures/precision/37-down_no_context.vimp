@@ -3,7 +3,7 @@
 // (no context): one copy of down stands for all 101 calls, and the guard keeps
 // n in [0,100], so the check holds. 2 contexts.
 
-fun down(n) {
+fun down(i32 n) {
   __voblint_check(n >= 0); // PROVED
   if (n > 0) {
     down(n - 1);

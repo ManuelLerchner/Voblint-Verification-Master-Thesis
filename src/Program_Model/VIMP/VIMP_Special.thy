@@ -14,28 +14,34 @@ text \<open>
 
 datatype special_desc = SD_Nondet_Int | SD_Min | SD_Max
 
-datatype special_call =
-    Nondet_Int
-  | Min exp exp
-  | Max exp exp
+text \<open>A classified call is generic in its argument expressions, so a typed CFG carries
+  typed arguments; \<open>special_call\<close> is the instance at \<^typ>\<open>src_exp\<close>.\<close>
 
-instance special_call :: countable
+datatype 'e gspecial_call =
+    Nondet_Int
+  | Min 'e 'e
+  | Max 'e 'e
+
+type_synonym special_call = "src_exp gspecial_call"
+
+instance gspecial_call :: (countable) countable
   by countable_datatype
 
-fun classify_special :: "special_desc \<Rightarrow> exp list \<Rightarrow> special_call option" where
+fun classify_special :: "special_desc \<Rightarrow> 'e list \<Rightarrow> 'e gspecial_call option" where
   "classify_special SD_Nondet_Int [] = Some Nondet_Int"
 | "classify_special SD_Min [a, b] = Some (Min a b)"
 | "classify_special SD_Max [a, b] = Some (Max a b)"
 | "classify_special _ _ = None"
 
 text \<open>Shared by \<open>pstep\<close>'s \<open>Special\<close> rule and the CFG's \<open>special_step\<close>, so the two
-  concrete semantics cannot drift. \<open>Nondet_Int\<close> admits every integer.\<close>
-fun special_result :: "special_call \<Rightarrow> store \<Rightarrow> int \<Rightarrow> bool" where
-  "special_result Nondet_Int s v = True"
-| "special_result (Min a b) s v = (v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s))"
-| "special_result (Max a b) s v = (v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s))"
+  concrete semantics cannot drift. \<open>Nondet_Int\<close> admits every integer. The arguments are
+  evaluated by \<open>ev\<close>, the evaluator of the language the call is written in.\<close>
+fun special_result :: "('e \<Rightarrow> 's \<Rightarrow> int) \<Rightarrow> 'e gspecial_call \<Rightarrow> 's \<Rightarrow> int \<Rightarrow> bool" where
+  "special_result ev Nondet_Int s v = True"
+| "special_result ev (Min a b) s v = (v = min (ev a s) (ev b s))"
+| "special_result ev (Max a b) s v = (v = max (ev a s) (ev b s))"
 
-lemma special_result_ex [simp]: "\<exists>v. special_result sc s v"
+lemma special_result_ex [simp]: "\<exists>v. special_result ev sc s v"
   by (cases sc) auto
 
 text \<open>Every \<open>special_pname_*\<close> is an ordinary identifier, so a source program could

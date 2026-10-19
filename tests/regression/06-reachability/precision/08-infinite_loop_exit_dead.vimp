@@ -8,7 +8,7 @@
 // second trailing check reads x so the DEAD row is seen to hold for a
 // check over a bound variable, not only for the literal sentinel.
 fun main() {
-  x = 0;
+  i32 x = 0;
   while (true) {
     __voblint_check(false); // REFUTED
   }

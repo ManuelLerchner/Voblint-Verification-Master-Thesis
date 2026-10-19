@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// A literal is one exact value of its kind, however narrow the host's native
+// int: the lexer reads digits into an arbitrary-precision integer, so the
+// browser build's 31-bit ints and the native 63-bit ints keep 2^30 and
+// 2^63 - 1 exact.
+fun main() {
+  i32 x = 1073741824;
+  __voblint_check(x == 1073741823 + 1); // PROVED
+  i64 y = 9223372036854775807;
+  __voblint_check(y - 9223372036854775806 == 1); // PROVED
+  __voblint_check(y > 9223372036854775806); // PROVED
+}

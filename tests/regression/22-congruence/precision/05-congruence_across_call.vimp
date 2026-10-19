@@ -1,4 +1,4 @@
-// PARAM: --analysis congruence
+// PARAM: --analysis congruence --signed-overflow assume_wraparound
 // Congruence through the routed spine's enter and combine edges rather
 // than intra-procedural transfer alone. The guard pins n to 4 in the
 // caller; enter_congruence_ci_for binds that class to the formal p in a
@@ -9,11 +9,16 @@
 // Context-insensitive by construction: triple has one call site, so
 // Ctx_None already gives it an exact entry class. The context-sensitive
 // counterpart is 07-entry_state_separates_calls.vimp.
-fun triple(p) { return p * 3; }
+//
+// Run under --signed-overflow assume_wraparound: the case is about routing a
+// class through enter and combine, and its classes come from signed
+// arithmetic, which standalone Congruence answers with top under Goblint's
+// default assume_top (27-signed-overflow/known-imprecision/02).
+fun i32 triple(i32 p) { return p * 3; }
 fun main() {
-  n = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
   if (n == 4) {
-    a = triple(n);
+    i32 a = triple(n);
     __voblint_check(a == 12); // PROVED
     __voblint_check(a != 11); // PROVED
   } else {

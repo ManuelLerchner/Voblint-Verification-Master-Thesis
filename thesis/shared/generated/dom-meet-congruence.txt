@@ -1,0 +1,16 @@
+tests/regression/22-congruence/precision/04-equality_meet_refines_wrapped_class.vimp [congruence]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  ------------------------------------------------
+18:7      pp2    WARNING   possible signed integer overflow in *: 4 * n
+18:7      pp2    WARNING   possible signed integer overflow in +: 4 * n + 1
+19:7      pp3    WARNING   possible signed integer overflow in *: 6 * m
+19:7      pp3    WARNING   possible signed integer overflow in +: 6 * m + 3
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------
+21:5      pp5    y != 3     PROVED   congruence: y=1+4ℤ
+23:7      pp7    0          REFUTED  
+26:5      pp9    1          PROVED   

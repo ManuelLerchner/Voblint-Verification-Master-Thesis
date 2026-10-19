@@ -6,25 +6,22 @@
 // under the sl4 solver: the inner widening point must be restarted from
 // bottom once the outer head narrows.
 //
-// Voblint answers (i <= 10) UNKNOWN. Mechanism: the inner head is its
+// Voblint answers both bounds UNKNOWN. Mechanism: the inner head is its
 // own widening point, and i flows around the inner back-edge unrefined
-// (the inner guard j < 10 says nothing about i). On the outer head's
-// first widening, i := i + 1 delivers [1,+inf] to the inner head; the
-// outer head later narrows to [0,9] and delivers [1,10], but the inner
-// head's right-hand side joins that with its own back-edge value
-// [1,+inf], so [1,+inf] is a self-fixpoint that narrowing never
-// re-descends (measured: i = [1,+inf] at both checks). Removing the
-// inner loop -- the same program with the checks directly in the outer
-// body -- measures i = [1,10] and PROVED x2, so the loss is the inner
-// widening point, not the outer narrowing.
+// (the inner guard j < 10 says nothing about i). The outer head's first
+// widening takes i to 2147483647, so i := i + 1 may overflow and delivers
+// the full i32 range to the inner head. The outer head later narrows, but
+// the inner head's right-hand side joins its value with its own back-edge
+// value, so top is a self-fixpoint that narrowing never re-descends
+// (measured: i is top at both checks).
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 fun main() {
-  i = 0;
+  i32 i = 0;
   while (true) {
     i = i + 1;
-    j = 0;
+    i32 j = 0;
     while (j < 10) {
-      __voblint_check(i >= 0); // PROVED
+      __voblint_check(i >= 0); // UNKNOWN
       __voblint_check(i <= 10); // UNKNOWN
       j = j + 1;
     }

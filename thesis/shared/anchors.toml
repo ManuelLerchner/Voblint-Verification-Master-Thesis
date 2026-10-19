@@ -13,7 +13,19 @@
 
 [[anchor]]
 chapter = "ch:program-model"
-concept = "VIMP expressions"
+concept = "Surface VIMP expressions"
+kind = "type"
+name = "src_exp"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Elaboration of expressions"
+kind = "const"
+name = "elaborate"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Core VIMP expressions"
 kind = "type"
 name = "exp"
 
@@ -21,13 +33,20 @@ name = "exp"
 chapter = "ch:program-model"
 concept = "Expression evaluation"
 kind = "const"
-name = "aval"
+name = "eval"
+thy = "Core_Exp"
 
 [[anchor]]
 chapter = "ch:program-model"
-concept = "VIMP commands"
+concept = "Core VIMP commands"
 kind = "type"
 name = "com"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Elaborated program"
+kind = "const"
+name = "elab_ptable"
 
 [[anchor]]
 chapter = "ch:program-model"
@@ -45,7 +64,13 @@ name = "wf_source_program"
 chapter = "ch:program-model"
 concept = "Procedure-aware control-flow graph"
 kind = "type"
-name = "cfg"
+name = "gcfg"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Graph of an elaborated program"
+kind = "const"
+name = "elab_cfg"
 
 [[anchor]]
 chapter = "ch:program-model"
@@ -128,14 +153,14 @@ name = "gamma_state"
 [[anchor]]
 chapter = "ch:domains"
 concept = "Backward refinement"
-kind = "locale"
-name = "sound_refinement"
+kind = "const"
+name = "nonrel_refine"
 
 [[anchor]]
 chapter = "ch:domains"
 concept = "Sound transfer functions"
-kind = "locale"
-name = "sound_nonrelational_transfer"
+kind = "thm"
+name = "nonrel_spec_sound"
 
 [[anchor]]
 chapter = "ch:analysis-interface"
@@ -203,7 +228,7 @@ name = "part_post_solution_of_solve_c"
 chapter = "ch:solving"
 concept = "Executable state carrier"
 kind = "type"
-name = "default_st"
+name = "gdefault_st"
 
 [[anchor]]
 chapter = "ch:results"
@@ -219,9 +244,9 @@ name = "activation_collect_dg_sound"
 
 [[anchor]]
 chapter = "ch:results"
-concept = "Report covers the collecting semantics"
+concept = "Report covers the reaching stores"
 kind = "thm"
-name = "run_voblint_covers"
+name = "run_voblint_sound"
 
 [[anchor]]
 chapter = "ch:executable"
@@ -255,9 +280,9 @@ name = "run_voblint_check_sound"
 
 [[anchor]]
 chapter = "ch:results"
-concept = "Dead checks"
+concept = "Dead points"
 kind = "thm"
-name = "run_voblint_dead_check_unreached"
+name = "run_voblint_dead_unreached"
 
 [[anchor]]
 chapter = "ch:results"

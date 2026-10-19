@@ -14,7 +14,7 @@
 // alone knows only Odd and --analysis sign only Positive, so the exact
 // value comes from the reduction, not from any single component.
 fun main() {
-  v = 1;
+  i32 v = 1;
   while (v < 51) {
     __voblint_check(v >= 1); // PROVED
     v = v + 2;

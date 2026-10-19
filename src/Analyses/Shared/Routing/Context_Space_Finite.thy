@@ -61,7 +61,7 @@ theorem compiled_call_strings_finite:
   by (rule call_strings_bounded_finite)
 
 text \<open>
-  The practical corollary a \<open>call_string_routed_context\<close> instance can cite directly:
+  The practical corollary an instance routed by call strings can cite directly:
   every \<open>(node, call-string)\<close> pair a \<open>k\<close>-bounded call-string analysis over a compiled
   program could ever solve for lies in a fixed finite set, so \<open>vars\<close> --- whatever a
   particular solver run actually populates it with --- is finite because it lies in a
@@ -103,7 +103,7 @@ theorem compiled_call_string_gk_finite:
 section \<open>The monovariant policy\<close>
 
 text \<open>
-  The same result for the monovariant \<open>route_unit\<close> policy, where it needs less: a context is
+  The same result for the monovariant policy, where it needs less: a context is
   \<^typ>\<open>unit\<close>, so the context factor is a singleton and the node bound is the
   entire hypothesis. Stated over \<open>fst ` vars\<close> rather than a product, since with
   one context there is nothing for a product to say.

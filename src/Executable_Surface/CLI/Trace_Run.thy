@@ -1,6 +1,6 @@
 theory Trace_Run
   imports
-    Analysis_Render
+    Run_Report
     "Voblint_Solver.Solver_Trace"
 begin
 
@@ -19,36 +19,20 @@ subsection \<open>Routing\<close>
 
 text \<open>
   A route receives the calling unknown's node and context and the entry state,
-  and returns the callee's context. Each context policy the CLI runs reports
-  that triple from its own equation.
+  and returns the callee's context. A context policy whose route is a definition
+  reports that triple from its own equation, by wrapping it.
 \<close>
 
 datatype ('x, 'l, 'c) route_event = Ev_Route 'x 'l 'c
 
-declare route_unit_def [code del] cs_route_def [code del] mcp_formals_route_def [code del]
-
-lemma route_unit_traced [code]:
-  "route_unit u ctx d ca =
-    (let c = (); _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
-  by (simp add: trace_event_def Let_def)
-
-lemma cs_route_traced [code]:
-  "cs_route k u ctx d ca =
-    (let c = take k (u # ctx); _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
-  by (simp add: cs_route_def trace_event_def Let_def)
-
-text \<open>The formals route is generated per analysis registry, so it is wrapped, not restated.\<close>
-
 lemma trace_route:
-  fixes route :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> call_action \<Rightarrow> 'c"
-    and route_rhs :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> call_action \<Rightarrow> 'c"
+  fixes route :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> ('v, 'e) gcall_action \<Rightarrow> 'c"
+    and route_rhs :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> ('v, 'e) gcall_action \<Rightarrow> 'c"
   assumes "\<And>u ctx d ca. route u ctx d ca = route_rhs u ctx d ca"
   shows "route u ctx d ca =
     (let c = route_rhs u ctx d ca; _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
   using assms by (simp add: trace_event_def Let_def)
 
-lemmas mcp_formals_route_traced [code] =
-  trace_route[where route = "mcp_formals_route as G", OF mcp_formals_route_def] for as G
 
 subsection \<open>Reading unknowns and values back\<close>
 
@@ -66,67 +50,120 @@ text \<open>
 
 datatype 'c trace_key = Trace_Buffer | Trace_Global vname | Trace_Seed cfg_node 'c
 
-datatype ('c, 'g, 'd, 'l) trace_printers = Trace_Printers
-  "'c \<Rightarrow> abstract_value analysis_context"
-  "'g \<Rightarrow> 'c trace_key"
-  "'d \<Rightarrow> abstract_value analysis_view lifted"
-  "vname option \<Rightarrow> 'd \<Rightarrow> abstract_value analysis_view lifted"
-  "'l \<Rightarrow> abstract_value analysis_view lifted"
+text \<open>
+  The printers hand the trace each analysis by its name and each value as its
+  rendering, so one trace reader serves every run, whatever the analyses' values.
+\<close>
 
-fun key_of_global_unknown :: "(vname, 'c) global_unknown \<Rightarrow> 'c trace_key" where
+type_synonym trace_view = "(String.literal, String.literal) analysis_view"
+
+datatype ('c, 'g, 'd, 'l) trace_printers = Trace_Printers
+  "'c \<Rightarrow> String.literal analysis_context"
+  "'g \<Rightarrow> 'c trace_key"
+  "'d \<Rightarrow> trace_view lifted"
+  "vname option \<Rightarrow> 'd \<Rightarrow> trace_view lifted"
+  "'l \<Rightarrow> trace_view lifted"
+
+definition trace_view_of :: "('a \<Rightarrow> String.literal) \<Rightarrow> ('v \<Rightarrow> String.literal)
+    \<Rightarrow> ('a, 'v) analysis_view \<Rightarrow> trace_view" where
+  "trace_view_of name text = map (\<lambda>(a, f). (name a, map_field_state text f))"
+
+
+fun analysis_name :: "analysis \<Rightarrow> String.literal" where
+  "analysis_name Sign = STR ''sign''"
+| "analysis_name Interval = STR ''interval''"
+| "analysis_name (Ana_Int _) = STR ''int''"
+| "analysis_name Parity = STR ''parity''"
+| "analysis_name Congruence = STR ''congruence''"
+| "analysis_name Order = STR ''order''"
+
+
+text \<open>A run names a global's unknown by the global's label.\<close>
+
+fun key_of_global_unknown :: "(var_id, 'c) global_unknown \<Rightarrow> 'c trace_key" where
   "key_of_global_unknown Analysis_Buffer = Trace_Buffer"
-| "key_of_global_unknown (Analysis_Global x) = Trace_Global x"
+| "key_of_global_unknown (Analysis_Global x) = Trace_Global (var_label x)"
 | "key_of_global_unknown (Activation_Seed n c) = Trace_Seed n c"
 
-definition mcp_trace_printers ::
-    "program_globals \<Rightarrow> analysis_domain list \<Rightarrow> imp_prog
-       \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
-       \<Rightarrow> ('c, (vname, 'c) global_unknown, (mcp_st lifted, mcp_st lifted) dg_state, mcp_st lifted)
+
+text \<open>A run's values are read as its report renders them, each variable by its
+  label. The trace also shows the return slot, which carries a callee's result to its
+  caller. With the declared globals at their own unknowns, a point's value is shown
+  without them and a global's unknown shows that global alone.\<close>
+
+definition trace_printers ::
+    "program_globals \<Rightarrow> analysis list \<Rightarrow> kind_decls \<Rightarrow> imp_prog
+       \<Rightarrow> ('c \<Rightarrow> String.literal analysis_context)
+       \<Rightarrow> ('c, (var_id, 'c) global_unknown, (mcp_st lifted, mcp_st lifted) dg_state, mcp_st lifted)
             trace_printers" where
-  "mcp_trace_printers pg as p ctx_view =
-     (let raw = (\<lambda>vs d. map_lift (mcp_render (activation as) vs)
-                         (map_lift (mcp_rd (declared_global p)) d));
-          view = (\<lambda>d. raw (program_vars p) (canonicalize_lift (mcp_emp (activation as) p) d));
+  "trace_printers pg as ds p ctx_view =
+     (let raw = (\<lambda>vs d. map_lift (trace_view_of analysis_name string_of_report_value
+                                    \<circ> render (activation_of as) vs)
+                         (map_lift (mcp_rd is_global) d));
+          vars = remdups (cfg_vars (elab_cfg p ds) @ [ReturnVar]);
+          gs = declared_globals p;
           local = (case pg of
-                     Program_Globals_Flow_Sensitive \<Rightarrow> view
-                   | Program_Globals_Flow_Insensitive \<Rightarrow>
-                       raw (filter (\<lambda>x. \<not> declared_global p x) (program_vars p)));
-          globals = (\<lambda>n. case n of
-                       None \<Rightarrow> filter (declared_global p) (program_vars p)
-                     | Some x \<Rightarrow> [x])
+                     Program_Globals_Flow_Sensitive \<Rightarrow> raw vars
+                   | Program_Globals_Flow_Insensitive \<Rightarrow> raw (filter (\<lambda>x. x \<notin> set gs) vars));
+          globals = (\<lambda>n. case n of None \<Rightarrow> gs | Some x \<Rightarrow> [GlobalId x])
       in Trace_Printers ctx_view key_of_global_unknown (\<lambda>d. local (dg_local d))
            (\<lambda>n d. raw (globals n) (dg_global d)) local)"
 
-lemma trace_run:
-  "f = rhs \<Longrightarrow> f = (let _ = trace_event STR ''run'' e in rhs)"
-  by (simp add: trace_event_def Let_def)
 
 text \<open>
-  Each context mode fixes the types of its contexts and global unknowns; they are
-  spelled out, since a type variable left free in a code equation's right-hand
-  side makes code export drop the equation.
+  A run announces its printers before the solve, and the solve reports its steps. A
+  call-string context of length zero is shown as no context, as the report shows it.
 \<close>
 
-text \<open>
-  The solve itself is \<^const>\<open>mcp_solve_c\<close>; its traced form adds the start and stop
-  events around it, and is the same function in the logic.
-\<close>
+declare cs_run_def [code del] es_run_def [code del]
 
-declare mcp_solve_c_def [code del]
+lemma cs_run_traced [code]:
+  "cs_run conf k ds p =
+     (let sem = conf_sem conf; as = conf_analyses conf; r = conf_globals conf;
+          key = (\<lambda>ctx. Key_List (map Key_Node ctx));
+          tag = (if k = 0 then (\<lambda>_. Report_Unit) else Report_Call_String);
+          root = (cfg_exit (elab_cfg p ds), []);
+          _ = trace_event STR ''run''
+                (\<lambda>_. trace_printers (conf_program_globals conf) as ds p
+                       (if k = 0 then (\<lambda>_ :: cfg_node list. Context_Unit) else Context_Call_String))
+      in case conf_program_globals conf of
+           Program_Globals_Flow_Sensitive \<Rightarrow>
+             map_option (\<lambda>sol. prog_report_of conf ds p [] key tag
+                                 (mcp_cs.solved_run_of sem ds as k is_global p sol))
+               (solve_c_traced r (mcp_cs.equations sem ds as k is_global p) root)
+         | Program_Globals_Flow_Insensitive \<Rightarrow>
+             (let gs = declared_globals p
+              in map_option (\<lambda>sol. prog_report_of conf ds p gs key tag
+                                     (mcp_split.solved_run_of sem ds as k gs is_global p sol))
+                   (solve_c_traced r (mcp_split.equations sem ds as k gs is_global p) root)))"
+  by (simp add: cs_run_def solve_c_traced_eq trace_event_def Let_def
+      split: program_globals.split)
 
-lemma mcp_solve_c_traced [code]: "mcp_solve_c r T x = solve_c_traced r T x"
-  by (simp add: mcp_solve_c_def solve_c_traced_eq)
+lemma es_run_traced [code]:
+  "es_run conf ds p =
+     (let sem = conf_sem conf; as = conf_analyses conf; r = conf_globals conf;
+          root = (cfg_exit (elab_cfg p ds), mcp_root_ctx);
+          _ = trace_event STR ''run''
+                (\<lambda>_. trace_printers (conf_program_globals conf) as ds p
+                       (\<lambda>ctx. Context_Entry (map string_of_report_value
+                                (context_values (activation_of as) ctx))))
+      in case conf_program_globals conf of
+           Program_Globals_Flow_Sensitive \<Rightarrow>
+             map_option (\<lambda>sol. prog_report_of conf ds p [] mcp_ctx_key Report_Entry
+                                 (mcp_es.solved_run_of sem ds as is_global p sol))
+               (solve_c_traced r (mcp_es.equations sem ds as is_global p) root)
+         | Program_Globals_Flow_Insensitive \<Rightarrow>
+             (let gs = declared_globals p
+              in map_option (\<lambda>sol. prog_report_of conf ds p gs mcp_ctx_key Report_Entry
+                                     (mcp_split_es.solved_run_of sem ds as gs is_global p sol))
+                   (solve_c_traced r (mcp_split_es.equations sem ds as gs is_global p) root)))"
+  by (simp add: es_run_def solve_c_traced_eq trace_event_def Let_def
+      split: program_globals.split)
 
-declare analysis_report_of.simps [code del]
+declare mcp_route_def [code del]
 
-lemmas analysis_report_of_traced [code] =
-  trace_run[OF analysis_report_of.simps(1)[of as r pg p],
-    of "\<lambda>_. mcp_trace_printers pg as p (\<lambda>_ :: unit. Context_Unit)"]
-  trace_run[OF analysis_report_of.simps(2)[of as r pg p],
-    of "\<lambda>_. mcp_trace_printers pg as p (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))"]
-  trace_run[OF analysis_report_of.simps(3)[of as r k pg p],
-    of "\<lambda>_. mcp_trace_printers pg as p Context_Call_String"]
-  for as r k pg p
+lemmas mcp_route_traced [code] =
+  trace_route[where route = "mcp_route as G", OF mcp_route_def] for as G
 
 subsection \<open>The hook\<close>
 

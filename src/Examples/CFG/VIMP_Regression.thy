@@ -1,5 +1,5 @@
 theory VIMP_Regression
-  imports "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_VIMP.Core_Com" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>VIMP syntax and semantics regressions\<close>
@@ -9,7 +9,7 @@ text \<open>Build-checked regression assertions on concrete VIMP snippets and va
 
 subsection \<open>Concrete syntax and precedence\<close>
 
-text \<open>Each snippet elaborates to a fixed \<open>com\<close> term or to its fully parenthesised form: dangling
+text \<open>Each snippet elaborates to a fixed \<open>src_com\<close> term or to its fully parenthesised form: dangling
   and chained \<open>else\<close>, statement boundaries, calls and returns, and C operator precedence.\<close>
 
 lemma notation_if_without_else:
@@ -119,18 +119,19 @@ lemma notation_multiplicative_precedence:
 
 subsection \<open>Comparison semantics\<close>
 
-text \<open>Comparisons yield \<open>1\<close> or \<open>0\<close> on signed operands, including the boundaries at \<open>-1\<close> and \<open>0\<close>.\<close>
+text \<open>Comparisons of core expressions yield \<open>1\<close> or \<open>0\<close> on signed operands, including the
+  boundaries at \<open>-1\<close> and \<open>0\<close>.\<close>
 
 lemma comparison_signed_boundaries:
-  "map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s)
-    [Less (N (-1)) (N 0), LessEq (N (-1)) (N (-1)),
-     Greater (N 0) (N (-1)), GreaterEq (N (-1)) (N (-1)),
-     Eq (N (-1)) (N (-1)), NotEq (N (-1)) (N 0)] = [1, 1, 1, 1, 1, 1]"
-  "map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s)
-    [Less (N (-1)) (N (-1)), LessEq (N 0) (N (-1)),
-     Greater (N (-1)) (N (-1)), GreaterEq (N (-1)) (N 0),
-     Eq (N (-1)) (N 0), NotEq (N (-1)) (N (-1))] = [0, 0, 0, 0, 0, 0]"
-  by simp_all
+  "map (\<lambda>e. eval e s)
+    [TCmp CLt (TN I32 (-1)) (TN I32 0), TCmp CLe (TN I32 (-1)) (TN I32 (-1)),
+     TCmp CGt (TN I32 0) (TN I32 (-1)), TCmp CGe (TN I32 (-1)) (TN I32 (-1)),
+     TCmp CEq (TN I32 (-1)) (TN I32 (-1)), TCmp CNe (TN I32 (-1)) (TN I32 0)] = [1, 1, 1, 1, 1, 1]"
+  "map (\<lambda>e. eval e s)
+    [TCmp CLt (TN I32 (-1)) (TN I32 (-1)), TCmp CLe (TN I32 0) (TN I32 (-1)),
+     TCmp CGt (TN I32 (-1)) (TN I32 (-1)), TCmp CGe (TN I32 (-1)) (TN I32 0),
+     TCmp CEq (TN I32 (-1)) (TN I32 0), TCmp CNe (TN I32 (-1)) (TN I32 (-1))] = [0, 0, 0, 0, 0, 0]"
+  by (simp_all add: ik_min_def ik_max_def ik_half_def)
 
 subsection \<open>Division and remainder\<close>
 
@@ -147,13 +148,14 @@ lemma c_mod_signed_examples:
     [1, -1, 1, -1]"
   by (simp add: c_mod_def c_div_def)
 
-lemma aval_division_remainder:
-  "map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s)
-    [Div (N 7) (N 3), Div (N (-7)) (N 3),
-     Div (N 7) (N (-3)), Div (N (-7)) (N (-3)),
-     Mod (N 7) (N 3), Mod (N (-7)) (N 3),
-     Mod (N 7) (N (-3)), Mod (N (-7)) (N (-3)),
-     Div (N 7) (N 0), Mod (N (-7)) (N 0)] = [2, -2, -2, 2, 1, -1, 1, -1, 0, -7]"
-  by (simp add: c_div_def c_mod_def)
+lemma eval_division_remainder:
+  "map (\<lambda>e. eval e s)
+    [TArith I32 ADiv (TN I32 7) (TN I32 3), TArith I32 ADiv (TN I32 (-7)) (TN I32 3),
+     TArith I32 ADiv (TN I32 7) (TN I32 (-3)), TArith I32 ADiv (TN I32 (-7)) (TN I32 (-3)),
+     TArith I32 AMod (TN I32 7) (TN I32 3), TArith I32 AMod (TN I32 (-7)) (TN I32 3),
+     TArith I32 AMod (TN I32 7) (TN I32 (-3)), TArith I32 AMod (TN I32 (-7)) (TN I32 (-3)),
+     TArith I32 ADiv (TN I32 7) (TN I32 0), TArith I32 AMod (TN I32 (-7)) (TN I32 0)]
+   = [2, -2, -2, 2, 1, -1, 1, -1, 0, -7]"
+  by (simp add: ik_min_def ik_max_def ik_half_def c_div_def c_mod_def)
 
 end

@@ -215,6 +215,21 @@ Rules the author set while reviewing drafts. They refine the sections above.
 
 - Plain words. No `load-bearing`, no labels such as RQ1 or K1: state the
   research questions and contributions in prose and refer to them by topic.
+- Write the scientific English of a German-speaking master's student, not
+  polished native prose. Keep the technical terms (over-approximate,
+  collecting semantics, admits, non-vacuous) and simplify everything around
+  them: "translates into" over "reduces to", "depends on" over "rests on",
+  "computes" over "claims", "has its own proof obligations" over "discharges",
+  "combines" over "composes", "We trust X" over "the trusted base comprises X",
+  "To solve this" over "To recover this distinction", "We also prove" over
+  "Further theorems show". Drop ornamental connectors such as "Conversely".
+- Revise by exchanging words and splitting sentences, not by rewriting a
+  passage the author already accepted.
+- Put the verb early. A long subject list ("Domains, context policies,
+  analyses, and the solver discharge …") or nested modifiers before the verb
+  make the reader guess where the sentence ends; split the sentence instead.
+  Watch for garden paths, where a later clause first reads as a second object
+  of the previous verb.
 - Precise mathematics. Say post-fixpoint when a value only satisfies
   $f(d) lle d$, say inequality when soundness needs only $lle$, write abstract
   operations with a sharp ($sh(+)$), and do not say an iteration "reaches" a

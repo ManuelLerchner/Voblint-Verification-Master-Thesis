@@ -33,7 +33,7 @@ definition prog_table :: "imp_prog \<Rightarrow> proc_table" where
 definition prog_procs :: "imp_prog \<Rightarrow> pname list" where
   "prog_procs p = filter (\<lambda>n. n \<noteq> prog_main_name) (map fst (proc_rep p))"
 
-definition prog_main :: "imp_prog \<Rightarrow> com" where
+definition prog_main :: "imp_prog \<Rightarrow> src_com" where
   "prog_main p = main_body (prog_table p)"
 
 lemma prog_main_eq_main_body [simp]: "main_body (prog_table p) = prog_main p"
@@ -41,7 +41,7 @@ lemma prog_main_eq_main_body [simp]: "main_body (prog_table p) = prog_main p"
 
 text \<open>\<open>mk_program\<close> conses the entry onto \<open>proc_rep\<close>, so a program built through
   it satisfies \<open>wf_source_program\<close>'s entry conjunct by construction.\<close>
-definition mk_program :: "(pname * proc_decl) list \<Rightarrow> com \<Rightarrow> vname list \<Rightarrow> imp_prog" where
+definition mk_program :: "(pname * proc_decl) list \<Rightarrow> src_com \<Rightarrow> vname list \<Rightarrow> imp_prog" where
   "mk_program ps m gv = imp_prog.make ((prog_main_name, \<lparr>formals = [], body = m\<rparr>) # ps) gv"
 
 lemma mk_program_simps [simp]:

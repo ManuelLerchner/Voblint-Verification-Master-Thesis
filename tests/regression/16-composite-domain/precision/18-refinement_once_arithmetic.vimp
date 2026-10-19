@@ -3,33 +3,40 @@
 // Example_Int_Backward (int_exact_division_recovers_parity,
 // int_division_remainder_progressive), the Refine_Once columns.
 //
+// m and n are bounded, so no operation here overflows i32 and every
+// result is fixed by its bounds: y = 1 and z = 0, even = 2 * n is even,
+// odd = -(4 * n + 1) is odd, and r = 1. Unbounded, the products wrap and the
+// quotients have no fixed parity (../soundness/01-exact_division_parity.vimp).
+//
 // One refinement round per operation is enough here. Congruence 0 (mod 2)
-// cuts z's interval [-1,0] to [0,0]; parity learns Even and Odd from the
-// exact-division congruences, refuting both equalities; and 1 (mod 4) cuts
-// the remainder's [0,3] to [1,1]. Fixpoint gives the same verdicts
-// (measured; 10-exact_division_parity.vimp and
-// 11-division_remainder_reduction.vimp pin them at the default mode). The
-// once-versus-fixpoint sign difference of arithmetic_once_not_fixpoint is
-// not visible in a check: the interval already decides every row.
-// ../precision/17-refinement_never_raw_arithmetic.vimp is the never twin.
+// cuts z's interval [-1,0] to [0,0], and 1 (mod 4) cuts the remainder's
+// [0,3] to [1,1]. The exact quotients' congruences refute both equalities
+// without refinement (../precision/17-refinement_never_raw_arithmetic.vimp,
+// the never twin). Fixpoint gives the same verdicts (measured;
+// 11-division_remainder_reduction.vimp pins the remainder at the default
+// mode). The once-versus-fixpoint sign difference of
+// arithmetic_once_not_fixpoint is not visible in a check: the interval
+// already decides every proved row.
 fun main() {
-  x = -1;
-  m = __voblint_nondet_int();
-  y = 2 * m + 1;
-  if (y >= 0) {
-    if (y <= 1) {
-      z = x + y;
-      __voblint_check(z == 0); // PROVED
-      __voblint_check(z <= 0); // PROVED
+  i32 x = -1;
+  i32 m = __voblint_nondet_int();
+  if (-100 <= m && m <= 100) {
+    i32 y = 2 * m + 1;
+    if (y >= 0) {
+      if (y <= 1) {
+        i32 z = x + y;
+        __voblint_check(z == 0); // PROVED
+        __voblint_check(z <= 0); // PROVED
+      }
     }
   }
-  n = __voblint_nondet_int();
-  even = (6 * n) / 3;
-  odd = (12 * n + 3) / -3;
-  __voblint_check(even == 1); // REFUTED
-  __voblint_check(odd == 0); // REFUTED
+  i32 n = __voblint_nondet_int();
   if (0 <= n && n <= 20) {
-    r = ((12 * n + 3) / 3) % 4;
+    i32 even = (6 * n) / 3;
+    i32 odd = (12 * n + 3) / -3;
+    __voblint_check(even == 1); // REFUTED
+    __voblint_check(odd == -2); // REFUTED
+    i32 r = ((12 * n + 3) / 3) % 4;
     __voblint_check(r == 1); // PROVED
     __voblint_check(r > 0); // PROVED
   }

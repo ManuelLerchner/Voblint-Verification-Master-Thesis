@@ -5,18 +5,18 @@
 // widening, so the one analyzed body returns [6,20] to both callers. The
 // bounds survive (contrast the warrow default in
 // 19-paper-examples/known-imprecision/04-context_insensitive_calls.vimp,
-// which widens to [6,+inf]); the per-call values do not.
+// which loses both bounds); the per-call values do not.
 //
 // Ported from Example_Interval_DG_IP_Flagship.thy: twice_p_at_entry,
 // twice_ret_at_exit, twice_x_computed, twice_y_computed.
-fun twice(p) {
+fun i32 twice(i32 p) {
   __voblint_check(p >= 3); // PROVED
   __voblint_check(p <= 10); // PROVED
   return p + p;
 }
 fun main() {
-  x = twice(3);
-  y = twice(10);
+  i32 x = twice(3);
+  i32 y = twice(10);
   __voblint_check(x >= 6); // PROVED
   __voblint_check(x <= 20); // PROVED
   __voblint_check(y >= 6); // PROVED

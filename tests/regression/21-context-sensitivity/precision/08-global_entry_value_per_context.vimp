@@ -13,8 +13,8 @@
 // are decided and agree: n = [K,K] forces g = [G,G], and any other n forces g
 // to exclude G. An inexact g anywhere leaves one side at [0,1]. Under
 // --context none all three are UNKNOWN.
-global g;
-fun bump(n) {
+global i32 g;
+fun i32 bump(i32 n) {
   __voblint_check((n == 5) == (g == 10)); // PROVED
   __voblint_check((n == 4) == (g == 15)); // PROVED
   __voblint_check((n == 19) == (g == 19)); // PROVED
@@ -23,13 +23,13 @@ fun bump(n) {
 }
 fun main() {
   g = 10;
-  a = bump(5);
+  i32 a = bump(5);
   __voblint_check(g == 15); // PROVED
-  b = bump(4);
+  i32 b = bump(4);
   __voblint_check(a == 15); // PROVED
   __voblint_check(b == 19); // PROVED
   __voblint_check(g == 19); // PROVED
-  c = bump(g);
+  i32 c = bump(g);
   __voblint_check(c == 38); // PROVED
   __voblint_check(g == 38); // PROVED
 }

@@ -1,33 +1,33 @@
-fun h(z) {
+fun i32 h(i32 z) {
   return z + 1;
 }
 
-fun g(u, v) {
-  r = h(u);
+fun i32 g(i32 u, i32 v) {
+  i32 r = h(u);
   return r + v;
 }
 
-fun w(x) {
+fun i32 w(i32 x) {
   if (x > 0) {
-    y = __voblint_nondet_int();
-    r = w(y);
+    i32 y = __voblint_nondet_int();
+    i32 r = w(y);
     return r;
   }
   return 0;
 }
 
-fun f(n) {
+fun i32 f(i32 n) {
   if (n < 2) {
-    r = g(n, 0);
+    i32 r = g(n, 0);
     return r;
   }
-  a = f(n - 1);
-  b = f(n - 2);
+  i32 a = f(n - 1);
+  i32 b = f(n - 2);
   return a + b;
 }
 
 fun main() {
-  q = __voblint_nondet_int();
-  s = w(q);
-  r = f(3);
+  i32 q = __voblint_nondet_int();
+  i32 s = w(q);
+  i32 r = f(3);
 }

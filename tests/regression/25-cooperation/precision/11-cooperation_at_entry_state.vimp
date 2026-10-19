@@ -1,0 +1,19 @@
+// PARAM: --analysis interval,order --context entry-state
+// Concretely only f(100, 0) enters the branch, so x = 100 and y = 0 there.
+//
+// Entry-state contexts separate the two calls, so inside the branch y is exactly 0
+// and the last check is refuted. Both analyses run at every entry-state context.
+fun f(i32 x, i32 y) {
+  i32 z;
+  if (y <= x) {
+    __voblint_check((y <= x) + 1 == 2); // PROVED
+    z = (y <= x);
+    x = 0;
+    __voblint_check(z == 1); // PROVED
+    __voblint_check(y == 1); // REFUTED
+  }
+}
+fun main() {
+  f(0, 100);
+  f(100, 0);
+}

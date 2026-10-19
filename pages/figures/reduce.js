@@ -1,46 +1,30 @@
 {
   /*
-   * Transcribed from refine_round = [refine_interval, refine_congruence], iterated by
-   * refine_fix, on the state each domain computes alone for x at the two checks.
+   * Transcribed from it_refine (congruence from interval, then interval rounded to the
+   * class), iterated by it_refine_mode, on the state each domain computes alone for x.
    */
   const REDUCE_TESTS = {
-    "⊤": () => true,
-    "> 0": (x) => x > 0,
     "[-2, 10]": (x) => x >= -2 && x <= 10,
     "[1, 9]": (x) => x >= 1 && x <= 9,
-    odd: (x) => mod(x, 2) === 1,
     "1 (mod 4)": (x) => mod(x, 4) === 1,
   };
 
-  /* Three states, not five: the tuple as it arrives, and each of the two rounds it takes
-     to reach the fixpoint. A third round changes nothing for any starting tuple. */
+  /* Two states: the tuple as it arrives, and after the one round it takes to reach the
+     fixpoint. A second round changes nothing. */
   const REDUCE_STEPS = [
     {
-      sign: "⊤",
       interval: "[-2, 10]",
-      parity: "odd",
       congruence: "1 (mod 4)",
       changed: [],
       proved: false,
-      text: "Four descriptions of the same `x`, and one of them is `⊤`: the guards left `x` straddling zero, so sign knows nothing at all. The interval still admits `-2` and `10`, so the check is not decided, although parity and congruence each exclude both. Together they already allow only `1`, `5` and `9`. Each is true, and none is tight.",
+      text: "Two descriptions of the same `x`. The interval still admits `-2` and `10`, so the check is not decided, although the congruence excludes both. Together they already allow only `1`, `5` and `9`. Each is true, and neither is tight.",
     },
     {
-      sign: "⊤",
       interval: "[1, 9]",
-      parity: "odd",
       congruence: "1 (mod 4)",
       changed: ["interval"],
       proved: true,
-      text: "Round one, and the congruence trims the interval. A bound is only useful if some value of the right residue class sits on it: `-2` is not `1 (mod 4)`, so the lower bound walks up to `1`, and `10` is not either, so the upper walks down to `9`. The dots did not move. The same three integers, described more tightly, and that alone decides the check.",
-    },
-    {
-      sign: "> 0",
-      interval: "[1, 9]",
-      parity: "odd",
-      congruence: "1 (mod 4)",
-      changed: ["sign"],
-      proved: true,
-      text: "Round two, and the trimmed interval sharpens the sign, which is where the component that knew nothing gets something: `[1, 9]` lies entirely above zero, so `⊤` becomes `> 0`. The traffic went congruence to interval to sign, one hop per round. Nothing can move after this, and a third round changes nothing.",
+      text: "One round, and the congruence trims the interval. A bound is only useful if some value of the right residue class sits on it: `-2` is not `1 (mod 4)`, so the lower bound walks up to `1`, and `10` is not either, so the upper walks down to `9`. The dots did not move. The same three integers, described more tightly, and that alone decides the check.",
     },
   ];
 
@@ -62,8 +46,7 @@
 
     const render = (i) => {
       const state = REDUCE_STEPS[i];
-      const together = (x) =>
-        ["sign", "interval", "parity", "congruence"].every((c) => REDUCE_TESTS[state[c]](x));
+      const together = (x) => ["interval", "congruence"].every((c) => REDUCE_TESTS[state[c]](x));
 
       for (const row of rows) {
         const comp = row.dataset.comp;

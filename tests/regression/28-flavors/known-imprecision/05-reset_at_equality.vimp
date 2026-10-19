@@ -1,0 +1,15 @@
+// PARAM: --analysis interval
+// Another example from the same tutorial: the counter resets on i == 10, so i stays
+// in [0, 9], but an equality test cuts no interval bound, widening reaches the i32
+// limit and narrowing does not recover it. Guided static analysis, which analyses
+// growing subgraphs, finds [0, 9]; Voblint does not.
+fun main() {
+  i32 i = 0;
+  while (1) {
+    i = i + 1;
+    if (i == 10) {
+      i = 0;
+    }
+    __voblint_check(i <= 9);  // UNKNOWN
+  }
+}

@@ -5,11 +5,11 @@
 // __voblint_nondet_int(); Parity can only refute an equality across differing
 // parities, never confirm one, and y == w is undetermined, so UNKNOWN.
 fun main() {
-  x = __voblint_nondet_int();
-  y = x * 2;
-  z = y + 1;
+  i32 x = __voblint_nondet_int();
+  i32 y = x * 2;
+  i32 z = y + 1;
   __voblint_check(y != z); // PROVED
   __voblint_check(y == z); // REFUTED
-  w = __voblint_nondet_int();
+  i32 w = __voblint_nondet_int();
   __voblint_check(y == w); // UNKNOWN
 }

@@ -1,0 +1,44 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// Conversion diagnostics. Every conversion whose source kind does not widen into
+// its target raises an obligation that the converted value fits the target: an
+// explicit cast, an assigned value, an argument, a returned value converted to
+// the kind of the procedure's result, and a call's result converted to the
+// caller's destination. The last is decided where the callee returns. An ERROR
+// holds at every store reaching the conversion; a WARN is a possible overflow.
+//
+// As Goblint does, Voblint reports conversions to unsigned kinds too, although C
+// defines them as wraparound; a conversion to a signed kind is
+// implementation-defined in C. The value after a reported conversion is the
+// wrapped one, and the run knows it exactly here: c == 44 and b == 0 are proved.
+fun u8 to_byte(i32 n) {
+  return n; // ARITH: WARN conversion-overflow
+}
+fun i32 id(i32 n) {
+  return n; // ARITH: ERROR conversion-overflow
+}
+fun i8 small(i8 n) {
+  return n;
+}
+fun main() {
+  i8 c; u8 b; i32 x; i32 y; i64 w; u16 h;
+  x = 300;
+  c = (i8) x; // ARITH: ERROR conversion-overflow
+  __voblint_check(c == 44); // PROVED
+  b = x; // ARITH: ERROR conversion-overflow
+  b = 255;
+  b = 256; // ARITH: ERROR conversion-overflow
+  __voblint_check(b == 0); // PROVED
+  w = x;
+  h = to_byte(7);
+  b = to_byte(300);
+  c = id(x);
+  c = small(x); // ARITH: ERROR conversion-overflow
+  y = __voblint_nondet_int();
+  b = y % 256; // ARITH: WARN conversion-overflow
+  if (y >= 0) {
+    if (y < 256) {
+      b = y;
+    }
+  }
+}

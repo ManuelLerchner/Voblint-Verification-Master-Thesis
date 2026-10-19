@@ -1,0 +1,8 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. A typed program may not write
+// a literal outside i64, the widest kind an unsuffixed C decimal literal can
+// take; the typed semantics would otherwise wrap it.
+fun main() {
+  u64 x;
+  x = 18446744073709551616;
+}

@@ -10,9 +10,9 @@ session Voblint_Domain in "." = "Voblint_VIMP" +
     "State"
     "Eval"
     "Int"
-    "Relational"
   theories
     Abstract_Domain
+    Kind_Lifted
     Reachability_Lift
     Three_Valued
     Query_Lift
@@ -31,4 +31,3 @@ session Voblint_Domain in "." = "Voblint_VIMP" +
     Parity_Lattice
     Congruence_Lattice
     Int_Lattice
-    Order_Lattice

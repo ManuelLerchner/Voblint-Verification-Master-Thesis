@@ -7,10 +7,10 @@
 // under it is DEAD.
 
 fun main() {
-  k = 10;
-  q = 100 / k;                // ARITH: NONE
-  d = __voblint_nondet_int();
-  y = 100 / d;                // ARITH: WARN division-by-zero
+  i32 k = 10;
+  i32 q = 100 / k;                // ARITH: NONE
+  i32 d = __voblint_nondet_int();
+  i32 y = 100 / d;                // ARITH: WARN division-by-zero
   __voblint_check(0 < q);     // PROVED
   if (k < 0) {
     __voblint_check(q == 0);  // NOWARN

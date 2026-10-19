@@ -716,23 +716,23 @@ nodes:
       interval:
   down_pp1_ctx0: pp1
       interval:
-        n=[-∞,1]
+        n=[-2147483648,1]
   down_exit_down_ctx0: exit_down
       interval:
-        n=[-∞,1]
+        n=[-2147483648,1]
   down_pp0_ctx0: pp0 [unknown]
       interval:
-        n=[-∞,1]
+        n=[-2147483648,1]
       check n >= 0
   down_pp2_ctx0: pp2
       interval:
         n=[1,1]
   down_pp4_ctx0: pp4
       interval:
-        n=[-∞,1]
+        n=[-2147483648,1]
   down_entry_down_ctx0: entry_down
       interval:
-        n=[-∞,1]
+        n=[-2147483648,1]
   down_pp1_ctx1: pp1
       interval:
         n=[2,2]

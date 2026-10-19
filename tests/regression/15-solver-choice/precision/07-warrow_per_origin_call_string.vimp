@@ -9,10 +9,10 @@
 // The same program under --globals warrow is the paired known-imprecision
 // case (04-warrow_call_string_joins_before_widening.vimp). Context-free
 // sibling: 06-warrow_per_origin_keeps_bound.vimp.
-fun p(n) {
+fun p(i32 n) {
   __voblint_check(n < 10); // PROVED
 }
-fun q(m) {
+fun q(i32 m) {
   p(m);
 }
 fun main() {

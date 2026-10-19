@@ -7,23 +7,29 @@ not here.
 ## Shape
 
 ```text
-voblint --analysis sign|interval|int|parity|congruence[,...]
+voblint --analysis sign|interval|int|parity|congruence|order[,...]
         [--context none|entry-state|call-string] [--context-depth K]
-        [--dot | --graph-snapshot | --html | --html-out DIR]
         [--globals join|per-origin|warrow|warrow-per-origin|bounded-narrowing]
         [--narrow-bound N]
         [--program-globals flow-sensitive|flow-insensitive]
-        [--timeout SECONDS] FILE.vimp
+        [--int-refinement never|once|fixpoint]
+        [--signed-overflow assume_top|assume_wraparound] [--set PATH VALUE]
+        [--dot | --graph-snapshot | --html | --html-out DIR | --json]
+        [--timeout SECONDS]
+        [--trace] [--verbose | --compact] [--trace-sys SYS[,...]]
+        [--format text|jsonl] [--output FILE]
+        FILE.vimp
 voblint --parse-only FILE.vimp
+voblint --ast FILE.vimp
 voblint --help
 ```
 
-- `--analysis sign|interval|int|parity|congruence` selects the domain (required
-  unless `--parse-only`). `int` is the refining composite Sign x Interval x
-  Parity x Congruence domain; `--int-refinement never|once|fixpoint` (default
-  `fixpoint`, only valid with `int`) selects how its components refine each
-  other. Each mode is a registered analysis of its own (`Int_Analysis mode` for
-  each `refine_mode`); all of them are `int` in reports.
+- `--analysis sign|interval|int|parity|congruence|order` selects the domain
+  (required unless `--parse-only`). `int` is the reduced product of Interval and
+  Congruence at each variable's machine kind; `--int-refinement
+  never|once|fixpoint` (default `fixpoint`, only valid with `int`) selects how
+  its components refine each other. Each mode is an analysis of its own
+  (`Ana_Int mode` for each `refine_mode`); all of them are `int` in reports.
   `parity` is the four-element Bot/Even/Odd/Top lattice; it decides equalities
   only by refuting them across differing parities. `congruence` is the residue-class domain, one
   value constrained to `x = r (mod m)`. A comma list runs the named domains
@@ -101,7 +107,7 @@ FILE.vimp text
 imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
-Voblint.run_voblint domain globals context prog
+Voblint.run_voblint conf kind_decls prog
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
     |                                     only analysis entry point: it checks
@@ -116,10 +122,13 @@ res_contexts / res_states / res_routes / res_checks / res_globals / res_diagnost
        cli/render/, all sourced from the one solve that produced `res`
 ```
 
-The parser is the only unverified component in this chain. Everything from
-`imp_prog` onward is exported from Isabelle-generated OCaml; the CLI is
-host-language plumbing over it (argument parsing, file I/O, the containment
-subprocess below), not new proof work.
+The parser is the only unverified component before `run_voblint`. After it, the
+rendering in `cli/result/` and `cli/render/` is trusted, and so is the
+code-generation stack (Isabelle's code generator, the OCaml toolchain and runtime)
+that turns `run_voblint` into OCaml; see
+[`VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`](VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md).
+The CLI is host-language plumbing over the generated code (argument parsing, file
+I/O, the containment subprocess below), not new proof work.
 
 ## Solver trace (`--trace`)
 
@@ -416,8 +425,9 @@ Stated in the CLI's own `--help` output too:
 
 > Trust boundary: results are sound for the program this file's unverified
 > parser actually built, not a guarantee that the parser read your source
-> correctly. The analyzer core (parsing excluded) is generated from a
-> machine-checked Isabelle/HOL proof.
+> correctly. The analyzer core is OCaml generated from Isabelle/HOL
+> definitions whose soundness is machine-checked; code generation, the
+> OCaml toolchain and the rendering are trusted.
 
 A parser bug can change *which* program gets analyzed; it cannot invalidate
 the analyzer's soundness theorem for the AST actually produced — the same

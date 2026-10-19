@@ -26,7 +26,7 @@ definition combine_env ::
 definition enter_frame :: "('k \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
   "enter_frame \<G> reset_val s = combine_env \<G> (\<lambda>_. reset_val) s"
 
-definition enter_state :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store" where
+definition enter_state :: "('k \<Rightarrow> bool) \<Rightarrow> ('k \<Rightarrow> int) \<Rightarrow> ('k \<Rightarrow> int)" where
   "enter_state \<G> s = enter_frame \<G> 0 s"
 
 lemma combine_query [simp]:
@@ -62,13 +62,16 @@ text \<open>
   those where every global is 0, so \<open>main\<close>'s locals may hold any integer. It
   constrains only the initial store. A callee's locals do not come from it:
   \<open>enter_state\<close> resets them to 0 on every entry, which defines what C leaves
-  indeterminate, as \<open>c_div\<close> defines division by zero. Neither convention is a
+  indeterminate, as \<open>c_div\<close> defines division by zero. Every local of a parsed
+  program is declared, and a declaration forgets the value it finds, so no run of a
+  parsed program observes this 0; a core program built inside Isabelle without
+  declarations can. Neither convention is a
   model of C's indeterminate-value or undefined-behaviour rules, and VIMP has no
   global initializer syntax for a declaration such as \<open>int x = 42;\<close> to diverge
   from.
 \<close>
 
-definition cinit_stores :: "(vname \<Rightarrow> bool) \<Rightarrow> store set" where
+definition cinit_stores :: "(vname \<Rightarrow> bool) \<Rightarrow> src_store set" where
   "cinit_stores \<G> = {s. \<forall>x. \<G> x \<longrightarrow> s x = 0}"
 
 end

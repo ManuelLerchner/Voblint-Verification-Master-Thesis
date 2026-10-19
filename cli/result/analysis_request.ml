@@ -17,21 +17,21 @@ let default_refinement = C.Refine_Fixpoint
 (* Each refinement mode is an analysis of its own in the generated carrier; all
    of them are int to the user. *)
 let analysis_of_name ~refinement = function
-  | "sign" -> Some C.Sign_Analysis
-  | "interval" -> Some C.Interval_Analysis
-  | "int" -> Some (C.Int_Analysis refinement)
-  | "parity" -> Some C.Parity_Analysis
-  | "congruence" -> Some C.Congruence_Analysis
-  | "order" -> Some C.Order_Analysis
+  | "sign" -> Some C.Sign
+  | "interval" -> Some C.Interval
+  | "int" -> Some (C.Ana_Int refinement)
+  | "parity" -> Some C.Parity
+  | "congruence" -> Some C.Congruence
+  | "order" -> Some C.Order
   | _ -> None
 
 let name_of_analysis = function
-  | C.Sign_Analysis -> "sign"
-  | C.Interval_Analysis -> "interval"
-  | C.Int_Analysis _ -> "int"
-  | C.Parity_Analysis -> "parity"
-  | C.Congruence_Analysis -> "congruence"
-  | C.Order_Analysis -> "order"
+  | C.Sign -> "sign"
+  | C.Interval -> "interval"
+  | C.Ana_Int _ -> "int"
+  | C.Parity -> "parity"
+  | C.Congruence -> "congruence"
+  | C.Order -> "order"
 
 (* The default of Goblint's solvers.td3.narrow-globs.narrow-gas option. The
    vendored rule counts differently: 0 still allows the one narrowing step of
@@ -56,14 +56,14 @@ type context_error =
   | Negative_depth
   | Unexpected_depth
 
-(* A call string needs its depth; no other policy takes one. *)
+(* A call string needs its depth; no other policy takes one. No context at all is a
+   call string of length zero. *)
 let context_of_name name depth =
   match (name, depth) with
-  | "none", None -> Ok C.Ctx_None
-  | "entry-state", None -> Ok C.Ctx_EntryState
+  | "none", None -> Ok (C.Call_String (C.nat_of_integer Z.zero))
+  | "entry-state", None -> Ok C.Entry_State
   | "call-string", Some k when k < 0 -> Error Negative_depth
-  | "call-string", Some k ->
-      Ok (C.Ctx_CallString (C.nat_of_integer (Z.of_int k)))
+  | "call-string", Some k -> Ok (C.Call_String (C.nat_of_integer (Z.of_int k)))
   | "call-string", None -> Error Missing_depth
   | ("none" | "entry-state"), Some _ -> Error Unexpected_depth
   | _ -> Error Unknown_context
@@ -75,11 +75,62 @@ let program_globals_of_name = function
   | "flow-insensitive" -> Some C.Program_Globals_Flow_Insensitive
   | _ -> None
 
-let config ~analyses ~globals ~context ~program_globals =
-  C.Analysis_Config (analyses, globals, context, program_globals)
+(* The options the domains read, under the paths of Goblint's configuration tree
+   (src/config/options.schema.json). [--set PATH VALUE] reaches every row, a
+   row's flag is an alias for its path, and the help text is generated from the
+   rows. A further option is a further row and the field of voblint_conf it
+   fills in [sem_of_settings]. *)
+type option_spec = {
+  path : string;
+  flag : string option;
+  values : string list;
+  default : string;
+  help : string;
+}
+
+let option_specs =
+  [
+    {
+      path = "sem.int.signed_overflow";
+      flag = Some "--signed-overflow";
+      values = [ "assume_top"; "assume_wraparound" ];
+      default = "assume_top";
+      help =
+        "How the integer domains treat a possible signed overflow: the kind's \
+         top (Goblint's default) or wraparound, as the concrete semantics \
+         computes it. Unsigned kinds wrap under both.";
+    };
+  ]
+
+let option_of_path path = List.find_opt (fun o -> o.path = path) option_specs
+
+let option_of_flag flag =
+  List.find_opt (fun o -> o.flag = Some flag) option_specs
+
+(* A request's value for a row: its last setting, or the row's default. *)
+let setting settings spec =
+  List.fold_left
+    (fun v (p, x) -> if p = spec.path then x else v)
+    spec.default settings
+
+(* Request validation admits only a row's [values]; a value without a case here
+   is a row this mapping has not caught up with. *)
+let signed_overflow_of_name = function
+  | "assume_top" -> C.Assume_Top
+  | "assume_wraparound" -> C.Assume_Wraparound
+  | v -> invalid_arg ("Analysis_request.signed_overflow_of_name: " ^ v)
+
+let sem_of_settings settings =
+  let get path =
+    match option_of_path path with
+    | Some spec -> setting settings spec
+    | None -> invalid_arg ("Analysis_request.sem_of_settings: " ^ path)
+  in
+  C.Sem_conf_ext (signed_overflow_of_name (get "sem.int.signed_overflow"), ())
 
 (* A request as either entry receives it: names, not constructors. The native
-   CLI reads it off its flags, the browser off the page's selections. *)
+   CLI reads it off its flags, the browser off the page's selections.
+   [settings] are the PATH VALUE pairs of [option_specs], in the order given. *)
 type request = {
   analyses : string list option;
   refinement : string option;
@@ -88,6 +139,7 @@ type request = {
   context : string;
   depth : int option;
   program_globals : string;
+  settings : (string * string) list;
 }
 
 type request_error =
@@ -100,18 +152,32 @@ type request_error =
   | Negative_narrow_bound
   | Narrow_bound_without_rule
   | Context of context_error
+  | Unknown_option of string
+  | Invalid_option_value of option_spec * string
 
 type resolved = {
-  domains : C.analysis_domain list option;
+  domains : C.analysis list option;
   rule : C.globals_rule;
-  mode : C.context_mode;
+  mode : C.context_policy;
   placement : C.program_globals;
+  sem : unit C.sem_conf_ext;
 }
 
 (* Every check a request needs before a program is read, in the order the CLI
    reports them. Each entry words the errors itself. *)
 let resolve (r : request) : (resolved, request_error) result =
   let ( let* ) = Result.bind in
+  let* () =
+    List.fold_left
+      (fun acc (path, value) ->
+        let* () = acc in
+        match option_of_path path with
+        | None -> Error (Unknown_option path)
+        | Some spec when not (List.mem value spec.values) ->
+            Error (Invalid_option_value (spec, value))
+        | Some _ -> Ok ())
+      (Ok ()) r.settings
+  in
   let* refinement =
     match r.refinement with
     | None -> Ok default_refinement
@@ -166,12 +232,62 @@ let resolve (r : request) : (resolved, request_error) result =
     | Some placement -> Ok placement
     | None -> Error (Unknown_program_globals r.program_globals)
   in
-  Ok { domains; rule; mode; placement }
+  Ok { domains; rule; mode; placement; sem = sem_of_settings r.settings }
+
+(* The configuration run_voblint receives, one value for every option. *)
+let conf ~domains ~rule ~context ~placement ~sem =
+  C.Voblint_conf_ext (domains, context, rule, placement, sem, ())
+
+(* The message of the one abort in the generated analyzer: a chain of nested
+   queries deeper than query_depth (MCP_Spec.ask_rec). Logically such a query
+   answers top; the executable stops instead, so its run has no certified
+   report. A query cycle is not this abort: it answers top and the run goes on. *)
+let query_depth_exhausted = "query recursion exceeded query_depth"
 
 (* The analysis and its rendering, in sequence: the report run_voblint returns is
-   semantic, and the adapters read its rendering. *)
-let analyse ~analyses ~globals ~context ~program_globals program =
-  Value_symbols.render_answer
-    (C.run_voblint
-       (config ~analyses ~globals ~context ~program_globals)
-       program)
+   semantic, and the adapters read its rendering. A run cut short by query depth
+   answers No_Answer, as one the solver did not finish does; no other failure is
+   caught. *)
+let analyse ~conf ~decls program =
+  let answer =
+    try C.run_voblint conf decls program
+    with Failure msg when msg = query_depth_exhausted -> C.No_Answer
+  in
+  Value_symbols.render_answer answer
+
+(* The options' help, generated from [option_specs], in the layout of the
+   other flags: name at column 2, text wrapped at column 29. *)
+let options_usage () =
+  let indent = String.make 29 ' ' in
+  let wrap text =
+    let words = String.split_on_char ' ' text in
+    let lines, last =
+      List.fold_left
+        (fun (lines, cur) w ->
+          if cur = "" then (lines, w)
+          else if String.length cur + 1 + String.length w > 50 then
+            (cur :: lines, w)
+          else (lines, cur ^ " " ^ w))
+        ([], "") words
+    in
+    List.rev (last :: lines)
+  in
+  String.concat ""
+    (List.map
+       (fun o ->
+         let names =
+           (match o.flag with
+             | Some f ->
+                 [ Printf.sprintf "  %s %s" f (String.concat "|" o.values) ]
+             | None -> [])
+           @ [
+               Printf.sprintf "  --set %s %s" o.path
+                 (String.concat "|" o.values);
+             ]
+         in
+         String.concat "\n" names ^ "\n"
+         ^ String.concat ""
+             (List.map
+                (fun l -> indent ^ l ^ "\n")
+                (wrap (o.help ^ " Default: " ^ o.default ^ "."))))
+       option_specs)

@@ -20,14 +20,15 @@
 
 = Five Domains and an Order Analysis <ch:instances>
 
-@ch:results proved that a report is sound regardless of which analyses produced it. A
-user can choose among the numeric domains Sign, Interval, Parity, and Congruence, their combination Int, and the relational order analysis. The four
-base domains are textbook material, and the project site lets readers
-#link(site("index.html#values"))[try them interactively],
-so this chapter treats them briefly. Most of it describes Int, which combines
-the four base domains and gains precision by letting them exchange facts. The
-formalization proves that this exchange preserves a value's meaning and shows
-why narrowing must skip it.
+@ch:results proved that a report is sound regardless of which analyses
+produced it. A user can choose among the numeric domains Sign, Interval,
+Parity, and Congruence, their combination Int, and the relational order
+analysis. The four base domains are textbook material, and the project site
+lets readers
+#link(site("index.html#values"))[try them interactively].
+Int combines Interval and Congruence and gains precision by letting them
+exchange facts. The formalization proves that this exchange keeps every
+integer a value stands for and shows why narrowing must skip it.
 
 == The implemented domains <sec:instances-supply>
 
@@ -35,14 +36,12 @@ The four base domains, Sign #thy-badge("Voblint_Domain", "Sign_Lattice"),
 Interval #thy-badge("Voblint_Domain", "Interval_Lattice"), Parity
 #thy-badge("Voblint_Domain", "Parity_Lattice"), and Congruence
 #thy-badge("Voblint_Domain", "Congruence_Lattice"), are the classical
-non-relational domains @mine17;
-congruences go back to Granger @granger89. @fig:gamma shows one value of each
-and the integers it stands for. Sign and Parity are finite, and a congruence
-class cannot grow forever either: growing from a single integer gives it a
-positive modulus, and every later strict growth replaces that modulus by a
-proper divisor @mine17[§4.8]. This argument is not mechanized
-here. All three use the join as their widening and keep the old value as their narrowing.
-Only Interval has a widening that jumps ahead and a narrowing that refines
+non-relational domains @mine17, shown with one value each in @fig:gamma.
+Sign and Parity are finite. A congruence class cannot grow forever either,
+because growing from a single integer gives it a positive modulus and every
+later strict growth replaces that modulus by a proper divisor @mine17[§4.8], an
+argument not mechanized here. Sign, Parity and Congruence therefore widen by
+the join, and only Interval has a widening that jumps ahead
 (@sec:domain-carrier-laws).
 
 #figure(
@@ -74,8 +73,8 @@ Only Interval has a widening that jumps ahead and a narrowing that refines
       ..row([Congruence], "2+3ℤ"),
       ..row(
         [Int],
-        claim-row("int-reduction-fixpoint", "68:7").state.split("x=").at(1),
-        shown: claim-row("int-reduction-fixpoint", "68:7")
+        claim-row("int-reduction-fixpoint", "74:7").state.split("x=").at(1),
+        shown: claim-row("int-reduction-fixpoint", "74:7")
           .state
           .split("x=")
           .at(1)
@@ -92,27 +91,32 @@ Only Interval has a widening that jumps ahead and a narrowing that refines
     the integers it denotes between $-6$ and $10$. Congruence and Parity values
     print as $c + m ZZ$, the integers congruent to $c$ modulo $m$ ($m ZZ$ when
     $c = 0$). An end cell is filled when
-    the set continues beyond the window. The values are illustrative. The Int value,
-    the reduced state of $x$ in @tab:reduction, denotes the intersection of its
+    the set continues beyond the window. The values are illustrative. The Int value
+    denotes the intersection of its
     components' meanings, here ${1, 5, 9}$.],
 ) <fig:gamma>
 
-Adding a domain mainly requires class instances for its carrier and a
-soundness proof for its operations: it supplies the record #isatype("nonrelational_ops") of
-@sec:domain-contract and interprets #isalocale("sound_nonrelational_ops").
-The generic construction then derives the abstract and executable transfer
-functions and their agreement, and
-#isathm("sound_nonrelational_ops.dg_analysis_execI") makes the domain a sound
-component of the combined state (@ch:cooperation). Only one of the lemma's premises concerns the domain's values: its initial state must cover the
-initial stores (for Parity, #isathm("parity_cinit_gamma")).
+Each of the five domains is an instance of the class
+#isalocale("kind_int_domain") (@sec:domain-contract), and the order analysis
+proves the laws of its local specification (#isathm("ord_spec_sound")). The
+generic construction derives sound transfer functions for every instance of
+the class, first on function-valued states (#isathm("nonrel_spec_sound")) and
+then on their executable representation (#isathm("nonrel_exec_spec_sound"),
+@sec:represented-function). Hence #isathm("run_voblint_source_sound") covers
+every selection of these analyses. Making a new domain selectable, however,
+is not generic. It needs a new case of the #isatype("analysis") datatype, a
+field of the combined state, and the cases that give the field its lens, its
+concretization and its answers (@ch:cooperation). The proofs about the combined
+state, an instance of the locale #isalocale("mcp_registry"), proceed by cases
+on the analysis and must cover the new case.
 
 == One loop, five answers <sec:stride2>
 
 The loop below is the fixture #fixture("12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp", label: "05-mine_ex410_stride2_parity.vimp"),
-adapted from Goblint's regression test #link("https://github.com/goblint/analyzer/blob/d155e9e/tests/regression/56-witness/29-mine-tutorial-ex4.10.c")[`56-witness/29-mine-tutorial-ex4.10.c`]
-(revision `d155e9e`) after Example 4.10 of Miné's tutorial @mine17. In every
-run $v$ takes the odd values $1, 3, dots, 51$ and the loop exits with
-$v = 51$, so every check holds.
+adapted from Goblint's regression test #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/tests/regression/56-witness/29-mine-tutorial-ex4.10.c")[`56-witness/29-mine-tutorial-ex4.10.c`]
+after Example 4.10 of Miné's tutorial @mine17. In every
+run $v$ takes the odd values $1, 3, dots, 51$ and exits with $v = 51$, so
+every check holds.
 
 #listing(
   lang: "c",
@@ -123,7 +127,7 @@ $v = 51$, so every check holds.
   ),
   ```
   fun main() {
-    v = 1;
+    i32 v = 1;
     while (v < 51) {
       __voblint_check(v >= 1);
       v = v + 2;
@@ -146,7 +150,7 @@ $v = 51$, so every check holds.
   interval: [bounds; infinite ascending chains],
   parity: [evenness],
   congruence: [residue modulo $m$],
-  int: [all four, reduced],
+  int: [bounds and residue, reduced],
 )
 #figure(
   table(
@@ -172,47 +176,39 @@ $v = 51$, so every check holds.
     table.hline(),
   ),
   caption: [The stride-2 loop under each domain (claims
-    #claim-ref("dom-stride2-*")), at the two highlighted checks of the listing. Only Int, which combines the bound and the
-    oddness, proves `v == 51`.],
+    #claim-ref("dom-stride2-*")), at the two highlighted checks of the listing,
+    under the default signed-overflow policy #ctor("Assume_Top"). Only Int, which
+    combines the bound and the oddness, proves `v == 51`.],
 ) <fig:stride2>
 
-Each base domain records a different property of $v$. Interval finds the bound
-through widening and narrowing, but its exit state still allows $52$, and an
-interval has no way to say "odd". Parity and Congruence know that $v$ is odd
-but nothing about its size, and Sign knows only that $v$ is positive. Every
-answer is sound, yet none of the four proves `v == 51`. Only Int, which puts
-the bound and the oddness together, does (@sec:reduced-product).
+Each base domain records a different property of $v$. Interval finds the
+bound through widening and narrowing, but its exit state still allows $52$,
+and an interval cannot express "odd". Parity knows that $v$ is odd but
+nothing about its size, and Sign knows only that $v$ is positive. Congruence
+alone loses even the oddness, because under #ctor("Assume_Top") it cannot
+exclude that `v + 2` wraps and returns its top (@sec:domain-kinds). Int keeps
+the class, because its interval shows that no value wraps, and by putting the
+bound and the oddness together it proves `v == 51` (@sec:reduced-product).
 
-== The reduced product #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
+== The reduced product #thy-badge("Voblint_Analysis_Int", "Int_Tuple_Kind") <sec:reduced-product>
 
-An Int value (#isatype("int_dom")) holds one value of each base domain and
-stands for the integers that all four allow. Running the four side by side
-would be sound, but each would work with its own value only, so a fact that
-needs two of them would not be found. @fig:stride2 shows this: no
-base domain alone proves `v == 51`. In the program below, the guards keep
-$x$ between $-2$ and $10$, and the assignment makes $x$ one more than a
-multiple of $4$. Only $1$, $5$, and $9$ satisfy both, so `x >= 1 && x <= 9`
-holds. Yet the interval alone still allows $-2$ and the residue class alone
-allows $-3$, so neither component can decide the check. A _reduction_ lets
-the components sharpen each other, as in the reduced product @cousot79
-@mine17[Def. 6.3, Ex. 6.2]. Here the residue class moves the interval's bounds
-to the nearest values that are $1$ modulo $4$, giving $ivl(1, 9)$, and the now
-positive interval makes the sign positive. The reduced value stands for the
-same integers and decides the check (@tab:reduction). Goblint uses a
-similar reduced-tuple design for integers. Its
-#link(
-  "https://github.com/goblint/analyzer/blob/5503dec/src/cdomain/value/cdomains/int/intDomTuple.ml",
-)[`IntDomTuple`]
-combines up to six optional components, among them definite values with
-exclusion sets, intervals, enumerations, and congruences, each enabled by an
-option. Its `ana.int.refinement` setting offers the same three reduction modes
-as Int. Goblint defaults to no reduction, and Voblint defaults to the
-fixpoint mode.
+An Int value (#isatype("int_tuple")) holds one interval and one congruence and
+stands for the integers that both allow. Running the two side by side would be
+sound, but a fact that needs both of them would not be found. In the program
+below, the guards keep $x$ between $-2$ and $10$, and the assignment makes $x$
+one more than a multiple of $4$. Only $1$, $5$, and $9$ satisfy both, so
+`x >= 1 && x <= 9` holds. Yet the interval alone still allows $-2$ and the
+residue class alone allows $-3$, so neither component decides the check. A
+_reduction_ lets the components sharpen each other, as in the reduced product
+@cousot79 @mine17[Def. 6.3, Ex. 6.2]. Here the residue class moves the
+interval's bounds to the nearest values that are $1$ modulo $4$, giving
+$ivl(1, 9)$. The reduced value stands for the same integers and decides the
+check (@tab:reduction).
 
 #listing(lang: "c", claim: "int-reduction-fixpoint", ```
 fun main() {
-  n = __voblint_nondet_int();
-  x = 4 * n + 1;
+  i32 n = __voblint_nondet_int();
+  i32 x = 4 * n + 1;
   if (x >= -2) {
     if (x <= 10) {
       __voblint_check(x >= 1 && x <= 9);
@@ -221,9 +217,18 @@ fun main() {
 }
 ```)
 
+// Each printed component of x as (label, value), so the rows follow the printer.
 #let _red(mode) = {
-  let row = claim-row("int-reduction-" + mode, "68:7")
-  let comps = row.state.split("x=").at(1).split("; ").map(c => c.split(":").at(1))
+  let row = claim-row("int-reduction-" + mode, "74:7")
+  let comps = row
+    .state
+    .split("x=")
+    .at(1)
+    .split("; ")
+    .map(c => {
+      let parts = c.split(":")
+      (parts.at(0), parts.slice(1).join(":"))
+    })
   (comps, row.verdict)
 }
 #figure(
@@ -237,10 +242,7 @@ fun main() {
       table.hline(),
       [*component of* $x$], [*without reduction*], [*with reduction*],
       table.hline(stroke: 0.5pt),
-      ..("Sign", "Interval", "Parity", "Congruence")
-        .enumerate()
-        .map(((i, n)) => ([#n], raw(never.at(i)), raw(fix.at(i))))
-        .flatten(),
+      ..never.zip(fix).map((((n, a), (_, b))) => ([#n], raw(a), raw(b))).flatten(),
       table.hline(stroke: 0.5pt),
       [verdict of the check], verdict-chip(v-never), verdict-chip(v-fix),
       table.hline(),
@@ -249,55 +251,81 @@ fun main() {
   placement: none,
   caption: [The value of $x$ at the check of the program above, without
     reduction and with the default reduction (claims #claim-ref("int-reduction-never") and
-    #claim-ref("int-reduction-fixpoint")). Both columns describe the integers $1$, $5$
+    #claim-ref("int-reduction-fixpoint")), both under wraparound overflow
+    (#ctor("Assume_Wraparound")). Since `4 * n` may overflow, #ctor("Assume_Top") would
+    drop the class (@sec:domain-kinds). Both columns describe the integers $1$, $5$
     and $9$ in the guard's range, but only the reduced value decides the check.],
 ) <tab:reduction>
 
-Reduction is also what proves `v == 51` in @fig:stride2. Inside the loop, the
-guard `v < 51` leaves $ivl(1, 50)$, and together with "odd" the reduction
-shrinks this to $ivl(1, 49)$. The increment then gives $ivl(3, 51)$ instead of
+Reduction also proves `v == 51` in @fig:stride2. Inside the loop, the guard
+`v < 51` leaves $ivl(1, 50)$, and together with "odd" the reduction shrinks
+this to $ivl(1, 49)$. The increment then gives $ivl(3, 51)$ instead of
 Interval's $ivl(3, 52)$, the loop head settles at $ivl(1, 51)$, and after the
 loop only $51$ remains.
 
-A reduction round has two steps. #isaconst("refine_interval") first combines
-the range information of Sign and Interval and uses the result to sharpen
-Sign, Interval, and Parity. #isaconst("refine_congruence") then uses the
-residue class, intersected with the parity, to sharpen Interval, Parity, and Congruence. Through
-#isatype("refine_mode") the user chooses whether to skip reduction, reduce once, or reduce until nothing changes. The last mode is the default. Every mode keeps the integers a
-value stands for (#isathm("refine_exact")) and only ever makes the value
-smaller (#isathm("refine_reductive")).
-
-The default mode repeats rounds until the value stops changing. In Isabelle
-this is a total function: if the rounds never settle, it returns its input.
-The generated OCaml instead keeps iterating, and no proof shows that it always
-stops. On some input the analyzer might therefore run forever instead of
-returning a report, just as it would if the solver did not terminate
-(@sec:trust-boundary). Soundness is unaffected, because the theorem only
-speaks about reports that are returned.
-
-Int reduces the result of every arithmetic operation and of the intersections
-and inverse operators of the guard filter. Join, widening, and narrowing work componentwise, and for join and widening Goblint makes the same choice. For
-narrowing, Voblint's solver contract forces the choice. The verified solver relies on the bracket
-laws $b lle a narrow b lle a$ for $b lle a$ (@sec:widening), and reduction,
-which only makes values smaller, can push a narrowed value below $b$
-(#isathm("post_narrow_refinement_would_violate_narrow_ge"), checked by
-evaluation). Goblint's
+A reduction round has two steps. The first sharpens the residue class with a
+finite interval, so a class that meets the interval in one value becomes that
+value, and one that meets it in none becomes empty. The second moves the
+interval's bounds to the nearest members of the class. Through
+#isatype("refine_mode") the user chooses whether to skip reduction, reduce
+once, or reduce until nothing changes. Every mode keeps every integer a value
+stands for (#isathm("it_refine_mode_sound")). Goblint's
 #link(
-  "https://github.com/goblint/analyzer/blob/5503dec/src/cdomain/value/cdomains/int/intDomTuple.ml#L421-L431",
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml",
+)[`IntDomTuple`]
+uses a similar reduced-tuple design with up to six optional components. Int
+corresponds to it restricted to the interval and congruence components,
+reduces in the same order, and offers the three modes of Goblint's
+`ana.int.refinement` setting. Goblint defaults to no reduction, and Voblint to
+reducing until nothing changes.
+
+The default mode iterates with HOL's while combinator, which in the logic
+returns no result when the rounds never settle, and Int then keeps the
+unreduced value. HOL can define this case because a definition may ask whether
+some number of rounds reaches a stable value without computing the answer.
+Its code equation instead runs the rounds until
+they settle, so the generated OCaml may loop where the HOL function returns.
+The code equation is a theorem, so, up to the trusted code generator, every
+value the generated code does return equals the HOL value, and the soundness theorem, which speaks only about
+reports that are returned, applies unchanged. A run that loops gives no
+report, as a solve that does not terminate gives none (@sec:termination).
+
+At a machine kind (@sec:domain-kinds), Int's arithmetic computes the interval
+first. When the mathematical interval lies in the kind's range, no value
+wraps, and the congruence keeps its classical class even where Congruence
+alone would return its top
+(#fixture("27-signed-overflow/precision/04-int_no_ov_keeps_class.vimp", label: "04-int_no_ov_keeps_class")).
+In @fig:domain-kinds, Int keeps $a in 4 ZZ$ and rounds its interval to
+$ivl(0, 2^32 - 4)$ (claim #claim-ref("dom-kinds-int")).
+
+Int reduces the result of every conversion, every arithmetic operation, and
+every step of the guard refinement. Join, widening, and narrowing work
+componentwise, as in Goblint for join and widening. For narrowing, the solver contract forces the choice. The verified
+solver relies on the bracket laws $b lle a narrow b lle a$ for $b lle a$
+(@sec:widening). Reduction keeps the integers a value stands for but can make
+its components smaller in the componentwise order, so a reduced narrowing can
+fall below $b$ when $b$ itself is not reduced. The domain library's product of
+a sign, an interval, a parity and a congruence (#isatype("int_dom")) gives an
+evaluated example. There $b = (top, ivl(-1, 0), "even", top)$ denotes only $0$
+and is narrowed against $top$. Reducing the result lets the exact interval
+bound sharpen the sign to non-positive, strictly below the sign $top$ of $b$
+(#isathm("post_narrow_refinement_would_violate_narrow_ge")). Goblint's
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml#L416-L426",
 )[`IntDomTuple`]
 does reduce after narrowing. No proof obliges its lattices to satisfy the
 bracket laws, so Goblint can make this choice and Voblint cannot.
 
-== The order analysis #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
+== The order analysis #thy-badge("Voblint_Analysis_Order", "Order_Analysis") <sec:relational>
 
 None of these domains can express that $x lt.eq y$, because each describes
 the variables one at a time. The order analysis keeps a set of such pairs, the
 relational state of @sec:rel-state. A guard between two variables adds a pair.
-An assignment first forgets the pairs involving the changed variable. It then
-asks the shared query channel how the new value relates to each variable, and
-every active analysis, the order analysis included, may contribute an answer
-(@sec:coop-catalogue). In the program below, the guard `x < y` tells Interval
-nothing about either variable, so it keeps
+An assignment forgets the pairs involving the changed variable and then asks
+the shared query channel how the new value relates to each variable, and every
+active analysis, the order analysis included, may answer
+(@sec:coop-catalogue). In the program below, the guard `x < y` removes only
+the extreme values of the kind from Interval's ranges, so Interval keeps
 #state("order-alone-interval", "12:5") and reports
 #verdict("order-alone-interval", "12:5") at the first check. The order
 analysis records #state("order-alone-order", "12:5") and reports
@@ -305,9 +333,9 @@ analysis records #state("order-alone-order", "12:5") and reports
 
 #listing(lang: "c", claim: "order-alone-order", ```
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
-  z = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
   if (x < y) {
     __voblint_check(x <= y);
     if (y <= z) {
@@ -316,29 +344,24 @@ fun main() {
     y = y + 1;
     __voblint_check(x <= y);
   }
-  w = x;
+  i32 w = x;
   __voblint_check(w == x);
 }
 ```)
 
 Because the analysis does not combine pairs transitively, it cannot prove
-`x <= z` under `y <= z`: it holds #state("order-alone-order", "14:7") there
-and answers #verdict("order-alone-order", "14:7") (@sec:rel-state). The assignment
-`y = y + 1` throws away every pair involving $y$, leaving
-#state("order-alone-order", "17:5"). A copy, in contrast, yields pairs in both
-directions. At `w = x` the assignment asks, for the variable $x$ itself,
-whether `x <= x` holds in each direction. The order analysis answers yes to
-both, because it treats a variable as ordered with itself, so it records
-#state("order-alone-order", "20:3") and proves `w == x`, where Interval
-answers #verdict("order-alone-interval", "20:3"). The analysis contract of
-@ch:analysis-interface accepts this state as it is, even though it is not a
-map from variables to values.
+`x <= z` under `y <= z`. It holds #state("order-alone-order", "14:7") there
+and answers #verdict("order-alone-order", "14:7") (@sec:rel-state). The
+assignment `y = y + 1` throws away every pair involving $y$, leaving
+#state("order-alone-order", "17:5"). Forgetting is necessary, since at
+$y = 2^31 - 1$ the increment wraps to $-2^31$ and `x <= y` fails for $x = 0$.
+A copy `w = x` between two variables of one kind, in contrast, records both
+orders and gives $w$ the pairs of $x$. The analysis then holds
+#state("order-alone-order", "20:3") and proves `w == x`, where Interval answers
+#verdict("order-alone-interval", "20:3").
 
-The base domains record different properties, Int lets them share these
+The base domains record different properties, Int lets two of them share
 facts, and the order analysis proves relations that no domain over single
-variables can express. The order analysis can also run together with the
-numeric domains in one combined state (@ch:cooperation). At each assignment it
-then asks them how the new value compares with the other variables, and a
-check is decided by the meet of all their answers. @sec:eval-precision shows
-that Interval and the order analysis together prove a check that neither
-proves alone.
+variables can express. Run with the numeric domains in one combined state
+(@ch:cooperation), it asks them at each assignment how the new value compares
+with the other variables, and a check is decided by the meet of all answers.

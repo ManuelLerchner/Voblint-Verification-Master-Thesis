@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// The declarators of one declaration run left to right, as C sequences them,
+// so a later initializer reads the value an earlier one stored.
+fun main() {
+  i32 a = 1, b = a + 2, c = b * 3;
+  __voblint_check(a == 1); // PROVED
+  __voblint_check(b == 3); // PROVED
+  __voblint_check(c == 9); // PROVED
+}

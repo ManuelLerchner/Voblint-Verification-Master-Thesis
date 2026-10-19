@@ -36,4 +36,4 @@ and `finite_stabl_solve` in `TD_side_upd_rule`, and `tree_covered_at`,
 `certified_solver` names the solver contract the analysis pipeline assumes
 (post-solution, finite key set, `solve_c` success implies `solve_dom`), and
 `td_certified_solver` (`Globals_Rule`) discharges it for every `globals_rule`;
-the generated `<Domain>_Analyses.thy` registrations cite that one fact.
+every `dg_analysis` instance cites that one fact.

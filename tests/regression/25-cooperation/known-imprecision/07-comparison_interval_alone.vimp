@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// Concretely only f(100, 0) enters the branch, so x = 100 and y = 0 there.
+//
+// Without contexts both parameters range over the two calls' values, and Interval
+// alone cannot order y and x: the comparison is [0,1] and no check is decided.
+// With Order beside it the first two are proved
+// (precision/10-comparison_answered_by_order).
+fun f(i32 x, i32 y) {
+  i32 z;
+  if (y <= x) {
+    __voblint_check((y <= x) + 1 == 2); // UNKNOWN
+    z = (y <= x);
+    x = 0;
+    __voblint_check(z == 1); // UNKNOWN
+    __voblint_check(y == 1); // UNKNOWN
+  }
+}
+fun main() {
+  f(0, 100);
+  f(100, 0);
+}

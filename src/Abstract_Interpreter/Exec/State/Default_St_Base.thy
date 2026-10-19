@@ -6,8 +6,8 @@ section \<open>Finite default-map representation\<close>
 
 text \<open>
   An abstract state has to be a finite thing before a solver can run on it. A
-  \<open>default_dict\<close> is a finite dictionary that answers every name it does not
-  list with a default. A \<open>default_st_rep\<close> is two of them, one per partition:
+  \<open>gdefault_dict\<close> is a finite dictionary that answers every name it does not
+  list with a default. A \<open>gdefault_st_rep\<close> is two of them, one per partition:
   a local dictionary and a global one. Reading a location consults the
   dictionary of its partition. Nothing forces a stored value to differ from
   its default.
@@ -56,19 +56,28 @@ text \<open>
     fixed \<open>top\<close> cannot represent at all.
 
   What the defaults cost is visible throughout this theory: the order has to
-  compare them, extensional equality has to pin them, and the emptiness test in
-  \<open>Default_St_Reachability\<close> has to reason about them. That cost is the price of the
+  compare them, extensional equality has to pin them, and an emptiness test
+  has to reason about them. That cost is the price of the
   three points above, not an accident of the first representation tried.
 \<close>
 
 subsection \<open>Default dictionaries\<close>
 
-type_synonym 'a default_dict = "'a \<times> (vname \<times> 'a) list"
+text \<open>A key type with infinitely many keys: a finite dictionary always leaves one
+  unlisted.\<close>
 
-fun default_dict_get :: "'a default_dict => vname => 'a" where
+class infinite_key =
+  assumes infinite_key_UNIV: "infinite (UNIV :: 'a set)"
+
+instance String.literal :: infinite_key
+  by standard (rule infinite_literal)
+
+type_synonym ('k, 'a) gdefault_dict = "'a \<times> ('k \<times> 'a) list"
+
+fun default_dict_get :: "('k, 'a) gdefault_dict => 'k => 'a" where
   "default_dict_get (d, ps) x = (case map_of ps x of Some a => a | None => d)"
 
-fun default_dict_set :: "'a default_dict => vname => 'a => 'a default_dict" where
+fun default_dict_set :: "('k, 'a) gdefault_dict => 'k => 'a => ('k, 'a) gdefault_dict" where
   "default_dict_set (d, ps) x a = (d, (x, a) # AList.delete x ps)"
 
 lemma map_of_resolved_delete:
@@ -109,14 +118,15 @@ text \<open>
   decides the pointwise order over all names.
 \<close>
 
-fun le_default_dict :: "('a::order) default_dict => 'a default_dict => bool" where
+fun le_default_dict :: "('k, 'a::order) gdefault_dict => ('k, 'a) gdefault_dict => bool" where
   "le_default_dict (d, ps) (e, qs) \<longleftrightarrow>
      d \<le> e \<and>
      list_all (\<lambda>x. default_dict_get (d, ps) x \<le> default_dict_get (e, qs) x)
        (map fst ps @ map fst qs)"
 
 lemma le_default_dict_iff:
-  "le_default_dict m n \<longleftrightarrow> (\<forall>x. default_dict_get m x \<le> default_dict_get n x)"
+  fixes m n :: "('k::infinite_key, 'a::order) gdefault_dict"
+  shows "le_default_dict m n \<longleftrightarrow> (\<forall>x. default_dict_get m x \<le> default_dict_get n x)"
 proof -
   obtain d ps where m: "m = (d, ps)" by (cases m)
   obtain e qs where n: "n = (e, qs)" by (cases n)
@@ -140,8 +150,8 @@ proof -
     qed
   next
     assume le: "\<forall>x. default_dict_get m x \<le> default_dict_get n x"
-    obtain y :: vname where "y \<in> UNIV" and fresh: "y \<notin> set (map fst ps @ map fst qs)"
-      by (rule obtain_fresh_vname[OF infinite_literal])
+    obtain y :: 'k where "y \<in> UNIV" and fresh: "y \<notin> set (map fst ps @ map fst qs)"
+      by (rule obtain_fresh_vname[OF infinite_key_UNIV])
     then have "map_of ps y = None" "map_of qs y = None"
       by (simp_all add: map_of_resolved_none_iff)
     with le[rule_format, of y] have "d \<le> e" unfolding m n by simp
@@ -156,20 +166,21 @@ text \<open>
   pair of dictionaries read by \<open>default_st_rep_get\<close>.
 \<close>
 
-datatype location =
-  Local_Location (location_vname: vname)
-| Global_Location (location_vname: vname)
+datatype 'k glocation =
+  Local_Location (location_vname: 'k)
+| Global_Location (location_vname: 'k)
+
 
 lemma all_location_iff:
   "(\<forall>loc. P loc) \<longleftrightarrow> (\<forall>x. P (Local_Location x)) \<and> (\<forall>x. P (Global_Location x))"
-  by (metis location.exhaust)
+  by (metis glocation.exhaust)
 
 text \<open>The local dictionary comes first, the global one second.\<close>
 
-type_synonym 'a default_st_rep = "'a default_dict \<times> 'a default_dict"
+type_synonym ('k, 'a) gdefault_st_rep = "('k, 'a) gdefault_dict \<times> ('k, 'a) gdefault_dict"
 
 fun default_st_rep_get ::
-  "('a::bot) default_st_rep => location => 'a" where
+  "('k, 'a::bot) gdefault_st_rep => 'k glocation => 'a" where
   "default_st_rep_get (l, g) (Local_Location x) = default_dict_get l x"
 | "default_st_rep_get (l, g) (Global_Location x) = default_dict_get g x"
 
@@ -181,7 +192,7 @@ text \<open>
 \<close>
 
 definition eq_default_st_rep ::
-  "('a::bot) default_st_rep => 'a default_st_rep => bool"
+  "('k, 'a::bot) gdefault_st_rep => ('k, 'a) gdefault_st_rep => bool"
 where
   "eq_default_st_rep s t \<longleftrightarrow>
      default_st_rep_get s = default_st_rep_get t"
@@ -215,7 +226,7 @@ text \<open>
 \<close>
 
 fun le_default_st_rep_code ::
-  "('a::order_bot) default_st_rep => 'a default_st_rep => bool"
+  "('k, 'a::order_bot) gdefault_st_rep => ('k, 'a) gdefault_st_rep => bool"
 where
   "le_default_st_rep_code (l1, g1) (l2, g2) \<longleftrightarrow>
      le_default_dict l1 l2 \<and> le_default_dict g1 g2"
@@ -227,7 +238,8 @@ text \<open>
 \<close>
 
 lemma le_default_st_rep_code_iff:
-  "le_default_st_rep_code s t \<longleftrightarrow>
+  fixes s t :: "('k::infinite_key, 'a::order_bot) gdefault_st_rep"
+  shows "le_default_st_rep_code s t \<longleftrightarrow>
     (\<forall>loc. default_st_rep_get s loc \<le> default_st_rep_get t loc)"
   by (cases s; cases t) (simp add: all_location_iff le_default_dict_iff)
 
@@ -235,22 +247,23 @@ lemma le_default_st_rep_code_iff:
 subsection \<open>The extensional quotient, lookup and point update\<close>
 
 text \<open>
-  \<open>default_st\<close> is the quotient of raw states by extensional equality.
+  \<open>gdefault_st\<close> is the quotient of raw states by extensional equality.
   Lookup and point update lift to it because both respect the equivalence.
 \<close>
 
-quotient_type 'a default_st =
-  "('a::bot) default_st_rep" / "eq_default_st_rep"
+quotient_type ('k, 'a) gdefault_st =
+  "('k, 'a::bot) gdefault_st_rep" / "eq_default_st_rep"
   morphisms rep_default_st Abs_default_st
   by (rule equivp_eq_default_st_rep)
 
+
 lift_definition default_st_get ::
-  "('a::bot) default_st => location => 'a"
+  "('k, 'a::bot) gdefault_st => 'k glocation => 'a"
   is default_st_rep_get
   by (simp add: eq_default_st_rep_def)
 
 fun default_st_rep_set ::
-  "('a::bot) default_st_rep => location => 'a => 'a default_st_rep" where
+  "('k, 'a::bot) gdefault_st_rep => 'k glocation => 'a => ('k, 'a) gdefault_st_rep" where
   "default_st_rep_set (l, g) (Local_Location x) a = (default_dict_set l x a, g)"
 | "default_st_rep_set (l, g) (Global_Location x) a = (l, default_dict_set g x a)"
 
@@ -266,7 +279,7 @@ lemma eq_default_st_rep_set:
   by (rule eq_default_st_repI) (simp add: eq_default_st_repD[OF assms])
 
 lift_definition default_st_set ::
-  "('a::bot) default_st => location => 'a => 'a default_st"
+  "('k, 'a::bot) gdefault_st => 'k glocation => 'a => ('k, 'a) gdefault_st"
   is default_st_rep_set
   by (rule eq_default_st_rep_set)
 
@@ -284,7 +297,7 @@ text \<open>
 \<close>
 
 abbreviation default_st_mk ::
-  "('a::bot) default_dict => 'a default_dict => 'a default_st" where
+  "('k, 'a::bot) gdefault_dict => ('k, 'a) gdefault_dict => ('k, 'a) gdefault_st" where
   "default_st_mk l g \<equiv> Abs_default_st (l, g)"
 
 bundle default_st_carrier_syntax
@@ -302,7 +315,7 @@ lemma default_st_get_Abs [simp]:
 
 lemma Abs_default_st_rep_default_st [simp]:
   "Abs_default_st (rep_default_st s) = s"
-  by (fact Lifting.Quotient_abs_rep [OF Quotient_default_st])
+  by (fact Lifting.Quotient_abs_rep [OF Quotient_gdefault_st])
 
 lemma default_st_get_rep:
   "s\<langle>loc\<rangle> = default_st_rep_get (rep_default_st s) loc"
@@ -343,28 +356,28 @@ text \<open>
   \<open>le_default_st_rep_code\<close>, which also yields an executable equality.
 \<close>
 
-instantiation default_st :: (bot) bot
+instantiation gdefault_st :: (type, bot) bot
 begin
-definition bot_default_st ::
-  "('a::bot) default_st"
+definition bot_gdefault_st ::
+  "('a, 'b::bot) gdefault_st"
 where
-  "bot_default_st = \<llangle>(bot, []), (bot, [])\<rrangle>"
+  "bot_gdefault_st = \<llangle>(bot, []), (bot, [])\<rrangle>"
 instance ..
 end
 
-instantiation default_st :: (order_bot) ord
+instantiation gdefault_st :: (infinite_key, order_bot) ord
 begin
-lift_definition less_eq_default_st ::
-  "('a::order_bot) default_st =>
-   'a default_st => bool"
+lift_definition less_eq_gdefault_st ::
+  "('a::infinite_key, 'b::order_bot) gdefault_st =>
+   ('a, 'b) gdefault_st => bool"
   is le_default_st_rep_code
   by (auto simp: le_default_st_rep_code_iff eq_default_st_rep_def)
 
-definition less_default_st ::
-  "('a::order_bot) default_st =>
-   'a default_st => bool"
+definition less_gdefault_st ::
+  "('a::infinite_key, 'b::order_bot) gdefault_st =>
+   ('a, 'b) gdefault_st => bool"
 where
-  "less_default_st s t \<longleftrightarrow>
+  "less_gdefault_st s t \<longleftrightarrow>
      s \<le> t \<and> \<not> t \<le> s"
 
 instance ..
@@ -372,16 +385,16 @@ end
 
 
 lemma le_default_st_iff:
-  fixes s t :: "('a::order_bot) default_st"
+  fixes s t :: "('k::infinite_key, 'a::order_bot) gdefault_st"
   shows "s \<le> t \<longleftrightarrow> (\<forall>loc. s\<langle>loc\<rangle> \<le> t\<langle>loc\<rangle>)"
   by transfer (rule le_default_st_rep_code_iff)
 
 
-instance default_st :: (order_bot) order
+instance gdefault_st :: (infinite_key, order_bot) order
 proof intro_classes
-  fix s t u :: "('a::order_bot) default_st"
+  fix s t u :: "('a::infinite_key, 'b::order_bot) gdefault_st"
   show "(s < t) \<longleftrightarrow> (s \<le> t \<and> \<not> t \<le> s)"
-    by (simp add: less_default_st_def)
+    by (simp add: less_gdefault_st_def)
 
   show "s \<le> s"
     by (simp add: le_default_st_iff)
@@ -397,27 +410,27 @@ context
 begin
 
 lemma default_st_get_bot [simp]:
-  "(\<bottom> :: ('a::bot) default_st)\<langle>loc\<rangle> = \<bottom>"
-  unfolding bot_default_st_def by (cases loc) simp_all
+  "(\<bottom> :: ('k, 'a::bot) gdefault_st)\<langle>loc\<rangle> = \<bottom>"
+  unfolding bot_gdefault_st_def by (cases loc) simp_all
 
 end
 
 
 lemma bot_le_default_st:
-  "(bot :: ('a::order_bot) default_st) \<le> s"
+  "(bot :: ('k::infinite_key, 'a::order_bot) gdefault_st) \<le> s"
   by (simp add: le_default_st_iff)
 
-instance default_st :: (order_bot) order_bot
+instance gdefault_st :: (infinite_key, order_bot) order_bot
   by standard (rule bot_le_default_st)
-instantiation default_st :: ("{order_bot,equal}") equal
+instantiation gdefault_st :: (infinite_key, "{order_bot,equal}") equal
 begin
-definition equal_default_st ::
-  "('a::{order_bot,equal}) default_st =>
-   'a default_st => bool"
+definition equal_gdefault_st ::
+  "('a::infinite_key, 'b::{order_bot,equal}) gdefault_st =>
+   ('a, 'b) gdefault_st => bool"
 where
-  "equal_default_st s t = (s \<le> t \<and> t \<le> s)"
+  "equal_gdefault_st s t = (s \<le> t \<and> t \<le> s)"
 instance
-  by standard (auto simp: equal_default_st_def intro: order_antisym)
+  by standard (auto simp: equal_gdefault_st_def intro: order_antisym)
 end
 
 unbundle no default_st_carrier_syntax

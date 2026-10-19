@@ -1,5 +1,9 @@
 # Session cleanup playbook
 
+Status: historical for the sessions it names. Stage 7 merged the language into
+`Voblint_VIMP` and renamed sessions, theories and constants
+(`docs/theorem-migration.toml`); the procedure and traps still apply.
+
 How the per-session audit-and-clean pass works, what it found in the sessions
 already done (VIMP, then CFG), and the traps that cost a rebuild each. Read
 this before auditing the next session (Core, then Analysis, ...).

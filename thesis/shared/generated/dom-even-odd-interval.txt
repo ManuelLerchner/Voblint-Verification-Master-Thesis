@@ -1,9 +1,13 @@
 tests/regression/18-parity/precision/01-even_odd_distinct.vimp [interval]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  ------------------------------------------------
+18:7      pp1    WARNING   possible signed integer overflow in *: 2 * n
+19:7      pp2    WARNING   possible signed integer overflow in *: 2 * n
+19:7      pp2    WARNING   possible signed integer overflow in +: 2 * n + 1
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ----------------------
-20:3      pp3    x != y     UNKNOWN  interval: x=⊤, y=⊤
+--------  -----  ---------  -------  ----------------------------------------------------------------
+20:3      pp3    x != y     UNKNOWN  interval: x=[-2147483648,2147483647], y=[-2147483648,2147483647]

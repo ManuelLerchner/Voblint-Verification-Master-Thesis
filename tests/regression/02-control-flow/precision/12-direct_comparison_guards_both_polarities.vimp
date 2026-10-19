@@ -10,8 +10,8 @@
 // refine_direct_comparisons_false, refine_x_lt_20,
 // guard_infeasible_canonical_bot.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
   if (0 <= x && x <= 20 && 5 <= y && y <= 9) {
     if (x <= 10) {
       __voblint_check(x >= 0); // PROVED

@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// INT_MAX + 1, INT_MIN - 1 and 2^16 * 2^16 overflow i32 and wrap to INT_MIN,
+// INT_MAX and 0. Under assume_wraparound Interval wraps each singleton result
+// as the semantics does, so every check is proved. The assume_top twin is
+// ../known-imprecision/01-interval_assume_top.vimp.
+fun main() {
+  i32 a = 2147483647;
+  i32 b = a + 1; // ARITH: ERROR signed-overflow
+  __voblint_check(b == -2147483648); // PROVED
+  i32 c = -2147483648;
+  i32 d = c - 1; // ARITH: ERROR signed-overflow
+  __voblint_check(d == 2147483647); // PROVED
+  i32 e = 65536;
+  i32 f = e * e; // ARITH: ERROR signed-overflow
+  __voblint_check(f == 0); // PROVED
+}

@@ -63,7 +63,8 @@ def test_source_scan_flags_vimp_outside_the_helper(tmp_path):
 def test_fragment_links_as_the_body_of_main():
     assert vl.vimp_program("fun main() {}") == "fun main() {}"
     assert (
-        vl.vimp_program("x = 0;\n\ny = x;") == "fun main() {\n  x = 0;\n\n  y = x;\n}"
+        vl.vimp_program("i32 x = 0;\n\ni32 y = x;")
+        == "fun main() {\n  i32 x = 0;\n\n  i32 y = x;\n}"
     )
 
 
@@ -159,7 +160,9 @@ def test_built_document_needs_a_clickable_link_on_every_vimp_listing():
         doc = Path(tmp) / "doc.typ"
         header = '#import "/lib/code.typ": listing\n'
         codly = '#import "@preview/codly:1.3.0": codly-init\n#show: codly-init\n'
-        body = '#listing(lang: "c", ```\nx = 0; while (x < 3) { x = x + 1; }\n```)\n'
+        body = (
+            '#listing(lang: "c", ```\ni32 x = 0; while (x < 3) { x = x + 1; }\n```)\n'
+        )
 
         doc.write_text(header + codly + body)
         problems, count = vl.check_built(doc)

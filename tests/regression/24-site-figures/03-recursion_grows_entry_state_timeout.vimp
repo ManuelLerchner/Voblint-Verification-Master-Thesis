@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --context entry-state --globals warrow --timeout 5
+// Backs the entry-state "no answer" of the figure "A call that never stops
+// calling": every call enters with a new singleton x, entry-state keying makes
+// a fresh context per value, and the solve gives no answer within 5 s;
+// --timeout turns that into the structured rejection this case pins.
+// Concretely f(x + 1) does not grow x without bound: x wraps to -2147483648
+// after 2^31 nested calls, so x >= 0 fails in a run that deep. The timeout
+// shows only that no answer came within 5 s; it says nothing about whether
+// the solve would finish.
+fun f(i32 x) {
+  __voblint_check(x >= 0);
+  f(x + 1);
+}
+
+fun main() {
+  f(0);
+}

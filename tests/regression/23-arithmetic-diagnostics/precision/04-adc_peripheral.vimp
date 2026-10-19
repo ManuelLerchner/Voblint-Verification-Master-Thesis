@@ -9,12 +9,12 @@
 // Computing the average therefore has a possible
 // division-by-zero when all channels are disabled.
 
-fun count_enabled(i, e0, e1, e2, e3) {
+fun i32 count_enabled(i32 i, i32 e0, i32 e1, i32 e2, i32 e3) {
   if (i == 4) {
     return 0;
   }
 
-  enabled = 0;
+  i32 enabled = 0;
 
   if (i == 0) {
     enabled = e0;
@@ -32,19 +32,19 @@ fun count_enabled(i, e0, e1, e2, e3) {
     enabled = e3;
   }
 
-  rest = count_enabled(i + 1, e0, e1, e2, e3);
+  i32 rest = count_enabled(i + 1, e0, e1, e2, e3);
   return enabled + rest;
 }
 
 fun main() {
   // Simulated MMIO register bits.
-  e0 = __voblint_nondet_int();
-  e1 = __voblint_nondet_int();
-  e2 = __voblint_nondet_int();
-  e3 = __voblint_nondet_int();
+  i32 e0 = __voblint_nondet_int();
+  i32 e1 = __voblint_nondet_int();
+  i32 e2 = __voblint_nondet_int();
+  i32 e3 = __voblint_nondet_int();
 
   // Simulated ADC accumulation register.
-  adc_sum = __voblint_nondet_int();
+  i32 adc_sum = __voblint_nondet_int();
 
   if (0 <= e0 && e0 <= 1 &&
       0 <= e1 && e1 <= 1 &&
@@ -52,11 +52,11 @@ fun main() {
       0 <= e3 && e3 <= 1 &&
       0 <= adc_sum && adc_sum <= 16380) {
 
-    active = count_enabled(0, e0, e1, e2, e3);
+    i32 active = count_enabled(0, e0, e1, e2, e3);
 
     __voblint_check(active >= 0); // PROVED
     __voblint_check(active <= 4); // PROVED
 
-    average = adc_sum / active; // ARITH: WARN division-by-zero
+    i32 average = adc_sum / active; // ARITH: WARN division-by-zero
   }
 }

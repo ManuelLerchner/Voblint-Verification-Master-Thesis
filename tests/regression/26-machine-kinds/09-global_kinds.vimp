@@ -1,0 +1,21 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// Globals carry kinds on their declaration line and start at zero, as C's
+// static storage does. A call result converts to the destination's kind.
+//
+// Run under --signed-overflow assume_wraparound: the checks pin wrapped
+// values. Under the default assume_top a signed result or conversion outside
+// its kind gives Interval the kind's top (27-signed-overflow/known-
+// imprecision/01).
+global u8 g;
+global i16 h;
+fun i32 big() {
+  return 70000; // ARITH: ERROR conversion-overflow
+}
+fun main() {
+  __voblint_check(g == 0); // PROVED
+  h = big();
+  __voblint_check(h == 4464); // PROVED
+  g = h; // ARITH: ERROR conversion-overflow
+  __voblint_check(g == 112); // PROVED
+}

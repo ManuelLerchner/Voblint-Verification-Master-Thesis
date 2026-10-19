@@ -1,0 +1,12 @@
+thesis/shared/programs/kinds-promotion.vimp [interval]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  ------------------------------------------------------------------------------------------------------
+4:6       pp2    ERROR     unsigned integer overflow in conversion whenever this operation is evaluated: (u8) ((i32) x + (i32) y)
+
+Assertion checks
+Location  Point  Condition                Verdict  State
+--------  -----  -----------------------  -------  ----------------------------------
+5:3       pp3    (i32) x + (i32) y < 250  REFUTED  interval: x=[200,200], y=[100,100]
+6:3       pp4    (i32) z < 250            PROVED   interval: z=[44,44]

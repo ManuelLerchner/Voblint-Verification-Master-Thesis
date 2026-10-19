@@ -8,6 +8,9 @@
    at the value level regardless of the signature hiding constructors) to
    the original.
 
+   The input carries the kind of every variable beside the program, as the
+   parser returns it; a round-trip compares both.
+
    Default mode prints "OK" or "FAIL <reason>" to stdout. `--print-source`
    instead prints just the generated VIMP source for the AST on stdin, with
    no round-trip check -- used by the mutation-fuzzing property, which needs
@@ -113,7 +116,19 @@ let rec build_exp = function
   | Slist [ Atom "Not"; a ] -> Not (build_exp a)
   | Slist [ Atom "And"; a; b ] -> And (build_exp a, build_exp b)
   | Slist [ Atom "Or"; a; b ] -> Or (build_exp a, build_exp b)
+  | Slist [ Atom "Cast"; Atom k; a ] -> Cast (build_kind k, build_exp a)
   | s -> failwith ("ast_driver: bad exp sexp: " ^ show_sexp s)
+
+and build_kind = function
+  | "i8" -> I8
+  | "u8" -> U8
+  | "i16" -> I16
+  | "u16" -> U16
+  | "i32" -> I32
+  | "u32" -> U32
+  | "i64" -> I64
+  | "u64" -> U64
+  | k -> failwith ("ast_driver: bad kind: " ^ k)
 
 and build_exp_opt = function
   | Atom "None" -> None
@@ -155,44 +170,74 @@ let build_names = function
         atoms
   | s -> failwith ("ast_driver: bad name list sexp: " ^ show_sexp s)
 
+(* ((x k) ...): names with their kinds. *)
+let build_typed = function
+  | Slist entries ->
+      List.map
+        (function
+          | Slist [ Atom x; Atom k ] -> (x, build_kind k)
+          | s -> failwith ("ast_driver: bad typed name: " ^ show_sexp s))
+        entries
+  | s -> failwith ("ast_driver: bad typed list sexp: " ^ show_sexp s)
+
+let scoped proc = List.map (fun (x, k) -> (ScopedId (proc, x), k))
+
+(* (name ret formals locals body), ret None or a kind. *)
 let build_proc = function
-  | Slist [ Atom name; formals; body ] ->
-      (name, Gproc_decl_ext (build_names formals, build_com body, ()))
+  | Slist [ Atom name; ret; formals; locals; body ] ->
+      let formals = build_typed formals and locals = build_typed locals in
+      let ret =
+        match ret with
+        | Atom "None" -> []
+        | Atom k -> [ (ReturnId name, build_kind k) ]
+        | s -> failwith ("ast_driver: bad return kind: " ^ show_sexp s)
+      in
+      ( (name, Gproc_decl_ext (List.map Stdlib.fst formals, build_com body, ())),
+        scoped name formals @ scoped name locals @ ret )
   | s -> failwith ("ast_driver: bad proc sexp: " ^ show_sexp s)
 
+(* (procs (main_locals main_body) globals): the program and its kind
+   declarations. *)
 let build_program = function
-  | Slist [ Slist procs; main_body; globals ] ->
-      mk_program
-        (List.map build_proc procs)
-        (build_com main_body) (build_names globals)
+  | Slist [ Slist procs; Slist [ main_locals; main_body ]; globals ] ->
+      let procs = List.map build_proc procs and globals = build_typed globals in
+      ( mk_program
+          (List.map Stdlib.fst procs)
+          (build_com main_body)
+          (List.map Stdlib.fst globals),
+        List.map (fun (g, k) -> (GlobalId g, k)) globals
+        @ scoped "main" (build_typed main_locals)
+        @ List.concat_map Stdlib.snd procs )
   | s -> failwith ("ast_driver: bad program sexp: " ^ show_sexp s)
 
 (* -- Driver --------------------------------------------------------------- *)
 
-let source_text_of_program = Vimp_printer.string_of_imp_prog
+let source_text_of_program decls = Vimp_printer.string_of_imp_prog ~decls
 let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
 
 let () =
   let input = In_channel.input_all stdin in
   try
-    let original = build_program (parse_sexp input) in
-    let source_text = source_text_of_program original in
+    let original, decls = build_program (parse_sexp input) in
+    let source_text = source_text_of_program decls original in
     if mode = "--print-source" then (
       print_string source_text;
       exit 0);
     match Vimp_frontend.program "<generated>" source_text with
-    | reparsed, _, _ when mode = "--print-reprinted" ->
+    | reparsed, reparsed_decls, _, _ when mode = "--print-reprinted" ->
         (* Prints pretty(parse(pretty(original))) -- the print/parse/print
          invariant is implied by original = reparsed (the printer
          is a pure function, so structurally equal ASTs print identically),
          but checking it directly gives a source-text diff on failure instead
          of "the trees differ", and catches the (structural-equality
          assumption) breaking silently. *)
-        print_string (source_text_of_program reparsed);
+        print_string (source_text_of_program reparsed_decls reparsed);
         exit 0
-    | reparsed, _, _ ->
-        if erase_program_labels original = erase_program_labels reparsed then
-          print_endline "OK"
+    | reparsed, reparsed_decls, _, _ ->
+        if
+          erase_program_labels original = erase_program_labels reparsed
+          && List.sort compare decls = List.sort compare reparsed_decls
+        then print_endline "OK"
         else begin
           Printf.printf
             "FAIL round-trip mismatch\n\

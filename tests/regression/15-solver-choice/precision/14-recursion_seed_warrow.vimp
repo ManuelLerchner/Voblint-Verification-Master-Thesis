@@ -6,17 +6,17 @@
 //
 // Ported from Example_Interval_DG_Seed_Join_Recursion.thy:
 // sj_warrowed_seed_agrees.
-fun up(n) {
+fun i32 up(i32 n) {
   __voblint_check(n >= 0); // PROVED
   __voblint_check(n <= 5); // PROVED
   if (n < 5) {
-    r = up(n + 1);
+    i32 r = up(n + 1);
     return 0;
   } else {
     return 0;
   }
 }
 fun main() {
-  z = up(0);
+  i32 z = up(0);
   __voblint_check(z == 0); // PROVED
 }

@@ -1,4 +1,4 @@
-// PARAM: --analysis congruence
+// PARAM: --analysis congruence --signed-overflow assume_wraparound
 // Source: Example_Congruence_Arithmetic (congruence_bottom_top_regression,
 // congruence_definite_arithmetic_regression,
 // congruence_modular_arithmetic_regression, aval_congruence_regression,
@@ -6,47 +6,54 @@
 // (congruence_division_remainder_regression).
 //
 // Singletons stay singletons under +, - and *, and anything times 0 is 0.
-// With x in 1 (mod 4) and y in 3 (mod 6), x + y and x - y are 0 (mod 2)
-// and x * y is 3 (mod 6), so each guard on an excluded value is dead.
-// Remainder and division keep the class: x % 2 is odd, x % 0 and x / 1
-// are x, 6n / 3 is even, and (6n + 1) / 3 is top, so u == 2 stays live.
-// Division by 0 is 0 under VIMP's totalization.
+// x = 4 * a + 1 keeps 1 (mod 4) over i32, since 4 divides 2^32, but
+// y = 6 * b + 3 is only odd: 6 * b wraps to any even value. x + y and
+// x - y are 0 (mod 2), so their guards on 1 are dead; x * y is only odd,
+// so t == 5 is reachable. Remainder and division keep the class: x % 2 is
+// odd, and x % 0 and x / 1 are x. 6 * n wraps to any even value, so
+// (6 * n) / 3 can be 1 (4 / 3 == 1), and (6 * n + 1) / 3 is top, so
+// u == 2 stays live. Division by 0 is 0 under VIMP's totalization.
+//
+// Run under --signed-overflow assume_wraparound: the case tests congruence
+// arithmetic modulo 2^32 on signed i32. Under Goblint's default assume_top a
+// signed +, - or * that may overflow gives top instead (27-signed-
+// overflow/known-imprecision/02).
 fun main() {
-  n = __voblint_nondet_int();
-  a = __voblint_nondet_int();
-  b = __voblint_nondet_int();
-  z = n * 0;
+  i32 n = __voblint_nondet_int();
+  i32 a = __voblint_nondet_int();
+  i32 b = __voblint_nondet_int();
+  i32 z = n * 0;
   __voblint_check(z == 0); // PROVED
-  s1 = -3 + 5;
+  i32 s1 = -3 + 5;
   __voblint_check(s1 == 2); // PROVED
-  s2 = 7 - 10;
+  i32 s2 = 7 - 10;
   __voblint_check(s2 == -3); // PROVED
-  s3 = -3 * 4;
+  i32 s3 = -3 * 4;
   __voblint_check(s3 == -12); // PROVED
-  x = 4 * a + 1;
-  y = 6 * b + 3;
-  p = x + y;
+  i32 x = 4 * a + 1;
+  i32 y = 6 * b + 3;
+  i32 p = x + y;
   if (p == 1) { __voblint_check(false); } // NOWARN
-  m = x - y;
+  i32 m = x - y;
   if (m == 1) { __voblint_check(false); } // NOWARN
-  t = x * y;
-  if (t == 5) { __voblint_check(false); } // NOWARN
+  i32 t = x * y;
+  if (t == 5) { __voblint_check(false); } // REFUTED
   if (t == 9) { __voblint_check(true); } // PROVED
-  o = 2 * a + 1;
-  e = o + 1;
+  i32 o = 2 * a + 1;
+  i32 e = o + 1;
   if (e == 3) { __voblint_check(false); } // NOWARN
-  r1 = -7 % 3;
+  i32 r1 = -7 % 3;
   __voblint_check(r1 == -1); // PROVED
-  r2 = x % 2;
+  i32 r2 = x % 2;
   if (r2 == 0) { __voblint_check(false); } // NOWARN
-  d0 = n / 0;
+  i32 d0 = n / 0;
   __voblint_check(d0 == 0); // PROVED
-  r0 = x % 0;
+  i32 r0 = x % 0;
   if (r0 == 3) { __voblint_check(false); } // NOWARN
-  d1 = x / 1;
+  i32 d1 = x / 1;
   if (d1 == 3) { __voblint_check(false); } // NOWARN
-  h = (6 * n) / 3;
-  if (h == 1) { __voblint_check(false); } // NOWARN
-  u = (6 * n + 1) / 3;
+  i32 h = (6 * n) / 3;
+  if (h == 1) { __voblint_check(false); } // REFUTED
+  i32 u = (6 * n + 1) / 3;
   if (u == 2) { __voblint_check(true); } // PROVED
 }

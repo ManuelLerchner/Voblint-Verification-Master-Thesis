@@ -1,0 +1,28 @@
+// PARAM: --analysis interval --context entry-state
+// Adapted from Goblint tests/regression/79-callstring/04-endless_loop_cs.c
+// (ana.context.callString_length 10; Goblint annotates the inner check
+// UNKNOWN). main cannot call itself in VIMP, so the recursion lives in a
+// helper. rec increments the global num_iterat and recurses while it is
+// positive. From num_iterat = 2 the counter wraps from 2147483647 to
+// -2147483648, the innermost activation returns 2, and every res and r is
+// 2: both checks are reached and fail in every store.
+// Mechanism: widening takes num_iterat to the upper i32 bound, so
+// num_iterat + 1 may overflow and rec is entered with the full i32 range
+// (measured). The else arm then admits num_iterat == 0 and its return 5,
+// so res and r are [2,5] and both checks are UNKNOWN.
+global i32 num_iterat;
+fun i32 rec() {
+  if (0 < num_iterat) {
+    num_iterat = num_iterat + 1;
+    i32 res = rec();
+    __voblint_check(res == 5); // UNKNOWN
+    return res;
+  } else {
+    if (num_iterat == 0) { return 5; } else { return 2; }
+  }
+}
+fun main() {
+  num_iterat = 2;
+  i32 r = rec();
+  __voblint_check(r == 5); // UNKNOWN
+}

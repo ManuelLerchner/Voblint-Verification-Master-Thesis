@@ -3,7 +3,7 @@
 // (call string 100): the string is as long as the recursion, so every context
 // holds one call. 102 contexts.
 
-fun down(n) {
+fun down(i32 n) {
   __voblint_check(n >= 0); // PROVED
   if (n > 0) {
     down(n - 1);

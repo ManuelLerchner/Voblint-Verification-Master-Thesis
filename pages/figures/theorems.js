@@ -42,56 +42,71 @@
    * rests on. The panel keeps the last item shown, so its link stays reachable.
    */
   const ISA = "Voblint";
-  const isaConst = (session, theory, name) =>
-    `${ISA}/${session}/${theory}.html#${theory}.${name}%7Cconst`;
+  const isaEntity = (kind) => (session, theory, name) =>
+    `${ISA}/${session}/${theory}.html#${theory}.${name}%7C${kind}`;
+  const isaConst = isaEntity("const");
+  const isaFact = isaEntity("fact");
+
+  const REACHING = isaConst("Voblint_CLI", "Analysis_Config", "reaching");
+  const REPORT = ["Voblint_CLI", "Analysis_Report"];
+  const OBLIGATIONS = isaConst("Voblint_CLI", "Run_Report", "obligation_holds");
 
   const RULE_EXPLANATIONS = {
     run: {
-      clause: "s0 ∈ cinit_stores 𝒢  ∧  𝒢, Π ⊢ (main_body Π, s0, []) →p* (residual, s, frs)",
-      text: "Start from an initial store (declared globals are `0`, locals arbitrary) with an empty call stack, and let the source semantics take any number of steps. It arrives at the rest of the program `residual`, the store `s` and the call frames `frs`. The run may stop anywhere, even inside a call.",
-      link: isaConst("Voblint_VIMP", "VIMP_Proc", "pstep"),
+      clause:
+        "s0 ∈ init_stores (kenv_of ds)  ∧  star (pstep (kenv_of ds) (elab_ptable p ds)) (main_body …, s0, []) (residual, s, frs)",
+      text: "Start from an initial store (globals are `0`, every other variable holds some value of its kind) with an empty call stack, and let core VIMP's semantics run the elaborated program for any number of steps. It arrives at the rest of the program `residual`, the store `s` and the call frames `frs`. The run may stop anywhere, even inside a call.",
+      link: isaConst("Voblint_VIMP", "VIMP_Semantics", "pstep"),
       linkText: "pstep",
     },
     ans: {
-      clause: "run_voblint config p = Analysed res",
-      text: "The exported analyzer, the function the playground calls, accepted the program as well-formed, its solve finished, and it returned the report `res`. Its checks and diagnostics are exactly what the page draws.",
-      link: isaConst("Voblint_CLI", "Analysis_Run", "run_voblint"),
+      clause: "run_voblint conf ds p = Analysed res",
+      text: "The exported analyzer, the function the playground calls, accepted the program and its kind declarations `ds`, its solve finished, and it returned the report `res`. Its checks and diagnostics are exactly what the page draws.",
+      link: isaConst("Voblint_CLI", "Run_Voblint", "run_voblint"),
       linkText: "run_voblint",
     },
     v: {
-      clause: "∃v. p, s0 ⊢ (residual, s, frs) ⊳ v",
-      text: "The reached configuration is observed at some CFG node `v`: a run of the program's elaboration, which annotates every statement with the nodes the compiler emits for it, reaches an annotated command that names `v`, and the compiler's simulation relates it to `v` with the same store `s`. A configuration reachable along two paths can be observed at two nodes, and the remaining conclusions hold at every one of them.",
-      link: isaConst("Voblint_Compile", "Elaborated_Compilation", "at_node"),
-      linkText: "at_node",
+      clause:
+        "∃v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name ⊢ (residual, s, frs) ≈ (v, s, stk)",
+      text: "The compiler's simulation relation matches the reached source configuration with a configuration of the compiled graph at some node `v`, holding the same store `s`.",
+      link: isaConst("Voblint_Compile", "Simulation_Relation", "csim"),
+      linkText: "csim",
     },
     coll: {
-      clause: "s ∈ 𝒞 v",
+      clause: "s ∈ reaching ds p v",
       text: "The graph's collecting semantics reaches node `v` with store `s`: some valid activation trace from an initial store ends there. Every analysis result is judged against this set.",
-      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
-      linkText: "node_collect",
+      link: REACHING,
+      linkText: "reaching",
     },
     coll2: {
-      clause: "s ∈ 𝒞 v",
+      clause: "s ∈ reaching ds p v",
       text: "The graph's collecting semantics reaches node `v` with store `s`. Here it is a premise: the theorem speaks about every store the program can really have at `v`.",
-      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
-      linkText: "node_collect",
+      link: REACHING,
+      linkText: "reaching",
     },
     cover: {
-      clause: "s ∈ ℛ⇘res⇙ v",
-      text: "Some state the report holds at `v`, under one of the contexts solved there, describes `s`. Not every context has to: another activation's state need not describe this store.",
-      link: isaConst("Voblint_CLI", "Analysis_Report", "report_sem"),
-      linkText: "report_sem",
+      clause: "∃d. Lifted d ∈ report_states_at res v ∧ s ∈ mcp.act_gamma ds … d",
+      text: "Some state the report holds at `v`, under one of the contexts solved there, describes `s`, read through the concretization of the activated analyses. Not every context has to: another activation's state need not describe this store.",
+      link: isaConst(...REPORT, "report_states_at"),
+      linkText: "report_states_at",
     },
     checks: {
-      clause: "s ∈ 𝒱ᵣₑₛ v",
-      text: "Every definite verdict the report gives at `v` is valid in `s`: `PROVED` means the condition is true in `s`, `REFUTED` that it is false. `UNKNOWN` claims nothing.",
-      link: isaConst("Voblint_CLI", "Analysis_Report", "verdict_stores"),
-      linkText: "verdict_stores",
+      clause:
+        "¬ DEAD res v ∧ (∀c. PROVED res v c ⟶ truthy (eval c s)) ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (eval c s))",
+      text: "`v` is not DEAD, and every definite verdict the report gives at `v` is valid in `s`: `PROVED` means the condition is true in `s`, `REFUTED` that it is false. `UNKNOWN` claims nothing.",
+      link: isaConst(...REPORT, "HAS_VERDICT"),
+      linkText: "HAS_VERDICT",
+    },
+    safe0: {
+      clause: "SAFE res v ⟶ (∀ob ∈ obligations_at ds p v. s ⊨ ob)",
+      text: "If the report names no arithmetic diagnostic at `v`, every obligation of the expressions evaluated there holds in `s`: no zero divisor, no signed overflow, no conversion out of range.",
+      link: OBLIGATIONS,
+      linkText: "obligation_holds",
     },
     notdead: {
       clause: "check_verdict c ≠ Dead",
-      text: "The check is not DEAD: the store `s` lies in the report's semantics at its node, and a DEAD node has none.",
-      link: isaConst("Voblint_CLI", "Analysis_Report", "DEAD"),
+      text: "The check is not DEAD: the store `s` reaches its node, and the report describes every reaching store, which a DEAD node cannot.",
+      link: isaConst(...REPORT, "DEAD"),
       linkText: "DEAD",
     },
     next: {
@@ -102,55 +117,55 @@
     },
     listed: {
       clause:
-        "∃c ∈ set (report_checks res). check_label c = l ∧ check_exp c = e ∧ s ∈ node_collect … (check_point c)",
-      text: "The report lists a check `c` under the label `l`, with condition `e`, at a node the store `s` really reaches. The report prints each row at its own label, so the verdict shown at a check's line is this row's.",
-      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
-      linkText: "check_sites",
+        "∃c ∈ set (report_checks res). check_label c = l ∧ check_exp c = e ∧ s ∈ reaching ds p (check_point c)",
+      text: "The report lists a check `c` under the label `l`, with condition `e`, at a node the store `s` really reaches.",
+      link: REACHING,
+      linkText: "reaching",
     },
     holds: {
       clause:
-        "(check_verdict c = Decided Check_Proved ⟶ truthy (aval e s)) ∧ (… Check_Refuted ⟶ ¬ truthy (aval e s))",
-      text: "Evaluating `e` in the store `s` agrees with the verdict: true for `PROVED`, false for `REFUTED`.",
-      link: isaConst("Voblint_CLI", "Analysis_Report", "verdict_stores"),
-      linkText: "verdict_stores",
-    },
-    listed2: {
-      clause: "chk ∈ set (report_checks res)",
-      text: "`chk` is one of the checks the report lists.",
-      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
-      linkText: "check_sites",
+        "(check_verdict c = Decided Check_Proved ⟶ truthy (eval e s)) ∧ (… Check_Refuted ⟶ ¬ truthy (eval e s))",
+      text: "Evaluating `e` in the store `s` agrees with the verdict: true for `PROVED`, false for `REFUTED`. `eval` is core VIMP's evaluation, with every operation wrapped into its kind.",
+      link: isaConst("Voblint_VIMP", "Core_Exp", "eval"),
+      linkText: "eval",
     },
     deadv: {
-      clause: "check_verdict chk = Dead",
-      text: "The report marks that check DEAD: every state it holds at the check's node is ⊥.",
-      link: isaConst("Voblint_CLI", "Analysis_Report", "DEAD"),
+      clause: "DEAD res v",
+      text: "The report marks node `v` DEAD: every state it holds there is ⊥.",
+      link: isaConst(...REPORT, "DEAD"),
       linkText: "DEAD",
     },
     empty: {
-      clause:
-        "node_collect (declared_global p) (prog_cfg p) (cinit_stores …) (check_point chk) = {}",
-      text: "The collecting semantics has no store at the check's node: no run, starting with its globals at zero, ever gets there.",
-      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
-      linkText: "node_collect",
+      clause: "reaching ds p v = {}",
+      text: "The collecting semantics has no store at `v`: no run, starting with its globals at zero, ever gets there.",
+      link: REACHING,
+      linkText: "reaching",
     },
     nodiag: {
-      clause: "∀d ∈ set (report_diagnostics res). diagnostic_point d ≠ v",
+      clause: "SAFE res v",
       text: "The report lists no arithmetic diagnostic, neither a warning nor an error, at node `v`.",
-      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "arithmetic_safe_at"),
-      linkText: "arithmetic_safe_at",
+      link: isaConst(...REPORT, "SAFE"),
+      linkText: "SAFE",
     },
     div: {
-      clause: "arithmetic_safe_at (prog_cfg p) v s",
-      text: "For every arithmetic expression on the graph's edges at `v`, every divisor evaluates to a non-zero value in `s`. The corollary `run_voblint_arithmetic_intra_safe` states it for one edge at a time.",
-      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "arithmetic_safe_at"),
-      linkText: "arithmetic_safe_at",
+      clause:
+        "(v, a, w) ∈ intra (elab_cfg p ds) ⟹ e ∈ set (edge_expressions a) ⟹ ob ∈ set (arith_obligations e) ⟹ s ⊨ ob",
+      text: "For every expression on an edge leaving `v`, every obligation it raises holds in `s`: a divisor is non-zero, a signed operation's mathematical result lies in its kind, a narrowing conversion's operand fits its target. The theorem's other two parts state the same for a call's arguments and for a value returned to a caller.",
+      link: OBLIGATIONS,
+      linkText: "obligation_holds",
+    },
+    distinct: {
+      clause: "distinct (map check_label (report_checks res))",
+      text: "No two rows of the report carry the same label. The renderers check this on the result and fail otherwise.",
+      link: isaFact("Voblint_CLI", "Run_Voblint", "run_voblint_labelled_check_sound"),
+      linkText: "run_voblint_labelled_check_sound",
     },
     sites: {
       clause:
-        "map (λchk. (check_point chk, check_label chk, check_exp chk)) (report_checks res) = check_sites (prog_cfg p)",
-      text: "Read as (node, label, condition) triples, the result's checks are exactly the check edges of the compiled graph, in the graph's edge order. Nothing is dropped or invented, and each keeps the label of the source check it came from.",
-      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
-      linkText: "check_sites",
+        "∀c ∈ set (report_checks res). check_label c = l ⟶ check_exp c = e ∧ check_verdict c ≠ Dead ∧ (… Proved ⟶ truthy (eval e s)) ∧ (… Refuted ⟶ ¬ truthy (eval e s))",
+      text: "A row exists under the label `l`, and every row under it is the row for the check about to run: same condition, not DEAD, and its verdict holds in `s`. The verdict shown at a check's line is therefore that check's.",
+      link: isaFact("Voblint_CLI", "Run_Voblint", "run_voblint_labelled_check_sound"),
+      linkText: "run_voblint_labelled_check_sound",
     },
   };
 
@@ -200,31 +215,38 @@
   const ISABELLE_CONSTANTS = new Set([
     "star",
     "pstep",
-    "declared_global",
-    "prog_table",
+    "elab_ptable",
+    "elab_cfg",
+    "kenv_of",
+    "init_stores",
     "main_body",
     "run_voblint",
-    "csim",
-    "at_node",
     "prog_main_name",
-    "prog_cfg",
-    "node_collect",
-    "cinit_stores",
-    "report_sem",
-    "verdict_stores",
+    "reaching",
+    "report_states_at",
+    "mcp",
+    "act_gamma",
+    "activation_of",
+    "conf_analyses",
+    "DEAD",
+    "PROVED",
+    "REFUTED",
+    "SAFE",
+    "obligations_at",
     "next_check",
     "set",
     "report_checks",
+    "check_label",
     "check_exp",
     "check_point",
     "check_verdict",
     "truthy",
-    "aval",
-    "report_diagnostics",
-    "diagnostic_point",
-    "arithmetic_safe_at",
+    "eval",
+    "intra",
+    "edge_expressions",
+    "arith_obligations",
+    "distinct",
     "map",
-    "check_sites",
   ]);
 
   const span = (kind, text) => `<span class="isa-${kind}">${escapeText(text)}</span>`;
@@ -243,8 +265,8 @@
       (_whole, word, symbol, rest) => {
         if (word) {
           if (bound.has(word)) return span("bound", word);
-          if (/^[A-Z][\w']+$/.test(word)) return span("ctor", word);
           if (ISABELLE_CONSTANTS.has(word)) return escapeText(word);
+          if (/^[A-Z][\w']+$/.test(word)) return span("ctor", word);
           return span("free", word);
         }
 

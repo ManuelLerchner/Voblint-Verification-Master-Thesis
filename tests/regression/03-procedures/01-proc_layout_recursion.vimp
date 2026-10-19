@@ -84,7 +84,7 @@
 //   main_pp12_ctx0 -> main_pp13_ctx0: call-to-return inc
 // EXPECT-GRAPH-END
 
-global G;
+global i32 G;
 fun f() {
   if (G < 1) { f(); } else { G = G; }
 }

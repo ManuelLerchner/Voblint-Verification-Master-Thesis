@@ -1,23 +1,20 @@
 theory Analysis_Run
   imports
     Arithmetic_Diagnostics
+    Dispatch_Carrier
     MCP_Split
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
 
-section \<open>Running one configuration once\<close>
+section \<open>The report of one run\<close>
 
 text \<open>
-  The public analysis operation. A caller hands over the three choices that
-  decide what gets solved and a program, and receives the solve as a report:
-  every covered point-and-context state, the contexts each call enters, the check
-  column and the arithmetic diagnostics. One solve stands behind all of them. The
-  report holds semantic states, never their rendering; text, graphs and report
-  pages are built from it by a projection outside the theorems.
-
-  Nothing outside this theory decides which analyser runs: the one function below
-  that reads the context policy names the registration that policy solves with.
+  A solve is handed back as a report: every covered point-and-context state, the
+  contexts each call enters, the check column and the arithmetic diagnostics. One
+  solve stands behind all of them. The report holds semantic states, never their
+  rendering; text, graphs and report pages are built from it by a projection outside
+  the theorems.
 \<close>
 
 subsection \<open>The rows of a report\<close>
@@ -38,12 +35,12 @@ text \<open>
   the effect of one statement survives.
 \<close>
 
-record 's result_state =
+record ('e, 's) result_state =
   state_point :: pp
   state_context :: nat
   state_value :: "'s lifted"
-  state_checks :: "(exp \<times> contextual_verdict) list"
-  state_diagnostics :: "(arithmetic_obligation \<times> contextual_verdict) list"
+  state_checks :: "('e \<times> contextual_verdict) list"
+  state_diagnostics :: "('e arithmetic_obligation \<times> contextual_verdict) list"
   state_steps :: "(pp \<times> 's lifted) list"
 
 record call_route =
@@ -52,10 +49,10 @@ record call_route =
   route_callee :: pname
   route_targets :: "nat list"
 
-record result_check =
+record 'e result_check =
   check_point :: pp
   check_label :: check_label
-  check_exp :: exp
+  check_exp :: 'e
   check_verdict :: contextual_verdict
 
 text \<open>
@@ -65,15 +62,15 @@ text \<open>
   entered.
 \<close>
 
-datatype result_global_unknown =
-    Global_Named vname
+datatype 'n result_global_unknown =
+    Global_Named 'n
   | Global_Seed pname "nat option"
 
-record 's result_global =
-  global_unknown :: result_global_unknown
+record ('n, 's) result_global =
+  global_unknown :: "'n result_global_unknown"
   global_state :: "'s lifted"
 
-definition map_result_state :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_state \<Rightarrow> 't result_state" where
+definition map_result_state :: "('s \<Rightarrow> 't) \<Rightarrow> ('e, 's) result_state \<Rightarrow> ('e, 't) result_state" where
   "map_result_state f st =
      \<lparr> state_point = state_point st,
        state_context = state_context st,
@@ -82,35 +79,10 @@ definition map_result_state :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_st
        state_diagnostics = state_diagnostics st,
        state_steps = map (\<lambda>(w, s). (w, map_lift f s)) (state_steps st) \<rparr>"
 
-definition map_result_global :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_global \<Rightarrow> 't result_global" where
+definition map_result_global :: "('s \<Rightarrow> 't) \<Rightarrow> ('n, 's) result_global \<Rightarrow> ('n, 't) result_global" where
   "map_result_global f g =
      \<lparr> global_unknown = global_unknown g,
        global_state = map_lift f (global_state g) \<rparr>"
-
-subsection \<open>The configuration\<close>
-
-text \<open>
-  A caller's three choices travel together as one value: the analyses that run, the
-  rule for side-effected globals, and the context policy. A configuration is valid
-  when it activates at least one analysis and none twice.
-\<close>
-
-text \<open>
-  Where a program's globals live: in every point's own state, flow-sensitively, or
-  each at its own global unknown, as a flow-insensitive value read only by the
-  edges that mention it.
-\<close>
-
-datatype program_globals = Program_Globals_Flow_Sensitive | Program_Globals_Flow_Insensitive
-
-datatype analysis_config = Analysis_Config
-  (config_analyses: "analysis_domain list")
-  (config_rule: globals_rule)
-  (config_context: context_mode)
-  (config_globals: program_globals)
-
-definition valid_config :: "analysis_config \<Rightarrow> bool" where
-  "valid_config config \<longleftrightarrow> config_analyses config \<noteq> [] \<and> distinct (config_analyses config)"
 
 subsection \<open>The report\<close>
 
@@ -118,24 +90,26 @@ text \<open>
   A context is kept as the policy's own value, tagged by policy, so one report type
   serves every policy. The report also keeps the configuration, which names the
   concretization its states are read through, and the program's variables, which a
-  rendering lists.
+  rendering lists. The configuration, the context tag, the variables, the expressions,
+  the global names and the states are parameters, so one report and one builder serve
+  every language an analysis runs on.
 \<close>
 
-datatype report_context =
+datatype 'm report_context =
     Report_Unit
-  | Report_Entry mcp_ctx
+  | Report_Entry 'm
   | Report_Call_String "pp list"
 
-record analysis_report =
-  report_config :: analysis_config
-  report_vars :: "vname list"
-  report_cfg :: cfg
-  report_contexts :: "report_context list"
-  report_states :: "mcp_val result_state list"
+record ('k, 'x, 'vr, 'e, 'n, 's) analysis_report =
+  report_config :: 'k
+  report_vars :: "'vr list"
+  report_cfg :: "('vr, 'e) gcfg"
+  report_contexts :: "'x list"
+  report_states :: "('e, 's) result_state list"
   report_routes :: "call_route list"
-  report_checks :: "result_check list"
-  report_globals :: "mcp_val result_global list"
-  report_diagnostics :: "arithmetic_diagnostic list"
+  report_checks :: "'e result_check list"
+  report_globals :: "('n, 's) result_global list"
+  report_diagnostics :: "'e arithmetic_diagnostic list"
 
 subsection \<open>One builder for every context policy\<close>
 
@@ -202,7 +176,8 @@ text \<open>
 \<close>
 
 definition result_checks_of ::
-    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> result_check list"
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> ('ctx, 'a) solved_table
+       \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> 'e result_check list"
 where
   "result_checks_of g r classify =
      map (\<lambda>(u, a, w).
@@ -217,16 +192,16 @@ text \<open>
 \<close>
 
 definition live_targets ::
-    "(pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)
-       \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list" where
+    "(pp \<Rightarrow> 'c \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> 'c option)
+       \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> 'c list" where
   "live_targets succ u ctx ca q = (case succ u ctx ca q of None \<Rightarrow> [] | Some ctx' \<Rightarrow> [ctx'])"
 
 text \<open>
-  The globals column lists the global unknowns of the constraint system: with
-  flow-insensitive program globals, one unknown per declared global, then for every
-  procedure the seed of each context its entry was solved at. A procedure entered at
-  no context is listed once, unreachable. Flow-sensitive program globals sit in
-  every point's own state and have no unknown of their own.
+  The globals column lists the global unknowns of the constraint system: one unknown
+  per global name the placement keeps apart, then for every procedure the seed of each
+  context its entry was solved at. A procedure entered at no context is listed once,
+  unreachable. Globals the placement keeps in every point's own state have no unknown
+  of their own.
 \<close>
 
 text \<open>
@@ -236,35 +211,44 @@ text \<open>
 \<close>
 
 definition report_row ::
-    "('c, vname, mcp_val) solved_run \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result)
-       \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, arithmetic_obligation list list) rbt
-       \<Rightarrow> (pp, (edge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> mcp_val result_state" where
-  "report_row sr classify conds obls edges i ctx v =
+    "('c, 'n, 's) solved_run \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> (exp arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, exp arithmetic_obligation list list) rbt
+       \<Rightarrow> (pp, ((var_id, exp) gedge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp
+       \<Rightarrow> (exp, 's) result_state" where
+  "report_row sr classify classify_ob conds obls edges i ctx v =
      (let state = lookup_table (run_table sr) v ctx
       in \<lparr> state_point = v, state_context = i,
            state_value = state,
            state_checks =
-             map (\<lambda>cond. (cond, classify_point classify cond state)) (group_lookup conds v),
+             map (\<lambda>c. (c, classify_point classify c state)) (group_lookup conds v),
            state_diagnostics =
-             map (\<lambda>obligation. (obligation,
-                                  classify_point classify (arithmetic_condition obligation) state))
+             map (\<lambda>obligation. (obligation, classify_point classify_ob obligation state))
                (concat (group_lookup obls v)),
            state_steps = map (\<lambda>(a, w). (w, run_step sr v ctx a)) (group_lookup edges v) \<rparr>)"
 
 lemma report_row_simps [simp]:
-  "state_point (report_row sr classify conds obls edges i ctx v) = v"
-  "state_context (report_row sr classify conds obls edges i ctx v) = i"
-  "state_value (report_row sr classify conds obls edges i ctx v)
+  "state_point (report_row sr classify classify_ob conds obls edges i ctx v) = v"
+  "state_context (report_row sr classify classify_ob conds obls edges i ctx v) = i"
+  "state_value (report_row sr classify classify_ob conds obls edges i ctx v)
      = lookup_table (run_table sr) v ctx"
   by (simp_all add: report_row_def Let_def)
 
+text \<open>
+  The builder reads the program only through what it is handed: its variables, its
+  graph, the global names kept at their own unknowns, the arithmetic obligation sites
+  with the classifier that decides one, and its procedures.
+\<close>
+
 definition report_of ::
-    "analysis_config \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> report_context)
-       \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result) \<Rightarrow> ('c, vname, mcp_val) solved_run \<Rightarrow> imp_prog
-       \<Rightarrow> analysis_report" where
-  "report_of config ctx_key ctx_tag classify sr p =
-     (let g = prog_cfg p;
-          r = run_table sr;
+    "'k \<Rightarrow> var_id list \<Rightarrow> (var_id, exp) gcfg \<Rightarrow> 'n list
+       \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list
+       \<Rightarrow> (exp arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> pname list \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> 'x)
+       \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> ('c, 'n, 's) solved_run
+       \<Rightarrow> ('k, 'x, var_id, exp, 'n, 's) analysis_report" where
+  "report_of config vars g globals sites classify_ob procs ctx_key ctx_tag classify sr =
+     (let r = run_table sr;
           ctxs = ordered_by_key ctx_key (snd ` covered_keys r);
           indexed = enumerate 0 ctxs;
           nodes = cfg_node_list g
@@ -273,8 +257,8 @@ definition report_of ::
           steps = group_by_key (\<lambda>(u, a, w). u) (\<lambda>(u, a, w). Some (a, w)) intra;
           checks = group_by_key (\<lambda>(u, a, w). u)
             (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) intra;
-          obligations = group_by_key fst (Some \<circ> snd) (arithmetic_sites g);
-          state_at = report_row sr classify checks obligations steps;
+          obligations = group_by_key fst (Some \<circ> snd) sites;
+          state_at = report_row sr classify classify_ob checks obligations steps;
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
               route_targets =
@@ -291,7 +275,7 @@ definition report_of ::
                                    global_state = run_seed sr f ctx \<rparr>)
                    entered))
       in \<lparr> report_config = config,
-           report_vars = program_vars p,
+           report_vars = vars,
            report_cfg = g,
            report_contexts = map ctx_tag ctxs,
            report_states =
@@ -306,159 +290,12 @@ definition report_of ::
                        (cfg_calls_list g)),
            report_checks = result_checks_of g r classify,
            report_globals =
-             (case config_globals config of
-                Program_Globals_Flow_Sensitive \<Rightarrow> []
-              | Program_Globals_Flow_Insensitive \<Rightarrow>
-                  map (\<lambda>x. \<lparr> global_unknown = Global_Named x, global_state = run_shared sr x \<rparr>)
-                    (declared_global_vars p))
-               @ concat (map seeds_of (prog_main_name # prog_procs p)),
-           report_diagnostics = arithmetic_diagnostics g r classify \<rparr>)"
+             map (\<lambda>x. \<lparr> global_unknown = Global_Named x, global_state = run_shared sr x \<rparr>)
+               globals
+             @ concat (map seeds_of procs),
+           report_diagnostics = arithmetic_diagnostics sites r classify_ob \<rparr>)"
 
-subsection \<open>One configuration, one report\<close>
-
-text \<open>
-  An entry-state context reads as the formal values the active analyses key it by,
-  in activation order, and is listed in the order of those values. Those values
-  alone do not tell every context apart --- they skip the fields of inactive
-  analyses --- so the whole context breaks ties, which makes the key injective and
-  leaves the order of contexts that the values already tell apart unchanged.
-\<close>
-
-definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
-  "mcp_ctx_values as ctx = concat (map (\<lambda>a. context_values (registration_of a) ctx) as)"
-
-definition entry_ctx_key :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> order_key" where
-  "entry_ctx_key as ctx =
-     Key_List [Key_List (map abstract_value_key (mcp_ctx_values as ctx)), mcp_ctx_key ctx]"
-
-lemma entry_ctx_key_inject: "entry_ctx_key as a = entry_ctx_key as b \<Longrightarrow> a = b"
-  by (simp add: entry_ctx_key_def mcp_ctx_key_inject)
-
-text \<open>
-  The one place the context policy is read. Each policy names the registration the
-  active analyses run as under the chosen global update rule, solves its equations
-  with the executable solver from the program exit at the root context, and reads
-  the report off the answer. The logical \<open>None\<close> branch of \<open>solve_c\<close> yields no report.
-  Where the solve diverges, the generated code does not return at all, so that
-  branch is not an operational timeout result.
-\<close>
-text \<open>
-  The executable boundary, specialised once. The registrations are generic in their
-  carrier; these three constants fix it at the combined state and leave only the
-  context and global-key types open. Generated code then builds the carrier's
-  equality and lattice dictionaries inside each constant rather than inline in every
-  branch below.
-\<close>
-
-text \<open>
-  The placement the configuration chooses: the component as it is, or wrapped by the
-  keyed lifter with each program global at its own unknown and a point's state
-  recombined against the solved global environment.
-\<close>
-
-definition mcp_place_spec :: "program_globals \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted local_spec
-    \<Rightarrow> (pp \<times> 'c, 'k, vname, mcp_st lifted, mcp_st lifted) dg_spec" where
-  "mcp_place_spec pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> c. dg_spec_of c)
-   | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>p c. keyed_split_spec (declared_global p)
-       split_cmb split_rl split_global_at split_free c))"
-
-definition mcp_place_cmb ::
-    "program_globals \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
-       \<Rightarrow> mcp_st lifted" where
-  "mcp_place_cmb pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d e. d)
-   | Program_Globals_Flow_Insensitive \<Rightarrow>
-       (\<lambda>p d e. split_cmb d (full_view split_global_at (declared_global_vars p) e)))"
-
-definition mcp_place_rl :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
-  "mcp_place_rl pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d. d) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_rl))"
-
-definition mcp_place_rg :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
-  "mcp_place_rg pg = (\<lambda>\<G> d. Bot)"
-
-definition mcp_place_inits :: "program_globals \<Rightarrow> analysis_domain list
-    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (vname \<times> mcp_st lifted) list" where
-  "mcp_place_inits pg as = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> p. [])
-   | Program_Globals_Flow_Insensitive \<Rightarrow>
-       (\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init as)))) (declared_global_vars p)))"
-
-definition mcp_place_enter ::
-    "program_globals \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
-       \<Rightarrow> mcp_st lifted" where
-  "mcp_place_enter pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>p ci d e. d)
-   | Program_Globals_Flow_Insensitive \<Rightarrow>
-       (\<lambda>p ci d e. split_cmb d (view_of split_global_at (call_global_reads (declared_global p)
-          (ci_args ci)) e (split_free (call_global_reads (declared_global p) (ci_args ci))))))"
-
-lemmas mcp_place_defs = mcp_place_spec_def mcp_place_cmb_def mcp_place_rl_def mcp_place_rg_def
-  mcp_place_inits_def mcp_place_enter_def
-
-definition mcp_equations ::
-    "analysis_domain list \<Rightarrow> program_globals \<Rightarrow> 'k \<Rightarrow> (vname \<Rightarrow> 'k) \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c
-       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
-  "mcp_equations as pg buffer global seed route root =
-     dg_pipeline.equations (mcp_comp as) (mcp_init as) buffer global seed route root
-       (mcp_place_spec pg) (mcp_place_rg pg) (mcp_place_inits pg as)"
-
-definition mcp_solve_c ::
-    "globals_rule \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c
-       \<Rightarrow> ((pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)) option"
-  where
-  "mcp_solve_c = TD_side_rule_Interp_solve_c"
-
-definition mcp_run_of ::
-    "analysis_domain list \<Rightarrow> program_globals \<Rightarrow> (vname \<Rightarrow> 'k) \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
-       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)
-       \<Rightarrow> ('c, vname, mcp_val) solved_run" where
-  "mcp_run_of as pg global seed route =
-     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route
-       (mcp_place_cmb pg) (mcp_place_rl pg) (mcp_place_enter pg)"
-
-lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
-
-
-fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report option" where
-  "analysis_report_of (Analysis_Config as r Ctx_None pg) p =
-     map_option
-       (\<lambda>sol. report_of (Analysis_Config as r Ctx_None pg) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
-          (mcp_classify (activation as))
-          (mcp_run_of (activation as) pg Analysis_Global Activation_Seed (\<lambda>_. route_unit)
-             (declared_global p) p sol) p)
-       (mcp_solve_c r
-          (mcp_equations (activation as) pg Analysis_Buffer Analysis_Global Activation_Seed
-             (\<lambda>_. route_unit) () (declared_global p) p)
-          (cfg_exit (prog_cfg p), ()))"
-| "analysis_report_of (Analysis_Config as r Ctx_EntryState pg) p =
-     map_option
-       (\<lambda>sol. report_of (Analysis_Config as r Ctx_EntryState pg)
-          (entry_ctx_key (activation as)) Report_Entry (mcp_classify (activation as))
-          (mcp_run_of (activation as) pg Analysis_Global Activation_Seed
-             (mcp_formals_route (activation as)) (declared_global p) p sol) p)
-       (mcp_solve_c r
-          (mcp_equations (activation as) pg Analysis_Buffer Analysis_Global Activation_Seed
-             (mcp_formals_route (activation as)) mcp_root_ctx (declared_global p) p)
-          (cfg_exit (prog_cfg p), mcp_root_ctx))"
-| "analysis_report_of (Analysis_Config as r (Ctx_CallString k) pg) p =
-     map_option
-       (\<lambda>sol. report_of (Analysis_Config as r (Ctx_CallString k) pg)
-          (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
-          (mcp_classify (activation as))
-          (mcp_run_of (activation as) pg Analysis_Global Activation_Seed
-             (\<lambda>_. cs_route k) (declared_global p) p sol) p)
-       (mcp_solve_c r
-          (mcp_equations (activation as) pg Analysis_Buffer Analysis_Global Activation_Seed
-             (\<lambda>_. cs_route k) [] (declared_global p) p)
-          (cfg_exit (prog_cfg p), []))"
-
-subsection \<open>The public operation\<close>
+subsection \<open>The answer\<close>
 
 text \<open>
   Four answers: an invalid configuration asks for no run, a malformed program was
@@ -471,15 +308,5 @@ datatype 'r analysis_answer =
   | Malformed_Program
   | No_Answer
   | Analysed 'r
-
-definition run_voblint ::
-  "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report analysis_answer"
-where
-  "run_voblint config p =
-     (if \<not> valid_config config then Invalid_Activation
-      else if \<not> wf_program_compile_input_exec p then Malformed_Program
-      else case analysis_report_of config p of
-             None \<Rightarrow> No_Answer
-           | Some res \<Rightarrow> Analysed res)"
 
 end

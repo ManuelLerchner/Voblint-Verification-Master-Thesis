@@ -88,10 +88,6 @@ where
        sp_return (DG (snd (step (dg_local d) (dg_global g))) (fst (step (dg_local d) (dg_global g))))
      })"
 
-lemma dep_dg_edge_program_at:
-  "dep_program tau (dg_edge_program_at step src gk) = {src, Inr gk}"
-  by (cases src) (simp_all add: dg_edge_program_at_def sp_compile_def)
-
 lemma sp_wf_dg_edge_program_at [intro, simp]: "sp_wf (dg_edge_program_at step src gk)"
   unfolding dg_edge_program_at_def by (intro sp_wf_bind) simp_all
 
@@ -251,20 +247,6 @@ lemma side_rhs_fold_dg_mono:
   by (auto intro!: traverse_fold_rhs_program_projected_mono[OF wf mono_dg_local mono_DG_bot])
 
 text \<open>
-  The vendored solver's own @{const mono_deps} precondition only needs the
-  weaker, order-conditional guarantee @{const mono_tree_deps}, not the full
-  equality @{const env_indep_deps}; the generic fold already carries it, so
-  this instance is one line.
-\<close>
-
-lemma side_rhs_fold_dg_mono_tree_deps:
-  assumes wf: "\<forall>p \<in> set ps. sp_wf p"
-    and prog_mono: "\<And>p. p \<in> set ps \<Longrightarrow> mono_tree_deps (sp_compile p)"
-  shows "mono_tree_deps (sp_compile (side_rhs_fold_dg acc ps))"
-  unfolding side_rhs_fold_dg_def
-  by (rule mono_tree_deps_fold_rhs_program_projected[OF wf prog_mono])
-
-text \<open>
   The fold's contributions are carried only by the per-contribution Side
   nodes; the accumulator flows into the final \<open>Answer\<close> (whose own sides are
   \<open>bot\<close>), so the side map is acc-independent --- the same fact
@@ -309,17 +291,6 @@ text \<open>The same equation with the accumulator left as the fold's seed, whic
 lemma side_acc_dg_as_foldr_seeded:
   "side_acc_dg acc \<tau> ps = foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) ps acc"
   by (simp only: side_acc_dg_as_foldr foldr_join_seed_out)
-
-lemma side_rhs_fold_dg_sides_mono:
-  assumes wf: "\<forall>p \<in> set ps. sp_wf p"
-    and prog_sides_mono:
-      "\<forall>p \<in> set ps. \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_program p s1 \<le> sides_of_program p s2"
-  shows "\<And>acc s1 s2. s1 \<le> s2 \<Longrightarrow>
-           sides_of_program (side_rhs_fold_dg acc ps) s1
-             \<le> sides_of_program (side_rhs_fold_dg acc ps) s2"
-  using prog_sides_mono
-  unfolding side_rhs_fold_dg_def
-  by (auto intro!: sides_of_program_fold_rhs_program_projected_mono[OF wf])
 
 subsection \<open>Pushing a projection through a join-fold\<close>
 

@@ -178,7 +178,7 @@ text \<open>
   meet of its components' answers.
 \<close>
 
-definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
+definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x, 'k, 'v, 'dl, 'dg) man" where
   "mk_dg_man d unknown_of = \<lparr>
      man_local = d,
      man_global = (\<lambda>v. dg_read_global (unknown_of v)),
@@ -214,7 +214,7 @@ lemma mk_dg_man_local_update [simp]:
   by (simp_all add: mk_dg_man_def)
 
 type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
-  "('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+  "('x, 'k, 'v, 'dl, 'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
 
 text \<open>
   A query handler takes the same manager and answers the query in the answer
@@ -222,7 +222,7 @@ text \<open>
 \<close>
 
 type_synonym ('x,'k,'v,'dl,'dg) man_query =
-  "('x,'k,'v,'dl,'dg) man \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
+  "('x, 'k, 'v, 'dl, 'dg) man \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
 
 text \<open>
   A combine-shaped transfer takes the same manager plus the callee-exit
@@ -231,7 +231,7 @@ text \<open>
 \<close>
 
 type_synonym ('x,'k,'v,'dl,'dg) man_combine_transfer =
-  "('x,'k,'v,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+  "('x, 'k, 'v, 'dl, 'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
 
 text \<open>
   A call answers a list of alternatives, and each alternative is a pair: the
@@ -250,7 +250,7 @@ text \<open>
 type_synonym 'dl enter_result = "'dl \<times> 'dl"
 
 type_synonym ('x,'k,'v,'dl,'dg) man_enter_transfer =
-  "('x,'k,'v,'dl,'dg) man
+  "('x, 'k, 'v, 'dl, 'dg) man
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl enter_result list) strategy_program"
 
 text \<open>

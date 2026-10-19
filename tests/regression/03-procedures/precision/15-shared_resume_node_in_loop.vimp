@@ -5,12 +5,13 @@
 // publication to after every contribution has been read, which reorders the
 // unknowns the solver visits on the first pass; narrowing is sensitive to that
 // order, so a loop is where a reordering that costs precision would surface.
-fun f(n) {
+fun i32 f(i32 n) {
   return n;
 }
 fun main() {
-  i = 0;
+  i32 i = 0;
   while (i < 10) {
+    i32 a;
     if (i < 5) {
       a = f(1);
     } else {

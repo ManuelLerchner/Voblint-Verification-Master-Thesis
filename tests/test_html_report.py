@@ -143,13 +143,13 @@ def test_graph_pane_is_the_dot_drawing(report):
     assert dot == cli
 
 
-@pytest.mark.parametrize("dead_call", ["a = f(3);", "a = f(\n  3\n);", "f(3);"])
+@pytest.mark.parametrize("dead_call", ["i32 a = f(3);", "i32 a = f(\n  3\n);", "f(3);"])
 def test_dead_calls_keep_their_operation_without_a_callee_context(tmp_path, dead_call):
     source = tmp_path / "dead_call.vimp"
     source.write_text(
-        "fun f(n) { return n; }\n"
-        "fun main() { x = 5; if (x < 2) { " + dead_call + " } "
-        "b = f(7); __voblint_check(b == 7); }\n"
+        "fun i32 f(i32 n) { return n; }\n"
+        "fun main() { i32 x = 5; if (x < 2) { " + dead_call + " } "
+        "i32 b = f(7); __voblint_check(b == 7); }\n"
     )
     out = tmp_path / "result"
     proc = subprocess.run(
@@ -403,9 +403,9 @@ def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
     """
     src = tmp_path / "seeded.vimp"
     src.write_text(
-        "fun bump(n) {\n  m = n + 1;\n  return m;\n}\n\n"
-        "fun never() {\n  return 0;\n}\n\n"
-        "fun main() {\n  x = 7;\n  y = bump(x);\n  __voblint_check(y == 8);\n}\n"
+        "fun i32 bump(i32 n) {\n  i32 m = n + 1;\n  return m;\n}\n\n"
+        "fun i32 never() {\n  return 0;\n}\n\n"
+        "fun main() {\n  i32 x = 7;\n  i32 y = bump(x);\n  __voblint_check(y == 8);\n}\n"
     )
     out = _run(tmp_path, "--analysis", "interval", str(src))
     rows = {
@@ -413,7 +413,7 @@ def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
         for g in ET.parse(out / "nodes" / "globals.xml").getroot().findall("glob")
     }
     assert "enter bump" in rows, rows.keys()
-    assert "<key>n</key><value>[7,7]</value>" in rows["enter bump"], (
+    assert "<key>bump::n</key><value>[7,7]</value>" in rows["enter bump"], (
         f"the seed does not carry the actual argument: {rows['enter bump']}"
     )
     assert "unreachable" in rows["enter never"], (
@@ -481,7 +481,7 @@ def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
     src = tmp_path / "dead_then_live.vimp"
     src.write_text(
         "fun main() {\n"
-        "  x = 5;\n"
+        "  i32 x = 5;\n"
         "  if (x < 0) {\n"
         "    __voblint_check(x == 99);\n"
         "  } else {\n"
@@ -567,8 +567,8 @@ def test_context_sensitive_globals_show_one_seed_per_context(tmp_path):
         v
         for k in seeds
         for v in [
-            "[3,3]" if "<key>n</key><value>[3,3]</value>" in rows[k] else "",
-            "[4,4]" if "<key>n</key><value>[4,4]</value>" in rows[k] else "",
+            "[3,3]" if "<key>square::n</key><value>[3,3]</value>" in rows[k] else "",
+            "[4,4]" if "<key>square::n</key><value>[4,4]</value>" in rows[k] else "",
         ]
         if v
     )
@@ -629,7 +629,8 @@ def test_several_domains_run_as_one_analysis(tmp_path):
         assert names == ["int", "interval", "sign"], (doc.name, names)
 
     # Interval and Sign alone leave this check UNKNOWN; Int proves it, and the
-    # met answer keeps Int's verdict.
+    # met answer keeps Int's verdict. Arithmetic diagnostics share the status
+    # rows, so only the check's row is compared.
     reported = [
         " ".join(v.text for v in status.iter("value") if v.text)
         for status in (
@@ -638,7 +639,8 @@ def test_several_domains_run_as_one_analysis(tmp_path):
         )
         if status is not None
     ]
-    assert reported == ["check y == 2 PROVED"], reported
+    reported = [row for row in reported if row.startswith("check ")]
+    assert reported == ["check x == 3 PROVED"], reported
 
 
 def test_context_sensitive_report_draws_contexts_and_verdicts(tmp_path):

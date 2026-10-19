@@ -6,11 +6,11 @@
   const GAMMA_PRESETS = [
     { label: "[−2, 5]", kind: "interval", test: (x) => x >= -2 && x <= 5 },
     {
-      label: "[3, +∞]",
+      label: "[3, 2³¹−1]",
       kind: "interval",
       test: (x) => x >= 3,
       tail: "right",
-      note: "The set continues past 12 forever.",
+      note: "The set continues past 12 up to 2³¹−1, the largest `i32`.",
     },
     { label: "≥ 0", kind: "sign", test: (x) => x >= 0, tail: "right" },
     { label: "< 0", kind: "sign", test: (x) => x < 0, tail: "left" },
@@ -23,9 +23,9 @@
       note: "Modulus 0 pins the value: exactly 4.",
     },
     {
-      label: "≥0 · [0,9] · odd · 1 (mod 3)",
+      label: "[0,9] · 1 (mod 6)",
       kind: "Int product",
-      test: (x) => x >= 0 && x <= 9 && mod(x, 2) === 1 && mod(x, 3) === 1,
+      test: (x) => x >= 0 && x <= 9 && mod(x, 6) === 1,
       note: "A product stands for the integers every component allows: here only `1` and `7`.",
     },
     {

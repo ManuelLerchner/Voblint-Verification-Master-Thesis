@@ -1,0 +1,16 @@
+// PARAM: --analysis interval
+// A declared global mutated across two calls; total is 7 at the check, so
+// 0 < total holds. Mechanism: inc is entered from two call sites with n = 3
+// and n = 4 in one context, and widening at the entry of inc takes n to
+// [3,2147483647]. total + n may then overflow, so the analysis sets total
+// to the full i32 range and the check is UNKNOWN.
+global i32 total;
+fun inc(i32 n) {
+  total = total + n;
+}
+fun main() {
+  total = 0;
+  inc(3);
+  inc(4);
+  __voblint_check(0 < total); // UNKNOWN
+}

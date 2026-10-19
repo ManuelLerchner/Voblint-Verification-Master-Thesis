@@ -5,7 +5,7 @@
 // origin is widened and the entry slot reads [1,2], enough to decide n < 10.
 // Under --globals warrow the same program answers UNKNOWN
 // (known-imprecision/03-warrow_joins_before_widening.vimp).
-fun p(n) {
+fun p(i32 n) {
   __voblint_check(n < 10); // PROVED
 }
 fun main() {

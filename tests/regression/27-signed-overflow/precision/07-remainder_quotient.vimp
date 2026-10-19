@@ -1,0 +1,27 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// A signed remainder raises the obligation that its truncated quotient fits the
+// kind: C leaves a % b undefined when a / b does not fit (6.5.5p6). m % -1 for
+// m == INT_MIN computes 0, but its quotient 2147483648 does not fit i32: an
+// ERROR. A negative remainder is ordinary, and a divisor or dividend that rules
+// out the pair (INT_MIN, -1) leaves the quotient in range. Unsigned remainders
+// wrap by definition and raise no such obligation.
+fun main() {
+  i32 m; i32 n; i32 r; i32 x; i32 y; i32 q; u32 a; u32 b;
+  m = -2147483648;
+  r = m % -1; // ARITH: ERROR signed-overflow
+  __voblint_check(r == 0); // PROVED
+  n = -7 % 2;
+  __voblint_check(n == -1); // PROVED
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  q = x % 3;
+  if (y > 1) {
+    q = x % y;
+  }
+  if (x > -2147483647) {
+    q = x % y; // ARITH: WARN remainder-by-zero
+  }
+  q = x % y; // ARITH: WARN remainder-by-zero; WARN signed-overflow
+  a = b % 7;
+}

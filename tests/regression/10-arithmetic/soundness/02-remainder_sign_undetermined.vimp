@@ -5,9 +5,9 @@
 // each check below, so UNKNOWN is the only sound answer here, not a lost
 // bound. The precision case next door shows what a guard on the sign recovers.
 fun main() {
-  n = __voblint_nondet_int();
-  x = 6 * n + 5;
-  a = x % 6;
+  i32 n = __voblint_nondet_int();
+  i32 x = 6 * n + 5;
+  i32 a = x % 6;
   __voblint_check(a >= 0); // UNKNOWN
   __voblint_check(a == 5); // UNKNOWN
 }

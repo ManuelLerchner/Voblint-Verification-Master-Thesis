@@ -8,8 +8,8 @@
 // so it claimed the first check holds (#1156); its second verdict is not documented.
 
 fun main() {
-  top = __voblint_nondet_int();
-  c = -5;
+  i32 top = __voblint_nondet_int();
+  i32 c = -5;
   if (top) {
     c = -7;
   }

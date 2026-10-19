@@ -6,19 +6,19 @@ digraph AnalysisCFG {
     label="bump / unit";
     style=rounded; color=gray70; penwidth=1;
     bump_pp1_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp1\nunreachable",tooltip="pp1\nunreachable"];
-    bump_exit_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_bump",tooltip="exit_bump\ninterval:\n  n=[-∞,5]"];
-    bump_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  n=[-∞,5]"];
-    bump_entry_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_bump",tooltip="entry_bump\ninterval:\n  n=[-∞,5]"];
+    bump_exit_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_bump",tooltip="exit_bump\ninterval:\n  n=[-2147483648,5]"];
+    bump_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  n=[-2147483648,5]"];
+    bump_entry_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_bump",tooltip="entry_bump\ninterval:\n  n=[-2147483648,5]"];
   }
   subgraph cluster_ctx_1 {
     label="main / unit";
     style=rounded; color=gray70; penwidth=1;
-    main_pp5_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp5\ncheck b == 5",tooltip="pp5\ninterval:\n  a=[-∞,6]\n  b=[-∞,6]\ncheck b == 5"];
-    main_pp6_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\ninterval:\n  a=[-∞,6]\n  b=[-∞,6]"];
-    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\ninterval:\n  a=[-∞,6]\n  b=[-∞,6]"];
+    main_pp5_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp5\ncheck b == 5",tooltip="pp5\ninterval:\n  a=[-2147483647,6]\n  b=[-2147483647,6]\ncheck b == 5"];
+    main_pp6_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\ninterval:\n  a=[-2147483647,6]\n  b=[-2147483647,6]"];
+    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\ninterval:\n  a=[-2147483647,6]\n  b=[-2147483647,6]"];
     main_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\ninterval:\n  a=⊤\n  b=⊤"];
-    main_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\ninterval:\n  a=[-∞,6]\n  b=⊤"];
-    main_pp4_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp4\ncheck a == 6",tooltip="pp4\ninterval:\n  a=[-∞,6]\n  b=[-∞,6]\ncheck a == 6"];
+    main_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\ninterval:\n  a=[-2147483647,6]\n  b=⊤"];
+    main_pp4_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp4\ncheck a == 6",tooltip="pp4\ninterval:\n  a=[-2147483647,6]\n  b=[-2147483647,6]\ncheck a == 6"];
     main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\ninterval:\n  a=⊤\n  b=⊤"];
   }
   bump_pp0_ctx0 -> bump_exit_bump_ctx0 [weight=20,label="return n + 1"];

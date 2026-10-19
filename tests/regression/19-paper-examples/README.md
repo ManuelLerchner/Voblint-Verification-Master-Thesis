@@ -19,7 +19,7 @@ the claim it is measured against.
 | --- | --- | --- |
 | Fig. 1, Example 1 | A flow-insensitive summary of `g` collects 1, -17 and 42, which suffices to falsify the error condition | `precision/01-fig1_sequential_globals.vimp`; flow-insensitively, `precision/07-fig1_flow_insensitive_globals.vimp` |
 | Example 2 | Widening the accumulated value drives `g` to `[-inf,+inf]`, losing `g <= 42` | `known-imprecision/02-whole_global_widening.vimp` |
-| Example 3 | A flow-insensitive analysis infers `h = [0,+inf]`, unable to tell one execution of line 4 from many | flow-sensitively exact in `precision/01-fig1_sequential_globals.vimp`; reproduced in `precision/07-fig1_flow_insensitive_globals.vimp` |
+| Example 3 | A flow-insensitive analysis infers `h = [0,+inf]`, unable to tell one execution of line 4 from many | flow-sensitively exact in `precision/01-fig1_sequential_globals.vimp`; in `precision/07-fig1_flow_insensitive_globals.vimp` `h` widens to the i32 maximum, and the next `h + 1` may overflow, so `0 <= h` is lost as well |
 | Example 5 | Fig. 1's side-effecting constraint system: one unknown per program point, plus `[g]` and `[h]` | `precision/01-fig1_sequential_globals.vimp`'s `EXPECT-GRAPH` block; the `[g]` and `[h]` unknowns in `precision/07-fig1_flow_insensitive_globals.vimp` |
 | Sect. 3 close | Contexts, by callstring or by tabulation, considerably increase precision | `known-imprecision/04-context_insensitive_calls.vimp` (the baseline they improve on) |
 | Example 7 | 1-callstring: the context is the call site, `context(u,f,args) _ _ = u` | `precision/05-example7_one_callstring.vimp` |
@@ -58,13 +58,16 @@ Nothing about a `global` here exercises the update rule.
 So cases 02 and 03 stage the paper's widening chain on the unknown that does:
 a procedure's `FunctionEntry` seed, side-effected once per call site, with
 the paper's own three contributions in the paper's order. The result is the
-paper's -- `[-inf,+inf]` under whole-value warrowing, `[-17,42]` per origin.
+paper's -- the full i32 range (the i32 reading of `[-inf,+inf]`) under
+whole-value warrowing, `[-17,42]` per origin.
 
 `--program-globals flow-insensitive` selects the flow-insensitive placement:
 `g` and `h` each get their own global unknown, Example 5's `[g]` and `[h]`.
 Case 07 runs Fig. 1 that way. The summary of `g` ends at `[-17,42]`, which
-proves `g < 43` and not `g == 42`, as Example 1 says, and `h` widens to
-`[0,+inf]`, as Example 3 says. Example 2's loss does not survive there: under
-`--globals warrow` the trace shows `g` widened to `[-inf,+inf]` on the way,
+proves `g < 43` and not `g == 42`, as Example 1 says, and `h` widens to the
+maximum of its kind, the i32 reading of Example 3's `[0,+inf]`; the possible
+overflow of `h + 1` then gives `h` the whole i32 range under the default
+`assume_top`. Example 2's loss does not survive there: under
+`--globals warrow` the trace shows `g` widened to the full i32 range on the way,
 after which warrowing narrows it back to `[-17,42]`. Under the joining rules
-`h` keeps growing and the solve does not finish within the time limit.
+`h` keeps growing and the solve gives no answer within the time limit.

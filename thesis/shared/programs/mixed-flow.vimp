@@ -1,4 +1,4 @@
-global Gx;
+global i32 Gx;
 fun set() { Gx = 1; }
-fun get() { return Gx; }
-fun main() { x = 1; set(); y = get(); }
+fun i32 get() { return Gx; }
+fun main() { i32 x = 1; set(); i32 y = get(); }

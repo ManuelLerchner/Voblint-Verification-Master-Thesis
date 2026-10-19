@@ -5,12 +5,12 @@
 // refutes x < 0. x == 5 is genuinely undetermined on [1,9], so UNKNOWN is the
 // only sound answer there.
 fun main() {
-  x = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
   if (0 < x && x < 10) {
     __voblint_check(x < 11); // PROVED
     __voblint_check(x < 0); // REFUTED
     __voblint_check(x == 5); // UNKNOWN
   } else {
-    y = 0;
+    i32 y = 0;
   }
 }

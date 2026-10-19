@@ -1,0 +1,17 @@
+// PARAM: --analysis interval
+// Coffee (Monniaux, ETAPS 2024): y = |x|, and y >= 1 implies x != 0. The check holds
+// in every run, also at x = -2^31, where -x wraps to -2^31 and y >= 1 fails. Proving
+// it needs the relation between x and y on each path; a non-relational interval
+// keeps x unconstrained at the check.
+fun main() {
+  i32 x;
+  i32 y = 0;
+  if (x >= 0) {
+    y = x;
+  } else {
+    y = -x;
+  }
+  if (y >= 1) {
+    __voblint_check(x != 0);  // UNKNOWN
+  }
+}

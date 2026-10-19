@@ -5,8 +5,9 @@
 // it stay live. 05-unreachable_dead_branch_literal.vimp is the Interval case,
 // 19-dead_branch_sign.vimp the Sign one.
 fun main() {
-  x = 5;
+  i32 x = 5;
   __voblint_check(0 < x); // PROVED
+  i32 y;
   if (x < 0) {
     y = 1;
     __voblint_check(false); // NOWARN

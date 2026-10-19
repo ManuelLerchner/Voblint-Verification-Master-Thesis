@@ -2,9 +2,9 @@
 // EXPECT-ARITHMETIC
 // Branch refinement makes the zero-divisor branch unreachable.
 fun main() {
-  n = 2;
+  i32 n = 2;
   if (n == 0) {
-    x = 10 / 0; // ARITH: NONE
+    i32 x = 10 / 0; // ARITH: NONE
     __voblint_check(x == 0); // NOWARN
   } else {
     __voblint_check(n == 2); // PROVED

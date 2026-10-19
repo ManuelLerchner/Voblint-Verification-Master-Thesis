@@ -1,19 +1,19 @@
 theory Example_Non_Vacuity
-  imports Example_End_To_End_Certificate
+  imports "Voblint_CLI.Run_Voblint"
 begin
 
 section \<open>The headline theorems are not vacuous\<close>
 
 text \<open>
   A theorem whose premises no configuration meets is true and says nothing. This
-  theory shows, for each endpoint of \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, that its
+  theory shows, for the endpoints of \<^theory>\<open>Voblint_CLI.Run_Voblint\<close>, that their
   premises hold together on one concrete program, and that the conclusion is then
   informative: the verdict it constrains is \<^const>\<open>Check_Proved\<close> or \<^const>\<open>Dead\<close>, not
   \<^const>\<open>Check_Unknown\<close>. It then shows five conditions to be load-bearing: the
-  definite verdicts in \<^const>\<open>verdict_stores\<close>, the transfer obligation of the
-  congruence remainder, the context correlation of RETURN and the TOTAL obligation in
+  definite verdicts a report states, the transfer obligation of the congruence
+  remainder, the context correlation of RETURN and the TOTAL obligation in
   \<^const>\<open>activation_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
-  or weakening each admits an answer that misses a concrete exe    by (elim IfSE) (blast intro: pstep.IfTrue pstep.IfFalse)+cution.
+  or weakening each admits an answer that misses a concrete execution.
 
   Non-vacuity is a property of the premises. It says nothing about whether
   \<^const>\<open>pstep\<close> models the intended language.
@@ -38,12 +38,13 @@ definition nv_prog :: imp_prog where
      }
    }"
 
-abbreviation nv_config :: analysis_config where
-  "nv_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState
-     Program_Globals_Flow_Sensitive"
+definition nv_conf :: voblint_conf where
+  "nv_conf = \<lparr>conf_analyses = [Interval], conf_context = Entry_State,
+     conf_globals = Globals_Warrow, conf_program_globals = Program_Globals_Flow_Sensitive,
+     conf_sem = default_sem_conf\<rparr>"
 
 lemma nv_report:
-  "(case run_voblint nv_config nv_prog of
+  "(case run_voblint nv_conf [] nv_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
           = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]
@@ -52,91 +53,99 @@ lemma nv_report:
 
 lemma nv_analysed:
   obtains res where
-    "run_voblint nv_config nv_prog = Analysed res"
+    "run_voblint nv_conf [] nv_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
-  using nv_report
-  by (cases "run_voblint nv_config nv_prog") auto
+  using nv_report by (cases "run_voblint nv_conf [] nv_prog") auto
 
 subsection \<open>The premises, discharged\<close>
 
 text \<open>
   Each premise of the source-level endpoints, proved for \<open>nv_prog\<close>: the zero store is
-  initial, there are no globals, and the source run reaches the first check
-  (\<open>nv_to_check\<close>).
+  initial, and the typed run reaches the first check (\<open>nv_to_check\<close>).
 \<close>
 
-lemma nv_init: "(\<lambda>_. 0) \<in> cinit_stores (declared_global nv_prog)"
-  by (simp add: cinit_stores_def)
+abbreviation nv_var :: "vname \<Rightarrow> var_id" where
+  "nv_var x \<equiv> ScopedId (STR ''main'') x"
 
-lemma nv_no_globals: "declared_global nv_prog = (\<lambda>_. False)"
-  by (simp add: nv_prog_def fun_eq_iff)
+lemma nv_init: "(\<lambda>_. 0) \<in> init_stores (kenv_of [])"
+  by (simp add: init_stores_def all_in_kinds_def kenv_of_def)
 
-lemma nv_table:
-  "prog_table nv_prog (STR ''bump'')
-     = Some \<lparr>formals = [STR ''n''],
-              body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
-  by (simp add: nv_prog_def prog_main_name_def)
+lemma nv_bump:
+  "elab_ptable nv_prog [] (STR ''bump'')
+     = Some \<lparr>formals = [ScopedId (STR ''bump'') (STR ''n'')],
+             body = Return () (Some (TArith I32 AAdd (TVar I32 (ScopedId (STR ''bump'') (STR ''n'')))
+                                       (TN I32 1)))\<rparr>"
+  by eval
 
 lemma nv_main:
-  "main_body (prog_table nv_prog)
-     = VIMP_Proc.gcom.Seq
-         (VIMP_Proc.gcom.Seq
-            (VIMP_Proc.gcom.Seq
-               (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
-               (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
-            (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6))))
-         (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))"
-  by (simp add: nv_prog_def main_body_def prog_main_name_def)
+  "main_body (elab_ptable nv_prog [])
+     = Seq (Seq (Seq (gcom.Call () (Some (nv_var (STR ''a''))) (STR ''bump'') [TN I32 5])
+                     (gcom.Call () (Some (nv_var (STR ''b''))) (STR ''bump'') [TN I32 4]))
+                (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))))
+           (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''b''))) (TN I32 5)))"
+  by eval
+
+text \<open>One call of \<open>bump\<close>: enter, return \<open>n + 1\<close>, and resume the caller.\<close>
 
 lemma nv_call:
-  "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-     (VIMP_Proc.gcom.Call () (Some x) (STR ''bump'') [N k]) s (s(x := k + 1))"
-  using pcompletes_Call_return
-          [where \<Pi> = "prog_table nv_prog" and p = "STR ''bump''"
-             and decl = "\<lparr>formals = [STR ''n''],
-                          body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
-             and e = "Plus (V (STR ''n'')) (N 1)" and actuals = "[N k]" and dst = "Some x"
-             and \<G> = "declared_global nv_prog" and s = s,
-           OF nv_table]
-  by (simp add: nv_no_globals enter_state_def combine_env_def)
-
-abbreviation nv_final :: store where
-  "nv_final \<equiv> (\<lambda>_. 0)(STR ''a'' := 6, STR ''b'' := 5)"
-
-lemma nv_calls:
-  "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-     (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
-        (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
-     (\<lambda>_. 0) nv_final"
+  assumes k: "k \<in> ik_range I32" and k1: "k + 1 \<in> ik_range I32"
+  shows
+    "(kenv_of []),(elab_ptable nv_prog []) \<turnstile> (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t(nv_var x := k + 1), [])"
 proof -
-  have c1: "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-              (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5]) (\<lambda>_. 0)
-              ((\<lambda>_. 0)(STR ''a'' := 6))"
-    using nv_call [where x = "STR ''a''" and k = 5 and s = "\<lambda>_. 0"] by simp
-  have c2: "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-              (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4])
-              ((\<lambda>_. 0)(STR ''a'' := 6)) nv_final"
-    using nv_call [where x = "STR ''b''" and k = 4 and s = "(\<lambda>_. 0)(STR ''a'' := 6)"]
+  let ?\<kappa> = "kenv_of []" and ?\<Pi> = "elab_ptable nv_prog []"
+  let ?n = "ScopedId (STR ''bump'') (STR ''n'')"
+  let ?E = "TArith I32 AAdd (TVar I32 ?n) (TN I32 1)"
+  let ?c = "bind_formals [?n] (map2 (\<lambda>y. kind_conv ?\<kappa> (Some y)) [?n] [eval (TN I32 k) t])
+              (enter_state is_global t)"
+  let ?c' = "?c(ReturnVar := eval ?E ?c)"
+  have s1:
+    "?\<kappa>,?\<Pi> \<turnstile> (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, []) \<rightarrow>\<^sub>p (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))])"
+    using pstep_Call[where \<Pi> = ?\<Pi> and p = "STR ''bump''", OF nv_bump,
+        of "[TN I32 k]" ?\<kappa> "()" "Some (nv_var x)" t "[]"]
     by simp
-  show ?thesis by (rule pcompletes_Seq [OF c1 c2])
+  have s2:
+    "?\<kappa>,?\<Pi> \<turnstile> (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))]) \<rightarrow>\<^sub>p (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))])"
+    by (rule Seq2) (rule ReturnSome)
+  have s3:
+    "?\<kappa>,?\<Pi> \<turnstile> (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))]) \<rightarrow>\<^sub>p (SKIP (), combine_assign (Some (nv_var x)) (kind_conv ?\<kappa> (Some (nv_var x)) (?c' ReturnVar)) (combine_env is_global t ?c'), [])"
+    by (rule UnwindAct)
+  have eq: "combine_assign (Some (nv_var x)) (kind_conv ?\<kappa> (Some (nv_var x)) (?c' ReturnVar))
+              (combine_env is_global t ?c') = t(nv_var x := k + 1)"
+    using k k1
+    by (auto simp: fun_eq_iff combine_env_def enter_state_def kenv_of_def simp del: ik_range_iff)
+  show ?thesis
+    using s1 s2 s3 by (simp only: eq[symmetric]) (meson star.step star.refl)
 qed
 
-text \<open>The source run, stopped with the first check about to execute.\<close>
+abbreviation nv_final :: store where
+  "nv_final \<equiv> (\<lambda>_. 0)(nv_var (STR ''a'') := 6, nv_var (STR ''b'') := 5)"
+
+abbreviation nv_checks :: "(unit, var_id, exp) gcom" where
+  "nv_checks \<equiv> Seq (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)))
+                  (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''b''))) (TN I32 5)))"
+
+text \<open>The typed run, stopped with the first check about to execute.\<close>
 
 lemma nv_to_check:
-  "declared_global nv_prog, prog_table nv_prog \<turnstile>
-     (main_body (prog_table nv_prog), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
-     (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-        (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))), nv_final, [])"
+  "(kenv_of []),(elab_ptable nv_prog []) \<turnstile> (main_body (elab_ptable nv_prog []), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (nv_checks, nv_final, [])"
 proof -
-  have "declared_global nv_prog, prog_table nv_prog \<turnstile>
-          (VIMP_Proc.gcom.Seq
-             (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
-                (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
-             (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)), nv_final, [])"
-    using psteps_Seq2 [OF nv_calls] by (meson Seq1 star.step star.refl star_trans)
+  let ?\<kappa> = "kenv_of []" and ?\<Pi> = "elab_ptable nv_prog []"
+  let ?C1 = "gcom.Call () (Some (nv_var (STR ''a''))) (STR ''bump'') [TN I32 5]"
+  let ?C2 = "gcom.Call () (Some (nv_var (STR ''b''))) (STR ''bump'') [TN I32 4]"
+  let ?K1 = "Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))"
+  let ?K2 = "Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''b''))) (TN I32 5))"
+  let ?t1 = "(\<lambda>_. 0)(nv_var (STR ''a'') := 6) :: store"
+  have r: "(4::int) \<in> ik_range I32" "(5::int) \<in> ik_range I32" "(6::int) \<in> ik_range I32"
+    by eval+
+  have c1: "?\<kappa>,?\<Pi> \<turnstile> (?C1, \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), ?t1, [])"
+    using nv_call[where k = 5 and x = "STR ''a''" and t = "\<lambda>_. 0", OF r(2)] r(3) by simp
+  have c2: "?\<kappa>,?\<Pi> \<turnstile> (?C2, ?t1, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), nv_final, [])"
+    using nv_call[where k = 4 and x = "STR ''b''" and t = ?t1, OF r(1)] r(2) by simp
+  have calls: "?\<kappa>,?\<Pi> \<turnstile> (Seq ?C1 ?C2, \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), nv_final, [])"
+    using psteps_Seq2[OF c1, of ?C2] c2 by (meson Seq1 star.step star_trans)
+  have "?\<kappa>,?\<Pi> \<turnstile> (Seq (Seq ?C1 ?C2) ?K1, \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (?K1, nv_final, [])"
+    using psteps_Seq2[OF calls, of ?K1] by (meson Seq1 star.step star.refl star_trans)
   then show ?thesis unfolding nv_main by (rule psteps_Seq2)
 qed
 
@@ -144,43 +153,38 @@ subsection \<open>The endpoints, instantiated\<close>
 
 text \<open>
   With the premises discharged, \<open>run_voblint_source_sound\<close> and its siblings apply to
-  \<open>nv_prog\<close> and to \<open>nv_dead_prog\<close>, and the verdicts they constrain are
-  \<open>Check_Proved\<close> and \<open>Dead\<close>.
+  \<open>nv_prog\<close> and to \<open>nv_dead_prog\<close>, and the verdicts they constrain are \<open>Check_Proved\<close>
+  and \<open>Dead\<close>.
 \<close>
 
 theorem nv_source_certified:
-  "\<exists>res v.
-     run_voblint nv_config nv_prog
-       = Analysed res
+  "\<exists>res v stk.
+     run_voblint nv_conf [] nv_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
-       = [(Statement 4, Decided Check_Proved),
-          (Statement 5, Decided Check_Proved)]
-   \<and> nv_prog, (\<lambda>_. 0) \<turnstile>
-       (VIMP_Proc.gcom.Seq
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
-        nv_final, []) \<rhd> v
-   \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                   cinit_stores (declared_global nv_prog)\<^esub> v
-   \<and> nv_final \<in> \<R>\<^bsub>res\<^esub> v
-   \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> v"
+       = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]
+   \<and> elab_ptable nv_prog [], elab_cfg nv_prog [], prog_main_name
+       \<turnstile> (nv_checks, nv_final, []) \<approx> (v, nv_final, stk)
+   \<and> nv_final \<in> reaching [] nv_prog v
+   \<and> (\<exists>d. Lifted d \<in> report_states_at res v
+          \<and> nv_final \<in> mcp.act_gamma [] (activation_of (conf_analyses nv_conf)) d)
+   \<and> \<not> DEAD res v"
 proof -
-  obtain res where ans: "run_voblint nv_config nv_prog
-                           = Analysed res"
+  obtain res where ans: "run_voblint nv_conf [] nv_prog = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  from run_voblint_source_sound [OF nv_init nv_to_check ans]
-  obtain v where "nv_prog, (\<lambda>_. 0) \<turnstile>
-       (VIMP_Proc.gcom.Seq
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
-        nv_final, []) \<rhd> v"
-    and "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                     cinit_stores (declared_global nv_prog)\<^esub> v"
-    and "nv_final \<in> \<R>\<^bsub>res\<^esub> v" and "nv_final \<in> \<V>\<^bsub>res\<^esub> v"
+  from run_voblint_source_sound [OF ans nv_init nv_to_check]
+  obtain v stk where
+    sim: "elab_ptable nv_prog [], elab_cfg nv_prog [], prog_main_name
+            \<turnstile> (nv_checks, nv_final, []) \<approx> (v, nv_final, stk)"
+    and reach: "nv_final \<in> reaching [] nv_prog v"
+    and st: "\<exists>d. Lifted d \<in> report_states_at res v
+               \<and> nv_final \<in> mcp.act_gamma [] (activation_of (conf_analyses nv_conf)) d"
+    and live: "\<not> DEAD res v"
     by blast
-  with ans checks show ?thesis by - (intro exI conjI; assumption)
+  show ?thesis
+    by (rule exI[of _ res], rule exI[of _ v], rule exI[of _ stk])
+       (simp only: ans checks sim reach st live simp_thms)
 qed
 
 text \<open>
@@ -189,30 +193,27 @@ text \<open>
 \<close>
 
 theorem nv_check_proved_sound:
-  "\<exists>res. run_voblint nv_config nv_prog = Analysed res
-     \<and> (\<exists>chk \<in> set (report_checks res). check_exp chk = Eq (V (STR ''a'')) (N 6)
-          \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                          cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)
+  "\<exists>res. run_voblint nv_conf [] nv_prog = Analysed res
+     \<and> (\<exists>chk \<in> set (report_checks res).
+          check_exp chk = TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)
+          \<and> nv_final \<in> reaching [] nv_prog (check_point chk)
           \<and> check_verdict chk = Decided Check_Proved
-          \<and> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final))"
+          \<and> truthy (eval (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)) nv_final))"
 proof -
-  obtain res where ans: "run_voblint nv_config nv_prog
-                           = Analysed res"
+  obtain res where ans: "run_voblint nv_conf [] nv_prog = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  have nc: "next_check (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-              (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))) = Some ((0, 0), Eq (V (STR ''a'')) (N 6))"
+  have nc:
+    "next_check nv_checks = Some ((0, 0), TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))"
     by simp
-  from run_voblint_check_sound [OF nv_init nv_to_check nc ans]
-  obtain chk
-    where listed: "chk \<in> set (report_checks res)"
-      and re: "check_exp chk = Eq (V (STR ''a'')) (N 6)"
-      and mem: "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                              cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)"
-      and pr: "check_verdict chk = Decided Check_Proved
-                 \<longrightarrow> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final)"
-    by auto
+  from run_voblint_check_sound [OF ans nv_init nv_to_check nc]
+  obtain chk where listed: "chk \<in> set (report_checks res)"
+    and re: "check_exp chk = TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)"
+    and mem: "nv_final \<in> reaching [] nv_prog (check_point chk)"
+    and pr: "check_verdict chk = Decided Check_Proved
+               \<longrightarrow> truthy (eval (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)) nv_final)"
+    by blast
   have "(check_point chk, check_verdict chk)
           \<in> set [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     unfolding checks [symmetric] using listed by auto
@@ -229,42 +230,40 @@ definition nv_dead_prog :: imp_prog where
      }
    }"
 
-abbreviation nv_dead_config :: analysis_config where
-  "nv_dead_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Join Ctx_None
-     Program_Globals_Flow_Sensitive"
+definition nv_dead_conf :: voblint_conf where
+  "nv_dead_conf = \<lparr>conf_analyses = [Interval], conf_context = Call_String 0,
+     conf_globals = Globals_Join, conf_program_globals = Program_Globals_Flow_Sensitive,
+     conf_sem = default_sem_conf\<rparr>"
 
 lemma nv_dead_report:
-  "(case run_voblint nv_dead_config nv_dead_prog of
+  "(case run_voblint nv_dead_conf [] nv_dead_prog of
       Analysed res \<Rightarrow>
-        map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-          = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-             (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]
+        map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
+          = [(Statement 1, Decided Check_Refuted), (Statement 3, Dead)]
     | _ \<Rightarrow> False)"
   by eval
 
 lemma nv_dead_analysed:
   obtains res where
-    "run_voblint nv_dead_config nv_dead_prog = Analysed res"
-    "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-       = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-          (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
-  using nv_dead_report
-  by (cases "run_voblint nv_dead_config nv_dead_prog") auto
+    "run_voblint nv_dead_conf [] nv_dead_prog = Analysed res"
+    "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
+       = [(Statement 1, Decided Check_Refuted), (Statement 3, Dead)]"
+  using nv_dead_report by (cases "run_voblint nv_dead_conf [] nv_dead_prog") auto
 
-theorem nv_dead_unreached:
-  "\<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-     cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 3) = {}"
+theorem nv_dead_unreached: "reaching [] nv_dead_prog (Statement 3) = {}"
 proof -
-  obtain res where ans: "run_voblint nv_dead_config nv_dead_prog
-                           = Analysed res"
-    and checks: "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-                   = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-                      (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
+  obtain res where ans: "run_voblint nv_dead_conf [] nv_dead_prog = Analysed res"
+    and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
+                   = [(Statement 1, Decided Check_Refuted), (Statement 3, Dead)]"
     by (rule nv_dead_analysed)
-  then obtain chk where "chk \<in> set (report_checks res)" "check_point chk = Statement 3"
-      "check_verdict chk = Dead"
-    by (cases "report_checks res" rule: remdups_adj.cases) auto
-  with run_voblint_dead_check_unreached [OF ans] show ?thesis by metis
+  obtain chk where mem: "chk \<in> set (report_checks res)" and pt: "check_point chk = Statement 3"
+    and dead: "check_verdict chk = Dead"
+    using checks by (cases "report_checks res" rule: remdups_adj.cases) auto
+  from ans have wf: "wf_program_compile_input nv_dead_prog"
+    and rep: "report_run nv_dead_conf [] nv_dead_prog = Some res"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  show ?thesis
+    using report_check_live[OF wf rep _ mem pt] dead by blast
 qed
 
 section \<open>Load-bearing conditions\<close>
@@ -277,19 +276,21 @@ text \<open>
 subsection \<open>Soundness alone is cheap\<close>
 
 text \<open>
-  \<^const>\<open>verdict_stores\<close> constrains only definite verdicts, so a report that answers
-  \<^const>\<open>Check_Unknown\<close> at every check admits every store at every node. The
-  endpoint is informative because the verdicts \<^const>\<open>run_voblint\<close> actually returns
-  above are \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
+  The guarantees constrain only definite verdicts, so a report that answers
+  \<^const>\<open>Check_Unknown\<close> at every check meets them at every store. The endpoint is
+  informative because the verdicts \<^const>\<open>run_voblint\<close> actually returns above are
+  \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
 \<close>
 
-definition answer_all :: "contextual_verdict \<Rightarrow> analysis_report \<Rightarrow> analysis_report" where
+definition answer_all :: "contextual_verdict \<Rightarrow> report \<Rightarrow> report" where
   "answer_all vd res =
      res\<lparr>report_checks := map (\<lambda>chk. chk\<lparr>check_verdict := vd\<rparr>) (report_checks res)\<rparr>"
 
 lemma unknown_everywhere_sound:
-  "s \<in> \<V>\<^bsub>answer_all (Decided Check_Unknown) res\<^esub> v"
-  by (auto simp: verdict_stores_eq answer_all_def)
+  "\<forall>chk \<in> set (report_checks (answer_all (Decided Check_Unknown) res)).
+     (check_verdict chk = Decided Check_Proved \<longrightarrow> P chk)
+     \<and> (check_verdict chk = Decided Check_Refuted \<longrightarrow> Q chk)"
+  by (auto simp: answer_all_def)
 
 text \<open>
   An answer of \<^const>\<open>Check_Proved\<close> everywhere is not sound: the store after
@@ -297,52 +298,52 @@ text \<open>
 \<close>
 
 lemma nv_dead_reaches_first_check:
-  "(\<lambda>_. 0)(STR ''x'' := 1)
-     \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-         cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 1)"
+  "(\<lambda>_. 0)(nv_var (STR ''x'') := 1) \<in> reaching [] nv_dead_prog (Statement 1)"
 proof -
-  have intra: "intra (prog_cfg nv_dead_prog) =
-     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
-      (Statement 5, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')),
-      (Statement 1, EA_Check (0, 0) (Eq (V (STR ''x'')) (N 0)), Statement 2),
-      (Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1),
-      (Statement 3, EA_Check (0, 0) (Eq (V (STR ''x'')) (N 5)), Statement 5),
-      (Statement 2, EA_Assume (Less (V (STR ''x'')) (N 0)), Statement 3),
-      (Statement 2, EA_AssumeNot (Less (V (STR ''x'')) (N 0)), Statement 4),
-      (Statement 4, EA_Assign (STR ''x'') (N 2), Statement 5)}"
-    unfolding prog_cfg_def by eval
-  have entry: "cfg_entry (prog_cfg nv_dead_prog) = FunctionEntry (STR ''main'')"
-    by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
-  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-              cinit_stores (declared_global nv_dead_prog)\<^esub> (FunctionEntry (STR ''main''))"
-    using node_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global nv_dead_prog)"
-                               "declared_global nv_dead_prog" "prog_cfg nv_dead_prog"]
-    by (simp add: entry cinit_stores_def)
-  have s0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-              cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 0)"
-    by (rule node_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
-       (auto simp: intra)
+  have intra: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0)
+                 \<in> intra (elab_cfg nv_dead_prog [])"
+    "(Statement 0, EA_Assign (nv_var (STR ''x'')) (TN I32 1), Statement 1)
+                 \<in> intra (elab_cfg nv_dead_prog [])"
+    by eval+
+  have entry: "cfg_entry (elab_cfg nv_dead_prog []) = FunctionEntry (STR ''main'')"
+    by eval
+  have e0: "(\<lambda>_. 0) \<in> reaching [] nv_dead_prog (FunctionEntry (STR ''main''))"
+    using node_collect_init [OF nv_init, of "kenv_of []" "elab_cfg nv_dead_prog []"]
+    by (simp add: entry)
+  have s0: "(\<lambda>_. 0) \<in> reaching [] nv_dead_prog (Statement 0)"
+    by (rule node_collect_intra_step [OF e0 intra(1)]) simp
   show ?thesis
-    by (rule node_collect_intra_step [OF s0, where a = "EA_Assign (STR ''x'') (N 1)"])
-       (auto simp: intra)
+    by (rule node_collect_intra_step [OF s0 intra(2)]) (simp add: kenv_of_def)
 qed
 
 theorem proved_everywhere_unsound:
-  assumes "run_voblint nv_dead_config nv_dead_prog = Analysed res"
-  shows "(\<lambda>_. 0)(STR ''x'' := 1)
-           \<notin> \<V>\<^bsub>answer_all (Decided Check_Proved) res\<^esub> (Statement 1)"
+  assumes "run_voblint nv_dead_conf [] nv_dead_prog = Analysed res"
+  shows "\<exists>chk \<in> set (report_checks (answer_all (Decided Check_Proved) res)).
+           check_verdict chk = Decided Check_Proved
+           \<and> (\<lambda>_. 0)(nv_var (STR ''x'') := 1) \<in> reaching [] nv_dead_prog (check_point chk)
+           \<and> \<not> truthy (eval (check_exp chk) ((\<lambda>_. 0)(nv_var (STR ''x'') := 1)))"
 proof -
-  from nv_dead_report assms
-  have "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-          = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-             (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
-    by simp
-  then obtain chk where "chk \<in> set (report_checks res)" "check_point chk = Statement 1"
-      "check_exp chk = Eq (V (STR ''x'')) (N 0)"
+  have exps: "map (\<lambda>chk. (check_point chk, check_exp chk)) (report_checks res)
+      = [(Statement 1, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 0)),
+         (Statement 3, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 5))]"
+  proof -
+    have "(case run_voblint nv_dead_conf [] nv_dead_prog of
+             Analysed res \<Rightarrow> map (\<lambda>chk. (check_point chk, check_exp chk)) (report_checks res)
+                = [(Statement 1, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 0)),
+                   (Statement 3, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 5))]
+           | _ \<Rightarrow> False)"
+      by eval
+    then show ?thesis using assms by simp
+  qed
+  then obtain chk where mem: "chk \<in> set (report_checks res)" and pt: "check_point chk = Statement 1"
+      and ex: "check_exp chk = TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 0)"
     by (cases "report_checks res" rule: remdups_adj.cases) auto
-  then show ?thesis
-    by (auto simp: verdict_stores_eq answer_all_def
-        intro!: bexI[of _ "chk\<lparr>check_verdict := Decided Check_Proved\<rparr>"])
+  have mem': "chk\<lparr>check_verdict := Decided Check_Proved\<rparr>
+                \<in> set (report_checks (answer_all (Decided Check_Proved) res))"
+    using mem by (simp add: answer_all_def)
+  show ?thesis
+    using nv_dead_reaches_first_check pt ex
+    by (intro bexI[OF _ mem']) simp
 qed
 
 subsection \<open>The pre-fix Goblint congruence remainder\<close>
@@ -371,8 +372,10 @@ section \<open>The paired-coverage, RETURN and TOTAL counterexamples\<close>
 
 text \<open>
   Three weakenings of \<open>activation_coverage\<close> fail: RETURN read at the caller's
-  context, TOTAL dropped, and entry coverage without pairing. \<open>ret_prog\<close> calls \<open>f\<close>
-  with \<open>1\<close> and then \<open>5\<close>.
+  context, TOTAL dropped, and entry coverage without pairing. They are shown
+  on core VIMP, the language the analyzer runs. \<open>ret_prog\<close>
+  calls \<open>f\<close> with \<open>1\<close> and then \<open>5\<close>; every variable has the default kind
+  \<^const>\<open>I32\<close>.
 \<close>
 
 definition ret_prog :: imp_prog where
@@ -381,38 +384,56 @@ definition ret_prog :: imp_prog where
      fun main() { a = f(1); b = f(5); }
    }"
 
+abbreviation ret_n :: var_id where
+  "ret_n \<equiv> ScopedId (STR ''f'') (STR ''n'')"
+
+abbreviation ret_\<kappa> :: kenv where
+  "ret_\<kappa> \<equiv> kenv_of []"
+
+abbreviation ret_g :: "(var_id, exp) gcfg" where
+  "ret_g \<equiv> elab_cfg ret_prog []"
+
+lemma ret_norm [simp]: "ik_norm I32 1 = 1" "ik_norm I32 5 = 5" "(1::int) \<in> ik_range I32"
+  by eval+
+
 lemma ret_intra:
-  "intra (prog_cfg ret_prog) =
+  "intra ret_g =
      {(FunctionEntry (STR ''f''), EA_Body (STR ''f''), Statement 0),
-      (Statement 0, EA_Ret (Some (V (STR ''n''))) (STR ''f''), FunctionResult (STR ''f'')),
+      (Statement 0, EA_Ret (Some (TVar I32 ret_n)) (STR ''f''), FunctionResult (STR ''f'')),
       (Statement 1, EA_Ret None (STR ''f''), FunctionResult (STR ''f'')),
       (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 2),
       (Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
-  unfolding prog_cfg_def by eval
+  by eval
 
 lemma ret_calls:
-  "calls (prog_cfg ret_prog) =
-     {(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1], FunctionEntry (STR ''f''),
-       Statement 3),
-      (Statement 3, CallEdge (Some (STR ''b'')) [STR ''n''] [N 5], FunctionEntry (STR ''f''),
-       Statement 4)}"
-  unfolding prog_cfg_def by eval
+  "calls ret_g =
+     {(Statement 2, CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1],
+       FunctionEntry (STR ''f''), Statement 3),
+      (Statement 3, CallEdge (Some (nv_var (STR ''b''))) [ret_n] [TN I32 5],
+       FunctionEntry (STR ''f''), Statement 4)}"
+  by eval
 
-lemma ret_entry: "cfg_entry (prog_cfg ret_prog) = FunctionEntry (STR ''main'')"
-  by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
-
-lemma ret_no_globals: "declared_global ret_prog = (\<lambda>_. False)"
-  by (simp add: ret_prog_def fun_eq_iff)
+lemma ret_entry: "cfg_entry ret_g = FunctionEntry (STR ''main'')"
+  by eval
 
 lemma ret_enter:
-  "call_enter (declared_global ret_prog) (CallEdge dst [STR ''n''] [e]) s
-     = (\<lambda>_. 0)(STR ''n'' := \<lbrakk>e\<rbrakk>\<^sub>e s)"
-  by (simp add: ret_no_globals call_enter_CallEdge enter_binding_def enter_frame_def fun_eq_iff)
+  "call_enter ret_\<kappa> (CallEdge dst [ret_n] [e]) s
+     = (enter_state is_global s)(ret_n := ik_norm I32 (eval e s))"
+  by (simp add: call_enter_CallEdge kenv_of_def)
+
+lemma ret_enter_zero [simp]: "enter_state is_global (\<lambda>_. 0) = (\<lambda>_. 0)"
+  by (simp add: enter_state_def enter_frame_def fun_eq_iff)
+
+lemma ret_combine:
+  assumes "\<And>v. is_global v \<Longrightarrow> t v = 0"
+  shows
+    "combine_collect \<kappa> (Some x) (\<lambda>_. 0) t = (\<lambda>_. 0)(x := kind_conv \<kappa> (Some x) (t ReturnVar))"
+  using assms by (auto simp: combine_collect_def fun_eq_iff)
 
 text \<open>The policy of the illustration: the callee context is the entry value of \<open>n\<close>.\<close>
 
-definition ret_R :: "int context_policy" where
-  "ret_R = context_policy_of_fun (\<lambda>_ _ es. es (STR ''n''))"
+definition ret_R :: "int call_context_policy" where
+  "ret_R = context_policy_of_fun (\<lambda>_ _ es. es ret_n)"
 
 text \<open>
   The claim: \<open>main\<close> is covered in the initial context \<open>0\<close> up to its first call site
@@ -427,94 +448,88 @@ definition ret_cover :: "cfg_node \<Rightarrow> int \<Rightarrow> store set" whe
       else if ctx = 0 \<and> v \<in> {FunctionEntry (STR ''main''), Statement 2} then UNIV else {})"
 
 lemma ret_weak_obligations:
-  shows "\<forall>s. s \<in> cinit_stores (declared_global ret_prog)
-              \<longrightarrow> s \<in> ret_cover (cfg_entry (prog_cfg ret_prog)) 0"
-    and "\<forall>u a v c s s'. (u, a, v) \<in> intra (prog_cfg ret_prog) \<longrightarrow> s \<in> ret_cover u c
-              \<longrightarrow> s' \<in> edge_step a s \<longrightarrow> s' \<in> ret_cover v c"
+  shows "\<forall>s. s \<in> init_stores ret_\<kappa> \<longrightarrow> s \<in> ret_cover (cfg_entry ret_g) 0"
+    and "\<forall>u a v c s s'. (u, a, v) \<in> intra ret_g \<longrightarrow> s \<in> ret_cover u c
+              \<longrightarrow> s' \<in> edge_step ret_\<kappa> a s \<longrightarrow> s' \<in> ret_cover v c"
     and "\<forall>u dst pars args p cont c c' s.
-              (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (prog_cfg ret_prog)
+              (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ret_g
               \<longrightarrow> s \<in> ret_cover u c
               \<longrightarrow> c' \<in> ret_R u c (call_info_of (CallEdge dst pars args) p) s
-                    (call_enter (declared_global ret_prog) (CallEdge dst pars args) s)
-              \<longrightarrow> call_enter (declared_global ret_prog) (CallEdge dst pars args) s
+                    (call_enter ret_\<kappa> (CallEdge dst pars args) s)
+              \<longrightarrow> call_enter ret_\<kappa> (CallEdge dst pars args) s
                     \<in> ret_cover (FunctionEntry p) c'"
     and "\<forall>cl dst pars args p cont c1 s t.
-              (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (prog_cfg ret_prog)
+              (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ret_g
               \<longrightarrow> s \<in> ret_cover cl c1 \<longrightarrow> t \<in> ret_cover (FunctionResult p) c1
-              \<longrightarrow> combine_collect (declared_global ret_prog) dst s t \<in> ret_cover cont c1"
-    and "call_context_total_on ret_cover ret_R (declared_global ret_prog) (prog_cfg ret_prog)"
+              \<longrightarrow> combine_collect ret_\<kappa> dst s t \<in> ret_cover cont c1"
+    and "call_context_total_on ret_\<kappa> ret_cover ret_R ret_g"
   by (auto simp: ret_entry ret_intra ret_calls ret_cover_def ret_R_def ret_enter
                  call_context_total_on_def)
 
 lemma ret_not_coverage:
-  "\<not> activation_coverage (prog_cfg ret_prog) (cinit_stores (declared_global ret_prog)) ret_cover
-       ret_R 0 (declared_global ret_prog)"
+  "\<not> activation_coverage ret_\<kappa> ret_g
+       (init_stores ret_\<kappa>) ret_cover ret_R 0"
 proof
-  assume "activation_coverage (prog_cfg ret_prog) (cinit_stores (declared_global ret_prog)) ret_cover
-            ret_R 0 (declared_global ret_prog)"
-  then interpret C: activation_coverage "prog_cfg ret_prog"
-    "cinit_stores (declared_global ret_prog)"
-      ret_cover ret_R 0 "declared_global ret_prog" .
-  have e: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1], FunctionEntry (STR ''f''),
-             Statement 3) \<in> calls (prog_cfg ret_prog)"
+  assume "activation_coverage ret_\<kappa> ret_g
+            (init_stores ret_\<kappa>) ret_cover ret_R 0"
+  then interpret C: activation_coverage ret_\<kappa>
+    ret_g "init_stores ret_\<kappa>" ret_cover ret_R 0 .
+  have e: "(Statement 2, CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1],
+             FunctionEntry (STR ''f''), Statement 3) \<in> calls ret_g"
     by (simp add: ret_calls)
-  have adm: "admits_call_context (declared_global ret_prog) (prog_cfg ret_prog) ret_R
+  have adm: "admits_call_context ret_\<kappa> ret_g ret_R
                (Statement 2) 0 (STR ''f'') (\<lambda>_. 0)
-               (call_enter (declared_global ret_prog)
-                  (CallEdge (Some (STR ''a'')) [STR ''n''] [N 1]) (\<lambda>_. 0)) 1"
+               (call_enter ret_\<kappa>
+                  (CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1]) (\<lambda>_. 0)) 1"
     unfolding admits_call_context_def
-    by (rule exI [of _ "Some (STR ''a'')"], rule exI [of _ "[STR ''n'']"],
-        rule exI [of _ "[N 1]"], rule exI [of _ "Statement 3"])
+    by (rule exI [of _ "Some (nv_var (STR ''a''))"], rule exI [of _ "[ret_n]"],
+        rule exI [of _ "[TN I32 1]"], rule exI [of _ "Statement 3"])
        (simp add: e ret_R_def ret_enter)
-  have "combine_collect (declared_global ret_prog) (Some (STR ''a'')) (\<lambda>_. 0) (\<lambda>_. 0)
+  have "combine_collect ret_\<kappa> (Some (nv_var (STR ''a''))) (\<lambda>_. 0) (\<lambda>_. 0)
           \<in> ret_cover (Statement 3) 0"
     by (rule C.RETURN [OF e _ adm]) (simp_all add: ret_cover_def)
   then show False by (simp add: ret_cover_def)
 qed
 
 lemma ret_f_body:
-  "intra_path (prog_cfg ret_prog)
-     (FunctionEntry (STR ''f''), (\<lambda>_. 0)(STR ''n'' := k))
-     (FunctionResult (STR ''f''), ((\<lambda>_. 0)(STR ''n'' := k))(ret_var := k))"
+  "star (cfg_intra_step ret_\<kappa> ret_g)
+     (FunctionEntry (STR ''f''), (\<lambda>_. 0)(ret_n := k))
+     (FunctionResult (STR ''f''), ((\<lambda>_. 0)(ret_n := k))(ReturnVar := k))"
 proof (rule star_trans)
-  show "intra_path (prog_cfg ret_prog)
-          (FunctionEntry (STR ''f''), (\<lambda>_. 0)(STR ''n'' := k))
-          (Statement 0, (\<lambda>_. 0)(STR ''n'' := k))"
+  show "star (cfg_intra_step ret_\<kappa> ret_g)
+          (FunctionEntry (STR ''f''), (\<lambda>_. 0)(ret_n := k))
+          (Statement 0, (\<lambda>_. 0)(ret_n := k))"
     by (rule intra_path_single [where a = "EA_Body (STR ''f'')"]) (auto simp: ret_intra)
 next
-  show "intra_path (prog_cfg ret_prog)
-          (Statement 0, (\<lambda>_. 0)(STR ''n'' := k))
-          (FunctionResult (STR ''f''), ((\<lambda>_. 0)(STR ''n'' := k))(ret_var := k))"
-    by (rule intra_path_single [where a = "EA_Ret (Some (V (STR ''n''))) (STR ''f'')"])
+  show "star (cfg_intra_step ret_\<kappa> ret_g)
+          (Statement 0, (\<lambda>_. 0)(ret_n := k))
+          (FunctionResult (STR ''f''), ((\<lambda>_. 0)(ret_n := k))(ReturnVar := k))"
+    by (rule intra_path_single [where a = "EA_Ret (Some (TVar I32 ret_n)) (STR ''f'')"])
        (auto simp: ret_intra)
 qed
 
+lemma ret_globals_zero: "is_global v \<Longrightarrow> (((\<lambda>_. 0)(ret_n := k))(ReturnVar := k)) v = 0"
+  by (cases v) simp_all
+
 lemma ret_reaches_second_call:
-  "(\<lambda>_. 0)(STR ''a'' := 1)
-     \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
-         cinit_stores (declared_global ret_prog)\<^esub> (Statement 3)"
+  "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 3)"
 proof -
-  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
-              cinit_stores (declared_global ret_prog)\<^esub> (FunctionEntry (STR ''main''))"
-    using node_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global ret_prog)"
-                               "declared_global ret_prog" "prog_cfg ret_prog"]
-    by (simp add: ret_entry cinit_stores_def)
-  have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
-              cinit_stores (declared_global ret_prog)\<^esub> (Statement 2)"
+  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (FunctionEntry (STR ''main''))"
+    using node_collect_init [OF nv_init, of ret_\<kappa> ret_g] by (simp add: ret_entry)
+  have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 2)"
     by (rule node_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: ret_intra)
-  have ce: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
-             FunctionEntry (STR ''f''), Statement 3) \<in> calls (prog_cfg ret_prog)"
+  have ce: "(Statement 2, CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1],
+             FunctionEntry (STR ''f''), Statement 3) \<in> calls ret_g"
     by (simp add: ret_calls)
-  have bd: "intra_path (prog_cfg ret_prog)
+  have bd: "star (cfg_intra_step ret_\<kappa> ret_g)
               (FunctionEntry (STR ''f''),
-               call_enter (declared_global ret_prog)
-                 (CallEdge (Some (STR ''a'')) [STR ''n''] [N 1]) (\<lambda>_. 0))
-              (FunctionResult (STR ''f''), ((\<lambda>_. 0)(STR ''n'' := 1))(ret_var := 1))"
+               call_enter ret_\<kappa> (CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1]) (\<lambda>_. 0))
+              (FunctionResult (STR ''f''), ((\<lambda>_. 0)(ret_n := 1))(ReturnVar := 1))"
     using ret_f_body [where k = 1] by (simp add: ret_enter)
   show ?thesis
     using node_collect_call_return_step [OF s2 ce bd]
-    by (simp add: ret_no_globals combine_collect_def combine_env_def ret_var_def fun_eq_iff)
+    by (simp add: ret_combine [OF ret_globals_zero] kenv_of_def)
 qed
 
 text \<open>
@@ -525,9 +540,7 @@ text \<open>
 \<close>
 
 theorem return_at_caller_context_unsound:
-  "(\<lambda>_. 0)(STR ''a'' := 1)
-     \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
-         cinit_stores (declared_global ret_prog)\<^esub> (Statement 3)
+  "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 3)
    \<and> (\<Union>c. ret_cover (Statement 3) c) = {}"
   using ret_reaches_second_call by (simp add: ret_cover_def)
 
@@ -540,30 +553,32 @@ text \<open>
 \<close>
 
 lemma resume_keeps_context:
-  assumes s: "s \<in> \<A>\<^bsub>\<G>,adm,c0,g,S\<^esub> u ctx"
+  assumes s: "s \<in> \<A>\<^bsub>\<kappa>,adm,c0,g,S\<^esub> u ctx"
     and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls g"
-    and body: "intra_path g (FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)
+    and body: "star (cfg_intra_step \<kappa> g)
+                 (FunctionEntry q, call_enter \<kappa> (CallEdge dst pars args) s)
                  (FunctionResult q, t)"
-  shows "combine_collect \<G> dst s t \<in> \<A>\<^bsub>\<G>,adm,c0,g,S\<^esub> cont ctx"
+  shows "combine_collect \<kappa> dst s t \<in> \<A>\<^bsub>\<kappa>,adm,c0,g,S\<^esub> cont ctx"
 proof -
-  from s obtain caller where cv: "caller \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-    and cn: "sink_node caller = u" and ck: "activation_context_rel \<G> adm c0 g caller ctx"
+  from s obtain caller where cv: "caller \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
+    and cn: "sink_node caller = u" and ck: "activation_context_rel \<kappa> adm c0 g caller ctx"
     and cs: "sink_store caller = s"
     by (rule activation_collect_E)
-  let ?entered = "Call caller [(FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)]"
-  have ev: "?entered \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+  let ?entered = "Call caller [(FunctionEntry q, call_enter \<kappa> (CallEdge dst pars args) s)]"
+  have ev: "?entered \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
     using valid_activation_trace.call [OF cv, where dst = dst and pars = pars and args = args
                             and p = q and cont = cont]
       ce cn cs by simp
-  obtain callee where dv: "callee \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+  obtain callee where dv: "callee \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
     and dn: "sink_node callee = FunctionResult q" and ds: "sink_store callee = t"
     and dc: "caller_of callee = caller_of ?entered"
     by (rule valid_activation_trace_intra_path_extend [OF _ ev]) (use body in simp_all)
   let ?r = "Resume caller callee
-              (path_of caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])"
-  have rv: "?r \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+              (path_of caller @ [(cont, combine_collect \<kappa> dst
+                  (sink_store caller) (sink_store callee))])"
+  have rv: "?r \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
     by (rule valid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
-  have "sink_store ?r \<in> \<A>\<^bsub>\<G>,adm,c0,g,S\<^esub> (sink_node ?r) ctx"
+  have "sink_store ?r \<in> \<A>\<^bsub>\<kappa>,adm,c0,g,S\<^esub> (sink_node ?r) ctx"
     by (rule activation_collect_I [OF rv refl]) (use ck in simp)
   then show ?thesis using cs ds by (simp add: sink_node_def sink_store_def)
 qed
@@ -571,7 +586,7 @@ qed
 text \<open>The relation that admits no context, and the claim that covers \<open>main\<close> up to its first
   call site in the initial context and nothing else.\<close>
 
-definition tot_R :: "int context_policy" where
+definition tot_R :: "int call_context_policy" where
   "tot_R u ctx ci s es = {}"
 
 definition tot_cover :: "cfg_node \<Rightarrow> int \<Rightarrow> store set" where
@@ -579,25 +594,23 @@ definition tot_cover :: "cfg_node \<Rightarrow> int \<Rightarrow> store set" whe
      (if ctx = 0 \<and> v \<in> {FunctionEntry (STR ''main''), Statement 2} then UNIV else {})"
 
 lemma tot_weak_obligations:
-  shows "\<forall>s. s \<in> cinit_stores (declared_global ret_prog)
-              \<longrightarrow> s \<in> tot_cover (cfg_entry (prog_cfg ret_prog)) 0"
-    and "\<forall>u a v c s s'. (u, a, v) \<in> intra (prog_cfg ret_prog) \<longrightarrow> s \<in> tot_cover u c
-              \<longrightarrow> s' \<in> edge_step a s \<longrightarrow> s' \<in> tot_cover v c"
+  shows "\<forall>s. s \<in> init_stores ret_\<kappa> \<longrightarrow> s \<in> tot_cover (cfg_entry ret_g) 0"
+    and "\<forall>u a v c s s'. (u, a, v) \<in> intra ret_g \<longrightarrow> s \<in> tot_cover u c
+              \<longrightarrow> s' \<in> edge_step ret_\<kappa> a s \<longrightarrow> s' \<in> tot_cover v c"
     and "\<forall>u dst pars args p cont c c' s.
-              (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (prog_cfg ret_prog)
+              (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ret_g
               \<longrightarrow> s \<in> tot_cover u c
               \<longrightarrow> c' \<in> tot_R u c (call_info_of (CallEdge dst pars args) p) s
-                    (call_enter (declared_global ret_prog) (CallEdge dst pars args) s)
-              \<longrightarrow> call_enter (declared_global ret_prog) (CallEdge dst pars args) s
+                    (call_enter ret_\<kappa> (CallEdge dst pars args) s)
+              \<longrightarrow> call_enter ret_\<kappa> (CallEdge dst pars args) s
                     \<in> tot_cover (FunctionEntry p) c'"
     and "\<forall>cl dst pars args p cont c1 c' p' s t es.
-              (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (prog_cfg ret_prog)
+              (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ret_g
               \<longrightarrow> s \<in> tot_cover cl c1
-              \<longrightarrow> admits_call_context (declared_global ret_prog) (prog_cfg ret_prog) tot_R
-                    cl c1 p' s es c'
+              \<longrightarrow> admits_call_context ret_\<kappa> ret_g tot_R cl c1 p' s es c'
               \<longrightarrow> t \<in> tot_cover (FunctionResult p) c'
-              \<longrightarrow> combine_collect (declared_global ret_prog) dst s t \<in> tot_cover cont c1"
-    and "\<not> call_context_total_on tot_cover tot_R (declared_global ret_prog) (prog_cfg ret_prog)"
+              \<longrightarrow> combine_collect ret_\<kappa> dst s t \<in> tot_cover cont c1"
+    and "\<not> call_context_total_on ret_\<kappa> tot_cover tot_R ret_g"
   by (auto simp: ret_entry ret_intra ret_calls tot_cover_def tot_R_def admits_call_context_def
                  call_context_total_on_def)
 
@@ -608,82 +621,83 @@ text \<open>
 \<close>
 
 theorem total_dropped_unsound:
-  "(\<lambda>_. 0)(STR ''a'' := 1)
-     \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,
-         cinit_stores (declared_global ret_prog)\<^esub> (Statement 3) 0
-   \<and> (\<lambda>_. 0)(STR ''a'' := 1) \<notin> tot_cover (Statement 3) 0"
+  "(\<lambda>_. 0)(nv_var (STR ''a'') := 1)
+     \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 3) 0
+   \<and> (\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<notin> tot_cover (Statement 3) 0"
 proof
-  let ?S = "cinit_stores (declared_global ret_prog)"
+  let ?S = "init_stores ret_\<kappa>"
   let ?t0 = "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0)]"
-  have v0: "?t0 \<in> \<T>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,?S\<^esub>"
-    using valid_activation_trace.root
-      [where s = "\<lambda>_. 0" and S = ?S and \<G> = "declared_global ret_prog"
-                                and g = "prog_cfg ret_prog"]
-    by (simp add: ret_entry cinit_stores_def)
+  have v0: "?t0 \<in> \<T>\<^bsub>ret_\<kappa>,ret_g,?S\<^esub>"
+    using valid_activation_trace.root [where s = "\<lambda>_. 0" and S = ?S and g = ret_g]
+      nv_init by (simp add: ret_entry)
   have v1: "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)]
-              \<in> \<T>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,?S\<^esub>"
+              \<in> \<T>\<^bsub>ret_\<kappa>,ret_g,?S\<^esub>"
     using valid_activation_trace.intra
-      [OF v0, where a = "EA_Body (STR ''main'')" and v = "Statement 2"
-                                  and s' = "\<lambda>_. 0"]
+      [OF v0, where a = "EA_Body (STR ''main'')" and v = "Statement 2" and s' = "\<lambda>_. 0"]
     by (simp add: ret_intra sink_node_def sink_store_def)
-  have s2: "(\<lambda>_. 0) \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub> (Statement 2) 0"
+  have s2: "(\<lambda>_. 0) \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,?S\<^esub> (Statement 2) 0"
   proof -
     have "sink_store (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])
-            \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub>
+            \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,?S\<^esub>
                 (sink_node (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])) 0"
-      by (rule activation_collect_I [OF v1 refl]) simp
+      by (rule activation_collect_I [OF v1]) (simp_all add: sink_node_def)
     then show ?thesis by (simp add: sink_node_def sink_store_def)
   qed
-  have ce: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
-             FunctionEntry (STR ''f''), Statement 3) \<in> calls (prog_cfg ret_prog)"
+  have ce: "(Statement 2, CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1],
+             FunctionEntry (STR ''f''), Statement 3) \<in> calls ret_g"
     by (simp add: ret_calls)
-  have bd: "intra_path (prog_cfg ret_prog)
+  have bd: "star (cfg_intra_step ret_\<kappa> ret_g)
               (FunctionEntry (STR ''f''),
-               call_enter (declared_global ret_prog)
-                 (CallEdge (Some (STR ''a'')) [STR ''n''] [N 1]) (\<lambda>_. 0))
-              (FunctionResult (STR ''f''), ((\<lambda>_. 0)(STR ''n'' := 1))(ret_var := 1))"
+               call_enter ret_\<kappa> (CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1]) (\<lambda>_. 0))
+              (FunctionResult (STR ''f''), ((\<lambda>_. 0)(ret_n := 1))(ReturnVar := 1))"
     using ret_f_body [where k = 1] by (simp add: ret_enter)
-  show "(\<lambda>_. 0)(STR ''a'' := 1)
-          \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub> (Statement 3) 0"
+  show "(\<lambda>_. 0)(nv_var (STR ''a'') := 1)
+          \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,?S\<^esub> (Statement 3) 0"
     using resume_keeps_context [OF s2 ce bd]
-    by (simp add: ret_no_globals combine_collect_def combine_env_def ret_var_def fun_eq_iff)
-  show "(\<lambda>_. 0)(STR ''a'' := 1) \<notin> tot_cover (Statement 3) 0"
+    by (simp add: ret_combine [OF ret_globals_zero] kenv_of_def)
+  show "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<notin> tot_cover (Statement 3) 0"
     by (simp add: tot_cover_def)
 qed
 
 subsection \<open>Entry coverage must be paired\<close>
 
 text \<open>
-  \<open>y = p(x)\<close> with \<open>fun p(a) { return a; }\<close> and \<open>x = 1\<close>. Abstract values are
-  represented by their concretizations, so \<^const>\<open>entry_pairs_cover\<close> is taken at
-  \<^const>\<open>id\<close>. The answer \<open>[(x > 0, a < 0), (\<bottom>, a > 0)]\<close> covers the caller store
-  with its first pair and the entered store with its second. Each pair's callee
-  result, \<open>a\<close> published as the return value, is combined with that pair's own
-  continuation; the union excludes the run's \<open>y = 1\<close>.
+  \<open>y = p(x)\<close> with \<open>fun p(a) { return a; }\<close> and \<open>x = 1\<close>, all of kind \<^const>\<open>I32\<close>.
+  Abstract values are represented by their concretizations, which hold values of kind
+  \<^const>\<open>I32\<close> at \<open>a\<close>, so
+  \<^const>\<open>entry_pairs_cover\<close> is taken at \<^const>\<open>id\<close>. The answer
+  \<open>[(x > 0, a < 0), (\<bottom>, a > 0)]\<close> covers the caller store with its first pair and the
+  entered store with its second. Each pair's callee result, \<open>a\<close> published as the return
+  value, is combined with that pair's own continuation; the union excludes the run's
+  \<open>y = 1\<close>.
 \<close>
+
+abbreviation up_x :: var_id where "up_x \<equiv> (nv_var (STR ''x''))"
+abbreviation up_y :: var_id where "up_y \<equiv> (nv_var (STR ''y''))"
+abbreviation up_a :: var_id where "up_a \<equiv> ScopedId (STR ''p'') (STR ''a'')"
 
 definition unpaired_answer :: "(store set \<times> store set) list" where
   "unpaired_answer =
-     [({t. 0 < t (STR ''x'')}, {t. t (STR ''a'') < 0}), ({}, {t. 0 < t (STR ''a'')})]"
+     [({t. 0 < t up_x}, {t. t up_a \<in> ik_range I32 \<and> t up_a < 0}),
+      ({}, {t. t up_a \<in> ik_range I32 \<and> 0 < t up_a})]"
 
 definition pairwise_contribution :: "(store set \<times> store set) list \<Rightarrow> store set" where
   "pairwise_contribution P =
      (\<Union>(q, e) \<in> set P.
-        {combine_collect (\<lambda>_. False) (Some (STR ''y'')) s0 (t(ret_var := t (STR ''a'')))
+        {combine_collect (ret_\<kappa>) (Some up_y) s0 (t(ReturnVar := t up_a))
          | s0 t. s0 \<in> q \<and> t \<in> e})"
 
 theorem unpaired_entry_cover_unsound:
-  defines "s \<equiv> (\<lambda>_. 0)(STR ''x'' := 1) :: store"
-      and "s' \<equiv> (\<lambda>_. 0)(STR ''a'' := 1) :: store"
-  shows "s' = call_enter (\<lambda>_. False) (CallEdge (Some (STR ''y'')) [STR ''a''] [V (STR ''x'')]) s"
+  defines "s \<equiv> (\<lambda>_. 0)(up_x := 1) :: store"
+      and "s' \<equiv> (\<lambda>_. 0)(up_a := 1) :: store"
+  shows "s' = call_enter (ret_\<kappa>) (CallEdge (Some up_y) [up_a] [TVar I32 up_x]) s"
     and "(\<exists>(q, e) \<in> set unpaired_answer. s \<in> q)"
     and "(\<exists>(q, e) \<in> set unpaired_answer. s' \<in> e)"
     and "\<not> entry_pairs_cover id s s' unpaired_answer"
-    and "\<forall>u \<in> pairwise_contribution unpaired_answer. u (STR ''y'') < 0"
-    and "combine_collect (\<lambda>_. False) (Some (STR ''y'')) s (s'(ret_var := s' (STR ''a'')))
-           (STR ''y'') = 1"
+    and "\<forall>u \<in> pairwise_contribution unpaired_answer. u up_y < 0"
+    and "combine_collect (ret_\<kappa>) (Some up_y) s (s'(ReturnVar := s' up_a)) up_y = 1"
   by (auto simp: s_def s'_def unpaired_answer_def pairwise_contribution_def
-                 entry_pairs_cover_def call_enter_CallEdge enter_binding_def enter_frame_def
-                 combine_collect_def combine_env_def ret_var_def fun_eq_iff)
+                 entry_pairs_cover_def call_enter_CallEdge enter_state_def enter_frame_def
+                 combine_collect_def kenv_of_def fun_eq_iff)
 
 end

@@ -20,7 +20,8 @@ individual work items, dependencies, and scheduling.
 The supported pipeline is:
 
 ```text
-VIMP source
+surface VIMP (parser output)
+  -> elaboration to core VIMP over machine-integer kinds
   -> procedure-aware CFG
   -> activation-trace collecting semantics
   -> generic D/G equations
@@ -40,8 +41,8 @@ edges, procedure entry, and return combination.
 The generic D/G interface is the supported modular-analysis architecture. It
 permits different local (`D`) and global (`G`) carriers, context-indexed local
 unknowns, and analysis-defined shared-state routing. Sign, Interval, Parity,
-Congruence and the `int_dom` product use the same solver and soundness
-infrastructure.
+Congruence, their reduced product Int (Interval and Congruence) and the relational
+Order analysis use the same solver and soundness infrastructure.
 
 ## Intentionally retired components
 
@@ -81,29 +82,27 @@ more precise shared-state communication. Keep routing generic over the `D` and
 The hook-tree layer (`sound_dg_hooks`) and the owner-sensitive placement
 examples built on it were removed; `docs/GOBLINT_ALIGNMENT_REGISTER.md` ("D/G
 reconstruction and publication timing") records why. Every analysis interprets
-`analysis_contract` through `dg_context_activation` and
-`routed_context`. An analysis-specific sharing policy belongs in that
+`ganalysis_contract` through `gdg_context_activation` and
+`grouted_context`. An analysis-specific sharing policy belongs in that
 analysis's own semantics over the keyed manager, not in a generic placement
 layer.
 
 ### Domain composition
 
-`int_dom` is one concrete reduced product, and `Rel_Order_Domain.thy`
-demonstrates a non-pointwise carrier.
+`int_tuple` (`Int_Tuple_Kind.thy`) is one concrete reduced product, and
+`Order_Analysis.thy` demonstrates a non-pointwise carrier.
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) settled this: no
-shared product/reduction layer is planned. `analysis_contract`'s carriers are
-already opaque, so new heterogeneous or relational analyses (e.g.
-`Rel_Order_Domain.thy`) are added directly against it.
+shared product/reduction layer is planned. `ganalysis_contract`'s carriers are
+opaque, so new heterogeneous or relational analyses are added directly against
+it.
 
 ### Cross-analysis query composition
 
 Goblint's MCP layer answers expression queries (`EvalInt` and friends) by
-meeting responses from every activated analysis, including recursively into
-subexpressions and callee-side `combine`. Voblint's expression evaluation is
-currently domain-local; the composite `int_dom` reduces internally between
-its own Sign/Interval/Parity/Congruence components but has no cross-analysis
-query channel. Design investigation tracked in #70; alignment inventory and
-staging in #141.
+meeting responses from every activated analysis. Voblint runs the activated
+analyses as one through `mcp_registry` (`MCP_Registry.thy`), and each answers
+the others' `EvalInt` queries; `docs/COOPERATING_ANALYSES_DESIGN.md` records the
+design and its limits.
 
 ### Numeric precision
 

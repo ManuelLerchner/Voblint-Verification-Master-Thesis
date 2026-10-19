@@ -53,7 +53,7 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return p
 // EXPECT-GRAPH-END
 
-fun p(x) {
+fun p(i32 x) {
   __voblint_check(x <= 2); // PROVED
 }
 

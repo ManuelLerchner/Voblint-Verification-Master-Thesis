@@ -3,8 +3,8 @@
 // operands and equality boundaries. Congruence previously answered UNKNOWN
 // for every ordering query, even when both classes were singletons.
 fun main() {
-  x = -1;
-  y = 0;
+  i32 x = -1;
+  i32 y = 0;
   __voblint_check(x < y); // PROVED
   __voblint_check(x <= x); // PROVED
   __voblint_check(y > x); // PROVED

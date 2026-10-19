@@ -1,0 +1,20 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// A library min or max result is converted to its destination's kind like any
+// written value. Its obligation is about the result, not the arguments: max(300, 1)
+// is 300, which u8 cannot hold, while min(300, 1) is 1, which it can. A result into
+// a kind that holds both arguments' kinds raises no obligation.
+fun main() {
+  i32 x;
+  i32 y;
+  u8 g;
+  u8 h;
+  u8 m;
+  i64 w;
+  g = max(300, 1); // ARITH: ERROR conversion-overflow
+  h = min(300, 1); // ARITH: NONE
+  m = max(x, 1); // ARITH: WARN conversion-overflow
+  w = min(x, y); // ARITH: NONE
+  __voblint_check(g == 44); // PROVED
+  __voblint_check(h == 1); // PROVED
+}

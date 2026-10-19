@@ -1,0 +1,11 @@
+tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value.vimp [interval]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+12:5      pp4    WARNING   possible signed integer overflow in -: 0 - x
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ------------------------------------
+15:5      pp6    x != 0     UNKNOWN  interval: x=[-2147483648,2147483647]

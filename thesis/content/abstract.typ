@@ -17,17 +17,20 @@ condition had been verified @stade24 @tilscher26.
 
 We present Voblint, an Isabelle/HOL formalization of a context-sensitive
 interprocedural analyzer. Its soundness proof covers all four conditions for
-VIMP, a small C-like language with global and local integer variables and
-recursive procedures with parameters and return values. The main theorem
-combines the proofs of the four conditions. It states that if the analyzer
-returns a report, the report covers every store that a finite execution of the
-program reaches from an initial store with zeroed globals, and that every
-definite verdict at the corresponding program point holds for that store. We
-also prove that a check reported #verdict("DEAD") is unreachable and that a
-divisor reported as an error is zero wherever its point is reached. At a point
-without an arithmetic warning or error, no divisor is zero. To our knowledge,
-Voblint is the first mechanized analyzer whose soundness proof connects a source
-semantics to a side-effecting constraint system and its verified solver.
+VIMP, a small C-like language with fixed-width integer variables and recursive
+procedures with parameters and return values. A parsed program is translated
+into core VIMP, which makes every integer type and conversion explicit, as CIL
+does for Goblint @necula02. The main theorem combines the proofs of the four
+conditions. It states that if the analyzer returns a report, the report covers
+every store that a finite execution of the translated program reaches from an
+initial store, and that every definite verdict at the corresponding program
+point holds for that store. We also prove that a check reported #verdict("DEAD")
+is unreachable and that an arithmetic obligation reported as an error fails
+wherever its point is reached. At a point without an arithmetic warning or
+error, no divisor is zero, no signed operation overflows, and no conversion
+changes its value. To our knowledge, Voblint is the first mechanized analyzer
+whose soundness proof connects a source semantics to a side-effecting constraint
+system and its verified solver.
 
 The main difficulty is context sensitivity. A context-sensitive analyzer
 computes a separate invariant for each program point and calling context. The
@@ -44,9 +47,9 @@ policies, analyses, and the solver each have their own proof obligations, and
 one soundness theorem combines them. A numeric domain only has to implement a
 shared interface and prove its abstract operations sound. The framework builds
 transfer functions from these operations and proves them sound once for all
-domains, as in Nipkow and Klein's generic abstract interpreter
-@nipkow14[§13.5]. The main theorem holds for every offered choice of analysis,
-context policy, and placement of program globals.
+domains, as in Nipkow and Klein's generic abstract interpreter @nipkow14[§13.5].
+The main theorem holds for every offered choice of analysis, context policy,
+placement of program globals, and treatment of signed overflow.
 
 The analysis function is exported to OCaml, runs in a command-line interface and
 a

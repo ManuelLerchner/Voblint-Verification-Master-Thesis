@@ -1,8 +1,8 @@
 (* src/Program_Model/Compile/VIMP_Proc_to_CFG.thy *)
 definition compile_proc ::
-  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a gproc_decl \<Rightarrow> nat
-   \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
-        \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+  "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> ('a, 'v, 'e) gproc_decl \<Rightarrow> nat
+   \<Rightarrow> nat \<times> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+        \<times> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
 where
   "compile_proc \<Pi> p decl n =
      (let r = n + csize (body decl);

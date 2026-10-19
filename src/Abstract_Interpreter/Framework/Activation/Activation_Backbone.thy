@@ -20,7 +20,7 @@ text \<open>
   \<open>TOTAL\<close> for at least one admitted context per covered call ---
   \<open>activation_collect_sound\<close> bounds \<^const>\<open>activation_collect\<close>, the set
   of stores some valid activation trace can leave at one \<open>(node, context)\<close>.  It is the context-sensitive
-  twin of \<open>node_collect_semantic_postfix\<close> and shares its proof shape: interpret
+  twin of a monovariant post-fixpoint argument: interpret
   \<^locale>\<open>activation_coverage\<close> at the supplied \<open>cover\<close>, then read off \<open>valid_activation_trace_covered_at\<close>.
 
   \<open>adm\<close> says which contexts may describe a concrete call transition, and that is what indexes
@@ -32,15 +32,15 @@ text \<open>
 \<close>
 
 theorem activation_collect_sound:
-  assumes "activation_coverage g S cover adm c\<^sub>0 \<G>"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> cover v c"
+  assumes "activation_coverage \<kappa> g S cover adm c\<^sub>0"
+  shows "\<A>\<^bsub>\<kappa>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> cover v c"
 proof -
-  interpret G: activation_coverage g S cover adm c\<^sub>0 \<G> by (fact assms)
+  interpret G: activation_coverage \<kappa> g S cover adm c\<^sub>0 by (fact assms)
   show ?thesis
   proof (rule subsetI)
-    fix st assume "st \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
-    then obtain t where t: "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-      and sn: "sink_node t = v" and kc: "activation_context_rel \<G> adm c\<^sub>0 g t c"
+    fix st assume "st \<in> \<A>\<^bsub>\<kappa>,adm,c\<^sub>0,g,S\<^esub> v c"
+    then obtain t where t: "t \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
+      and sn: "sink_node t = v" and kc: "activation_context_rel \<kappa> adm c\<^sub>0 g t c"
       and st: "sink_store t = st"
       by (rule activation_collect_E)
     have "sink_store t \<in> cover (sink_node t) c" using G.valid_activation_trace_covered_at[OF t kc]

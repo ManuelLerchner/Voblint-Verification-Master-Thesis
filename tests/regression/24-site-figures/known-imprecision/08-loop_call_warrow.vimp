@@ -1,6 +1,7 @@
 // PARAM: --analysis interval --context none --globals warrow
-// Backs the warrow cell of the site's Globals guide table. Concretely g receives [0,9] from the loop,
-// but warrow widens g's entry while the loop's contribution grows: [0,+inf], so the check is UNKNOWN.
+// Backs the warrow cell of the site's Globals guide table. Concretely g
+// receives [0,9] from the loop, but warrow widens g's entry while the loop's
+// contribution grows: [0,2147483647], so the check is UNKNOWN.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: g / unit
@@ -20,10 +21,10 @@
 // nodes:
 //   g_pp1_ctx0: pp1
 //       interval:
-//         x=[0,+∞]
+//         x=[0,2147483647]
 //   g_exit_g_ctx0: exit_g
 //       interval:
-//         x=[0,+∞]
+//         x=[0,2147483647]
 //   main_pp3_ctx0: pp3
 //       interval:
 //         x=[0,10]
@@ -35,7 +36,7 @@
 //         x=[10,10]
 //   g_pp0_ctx0: pp0 [unknown]
 //       interval:
-//         x=[0,+∞]
+//         x=[0,2147483647]
 //       check x < 10
 //   main_pp2_ctx0: pp2
 //       interval:
@@ -45,7 +46,7 @@
 //         x=[0,9]
 //   g_entry_g_ctx0: entry_g
 //       interval:
-//         x=[0,+∞]
+//         x=[0,2147483647]
 //   main_pp5_ctx0: pp5
 //       interval:
 //         x=[0,9]
@@ -68,12 +69,12 @@
 //   main_pp4_ctx0 -> main_pp5_ctx0: call-to-return g
 // EXPECT-GRAPH-END
 
-fun g(x) {
+fun g(i32 x) {
   __voblint_check(x < 10); // UNKNOWN
 }
 
 fun main() {
-  x = 0;
+  i32 x = 0;
   while (x < 10) {
     g(x);
     x = x + 1;

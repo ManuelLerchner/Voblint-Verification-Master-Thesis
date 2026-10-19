@@ -6,6 +6,6 @@
 // a regression that collapses every comparison to PROVED go unnoticed.
 
 fun main() {
-  x = 0 - 5;
+  i32 x = 0 - 5;
   __voblint_check(0 < x); // REFUTED
 }

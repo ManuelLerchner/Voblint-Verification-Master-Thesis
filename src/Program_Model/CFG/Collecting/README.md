@@ -23,6 +23,9 @@ unbounded call stack in CFG nodes.
 `node_collect` forgets activation structure and collects reachable sink stores
 at each node. `activation_collect` retains an analysis-defined activation key.
 These sets are the concrete targets of equation-system and D/G soundness.
+Each is defined generically and instantiated for core VIMP as `vimp`; the canonical
+constants `valid_activation_trace`, `activation_collect` and `node_collect` take the
+kind environment `κ`.
 
 Nothing here mentions the compiler: `valid_activation_trace` is the semantics of an
 arbitrary CFG, which is what lets the analysis soundness statements be about

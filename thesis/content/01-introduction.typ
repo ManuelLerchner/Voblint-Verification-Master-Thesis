@@ -10,7 +10,7 @@
 = Introduction <ch:intro>
 
 A static analyzer answers questions about every execution of a program at once:
-whether a divisor can be zero at some point, whether a program point is reachable at all, or whether a check always holds. The analyzer is itself a program and can contain errors. Such an error can produce a confident answer that real executions contradict. In Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156], Goblint claimed that `c % 2 == 1` holds for $c in {-5, -7}$ @goblint1156. However, the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$ for both values. #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
+whether a divisor can be zero at some point, whether a signed operation can overflow, whether a conversion can change a value, whether a program point is reachable at all, or whether a check always holds. The analyzer is itself a program and can contain errors. Such an error can produce a confident answer that real executions contradict. In Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156], Goblint claimed that `c % 2 == 1` holds for $c in {-5, -7}$ @goblint1156. However, the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$ for both values. #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
   1161] fixed the congruence domain, which had ignored the sign of the dividend
 @goblint1161. Such bugs are particularly bad because a user who trusts the
 answer has no reason to look for the error. An imprecise answer, in contrast,
@@ -41,7 +41,13 @@ relates the kernel's C implementation to an abstract specification in
 Isabelle/HOL and names the compiler, assembly code, boot code, cache
 management, and hardware as assumptions @klein09. Voblint draws its boundary at
 the source language. Its main theorem
-starts from _source executions_, the executions of a program under the small-step semantics #isaconst("pstep") of Voblint's input language VIMP. Every later representation is connected to source executions by proof, so only #isaconst("pstep") needs an adequacy argument. That argument states which fragment of C it models, where it departs from C11 (@sec:vimp-vs-c), and why no existing verified semantics
+starts from _source executions_, the executions of the elaborated program
+under the small-step semantics #isaconst("pstep") of Voblint's input language
+VIMP. _Elaboration_ (#isaconst("elab_ptable")) translates the parsed program into core VIMP with explicit
+integer kinds. Every later representation is connected to source executions
+by proof, so only elaboration and #isaconst("pstep") need an adequacy
+argument. That argument states which fragment of C they model, where they
+depart from C11 (@sec:vimp-vs-c), and why no existing verified semantics
 serves as the anchor.
 
 == From executions to static guarantees
@@ -99,16 +105,17 @@ are
 many contexts, the analysis may not finish in practice.
 
 Voblint answers every check that the user writes into the source program as a
-`check` statement. It also warns at every division and remainder where it cannot
-exclude a zero divisor. @fig:intro-answers shows a run in the
+statement `__voblint_check(e);`. It also warns at every arithmetic operation
+where it cannot exclude a hazard: a zero divisor, a signed overflow, or a
+conversion that changes a value. @fig:intro-answers shows a run in the
 #link(site("playground.html"))[browser
   playground] together with what each answer guarantees. Only #verdict("DEAD")
 makes a claim about reachability, and #verdict("REFUTED") is not a verified
 counterexample. Each run fixes an analysis configuration. It consists of the
 activated analyses (the domains Sign, Interval, Parity, Congruence, and the
 reduced-product domain Int, and an order analysis), the context policy that
-chooses the contexts, the rule that combines contributions to global values, and
-the placement of the program's globals. The
+chooses the contexts, the rule that combines contributions to global values, the
+placement of the program's globals, and the treatment of signed overflow. The
 run shown uses intervals without calling
 contexts.
 
@@ -163,7 +170,7 @@ contexts.
         [#_line("1000 / p;")], tag(vb.verdict-warning, raw(_ans-warn.cond)),
         [a zero divisor could not be excluded; no run is shown to divide by zero],
         [#_line("1000 / (p + 1)")], tag(vb.muted, [none]),
-        [no run reaching this point divides by zero],
+        [no run reaching this point divides by zero, overflows, or changes a value by a conversion],
         table.hline(stroke: 0.5pt),
       ),
     )
@@ -437,7 +444,8 @@ proof excludes them.
     ring(
       vb.proved,
       [Verdicts],
-      [stores in which every definite verdict at $v$ holds (#isaconst("verdict_stores"), @ch:results)],
+      [stores in which every definite verdict at $v$ holds (#isaconst("PROVED"),
+        #isaconst("REFUTED"), @ch:results)],
       ring(
         vb.accent,
         [Report],
@@ -491,8 +499,7 @@ make this theorem possible or show that it is not vacuous.
   path of one activation together with the activation that called it. Therefore,
   the contexts that a policy assigns to a call can be read off the concrete
   execution.
-  A policy may assign several contexts to one call. Assume that an analysis
-  claim meets the coverage contract.
+  A policy may assign several contexts to one call. Assume that an analysis claim meets the coverage contract.
   This contract includes that every call from a store the claim contains gets
   at least one context. Then the stores collected per context together are
   exactly the stores of the node collecting
@@ -502,7 +509,7 @@ make this theorem possible or show that it is not vacuous.
   the solver are each verified against their own interface, and generic
   theorems compose them for every configuration. A numeric domain proves only
   its primitive operations sound, and the transfer functions derived from them
-  are sound for every such domain (#isalocale("sound_nonrelational_ops")). A context
+  are sound for every such domain (#isathm("nonrel_spec_sound")). A context
   policy proves only that its contexts agree with the concrete semantics and
   that every call from a store that the claim contains gets a context. Analyses
   that ask one another for facts can be combined under conditions on their
@@ -568,7 +575,7 @@ stage of the analyzer relative to the proof.
           inset: 3pt,
           radius: 3pt,
           stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dashed"),
-        )[Source semantics: #isaconst("pstep") and its operators]),
+        )[Source semantics: elaboration (#isaconst("elab_ptable")), #isaconst("pstep") and its operators]),
         align(center, text(fill: vb.neutral)[#sym.arrow.b]),
         zone(vb.proved, [proved in Isabelle/HOL])[
           #p[CFG compiler] #arrow #p[equations] #arrow #p[solver] #arrow #p[result, verdicts]
@@ -586,7 +593,7 @@ stage of the analyzer relative to the proof.
   },
   placement: none,
   caption: [Where the proof starts and stops, for accepted programs whose solve
-    terminates. The adequacy of #isaconst("pstep") is argued
+    terminates. The adequacy of elaboration and #isaconst("pstep") is argued
     (@sec:vimp-vs-c). The handwritten adapters connect the generated code to
     the command line and the browser, Zarith is OCaml's arbitrary-precision
     integer library, and @sec:trust-boundary gives the exact boundary.],
@@ -595,12 +602,15 @@ stage of the analyzer relative to the proof.
 The theorem has the following limits (@sec:limitations).
 
 - _Language and properties._ VIMP has no pointers, heap, or threads. Its
-  integers are unbounded, and division by zero is defined. Therefore, a verdict
-  does not always hold for a C program with the same text (@sec:vimp-vs-c).
-  Voblint checks assertions and division by zero, while Goblint also checks
-  overflows, data races, memory
+  integers have fixed widths and wrap around. Every operation is defined,
+  including division by zero, and a local declared without an initializer
+  holds some value of its kind. Therefore, a verdict does not always hold for
+  a C program with the same text (@sec:vimp-vs-c). Voblint checks assertions
+  and arithmetic hazards, while Goblint also checks data races, memory
   safety, memory leaks, and program termination @saan26phd[§3.3].
-- _Adequacy and trusted components._ We argue, but do not prove, that #isaconst("pstep") models the intended language (@sec:vimp-vs-c). The parser, the code generator, and the target
+- _Adequacy and trusted components._ We argue, but do not prove, that
+  elaboration and the core semantics #isaconst("pstep") model the intended
+  language (@sec:vimp-vs-c). The parser, the code generator, and the target
   toolchains lie outside the proof (@sec:trust-boundary).
 - _Partial correctness._ The theorem covers every report the analyzer returns.
   Termination of the solve is not proved for every program (@sec:termination).

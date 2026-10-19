@@ -3,9 +3,9 @@ docs/readme-figures/division-possible.vimp [interval]
 Arithmetic diagnostics
 Location  Point  Severity  Message
 --------  -----  --------  --------------------------------------
-3:3       pp1    WARNING   possible division by zero: 7 / divisor
+3:7       pp1    WARNING   possible division by zero: 7 / divisor
 
 Assertion checks
 Location  Point  Condition     Verdict  State
---------  -----  ------------  -------  ---------------------
-4:3       pp2    divisor != 0  UNKNOWN  interval: divisor=⊤
+--------  -----  ------------  -------  ------------------------------------------
+4:3       pp2    divisor != 0  UNKNOWN  interval: divisor=[-2147483648,2147483647]

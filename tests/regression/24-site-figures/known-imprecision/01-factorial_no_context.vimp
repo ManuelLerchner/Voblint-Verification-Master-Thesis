@@ -3,7 +3,7 @@
 // but with one context for f the recursive call f(n - 1) shares f's single exit, and
 // the recursive combine feeds that exit back into itself, so the return value is lost
 // and a == 2 is UNKNOWN under every --globals rule. Under the default warrow rule the
-// entry is additionally widened to n = [-inf,2]; under join it stays n = [1,2].
+// entry is additionally widened to n = [-2147483648,2]; under join it stays n = [1,2].
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: f / unit
@@ -24,42 +24,43 @@
 // nodes:
 //   f_pp1_ctx0: pp1
 //       interval:
-//         n=[-∞,1]
+//         n=[-2147483648,1]
 //         r=⊤
 //   f_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //   f_exit_f_ctx0: exit_f
 //       interval:
-//         n=[-∞,2]
+//         n=[-2147483648,2]
 //         r=⊤
 //   main_pp7_ctx0: pp7
 //       interval:
-//         a=⊤
+//         a=[-2147483648,2147483647]
 //   main_exit_main_ctx0: exit_main
 //       interval:
-//         a=⊤
+//         a=[-2147483648,2147483647]
 //   f_pp0_ctx0: pp0
 //       interval:
-//         n=[-∞,2]
+//         n=[-2147483648,2]
 //         r=⊤
 //   f_pp2_ctx0: pp2
 //       interval:
 //         n=[2,2]
 //         r=⊤
-//   f_pp3_ctx0: pp3
+//   f_pp3_ctx0: pp3 [unknown]
 //       interval:
 //         n=[2,2]
-//         r=⊤
+//         r=[-2147483648,2147483647]
+//       possible signed integer overflow in *: n * r
 //   main_pp5_ctx0: pp5
 //       interval:
 //         a=⊤
 //   f_entry_f_ctx0: entry_f
 //       interval:
-//         n=[-∞,2]
+//         n=[-2147483648,2]
 //         r=⊤
 //   main_pp6_ctx0: pp6 [unknown]
 //       interval:
-//         a=⊤
+//         a=[-2147483648,2147483647]
 //       check a == 2
 //   main_entry_main_ctx0: entry_main
 //       interval:
@@ -83,16 +84,16 @@
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-fun f(n) {
+fun i32 f(i32 n) {
   if (n < 2) {
     return 1;
   } else {
-    r = f(n - 1);
+    i32 r = f(n - 1);
     return n * r;
   }
 }
 
 fun main() {
-  a = f(2);
+  i32 a = f(2);
   __voblint_check(a == 2); // UNKNOWN
 }

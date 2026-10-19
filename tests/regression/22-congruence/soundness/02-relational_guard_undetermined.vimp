@@ -10,8 +10,8 @@
 // then subtracts the literal 1 from top and gets top back. The domain
 // tracks one class per variable and has nowhere to record m - n = 1.
 fun main() {
-  n = __voblint_nondet_int();
-  m = __voblint_nondet_int();
+  i32 n = __voblint_nondet_int();
+  i32 m = __voblint_nondet_int();
   if (n + 1 == m) {
     __voblint_check(n == 0); // UNKNOWN
   }

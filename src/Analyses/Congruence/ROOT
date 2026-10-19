@@ -1,7 +1,9 @@
 chapter Voblint
 
 session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
-  description "The Congruence domain: normalized residue-class lattice, arithmetic, backward filtering, transfers, executable bridge"
+  description "The Congruence domain: warrowing, arithmetic on the normalized residue-class
+    carrier, normalization modulo a kind's width with Goblint's conversions, and an
+    executed regression"
   sessions
     "Voblint_VIMP"
     "Voblint_CFG"
@@ -12,15 +14,8 @@ session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
     "Voblint_Exec"
     "HOL-Computational_Algebra"
     "TD"
-  directories
-    "generated"
   theories
     Congruence_Warrowing
     Congruence_Arithmetic
-    Congruence_Backward
-    Congruence_Special
-    Congruence_Transfer
-    Congruence_Exec
-    Congruence_Sound
-    Congruence_Classify
-    Congruence_Analyses
+    Congruence_Kind
+    Congruence_Regression

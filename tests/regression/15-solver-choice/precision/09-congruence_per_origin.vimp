@@ -1,9 +1,14 @@
-// PARAM: --analysis congruence --globals per-origin
+// PARAM: --analysis congruence --globals per-origin --signed-overflow assume_wraparound
 // Exercises --globals per-origin with the Congruence domain. Congruence's
 // widen is plain join, and a strictly ascending chain of residue classes is a
 // chain of proper divisors of the modulus, so join alone terminates and the
 // warrowing rules solve the same system by the same steps.
+//
+// Run under --signed-overflow assume_wraparound: the case is about the per-
+// origin globals rule, and its classes come from signed arithmetic, which
+// standalone Congruence answers with top under Goblint's default assume_top
+// (27-signed-overflow/known-imprecision/02).
 fun main() {
-  x = 2 + 2;
+  i32 x = 2 + 2;
   __voblint_check(x == 4); // PROVED
 }

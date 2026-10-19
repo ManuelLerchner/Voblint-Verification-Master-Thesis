@@ -1,0 +1,19 @@
+// PARAM: --analysis sign
+// Every value is fixed at i32: a = -6, b = 6, y = 2, and no operation
+// overflows. Sign loses all three. A product of two nonzero signs or a sum of
+// two positives can leave i32 for large enough magnitudes, and a sign carries
+// no magnitude, so the transfer cannot rule out the overflow and normalizes
+// the result to the kind's top (sign_safe fails in arith_ik_sign). The
+// assume_wraparound policy does not help: a wrapped product or sum can land on
+// either side of zero.
+// Split from ../precision/18-sign_operations.vimp, whose products with zero and
+// whose quotients and remainders cannot overflow and keep their sign.
+fun main() {
+  i32 a = -2 * 3;
+  __voblint_check(a < 0); // UNKNOWN
+  i32 b = -2 * -3;
+  __voblint_check(0 < b); // UNKNOWN
+  i32 x = 1;
+  i32 y = x + x;
+  __voblint_check(0 < y); // UNKNOWN
+}

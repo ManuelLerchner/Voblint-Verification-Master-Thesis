@@ -5,9 +5,9 @@
 // y <= z, and y = y + 1 forgets every pair with y. A copy w = x records both
 // pairs between w and x, so w == x is PROVED. Backs thesis Section 11.4.
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
-  z = __voblint_nondet_int();
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
   if (x < y) {
     __voblint_check(x <= y); // PROVED
     if (y <= z) {
@@ -16,6 +16,6 @@ fun main() {
     y = y + 1;
     __voblint_check(x <= y); // UNKNOWN
   }
-  w = x;
+  i32 w = x;
   __voblint_check(w == x); // PROVED
 }

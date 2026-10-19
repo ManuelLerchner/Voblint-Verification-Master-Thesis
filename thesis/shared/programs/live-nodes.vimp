@@ -1,4 +1,4 @@
-fun f(b) {
+fun i32 f(i32 b) {
   return b;
   if (b < 0) {
     return 1;
@@ -6,5 +6,5 @@ fun f(b) {
   b = 2;
 }
 fun main() {
-  a = f(0);
+  i32 a = f(0);
 }

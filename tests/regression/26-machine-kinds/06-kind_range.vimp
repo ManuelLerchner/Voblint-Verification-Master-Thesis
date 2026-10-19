@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// A declared local starts at an arbitrary value of its kind, so before the
+// program writes it, it is bounded by its kind's range and nothing more.
+fun main() {
+  u8 x;
+  i8 y;
+  __voblint_check(x <= 255); // PROVED
+  __voblint_check(0 <= x); // PROVED
+  __voblint_check(-128 <= y); // PROVED
+  __voblint_check(x < 255); // UNKNOWN
+}

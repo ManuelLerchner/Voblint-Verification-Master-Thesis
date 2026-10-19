@@ -1,0 +1,23 @@
+// PARAM: --analysis interval,order
+// Concretely only f(100, 0) enters the branch, so x = 100 and y = 0 there.
+//
+// Without contexts both parameters range over the two calls' values. Interval
+// evaluates (y <= x) by asking it, and Order answers 1 from the guard, so the
+// first check is proved; Interval alone leaves it open
+// (known-imprecision/07-comparison_interval_alone). Interval stored z = 1 when it
+// evaluated the assignment through the channel, so the second check survives
+// x = 0 removing Order's fact. No answer decides y == 1.
+fun f(i32 x, i32 y) {
+  i32 z;
+  if (y <= x) {
+    __voblint_check((y <= x) + 1 == 2); // PROVED
+    z = (y <= x);
+    x = 0;
+    __voblint_check(z == 1); // PROVED
+    __voblint_check(y == 1); // UNKNOWN
+  }
+}
+fun main() {
+  f(0, 100);
+  f(100, 0);
+}

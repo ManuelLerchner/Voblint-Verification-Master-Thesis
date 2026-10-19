@@ -5,7 +5,7 @@
     2: "Without sound transfers, a single wrong lemma is enough. Goblint's congruence domain evaluated `c % 2` to the constant `1` for a negative odd `c` and reported a check that every run violates as succeeding; this is the bug replayed earlier on this page.",
     3: "Without context coverage, a policy could assign a call to a key that no call site publishes to. That copy of the callee starts from `⊥`, its body appears unreachable, and its checks are reported DEAD.",
     4: "Without a post-solution, read the solver's values before the loop head has settled, while `H = [0, 0]`. Then `X = assume(i ≥ 5) [0, 0] = ⊥`, and the check after the loop is reported DEAD although every run reaches it. The solver promises a post-solution only when it terminates.",
-    5: "Without a sound classifier, a check `i == 5` could be reported PROVED whenever `5` lies in the interval, so `[0, 5]` would prove it too. `classify_proved` requires that every store in `γ` satisfies the check.",
+    5: "Without a sound classifier, a check `i == 5` could be reported PROVED whenever `5` lies in the interval, so `[0, 5]` would prove it too. `gclassify_proved` requires that every store in `γ` satisfies the check.",
   };
 
   const BRIDGE_X = { 1: 267, 2: 383, 3: 500, 4: 617, 5: 733 };

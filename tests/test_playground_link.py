@@ -19,7 +19,7 @@ def unpack(packed: str) -> str:
 
 
 def test_source_survives_the_fragment_encoding():
-    source = "fun main() {\n  x = 1 / 0; // ⚠ ∅\n  __voblint_check(x == 0);\n}\n"
+    source = "fun main() {\n  i32 x = 1 / 0; // ⚠ ∅\n  __voblint_check(x == 0);\n}\n"
     packed = playground_link.pack_source(source)
     assert "=" not in packed and "+" not in packed and "/" not in packed
     assert unpack(packed) == source

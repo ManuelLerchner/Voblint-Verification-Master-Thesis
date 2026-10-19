@@ -27,6 +27,14 @@ rule token = parse
   | "while"             { WHILE }
   | "true"              { BOOL_TRUE }
   | "false"             { BOOL_FALSE }
+  | "i8"                { KW_I8 }
+  | "u8"                { KW_U8 }
+  | "i16"               { KW_I16 }
+  | "u16"               { KW_U16 }
+  | "i32"               { KW_I32 }
+  | "u32"               { KW_U32 }
+  | "i64"               { KW_I64 }
+  | "u64"               { KW_U64 }
   | "="                 { ASSIGN }
   | "+"                 { PLUS }
   | "-"                 { MINUS }

@@ -3,7 +3,7 @@
 // Parity represents literal zero as Even, which also contains nonzero integers.
 // Its numeric queries cannot certify that the divisor is exactly zero.
 fun main() {
-  quotient = 10 / 0; // ARITH: WARN division-by-zero
-  remainder = 10 % 0; // ARITH: WARN remainder-by-zero
-  safe = 10 / 3; // ARITH: NONE
+  i32 quotient = 10 / 0; // ARITH: WARN division-by-zero
+  i32 remainder = 10 % 0; // ARITH: WARN remainder-by-zero
+  i32 safe = 10 / 3; // ARITH: NONE
 }

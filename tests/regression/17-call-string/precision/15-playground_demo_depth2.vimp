@@ -4,23 +4,23 @@
 // now also records which wrap call reached it, so wrap(1) and wrap(4) no
 // longer share a context: a is exactly 2, a == 2 is proved, and the possible
 // division by zero of the depth-1 run becomes a definite one.
-global hits;
+global i32 hits;
 
-fun record(amount) {
+fun record(i32 amount) {
   hits = hits + amount;
 }
 
-fun scale(v) {
+fun i32 scale(i32 v) {
   return v * 2;
 }
 
-fun wrap(w) {
-  r = scale(w);
+fun i32 wrap(i32 w) {
+  i32 r = scale(w);
   return r;
 }
 
 fun main() {
-  i = 0;
+  i32 i = 0;
   while (i < 5) {
     i = i + 1;
   }
@@ -35,8 +35,8 @@ fun main() {
     record(100);
   }
 
-  a = wrap(1);
-  b = wrap(4);
+  i32 a = wrap(1);
+  i32 b = wrap(4);
   __voblint_check(a == 2); // PROVED
-  share = 10 / (a - 2); // ARITH: ERROR division-by-zero
+  i32 share = 10 / (a - 2); // ARITH: ERROR division-by-zero
 }

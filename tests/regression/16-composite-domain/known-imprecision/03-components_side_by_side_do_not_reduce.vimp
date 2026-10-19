@@ -1,0 +1,20 @@
+// PARAM: --analysis interval,congruence
+// The program of precision/01-refinement_beats_components.vimp, run with
+// Interval and Congruence as two analyses in one solve. x == 3 holds: m lies
+// in [0, 100], so x = 3 * m is a multiple of three in [1, 5]. Interval keeps
+// x in [1, 5]. Congruence keeps nothing: it has no interval of its own to
+// establish that 3 * m cannot overflow, so under the default assume_top the
+// product is top (and under assume_wraparound 3 * m of a top m wraps to every
+// value anyway). Only the int product passes Interval's no-overflow fact to
+// Congruence, so only it obtains 3Z for x and proves x == 3; side by side the
+// check stays UNKNOWN.
+fun main() {
+  i32 m = __voblint_nondet_int();
+  if (m < 0 || m > 100) {
+    m = 0;
+  }
+  i32 x = 3 * m;
+  if (x >= 1 && x <= 5) {
+    __voblint_check(x == 3); // UNKNOWN
+  }
+}

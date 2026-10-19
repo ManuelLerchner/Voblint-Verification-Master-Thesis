@@ -20,7 +20,8 @@
 //   n == 7  Interval refutes it: the context entered with (3, 7) returns 3;
 // Interval proves the last branch unreachable, and it warns at 100 / x because
 // nothing bounds x away from 0.
-fun smaller(a, b) {
+fun i32 smaller(i32 a, i32 b) {
+  i32 lo;
   if (a <= b) {
     lo = a;
   } else {
@@ -30,20 +31,21 @@ fun smaller(a, b) {
 }
 
 fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
-  q = 100 / x; // ARITH: WARN division-by-zero
-  n = smaller(3, 7);
+  i32 x = __voblint_nondet_int();
+  i32 y = __voblint_nondet_int();
+  i32 q = 100 / x; // ARITH: WARN division-by-zero
+  i32 n = smaller(3, 7);
   smaller(9, 4);
   if (x <= y) {
     if (y <= x) {
-      z = (x == y);
-      w = x;
+      i32 z = (x == y);
+      i32 w = x;
       __voblint_check(z == 1); // PROVED
       __voblint_check(w == y); // PROVED
     }
   }
-  c = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 u, v;
   if (0 < c) {
     u = 0;
     v = 10;
@@ -52,7 +54,7 @@ fun main() {
     v = 30;
   }
   __voblint_check(u <= v); // PROVED
-  i = 0;
+  i32 i = 0;
   while (i < 3) {
     i = i + 1;
   }

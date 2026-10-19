@@ -36,8 +36,7 @@ text \<open>
   canonicalized to structural \<open>Bot\<close>, so \<open>Lifted a\<close> with an \<open>empty_pred\<close>-bottom \<open>a\<close> never
   actually escapes a value-producing step in practice, even though the raw datatype and
   order permit it. This theory does not know or assume that \<open>empty_pred\<close> means semantic
-  emptiness -- \<open>Nonrelational_Reachability\<close> is where \<open>empty_pred\<close> is instantiated to
-  \<open>is_empty_state\<close> and proved to coincide with an empty concretization.
+  emptiness; a carrier that instantiates it proves that coincidence itself.
 \<close>
 
 subsection \<open>The lifted order and lattice structure\<close>
@@ -58,8 +57,7 @@ text \<open>
   gives up the weaker standalone arities that instantiating each parent
   separately would have provided (\<open>'a::type \<Rightarrow> 'a lifted :: bot\<close> and
   \<open>'a::order \<Rightarrow> 'a lifted :: order\<close>), for an arbitrary or merely ordered
-  payload; consequently the generic lifted lemmas below (\<open>gamma_lift_mono\<close>,
-  \<open>map_lift_mono\<close>, \<open>normalize_lift_mono\<close>, \<open>transfer_lift_mono\<close>,
+  payload; consequently the generic lifted lemmas below (\<open>map_lift_mono\<close>, \<open>normalize_lift_mono\<close>, \<open>transfer_lift_mono\<close>,
   \<open>transfer_lift2_mono\<close>) and the standalone widening/narrowing instances are
   stated at \<open>semilattice_sup\<close> as well. A caller that only needs the weak
   standalone \<open>bot\<close> arity does not automatically satisfy this, and has to
@@ -148,7 +146,6 @@ qed
 
 end
 
-
 subsection \<open>Generic concretization\<close>
 
 text \<open>Reading a lifted value back: \<^term>\<open>Bot\<close> denotes no state at all, so it concretizes to
@@ -164,14 +161,6 @@ lemma gamma_lift_Bot [simp]: "gamma_lift gam Bot = {}"
 
 lemma gamma_lift_Lifted [simp]: "gamma_lift gam (Lifted a) = gam a"
   unfolding gamma_lift_def by simp
-
-
-lemma gamma_lift_mono:
-  fixes x y :: "'a::semilattice_sup lifted"
-  assumes gam_mono: "\<And>a b. a \<le> b \<Longrightarrow> gam a \<subseteq> gam b"
-    and le: "x \<le> y"
-  shows "gamma_lift gam x \<subseteq> gamma_lift gam y"
-  using le by (cases x; cases y) (auto simp: gam_mono)
 
 text \<open>
   \<open>gamma_liftE\<close> recovers the \<open>Lifted\<close> payload a lifted membership witnesses:
@@ -203,8 +192,6 @@ text \<open>
 fun bind_lift :: "'a lifted \<Rightarrow> ('a \<Rightarrow> 'b lifted) \<Rightarrow> 'b lifted" where
   "bind_lift Bot f = Bot"
 | "bind_lift (Lifted a) f = f a"
-
-lemma bind_lift_left_identity: "bind_lift (Lifted a) f = f a" by simp
 
 lemma bind_lift_right_identity [simp]: "bind_lift x Lifted = x"
   by (cases x) simp_all
@@ -257,12 +244,6 @@ lemma map_lift_mono:
   shows "map_lift f x \<le> map_lift f y"
   using le by (cases x; cases y) (auto simp: f_mono)
 
-lemma map_lift_sup:
-  fixes x y :: "'a::semilattice_sup lifted"
-  assumes f_sup: "\<And>a b. f (a \<squnion> b) = (f a \<squnion> f b :: 'b::semilattice_sup)"
-  shows "map_lift f (x \<squnion> y) = map_lift f x \<squnion> map_lift f y"
-  by (cases x; cases y) (simp_all add: f_sup)
-
 lemma map_lift_id [simp]: "map_lift id x = x"
   by (cases x) simp_all
 
@@ -286,37 +267,6 @@ fun collapse_lift :: "'a::bot lifted \<Rightarrow> 'a" where
     "collapse_lift Bot = bot"
   | "collapse_lift (Lifted a) = a"
 
-lemma collapse_lift_mono:
-  fixes x y :: "'a::bounded_semilattice_sup_bot lifted"
-  assumes "x \<le> y"
-  shows "collapse_lift x \<le> collapse_lift y"
-  using assms by (cases x; cases y) simp_all
-
-text \<open>
-  The soundness counterpart: a witness against \<open>gam\<close> through the lifted
-  carrier survives collapsing, since \<open>Bot\<close> can only arise when there is no
-  witness at all (\<open>gam bot = {}\<close> rules that reading out).
-\<close>
-
-lemma gamma_collapse_lift:
-  assumes "s \<in> gamma_lift gam x" and "gam bot = {}"
-  shows "s \<in> gam (collapse_lift x)"
-  using assms by (cases x) simp_all
-
-text \<open>
-  \<open>collapse_lift\<close> commutes with \<open>map_lift f\<close> whenever \<open>f\<close> itself sends
-  \<open>bot\<close> to \<open>bot\<close>: both sides land on \<open>Bot\<close>'s collapse, \<open>bot\<close>, when the
-  carrier is \<open>Bot\<close>, and agree trivially on \<open>Lifted a\<close>. This is what lets the
-  map from an executable state to its function (\<open>f\<close>) be applied either before or after
-  collapsing a \<open>lifted\<close> result, so a commutation theorem proved for the
-  \<open>lifted\<close> level transports to the collapsed, plain-type level for free.
-\<close>
-
-lemma collapse_lift_map_lift:
-  assumes "f bot = bot"
-  shows "collapse_lift (map_lift f x) = f (collapse_lift x)"
-  using assms by (cases x) simp_all
-
 subsection \<open>Canonical-bottom normalization\<close>
 
 text \<open>
@@ -337,20 +287,6 @@ lemma normalize_lift_bot [simp]: "empty_pred a \<Longrightarrow> normalize_lift 
 lemma normalize_lift_not_bot [simp]:
   "\<not> empty_pred a \<Longrightarrow> normalize_lift empty_pred a = Lifted a"
   unfolding normalize_lift_def by simp
-
-text \<open>
-  When \<open>empty_pred\<close> exactly tracks \<open>gam\<close>'s own emptiness, normalizing never
-  changes what a payload concretizes to: the \<open>if\<close> only chooses between
-  \<open>gam a\<close> and \<open>{}\<close>, and those coincide exactly when \<open>empty_pred a\<close> does.
-  This is the generic fact every \<open>gamma_*_lift\<close> correctness statement
-  (\<open>Nonrelational_Reachability\<close>'s \<open>is_empty_state_lift_iff\<close>) reduces to, once
-  \<open>empty_pred\<close>'s own iff-correctness is in hand.
-\<close>
-
-lemma gamma_normalize_lift:
-  assumes "empty_pred a \<longleftrightarrow> gam a = {}"
-  shows "gamma_lift gam (normalize_lift empty_pred a) = gam a"
-  using assms unfolding normalize_lift_def by auto
 
 definition transfer_lift ::
   "('b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 'a lifted \<Rightarrow> 'b lifted" where
@@ -395,8 +331,7 @@ text \<open>
   primitive a solver combines lifted values with: \<open>\<squnion>\<close> (joining several contributions at a
   program point) and \<open>\<nabla>\<Delta>\<close> (the warrowing update rule). Both need only that \<open>empty_pred\<close>
   itself is downward closed under the payload's order (\<open>mono\<close> below) -- exactly
-  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>numeric_domain\<close>, or \<open>default_st_is_bot_for\<close>'s own
-  monotonicity once bridged through \<open>default_st_to_fun_mono\<close> -- not any fact
+  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>numeric_domain\<close> -- not any fact
   specific to how \<open>empty_pred\<close> itself is computed.
 \<close>
 
@@ -459,36 +394,8 @@ lemma canonicalize_lift_idem [simp]:
   by (cases x) (auto simp: normalize_lift_def)
 
 text \<open>
-  \<open>\<squnion>\<close> preserves \<open>normalized_lift\<close> from two already-normalized operands: \<^const>\<open>Bot\<close> is
-  \<open>\<squnion>\<close>'s identity on \<^typ>\<open>'a lifted\<close> (\<open>sup_lifted.simps\<close>), so the only case needing
-  \<open>mono\<close> at all is \<^const>\<open>Lifted\<close>/\<^const>\<open>Lifted\<close>, where \<open>sup_ge1\<close>/\<open>sup_ge2\<close> place each
-  operand below the join and \<open>mono\<close>'s contrapositive carries non-bottomness upward.
-\<close>
-
-lemma normalized_lift_sup:
-  fixes x y :: "'a::semilattice_sup lifted"
-  assumes mono: "\<And>a b::'a. a \<le> b \<Longrightarrow> empty_pred b \<Longrightarrow> empty_pred a"
-    and nx: "normalized_lift empty_pred x"
-    and ny: "normalized_lift empty_pred y"
-  shows "normalized_lift empty_pred (x \<squnion> y)"
-  using nx ny by (cases x; cases y) (auto dest: mono[OF sup_ge1] mono[OF sup_ge2])
-
-text \<open>
-  \<open>normalized_lift_bind\<close> lifts a per-payload \<open>normalized_lift\<close> guarantee on
-  \<open>f\<close> through \<open>bind_lift\<close>: \<open>Bot\<close> is already normalized, and \<open>Lifted a\<close> hands
-  off to \<open>f a\<close>, which the assumption covers uniformly. Left unattributed:
-  its premise is a schematic function fact, too broad a shape for automatic
-  intro search.
-\<close>
-
-lemma normalized_lift_bind:
-  assumes "\<And>a. normalized_lift empty_pred (f a)"
-  shows "normalized_lift empty_pred (bind x f)"
-  using assms by (cases x) simp_all
-
-text \<open>
   Generic monotonicity for the reachability dispatch, proved once here instead of at every
-  instantiation (\<open>abs_state\<close>, \<open>default_st\<close>, ...): whenever the underlying transfer is
+  instantiation (\<open>gabs_state\<close>, \<open>gdefault_st\<close>, ...): whenever the underlying transfer is
   monotone and the bottom predicate is downward closed (as \<open>is_empty_state\<close> always is, via
   \<open>is_empty_state_antimono\<close>), \<open>transfer_lift\<close>/\<open>transfer_lift2\<close> are monotone.
 \<close>
@@ -519,20 +426,6 @@ lemma transfer_lift2_mono:
   using assms by (cases x1; cases x2; cases y1; cases y2)
      (auto intro: normalize_lift_mono f_mono bot_mono)
 
-text \<open>
-  \<open>bind_lift\<close>'s own monotonicity: a monotone step function carried through
-  a monotone bind argument stays monotone. Left unattributed, like
-  \<open>normalized_lift_bind\<close>: its \<open>f\<close>/\<open>g\<close> premise is schematic and broader than
-  a typical \<open>[intro]\<close> shape, so call sites invoke it explicitly.
-\<close>
-
-lemma bind_lift_mono2:
-  fixes x y :: "'a::semilattice_sup lifted"
-  assumes xy: "x \<le> y"
-      and fg: "\<And>a b. a \<le> b \<Longrightarrow> f a \<le> (g b :: 'b::semilattice_sup lifted)"
-  shows "bind x f \<le> bind y g"
-  using xy by (cases x; cases y) (auto intro: fg)
-
 subsection \<open>Solver update integration\<close>
 
 text \<open>
@@ -543,29 +436,5 @@ text \<open>
 \<close>
 
 instance lifted :: ("{bounded_semilattice_sup_bot, warrowing}") warrowing ..
-
-subsection \<open>Transporting a lifted transfer along a representation map\<close>
-
-text \<open>
-  A representation map that commutes with the underlying operation, and
-  classifies emptiness the same way on both sides, commutes with the whole
-  lifted transfer. Stated for \<^const>\<open>transfer_lift\<close>/\<^const>\<open>transfer_lift2\<close>
-  themselves, so any pair of representations of one domain --- an executable
-  carrier and the mathematical one it stands for, say --- gets the fact once
-  rather than once per operation that uses it.
-\<close>
-
-lemma transfer_lift_commute:
-  assumes commute: "\<And>s. phi (f s) = F (phi s)"
-    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
-  shows "map_lift phi (transfer_lift empty_pred f d) = transfer_lift empty_pred' F (map_lift phi d)"
-  by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
-
-lemma transfer_lift2_commute:
-  assumes commute: "\<And>s t. phi (f s t) = F (phi s) (phi t)"
-    and exact: "\<And>s. empty_pred s = empty_pred' (phi s)"
-  shows "map_lift phi (transfer_lift2 empty_pred f d1 d2) =
-           transfer_lift2 empty_pred' F (map_lift phi d1) (map_lift phi d2)"
-  by (cases d1; cases d2) (simp_all add: transfer_lift2_def normalize_lift_def commute exact)
 
 end

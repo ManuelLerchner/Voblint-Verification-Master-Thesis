@@ -9,6 +9,4 @@ session Voblint_Routing in "." = "Voblint_Exec" +
     "Voblint_Framework"
   theories
     Compiled_Routed_Equations
-    Call_String_Routed_Context
-    Entry_State_Routed_Context
     Context_Space_Finite

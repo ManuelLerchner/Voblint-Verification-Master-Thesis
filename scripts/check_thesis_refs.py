@@ -94,6 +94,7 @@ CMD_ARG = re.compile(r"\bcmd:\s*\"([a-z_]+)\"")
 ALLOWED = {
     # Goblint's own vocabulary, cited for comparison rather than claimed.
     "Spec",
+    "assume_top",
     "assign",
     "ctx",
     "combine_env",

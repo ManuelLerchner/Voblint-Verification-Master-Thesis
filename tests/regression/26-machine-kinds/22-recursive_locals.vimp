@@ -1,0 +1,25 @@
+// PARAM: --analysis interval --context call-string --context-depth 3
+// Every activation of a recursive procedure has its own locals, each starting
+// at an arbitrary value of its kind. A callee's writes to its own `a` do not
+// change the caller's `a`.
+fun i32 r(i32 d) {
+  u8 a;
+  i16 b;
+  i32 t;
+  __voblint_check(a <= 255); // PROVED
+  __voblint_check(0 <= a); // PROVED
+  __voblint_check(b <= 32767); // PROVED
+  __voblint_check(-32768 <= b); // PROVED
+  __voblint_check(a == 0); // UNKNOWN
+  a = 7;
+  if (d > 0) {
+    t = r(d - 1);
+  }
+  __voblint_check(a == 7); // PROVED
+  return a;
+}
+fun main() {
+  i32 v;
+  v = r(2);
+  __voblint_check(v == 7); // PROVED
+}

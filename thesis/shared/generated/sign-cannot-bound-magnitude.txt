@@ -1,9 +1,11 @@
 tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp [sign]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  ------------------------------------------------
+16:3      pp0    WARNING   possible signed integer overflow in +: total + n
 
 Assertion checks
 Location  Point  Condition    Verdict  State
---------  -----  -----------  -------  -------------
-22:3      pp5    total < 100  UNKNOWN  sign: total=+
+--------  -----  -----------  -------  ---------------
+22:3      pp5    total < 100  UNKNOWN  sign: total=⊤

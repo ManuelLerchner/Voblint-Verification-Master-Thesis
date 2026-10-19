@@ -5,11 +5,12 @@
 // context sensitivity precisely when the two calls agree on the entered
 // formals, which is the case a per-call-site keying would otherwise be assumed
 // to separate.
-fun f(n) {
+fun i32 f(i32 n) {
   return n;
 }
 fun main() {
-  x = 5;
+  i32 x = 5;
+  i32 a;
   if (x < 2) {
     a = f(1);
   } else {

@@ -59,7 +59,7 @@ program = "docs/readme-figures/int-refinement.vimp"
 analysis = "int"
 globals = "warrow"
 context = "none"
-why = "The product domain proving y == 2 where sign, interval and parity each answer UNKNOWN."
+why = "The product Int proving x == 5 where Interval alone, Congruence alone and Int without refinement each answer UNKNOWN."
 
 [figures.clamp]
 image = "docs/images/playground-clamp.png"

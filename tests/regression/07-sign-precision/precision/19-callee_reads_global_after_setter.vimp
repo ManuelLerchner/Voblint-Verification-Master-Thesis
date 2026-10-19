@@ -7,13 +7,13 @@
 // runs the same program with --program-globals flow-insensitive, where Gx joins its
 // seed 0 with 1 and y is only NonNegative; see
 // 21-callee_reads_shared_global_after_setter.vimp.
-global Gx;
+global i32 Gx;
 fun set() { Gx = 1; }
-fun get() { return Gx; }
+fun i32 get() { return Gx; }
 fun main() {
-  x = 1;
+  i32 x = 1;
   set();
-  y = get();
+  i32 y = get();
   __voblint_check(0 < x); // PROVED
   __voblint_check(y >= 0); // PROVED
   __voblint_check(0 < y); // PROVED

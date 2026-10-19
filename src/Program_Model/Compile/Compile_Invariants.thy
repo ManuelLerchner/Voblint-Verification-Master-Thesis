@@ -1,5 +1,5 @@
 theory Compile_Invariants
-  imports Compile_Wellformed "Voblint_VIMP.VIMP_Program" "Voblint_CFG.CFG_Prune"
+  imports Compile_Wellformed "Voblint_CFG.CFG_Prune"
 begin
 
 section \<open>What a program must satisfy, and what its graph then satisfies\<close>
@@ -26,20 +26,23 @@ text \<open>\<open>prog_main_name\<close> names the distinguished entry procedur
   the other declared procedures (\<open>dom \<Pi>\<close> minus \<open>prog_main_name\<close>), so the entry's nodes never
   collide with a callee's, yet \<open>FunctionEntry prog_main_name\<close> is an ordinary activation of a
   declared procedure like any other.\<close>
-definition wf_compile_input ::
-  "(vname => bool) => 'a ptable => pname list => bool" where
-  "wf_compile_input \<G> \<Pi> ps \<longleftrightarrow>
+definition gwf_compile_input ::
+  "('e \<Rightarrow> 'v set) \<Rightarrow> 'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> ('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> bool" where
+  "gwf_compile_input vars rv \<G> \<Pi> ps \<longleftrightarrow>
      distinct ps \<and>
      set ps = {p. \<Pi> p ~= None} - {prog_main_name} \<and>
      prog_main_name \<notin> set ps \<and>
-     wf_source_program \<G> \<Pi>"
+     gwf_source_program vars rv \<G> \<Pi>"
+
+abbreviation wf_compile_input :: "(vname => bool) => 'a ptable => pname list => bool" where
+  "wf_compile_input \<equiv> gwf_compile_input exp_vnames ret_var"
 
 text \<open>The leaf definitions an executable instance unfolds to decide the contract.  No
   abstract proof unfolds them, so they only ever fire under \<open>unfolding wf_compile_input_simps\<close>.\<close>
 declare
-  reserved_ret_var_def [wf_compile_input_simps]
-  source_exp_def [wf_compile_input_simps]
-  valid_formal_def [wf_compile_input_simps]
+  greserved_ret_var_def [wf_compile_input_simps]
+  gsource_exp_def [wf_compile_input_simps]
+  gvalid_formal_def [wf_compile_input_simps]
   value_providing_def [wf_compile_input_simps]
   special_table_def [wf_compile_input_simps]
   special_pname_nondet_int_def [wf_compile_input_simps]
@@ -50,16 +53,16 @@ declare
   main_body_def [wf_compile_input_simps]
 
 lemma wf_compile_inputD:
-  assumes "wf_compile_input \<G> \<Pi> ps"
-  shows "reserved_ret_var \<G>" and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = (main_body \<Pi>)\<rparr>"
-    and "wf_source_com \<Pi> (main_body \<Pi>)" and "no_return (main_body \<Pi>)"
-    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl \<G> \<Pi> decl"
+  assumes "gwf_compile_input vars rv \<G> \<Pi> ps"
+  shows "greserved_ret_var rv \<G>" and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = (main_body \<Pi>)\<rparr>"
+    and "gwf_source_com vars rv \<Pi> (main_body \<Pi>)" and "no_return (main_body \<Pi>)"
+    and "\<Pi> p = Some decl \<Longrightarrow> gwf_proc_decl vars rv \<G> \<Pi> decl"
     and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
     and "source_pi \<Pi>" and "source_com (main_body \<Pi>)"
     and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {prog_main_name}"
     and "prog_main_name \<notin> set ps"
-  using wf_source_programD
-    assms[unfolded wf_compile_input_def] by auto
+  using wf_source_programD [of vars rv \<G> \<Pi>]
+    assms[unfolded gwf_compile_input_def] by auto
 
 lemmas wf_compile_input_reserved_ret_var [dest] = wf_compile_inputD(1)
 
@@ -98,7 +101,9 @@ definition wf_program_compile_input_exec :: "imp_prog => bool" where
          pi prog_main_name = Some (\<lparr>formals = [], body = prog_main p\<rparr>) \<and>
          wf_source_com pi (prog_main p) \<and> no_return (prog_main p) \<and>
          list_all (\<lambda>(_, decl). wf_proc_decl \<G> pi decl) procs \<and>
-         list_all (\<lambda>(q, _). special_table q = None) procs)"
+         list_all (\<lambda>(q, _). special_table q = None) procs \<and>
+         list_all lits_fit (com_exps (prog_main p)) \<and>
+         list_all (\<lambda>(_, decl). list_all lits_fit (com_exps (body decl))) procs)"
 
 lemma wf_program_compile_input_exec_sound:
   assumes "wf_program_compile_input_exec p"
@@ -138,10 +143,10 @@ proof -
   qed
   have main_eq: "main_body pi = prog_main p" using pi_eq by simp
   have wf_source_program: "wf_source_program \<G> pi"
-    unfolding wf_source_program_def main_eq
+    unfolding gwf_source_program_def main_eq
     using h(1) h(5) h(6) h(7) every_decl every_special by blast
   have wf_compile_input: "wf_compile_input \<G> pi (prog_procs p)"
-    unfolding wf_compile_input_def
+    unfolding gwf_compile_input_def
     using h(2) h(3) h(4) wf_source_program
     using domain by blast
   show ?thesis
@@ -151,8 +156,8 @@ qed
 text \<open>\<^const>\<open>compile_prog\<close> takes a \<^typ>\<open>proc_table\<close> and a \<^typ>\<open>pname list\<close>, so a
   domain holding only an \<^typ>\<open>imp_prog\<close> needs the two-projection wrapper below.  The entry
   name is \<^const>\<open>prog_main_name\<close> and its body is looked up, so neither is threaded through
-  as a parameter.  This is also the name the OCaml export publishes: a second wrapper for
-  the export alone would put the same function in the generated module twice.\<close>
+  as a parameter. This is the graph of the surface program; the analyses and the OCaml
+  export use the graph of the elaborated program, \<open>elab_cfg\<close>.\<close>
 
 definition prog_cfg :: "imp_prog => cfg" where
   "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
@@ -163,7 +168,7 @@ text \<open>\<open>returns_in\<close> asks a purely syntactic question -- does t
   \<open>Return\<close> of exactly this expression -- which is the shape the compiler lemmas below need.
   They induct over the source command, so their hypothesis has to be readable off the
   syntax rather than off the graph the compiler produced from it.\<close>
-fun returns_in :: "exp option \<Rightarrow> 'a acom \<Rightarrow> bool" where
+fun returns_in :: "'e option \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "returns_in e (Return i e') = (e = e')"
 | "returns_in e (Seq c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
 | "returns_in e (If i _ c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
@@ -237,7 +242,7 @@ text \<open>
   this list's \<open>k\<close>th index without reproducing \<^const>\<open>compile\<close>'s counter arithmetic.
 \<close>
 
-fun com_stmt_post_order :: "nat \<Rightarrow> 'a acom \<Rightarrow> cfg_node list" where
+fun com_stmt_post_order :: "nat \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> cfg_node list" where
   "com_stmt_post_order n (SKIP i) = [Statement n]"
 | "com_stmt_post_order n (Assign i x a) = [Statement n]"
 | "com_stmt_post_order n (Check i l c) = [Statement n]"
@@ -271,7 +276,7 @@ text \<open>
   clause \<^const>\<open>compile_procs\<close> skips.
 \<close>
 
-fun procs_stmt_next :: "'a ptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat" where
+fun procs_stmt_next :: "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat" where
   "procs_stmt_next \<Pi> [] n = n"
 | "procs_stmt_next \<Pi> (p # ps) n =
      (case \<Pi> p of
@@ -407,6 +412,33 @@ proof -
           (FunctionEntry prog_main_name) (FunctionResult prog_main_name)"
     using g by (intro local_reaches_cfg_reaches compile_proc_reaches_result[OF cmain]) auto
   then show ?thesis by simp
+qed
+
+section \<open>The typed program is a compiler input\<close>
+
+text \<open>The typed program is a well-formed compiler input whenever the source program is:
+  elaboration resolves every name to an identity distinct from the return slot, and keeps
+  the control structure the contract inspects.\<close>
+
+theorem elab_wf_compile_input:
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) ps"
+  shows "gwf_compile_input exp_vars ReturnVar is_global (elab_ptable p ds) ps"
+proof -
+  from wf have src: "wf_source_program (declared_global p) (prog_table p)"
+    by (simp add: gwf_compile_input_def)
+  note main = elab_ptable_main [OF src, of ds]
+  have "gwf_source_com exp_vars ReturnVar (elab_ptable p ds) (main_body (elab_ptable p ds))"
+    using src by (simp add: main(2) gwf_source_com_elab_com gwf_source_program_def)
+  moreover have "no_return (main_body (elab_ptable p ds))"
+    using src by (simp add: main(2) gwf_source_program_def)
+  moreover have "gwf_proc_decl exp_vars ReturnVar is_global (elab_ptable p ds) decl"
+    if "elab_ptable p ds q = Some decl" for q decl
+    using that gwf_proc_decl_elab [OF src] by (auto simp: elab_ptable_def)
+  moreover have "special_table q = None" if "elab_ptable p ds q \<noteq> None" for q
+    using that src by (simp add: gwf_source_program_def)
+  ultimately show ?thesis
+    using wf main(1)
+    by (simp add: gwf_compile_input_def gwf_source_program_def greserved_ret_var_def)
 qed
 
 end

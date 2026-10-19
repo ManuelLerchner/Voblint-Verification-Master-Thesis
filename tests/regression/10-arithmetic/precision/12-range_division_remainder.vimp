@@ -7,29 +7,29 @@
 // Ported from Example_Guard_Refinement.thy:
 // interval_division_remainder_regression (its bot cases are domain-internal).
 fun main() {
-  a = __voblint_nondet_int();
-  b = __voblint_nondet_int();
-  c = __voblint_nondet_int();
-  d = __voblint_nondet_int();
-  e = __voblint_nondet_int();
+  i32 a = __voblint_nondet_int();
+  i32 b = __voblint_nondet_int();
+  i32 c = __voblint_nondet_int();
+  i32 d = __voblint_nondet_int();
+  i32 e = __voblint_nondet_int();
   if (7 <= a && a <= 9 && 2 <= b && b <= 3 && -1 <= c && c <= 1
       && 0 <= d && d <= 20 && -20 <= e && e <= -1) {
-    q1 = a / b;
+    i32 q1 = a / b;
     __voblint_check(q1 >= 2); // PROVED
     __voblint_check(q1 <= 4); // PROVED
-    q2 = -a / b;
+    i32 q2 = -a / b;
     __voblint_check(q2 >= -4); // PROVED
     __voblint_check(q2 <= -2); // PROVED
-    q3 = a / c;
+    i32 q3 = a / c;
     __voblint_check(q3 >= -9); // PROVED
     __voblint_check(q3 <= 9); // PROVED
-    r1 = d % 3;
+    i32 r1 = d % 3;
     __voblint_check(r1 >= 0); // PROVED
     __voblint_check(r1 <= 2); // PROVED
-    r2 = e % 3;
+    i32 r2 = e % 3;
     __voblint_check(r2 >= -2); // PROVED
     __voblint_check(r2 <= 0); // PROVED
   }
-  t = __voblint_nondet_int();
+  i32 t = __voblint_nondet_int();
   __voblint_check(t / 0 == 0); // PROVED
 }

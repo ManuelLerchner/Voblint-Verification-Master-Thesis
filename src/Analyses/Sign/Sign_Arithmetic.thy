@@ -1,5 +1,7 @@
 theory Sign_Arithmetic
-  imports Sign_Warrowing "Voblint_Nonrelational.Abstract_Arithmetic"
+  imports Sign_Warrowing
+    "Voblint_Domain.Forward_Domain"
+    "Voblint_Domain.Numeric_Queries" "Voblint_Domain.Nonrelational_State"
 begin
 
 section \<open>What arithmetic does to a known sign\<close>
@@ -15,9 +17,7 @@ text \<open>
   denotes rather than about the sign itself: \<open>sign_lt\<close>, \<open>sign_eqb\<close> and
   \<open>sign_tobool\<close> return \<open>Some b\<close> when every pair of concrete values agrees on
   \<open>b\<close> and \<open>None\<close> when they do not. Each operation and query is proved sound and
-  monotone, which is exactly what the shared \<open>sound_arith_ops\<close> locale
-  needs; interpreting it at the end yields \<open>sign_arith.aval_dom_sound\<close> and
-  \<open>sign_arith.aval_dom_mono\<close> for whole expressions.
+  monotone.
 \<close>
 
 instantiation sign :: plus begin
@@ -89,7 +89,6 @@ fun times_sign :: "sign => sign => sign" where
 instance ..
 end
 
-
 definition sign_div :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
   "sign_div a b = (if a = SBot \<or> b = SBot then SBot else (a * b) \<squnion> SZero)"
 
@@ -111,25 +110,24 @@ lemma sign_mod_sound:
   by (cases a; cases b; auto simp: sign_mod_def sup_sign_def
       intro: c_mod_nonneg c_mod_nonpos)
 
-lemma sign_div_mono:
-  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> sign_div a1 b1 \<le> sign_div a2 b2"
-  by (cases a1; cases a2; cases b1; cases b2;
-      simp add: sign_div_def sup_sign_def less_eq_sign_def)
+text \<open>A conversion to a machine kind keeps zero and the empty value. At an unsigned
+  kind every value is nonnegative; at a signed kind wraparound can change any sign.\<close>
 
-lemma sign_mod_mono:
-  "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> sign_mod a1 b1 \<le> sign_mod a2 b2"
-  by (cases a1; cases a2; cases b1; cases b2;
-      simp add: sign_mod_def sup_sign_def less_eq_sign_def)
+definition sign_cast :: "ikind \<Rightarrow> sign \<Rightarrow> sign" where
+  "sign_cast ik a =
+     (if a = SBot then SBot else if a = SZero then SZero
+      else if ik_signed ik then STop else SNonNeg)"
+
+lemma sign_cast_sound: "i \<in> gamma_sign a \<Longrightarrow> ik_norm ik i \<in> gamma_sign (sign_cast ik a)"
+  by (cases a) (auto simp: sign_cast_def ik_norm_nonneg_unsigned)
 
 subsection \<open>Comparison and truthiness queries\<close>
 
 text \<open>
   \<open>sign_lt\<close>/\<open>sign_eqb\<close>/\<open>sign_tobool\<close> are Sign's three-valued \<open>bool option\<close>
-  queries for \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>sound_arith_ops\<close>
-  locale: \<open>Some True\<close>/\<open>Some False\<close> when the two operands' sign bounds alone
+  queries: \<open>Some True\<close>/\<open>Some False\<close> when the two operands' sign bounds alone
   decide it, \<open>None\<close> otherwise. Every guard here is a \<open>sign_le\<close> test against a
-  fixed threshold, so downward-closedness under \<open>\<le>\<close> (needed for
-  \<open>aval_dom_mono\<close>) follows from \<open>sign_le\<close>'s own transitivity, not from any
+  fixed threshold, so downward-closedness under \<open>\<le>\<close> follows from \<open>sign_le\<close>'s own transitivity, not from any
   extra reasoning about \<open>SBot\<close>.
 \<close>
 
@@ -167,123 +165,9 @@ lemma sign_eqb_sound:
   using assms unfolding less_eq_sign_def[symmetric]
   by (cases a; cases b; auto split: if_splits)
 
-lemma sign_tobool_sound:
-  assumes "sign_tobool a = Some c" and "i \<in> gamma_sign a"
-  shows "(i \<noteq> 0) = c"
-  using assms unfolding less_eq_sign_def[symmetric]
-  by (cases a; auto split: if_splits)
+subsection \<open>Soundness and monotonicity of the arithmetic\<close>
 
-lemma sign_le_trans_below:
-  fixes a1 a2 :: sign
-  assumes "sign_le a2 t" and "a1 \<le> a2"
-  shows "sign_le a1 t"
-  using assms sign_le_trans unfolding less_eq_sign_def
-  by blast
-
-lemma sign_lt_mono:
-  assumes hp: "\<not> is_empty (a1::sign)" and hq: "\<not> is_empty b1"
-      and hab: "a1 \<le> a2" and hbb: "b1 \<le> b2"
-      and hwide: "sign_lt a2 b2 = Some c"
-  shows "sign_lt a1 b1 = Some c"
-proof (cases c)
-  case True
-  then have "sign_le a2 SNeg \<and> sign_le b2 SNonNeg \<or> sign_le a2 SNonPos \<and> sign_le b2 SPos"
-    using hwide by (auto split: if_splits)
-  then have "sign_le a1 SNeg \<and> sign_le b1 SNonNeg \<or> sign_le a1 SNonPos \<and> sign_le b1 SPos"
-    using sign_le_trans_below[OF _ hab] sign_le_trans_below[OF _ hbb] by blast
-  then show ?thesis using True by auto
-next
-  case False
-  then have "sign_le b2 SNonPos \<and> sign_le a2 SNonNeg \<or> sign_le b2 SNeg \<and> sign_le a2 SPos"
-    using hwide by (auto split: if_splits)
-  then have hyp: "sign_le b1 SNonPos \<and> sign_le a1 SNonNeg \<or> sign_le b1 SNeg \<and> sign_le a1 SPos"
-    using sign_le_trans_below[OF _ hab] sign_le_trans_below[OF _ hbb] by blast
-  show ?thesis using hyp False hp hq unfolding is_empty_sign is_bottom_sign_def
-    by (cases a1; cases b1; auto)
-qed
-
-lemma sign_eqb_mono:
-  assumes hp: "\<not> is_empty (a1::sign)" and hq: "\<not> is_empty b1"
-      and hab: "a1 \<le> a2" and hbb: "b1 \<le> b2"
-      and hwide: "sign_eqb a2 b2 = Some c"
-  shows "sign_eqb a1 b1 = Some c"
-proof (cases c)
-  case True
-  then have "a2 = SZero \<and> b2 = SZero" using hwide by (auto split: if_splits)
-  then have "sign_le a2 SZero" and "sign_le b2 SZero"
-    unfolding less_eq_sign_def[symmetric] by simp_all
-  then have hle1: "sign_le a1 SZero" and hle2: "sign_le b1 SZero"
-    using sign_le_trans_below[OF _ hab] sign_le_trans_below[OF _ hbb] by blast+
-  have ha1: "a1 = SBot \<or> a1 = SZero" using hle1 by (cases a1) auto
-  have hb1: "b1 = SBot \<or> b1 = SZero" using hle2 by (cases b1) auto
-  show ?thesis using True hp hq ha1 hb1 unfolding is_empty_sign is_bottom_sign_def by auto
-next
-next
-  case False
-  then have "sign_le a2 SNeg \<and> sign_le b2 SNonNeg \<or> sign_le b2 SNeg \<and> sign_le a2 SNonNeg
-             \<or> sign_le a2 SPos \<and> sign_le b2 SNonPos \<or> sign_le b2 SPos \<and> sign_le a2 SNonPos"
-    using hwide by (auto split: if_splits)
-  then have "sign_le a1 SNeg \<and> sign_le b1 SNonNeg \<or> sign_le b1 SNeg \<and> sign_le a1 SNonNeg
-             \<or> sign_le a1 SPos \<and> sign_le b1 SNonPos \<or> sign_le b1 SPos \<and> sign_le a1 SNonPos"
-    using sign_le_trans_below[OF _ hab] sign_le_trans_below[OF _ hbb] by blast
-  then show ?thesis using False by auto
-qed
-
-lemma sign_tobool_mono:
-  assumes "\<not> is_empty (a1::sign)" and "a1 \<le> a2" and "sign_tobool a2 = Some c"
-  shows "sign_tobool a1 = Some c"
-  using assms unfolding is_empty_sign is_bottom_sign_def
-  by (cases a1; cases a2; auto simp: less_eq_sign_def split: if_splits)
-
-subsection \<open>Abstract expression evaluation\<close>
-
-text \<open>
-  \<open>aval_sign\<close> evaluates an expression bottom-up with the sign operations above.
-  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
-  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
-  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
-\<close>
-
-fun aval_sign :: "exp => (vname => sign) => sign" where
-    "aval_sign (N n)        d = sign_of_int n"
-  | "aval_sign (V x)        d = d x"
-  | "aval_sign (Plus  a b)  d = aval_sign a d + aval_sign b d"
-  | "aval_sign (Minus a b)  d = aval_sign a d - aval_sign b d"
-  | "aval_sign (Times a b)  d = aval_sign a d * aval_sign b d"
-  | "aval_sign (Div a b)  d = sign_div (aval_sign a d) (aval_sign b d)"
-  | "aval_sign (Mod a b)  d = sign_mod (aval_sign a d) (aval_sign b d)"
-  | "aval_sign (Less a b)   d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int (sign_lt (aval_sign a d) (aval_sign b d)))"
-  | "aval_sign (LessEq a b)   d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int
-               (map_option HOL.Not (sign_lt (aval_sign b d) (aval_sign a d))))"
-  | "aval_sign (Greater a b)   d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int (sign_lt (aval_sign b d) (aval_sign a d)))"
-  | "aval_sign (GreaterEq a b)   d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int
-               (map_option HOL.Not (sign_lt (aval_sign a d) (aval_sign b d))))"
-  | "aval_sign (NotEq a b) d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int
-               (map_option HOL.Not (sign_eqb (aval_sign a d) (aval_sign b d))))"
-  | "aval_sign (exp.Eq a b) d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int (sign_eqb (aval_sign a d) (aval_sign b d)))"
-  | "aval_sign (exp.Not a)  d =
-       (if is_empty (aval_sign a d) then bot
-        else of_bool_option sign_of_int (map_option HOL.Not (sign_tobool (aval_sign a d))))"
-  | "aval_sign (And a b)    d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int
-               (and_opt (sign_tobool (aval_sign a d)) (sign_tobool (aval_sign b d))))"
-  | "aval_sign (Or a b)     d =
-       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
-        else of_bool_option sign_of_int
-               (or_opt (sign_tobool (aval_sign a d)) (sign_tobool (aval_sign b d))))"
+text \<open>Each table is sound for the integer operation and monotone in both operands.\<close>
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
@@ -300,62 +184,5 @@ lemma sign_times_sound:
   shows "i * j \<in> gamma_sign (a * b)"
   using assms by (cases a; cases b; auto simp: mult_neg_neg mult_neg_pos mult_pos_neg
                                                 zero_le_mult_iff mult_le_0_iff)
-
-lemma sign_plus_mono1:
-  "a1 \<le> a2 \<Longrightarrow> a1 + b \<le> a2 + (b::sign)"
-  unfolding less_eq_sign_def
-  by (cases a1; cases a2; cases b; simp)
-
-lemma sign_plus_mono2:
-  "b1 \<le> b2 \<Longrightarrow> a + b1 \<le> a + (b2::sign)"
-  unfolding less_eq_sign_def
-  by (cases a; cases b1; cases b2; simp)
-
-lemma sign_minus_mono1:
-  "a1 \<le> a2 \<Longrightarrow> a1 - b \<le> a2 - (b::sign)"
-  unfolding less_eq_sign_def
-  by (cases a1; cases a2; cases b; simp)
-
-lemma sign_minus_mono2:
-  "b1 \<le> b2 \<Longrightarrow> a - b1 \<le> a - (b2::sign)"
-  unfolding less_eq_sign_def
-  by (cases a; cases b1; cases b2; simp)
-
-lemma sign_times_mono1:
-  "a1 \<le> a2 \<Longrightarrow> a1 * b \<le> a2 * (b::sign)"
-  unfolding less_eq_sign_def
-  by (cases a1; cases a2; cases b; simp)
-
-lemma sign_times_mono2:
-  "b1 \<le> b2 \<Longrightarrow> a * b1 \<le> a * (b2::sign)"
-  unfolding less_eq_sign_def
-  by (cases a; cases b1; cases b2; simp)
-
-lemma sign_plus_combine_mono:
-  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 + b1 \<le> a2 + (b2::sign)"
-  by (meson order.trans sign_plus_mono1 sign_plus_mono2)
-
-lemma sign_minus_combine_mono:
-  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 - b1 \<le> a2 - (b2::sign)"
-  by (meson order.trans sign_minus_mono1 sign_minus_mono2)
-
-lemma sign_times_combine_mono:
-  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 * b1 \<le> a2 * (b2::sign)"
-  by (meson order.trans sign_times_mono1 sign_times_mono2)
-
-interpretation sign_arith: mono_arith_ops
-    aval_sign sign_of_int "(+)" "(-)" "(*)" sign_div sign_mod sign_lt sign_eqb sign_tobool
-  apply unfold_locales
-  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound
-    sign_div_sound sign_mod_sound
-                        sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono
-                          sign_div_mono sign_mod_mono
-                        sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]
-                        sup_sign_def
-                    del: sign_lt.simps sign_eqb.simps sign_tobool.simps)
-  apply (blast intro: sign_lt_mono[unfolded is_empty_sign] sign_eqb_mono[unfolded is_empty_sign]
-                      sign_tobool_mono[unfolded is_empty_sign])+
-  done
-
 
 end

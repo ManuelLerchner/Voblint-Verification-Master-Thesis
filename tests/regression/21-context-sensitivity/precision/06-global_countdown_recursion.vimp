@@ -7,11 +7,11 @@
 // back up. The result is proved in every mode, including --context none:
 // the base case's num_iterat == 0 guard selects the `return 5` arm on any
 // state containing 0, and the recursive arm only forwards that value.
-global num_iterat;
-fun rec() {
+global i32 num_iterat;
+fun i32 rec() {
   if (0 < num_iterat) {
     num_iterat = num_iterat - 1;
-    res = rec();
+    i32 res = rec();
     __voblint_check(res == 5); // PROVED
     return res;
   } else {
@@ -20,6 +20,6 @@ fun rec() {
 }
 fun main() {
   num_iterat = 11;
-  r = rec();
+  i32 r = rec();
   __voblint_check(r == 5); // PROVED
 }

@@ -6,6 +6,11 @@ concrete interprocedural semantics. It is what a soundness claim is stated
 hold for an arbitrary CFG rather than only for compiled ones. The VIMP-to-CFG
 compiler lives in `Voblint_Compile`.
 
+Each semantic object is defined directly over core VIMP (at `eval`, `ReturnVar`,
+`kind_conv κ`, `is_global`): `cstep`, `valid_activation_trace` (𝒯),
+`activation_collect` (𝒜) and `node_collect` (𝒞), each taking the kind
+environment `κ`.
+
 ## Graph model
 
 | File | Role |

@@ -1,5 +1,8 @@
 # Goblint-alignment remaining tracks — comparison and priority
 
+Status note (Stage 7): `manifests/analyses.yaml` no longer exists; call-string
+contexts reach every analysis through the registration `mcp_cs` (`MCP.thy`).
+
 Index for the three remaining Goblint context-alignment migration plans. The
 `(node, context)` unknown mechanism itself is **already modeled and verified**
 (call-string and entry-state `dg_analysis` registrations — see

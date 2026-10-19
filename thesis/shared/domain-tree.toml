@@ -14,37 +14,37 @@
 # most derived; each value is the node's horizontal centre as a fraction of the
 # text width. Row heights are measured.
 
-# fig:domain-carrier: what a domain supplies for evaluation, refinement and checks.
+# fig:domain-carrier: what a non-relational domain supplies, from the solver's
+# classes down to the kind-indexed operations of its transfer.
 [carrier]
-roots = ["numeric_domain", "sound_nonrelational_ops"]
+roots = ["kind_int_domain"]
 refs = []
 bends = {}
-parent-bends = { sound_check_query = { sound_numeric_queries = 32 } }
-# Vertical gap between rows, in points; chosen so the figure fills one page.
+parent-bends = {}
+# Vertical gap between rows, in points.
 row-gap = 10.0
-# Box widths as a fraction of the text width, for nodes sharing a row whose
-# statements should wrap later than the default 0.3.
-widths = { sound_inverse_ops = 0.34, sound_intersection = 0.4, sound_truth_test = 0.42, sound_evaluator = 0.32, sound_numeric_queries = 0.45, sound_minmax_ops = 0.31 }
-# Interfaces whose operations have a monotone strengthening, marked M: the
-# strengthening locale, which `domain_tree.py` checks extends the node.
-mono = { sound_evaluator = "mono_evaluator", sound_truth_test = "mono_truth_test", sound_intersection = "mono_intersection", sound_refinement = "mono_refinement", sound_minmax_ops = "mono_minmax_ops" }
-# The instances listed at the most derived node each reaches, as snippet
-# names: a class instantiation, a certificate lemma for a final locale, or an
-# interpretation of it or of a strengthening that extends it.
+# Box widths as a fraction of the text width, for nodes whose statements
+# should wrap later than the default 0.3.
+widths = { ik_domain = 0.6, kind_int_domain = 0.9 }
+# No drawn class has a monotone strengthening.
+mono = {}
+# The instances listed at each class they instantiate, as snippet names.
 interpreted = { executable_domain = [
-  "relc_executable_domain",
+  "order_rel_executable_domain",
 ], numeric_domain = [
   "sign_numeric_domain",
   "ivl_numeric_domain",
   "parity_numeric_domain",
   "congruence_numeric_domain",
   "int_dom_ext_numeric_domain",
-], sound_nonrelational_ops = [
-  "sign_tf",
-  "ivl_tf",
-  "parity_tf",
-  "congruence_tf",
-  "int_tf",
+  "int_tuple_numeric_domain",
+  "kd_numeric_domain",
+], kind_int_domain = [
+  "sign_kind_int_domain",
+  "ivl_kind_int_domain",
+  "parity_kind_int_domain",
+  "congruence_kind_int_domain",
+  "int_tuple_kind_int_domain",
 ] }
 rows = [
   { ord = 0.36 },
@@ -54,10 +54,7 @@ rows = [
   { semilattice_sup = 0.42, narrowing = 0.68 },
   { bounded_semilattice_sup_bot = 0.11, warrowing = 0.8 },
   { executable_domain = 0.32 },
-  { numeric_domain = 0.42, sound_intersection = 0.82 },
-  { sound_numeric_queries = 0.21, sound_truth_test = 0.617 },
-  { sound_evaluator = 0.42 },
-  { sound_inverse_ops = 0.82 },
-  { sound_minmax_ops = 0.16, sound_check_query = 0.42, sound_refinement = 0.617 },
-  { sound_nonrelational_ops = 0.42 },
+  { numeric_domain = 0.42 },
+  { ik_domain = 0.5 },
+  { kind_int_domain = 0.5 },
 ]

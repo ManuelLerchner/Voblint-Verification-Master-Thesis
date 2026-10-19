@@ -152,7 +152,7 @@ its _loop head_ $h$ is the node through which control enters and exits the cycle
     column-gutter: 16mm,
     align: horizon,
     listing(lang: "c", ```
-    i = 0;
+    i32 i = 0;
     while (i < 5) {
       i = i + 1;
     }
@@ -162,7 +162,8 @@ its _loop head_ $h$ is the node through which control enters and exits the cycle
   kind: image,
   caption: [The counting loop and its control-flow graph (schematic). Nodes
     are program points: $h$ is the loop head, $b$ the start of the body, $t$
-    the point after the increment, and $e$ the point after the loop. Edges
+    the point after the increment, and $e$ the point after the loop. `i32`
+    declares a 32-bit signed integer. Edges
     carry the assignment or the condition that leads from one point to the
     next. The edge from $t$ back to $h$ has no effect.],
 ) <fig:counting-loop>
@@ -218,7 +219,7 @@ element (#isalocale("bounded_semilattice_sup_bot")) that carries the widening
 and narrowing operators of @sec:widening, so joins need to exist only for
 pairs. A numeric domain adds a top element. Refinement at a branch adds a
 pairwise intersection that keeps every value both operands admit
-(#isalocale("sound_intersection"), @sec:branches).
+(#isathm("meet_ik_sound"), @sec:branches).
 
 An analysis computes the description at a point from the descriptions at its
 predecessors, by a function $f$ on $lat(D)$. The classical theory requires $f$
@@ -350,7 +351,11 @@ square of @fig:transfer-square thus commutes only up to inclusion. In the
 counting loop, the edge from $b$ to $t$ executes `i = i + 1`. Over $ZZ$, the
 interval transfer $[l, u] |-> [l + 1, u + 1]$ is sound for it, and applied to
 $[0, 4]$ it yields $[1, 5]$, which contains every successor $i = 1, dots, 5$.
-Soundness
+In VIMP, `i` is a 32-bit integer whose increment wraps around at the largest
+value. Voblint's transfer accounts for this. If a result leaves the range, it
+returns the whole range of the type. If the configuration lets the type wrap and
+the wrapped bounds still form one interval, it returns the wrapped interval
+instead. Soundness
 composes along paths
 @mine17[Thm. 2.6], and at control-flow joins the upper-bound laws of the join
 keep the states from both predecessors (#isathm("gamma_sup_ub1"),
@@ -486,14 +491,21 @@ requires inequalities.
 The formulation goes back to data-flow analysis, where Kildall computes one
 value per node of a program graph by iteration @kildall73[§3].
 
-Programs with procedures can be analyzed with one unknown per program point or
-separately per calling context, which abstracts how an activation
-(one execution from call to return) was reached @aho06[§7.2.1]. Sharir and Pnueli
-distinguish call strings, which record recent call sites, from the functional approach,
-which relates abstract entry and return states @sharir81. Context-sensitive constraint
-systems use unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3].
-For the calls `bump(5)` and `bump(4)` in @ch:intro, entry-argument contexts
-distinguish return values $6$ and $5$, while a single unknown must cover both.
+Programs with procedures add a choice. A procedure that is called from
+several places can be analyzed once for all its calls, with one unknown per
+program point, or separately per _calling context_, an abstraction of how an
+_activation_ was reached. An activation is one execution of a procedure from
+its call to its return @aho06[§7.2.1]. Sharir and Pnueli distinguish the
+call-string approach, whose contexts record the most recent call sites, from
+the functional approach, which relates the abstract state at entry to the
+state at the return @sharir81. In the constraint-system formulation of
+Apinis et al., a context-sensitive analysis has one unknown $[v, c]$ per
+program point $v$ and context $c$ @apinis12[§3]. Recall the calls `bump(5)` and
+`bump(4)` of @ch:intro. With contexts that
+record the argument at entry, the
+unknowns at the point where
+`bump` returns can claim $6$ and $5$ separately, whereas a single unknown there
+must cover both results.
 
 == Widening and narrowing <sec:widening>
 
@@ -505,6 +517,8 @@ iterations. At the example's loop head, joins take five increases after $[0,
 in $ZZ$ never stabilizes, because these intervals have infinite ascending chains
 such as
 $ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
+With signed 32-bit bounds, a corresponding chain is finite, but it can still
+have more than two billion elements.
 
 
 #subfigures(
@@ -546,7 +560,9 @@ $[0, 0] ljoin [1, 5] = [0, 5]$. A widened iteration only grows and would not
 take this smaller value. A _narrowing_ lets it descend. Both steps
 appear in @fig:widening-phases, and @fig:widening-warrow shows one update
 operator that combines them, widening or narrowing depending on the candidate.
-
+The example uses intervals over $ZZ$. For VIMP's fixed-width integers, Voblint's
+widening moves a growing bound to the type's limit instead of $+infinity$, which
+loses the bound $5$ in the same way and needs narrowing just as much.
 
 A narrowing $a narrow b$ combines the current value $a$ with a candidate
 $b lle a$ and returns a value between the two @cousot77[§9.3.4]
@@ -620,7 +636,7 @@ query and is closed under the local reads of its right-hand sides.
 == The verified top-down solver <sec:td>
 
 // The counting loop of fig:counting-loop, for the playground link below.
-#let _counting-loop = "i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
+#let _counting-loop = "i32 i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
 
 A straightforward implementation of Kleene iteration recomputes every unknown in
 every round, although most values
@@ -719,109 +735,15 @@ $V$ and the valuation $sol$, then $V$ contains $x$, is closed under the local
 reads of its right-hand sides, and on $V$ the valuation is a post-solution,
 published contributions included. The theorem needs no monotonicity of the
 right-hand sides and says nothing about unknowns outside $V$. We call the set
-on which this certificate holds the _solved set_. Termination of this solver is not proved, and @sec:isabelle explains how
-Isabelle defines such a function.
+on which this certificate holds the _solved set_. Termination of the solver is not proved.
 
-== Isabelle/HOL mechanisms used in this development <sec:isabelle>
-
-// The declarations below are examples, set smaller than the running text.
-#show raw.where(block: true): set text(size: 6.5pt)
-
-This section explains the mechanisms of Isabelle/HOL @nipkow14 needed to read
-the definitions and theorems that later chapters show, each with the place
-where the formalization uses it.
-
-HOL is a typed logic of total functions. We write $x :: tau$ for "$x$ has type
-$tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
-#isai("'a") for a type variable, and $lambda x. t$ for the function that maps
-$x$ to $t$. A _datatype_ declares a type by its constructors and comes with
-case distinction and structural induction. VIMP's commands
-#isatype("gcom") are one (@sec:vimp). A _record_ is a tuple with named fields.
-The analysis interface #isatype("dg_spec") is one (@sec:sound-core).
-
-Every HOL function is total, so an ordinary recursive definition needs a
-termination proof. Otherwise a definition such as $f(n) = f(n) + 1$ would yield $0 = 1$ @nipkow14[§2.3.4]. Isabelle's function package can also define a
-recursive function without one. The result is still a total HOL constant, but
-its defining equations are proved only on its _domain_, the arguments on which
-the recursion terminates, and theorems about it assume membership in that
-domain. The vendored solver is defined this way, with the domain
-#isaconst("solve_dom", thy: "TD_side_upd_rule"). @sec:termination explains why Voblint's main
-theorem nevertheless needs no termination premise.
-
-A _type class_ collects operations and laws that an instance proves once for a
-carrier @haftmann07. The solver's class #isalocale("widening") fixes the
-operator $widen$ and assumes that it bounds both operands:
-#thy("widening")
-A type has at most one instance of each class. The numeric domains state
-their algebra as classes (@ch:domains).
-
-A _locale_ fixes parameters and assumptions, and interpreting it proves the
-assumptions for an instance and yields its theorems @ballarin14. Unlike a
-class, a locale can be interpreted several times for one type. Voblint states
-its soundness obligations as locale assumptions, so an analysis becomes sound
-by interpreting the locale. #isalocale("sound_intersection"), for instance,
-fixes an intersection that keeps every value both operands admit and lies
-below both:
-#thy("sound_intersection")
-
-An _inductive definition_ is the least relation closed under its rules, and
-#isacmd("inductive_set") defines a set the same way. Its _rule induction_
-proves a property of every element with one case per rule. The solver's
-verification defines #isaconst("reach"), the unknowns on which a
-query $x$ transitively depends, by two rules:
-#thy("reach")
-Source execution #isaconst("pstep") (@fig:pstep), graph execution
-#isaconst("cstep") (@fig:cstep), the valid activation traces
-#isaconst("valid_activation_trace") and the reflexive–transitive closure
-$scripts(->)^*$ of a step relation are defined by rules as well, and a source
-run is written $scripts(->)_p^*$ (#isaconst("psteps")).
-
-A theorem declares its variables and their types after #isai("fixes"),
-introduces abbreviations local to the statement after #isai("defines"), lists
-its premises after #isai("assumes") and states its conclusion after
-#isai("shows"). The source-level theorem of @sec:headline uses all four:
-// deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
-#proved("run_voblint_source_sound")
-It fixes a program $p :: #isatype("imp_prog")$ and two stores, abbreviates the
-program's globals classifier, procedure table and graph, and assumes an initial
-store, a source run $scripts(->)_p^*$ from it and an answer of the analyzer. It
-shows that the reached configuration is observed at some graph node $v$
-(written $gt.closed$, #isaconst("at_node"), @sec:csim), and that at every such
-node the reached store lies in the collecting semantics, in the state the
-report gives there, and in the stores its verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
-$and$, $or$ are the usual connectives. Subscripts, superscripts, and symbols
-such as $tack.r$ are notation for a constant applied to its arguments, and the
-text names the constant at first use.
-
-A _quotient type_ identifies representations up to an equivalence
-@huffman13. The executable abstract states of @ch:solving are one: two finite
-representations are identified when they read back to the same
-function-valued state:
-#thy("default_st")
-Its operations are lifted with #isacmd("lift_definition").
-
-_Code equations_ determine what code generation emits @haftmann10, and one
-#isacmd("export_code") declaration emits the analyzer's OCaml from them, so
-the delivered analyzer runs the definitions the theorems are about. The
-generated code is _trusted_, not proved: no theorem states that the OCaml
-program computes what the Isabelle definitions compute, so its correctness
-rests on the code generator and the OCaml toolchain. The trust has a basis.
-The generator translates code equations that are proved from the definitions,
-apart from target-language adaptations such as the mapping of integers to
-OCaml's arbitrary-precision numbers (#isacmd("code_printing")), which are
-trusted. Haftmann and Nipkow give its source and intermediate language
-a semantics and prove the translation of type classes correct on paper
-@haftmann10, and the regression corpus runs the generated analyzer against
-expected verdicts (@ch:executable). Theories are grouped
-into _sessions_, which Isabelle builds and checks as units, and which later
-chapters cite as the home of a construction. The control-flow graph, for
-instance, lives in #isasession("Voblint_CFG"), which builds on
-#isasession("Voblint_VIMP").
-
-The _trusted computing base_ is the code that must be correct for a proof to
-be believed, normally only Isabelle's inference kernel. A _proof by
-evaluation_ extends it. The method `eval` compiles a closed proposition to code, runs it, and accepts
-the result through the code generator's evaluation oracle. In 2025, a defect in
-normalization by evaluation, which also extends trust beyond the kernel,
-admitted a proof of `False` @paulson26broken. Theorems about fixed programs such as #isathm("nv_report") are proved this
-way.
+HOL functions are total, but Isabelle's #isacmd("function") package also
+accepts a recursive definition without a termination proof. Its defining
+equations then hold only on a _domain_, the arguments on which the recursion
+terminates. The solver is defined this way, with the domain
+#isaconst("solve_dom", thy: "TD_side_upd_rule"), and its correctness theorem
+assumes membership in it. Voblint proves that every completed run of the
+executable form #isaconst("solve_c", thy: "TD_side_upd_rule") lies in the
+domain (#isathm("solve_dom_of_solve_c"), @sec:termination). The end-to-end
+theorem therefore needs no termination premise. It applies whenever
+#isaconst("run_voblint") returns a report.

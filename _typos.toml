@@ -12,8 +12,9 @@ extend-exclude = [
 ]
 
 [default]
-# The thesis carries a German title alongside the English one.
-extend-ignore-re = ["title-de: .*"]
+# The thesis carries a German title alongside the English one. A playground
+# link's #code= fragment is a compressed program in base64url.
+extend-ignore-re = ["title-de: .*", "#code=[A-Za-z0-9_-]+"]
 
 [default.extend-words]
 # Isabelle's theorem keyword and antiquotation.
@@ -28,3 +29,7 @@ eles = "eles"
 gam = "gam"
 # First-name fragment of Ondřej Lhoták, written Ond{\v{r}}ej in BibTeX.
 Ond = "Ond"
+# lits_fit in VIMP_Expr.thy: every literal of an expression fits I64.
+lits = "lits"
+# gret_store, the retired generic return-store update, recorded in theorem-migration.toml.
+gret = "gret"

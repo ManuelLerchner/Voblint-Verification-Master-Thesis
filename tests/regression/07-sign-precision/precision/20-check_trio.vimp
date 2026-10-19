@@ -6,10 +6,10 @@
 // unconstrained __voblint_nondet_int(), so UNKNOWN is the only sound answer
 // for z == 1.
 fun main() {
-  y = 5;
+  i32 y = 5;
   __voblint_check(0 < y); // PROVED
   y = 0;
   __voblint_check(0 < y); // REFUTED
-  z = __voblint_nondet_int();
+  i32 z = __voblint_nondet_int();
   __voblint_check(z == 1); // UNKNOWN
 }

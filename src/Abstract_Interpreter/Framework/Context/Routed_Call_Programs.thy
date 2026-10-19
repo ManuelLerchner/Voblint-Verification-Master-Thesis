@@ -27,7 +27,6 @@ text \<open>
   discharges CALL and COMB against it once.
 \<close>
 
-
 subsection \<open>The routed key space\<close>
 
 datatype ('v,'c) global_unknown =
@@ -141,12 +140,11 @@ text \<open>
 \<close>
 
 definition routed_call_alternative_program ::
-  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-     'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
+  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c)
    \<Rightarrow> ('D \<Rightarrow> bool)
-   \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pname \<Rightarrow> 'D enter_result
+   \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pp \<Rightarrow> pname \<Rightarrow> 'D enter_result
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
   "routed_call_alternative_program S global_of seed route is_bot ctx ca cc p alt =
@@ -195,12 +193,11 @@ lemma routed_call_alternative_program_nonbot [simp]:
   unfolding routed_call_alternative_program_def using assms by (simp add: Let_def)
 
 definition routed_callee_call_program ::
-  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-     'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
+  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c)
    \<Rightarrow> ('D \<Rightarrow> bool)
-   \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> 'D \<Rightarrow> pname
+   \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pp \<Rightarrow> 'D \<Rightarrow> pname
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
   "routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p =
@@ -225,13 +222,12 @@ text \<open>
 \<close>
 
 definition routed_call_program ::
-  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-     'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
+  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'D \<Rightarrow> pname list)
+   \<Rightarrow> (pp \<Rightarrow> pp \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'D \<Rightarrow> pname list)
    \<Rightarrow> ('D \<Rightarrow> bool)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
-   \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c)
+   \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
   "routed_call_program S global_of seed resolve is_bot route ctx ca cc v =
@@ -243,12 +239,11 @@ where
               (resolve v cc ca (dg_local caller_state)))
      }"
 
-
 text \<open>The seed read-back hook: at a callee entry it reads the seed out of the
   \<open>dg_local\<close> half, matching \<open>routed_call_program\<close>'s write.\<close>
 definition routed_entry_seed_programs ::
   "(pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D::bounded_semilattice_sup_bot \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D::bounded_semilattice_sup_bot \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G::bounded_semilattice_sup_bot) dg_state,
         ('D, 'G) dg_state) strategy_program list"
@@ -323,7 +318,6 @@ text \<open>
   produced, because the program is a fold over exactly those. These are the only
   facts CALL and COMB below need about its body.
 \<close>
-
 
 lemma routed_callee_call_program_sides_ge_seed:
   assumes wfS: "dg_spec_wf S"
@@ -433,7 +427,6 @@ proof -
         traverse_side_rhs_fold_dg[OF sp_wf_routed_call_alternative_programs[OF wfS]])
   finally show ?thesis .
 qed
-
 
 subsection \<open>When a routed combine publishes nothing at the analysis global\<close>
 
@@ -606,6 +599,5 @@ proof -
        (auto simp: at_free)
   then show ?thesis by (simp add: routed_call_program_def sp_compile_bind sp_wf_observes)
 qed
-
 
 end

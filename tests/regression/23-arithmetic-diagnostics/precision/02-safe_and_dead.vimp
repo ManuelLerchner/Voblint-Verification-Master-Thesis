@@ -2,11 +2,11 @@
 // EXPECT-ARITHMETIC
 // A known nonzero divisor is safe; an unreachable zero divisor is silent.
 fun main() {
-  divisor = 3;
-  quotient = 7 / divisor; // ARITH: NONE
-  remainder = 7 % divisor; // ARITH: NONE
+  i32 divisor = 3;
+  i32 quotient = 7 / divisor; // ARITH: NONE
+  i32 remainder = 7 % divisor; // ARITH: NONE
   if (0) {
-    dead = 7 / 0; // ARITH: NONE
+    i32 dead = 7 / 0; // ARITH: NONE
   } else {
     __voblint_check(quotient == 2); // PROVED
   }

@@ -5,22 +5,22 @@ directions are:
 
 ## Context abstractions
 
-Entry-state and call-string contexts are done for all five domains, from the
-collecting semantics to the CLI:
+Entry-state and call-string contexts are done for every analysis `run_voblint`
+activates, from the collecting semantics to the CLI:
 
-- **Semantics.** `context_policy` admits the contexts of one concrete call,
-  `activation_context_rel` threads them over traces, and `activation_collect` is indexed
+- **Semantics.** A context policy admits the contexts of one concrete call,
+  `gactivation_context_rel` threads them over traces, and `activation_collect` is indexed
   by them (`Activation_Trace_Context`). A functional policy embeds through
   `context_policy_of_fun`.
-- **Routing.** `routed_context` (`Routed_Context`) discharges the call
-  and combine obligations once for any context type `'c`;
-  `Entry_State_Routed_Context` and `Call_String_Routed_Context`
-  (`Voblint_Routing`) instantiate it. `'c` carries no `finite` sort constraint:
+- **Routing.** `grouted_context` (`Routed_Context`) discharges the call
+  and combine obligations once for any context type `'c`; the `gdg_analysis`
+  registrations `mcp_cs` and `mcp_es` (`MCP.thy`) instantiate it with call
+  strings and entry states. `'c` carries no `finite` sort constraint:
   termination is the per-run `solve_dom` premise, as for the flat analysis.
-- **Endpoints.** `dg_analysis.entry_state_activation_collect_sound` and
-  `fun_route_activation_collect_sound` bound each bucket;
-  `covered_table_of_activation` (`Analysis_Run_Sound`) and `report_of_sound`
-  (`Analysis_Report`) reach the report, and `run_voblint_source_sound` a source run.
+- **Endpoints.** `gdg_analysis.entry_state_activation_collect_sound` and
+  `fun_route_activation_collect_sound` (`DG_Analysis.thy`) bound each bucket;
+  `report_state_sound` and `report_check_sound` (`Run_Report.thy`) reach the
+  report, and `run_voblint_source_sound` a source run.
 - **Checks and rendering.** `classify_checks_verdicts` joins verdicts over the
   contexts the solved table covers (`table_contexts`), with `Dead` kept apart from
   the three check results; the graph draws one node per `(pp, ctx)` pair.
@@ -30,7 +30,7 @@ collecting semantics to the CLI:
   (one cluster per entry-state context).
 
 A user-chosen set of flow-insensitive variables stays out of scope;
-`declared_global p` is the classifier everywhere, and
+`is_global` (`VIMP_Semantics.thy`) is the classifier everywhere, and
 `--program-globals flow-insensitive` applies to every declared global at once.
 
 ### Open: context bounding
@@ -49,8 +49,8 @@ A user-chosen set of flow-insensitive variables stays out of scope;
   `tests/regression/17-call-string/known-imprecision/01-deep_recursion_bounded_context.vimp`
   (50 levels of recursion under `--context-depth 1`).
 - **Entry-state contexts are unbounded.** An entry-state context is a domain
-  value (`ivl list`, `sign list`, ...); for an infinite-height domain such as
-  `ivl` the context space is unbounded, and the contract is the same `solve_dom`
+  value; for an infinite-height domain such as Interval the context space is
+  unbounded, and the contract is the same `solve_dom`
   premise the flat analysis ships with. Bounding it needs a policy decision
   first -- a gas budget that widens overflow entries into one shared per-callee
   context, a loop-detecting variant, or something else -- and then that policy's
@@ -71,29 +71,26 @@ action is planned.
 
 ## Domain composition
 
-No generic reduced-product constructor is planned. `analysis_contract`'s carriers
-are already opaque, and `Rel_Order_Domain.thy` demonstrates a non-`abs_state`
-instance against the unmodified framework; see
+No generic reduced-product constructor is planned. `ganalysis_contract`'s carriers
+are opaque, and `Order_Analysis.thy` runs a relational domain over variable
+identities against the unmodified framework; see
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) for the settled
-architecture. New heterogeneous or relational analyses are added directly
-against `analysis_contract`, not through a shared product/reduction layer.
+architecture. The one reduced product, `int_tuple` (`Int_Tuple_Kind.thy`), pairs
+Interval and Congruence as Goblint's `IntDomTuple` does.
 
-## Cross-analysis query composition
+## Cross-analysis query composition (done)
 
-Not yet modeled: Goblint's MCP-style `EvalInt` query channel, where every
-activated analysis can answer an expression query and a requester meets the
-answers, recursively into subexpressions and callee-side `combine`. Voblint's
-composite `int_dom` only reduces internally among its own scalar components.
-Design investigation tracked in #70; alignment inventory and staging (Phase 3)
-in #141.
+Activated analyses run as one through `mcp_registry` (`MCP_Registry.thy`) and
+answer each other's `EvalInt` queries; `docs/COOPERATING_ANALYSES_DESIGN.md`
+records the design.
 
-## Soundness and monotonicity in the transfer bundle (done)
+## Soundness in the domain interface (done)
 
-`sound_nonrelational_ops` asks only for soundness (a reductive backward domain,
-sound special calls, sound checks); `mono_nonrelational_ops` adds monotonicity.
-Sign, Interval, Parity and Congruence interpret the monotone locale; Int
-interprets the sound one, parametric in its refinement mode, because the fixpoint
-mode has no monotonicity proof.
+A non-relational domain is an instance of the type class `kind_int_domain`
+(`Nonrelational_Domain.thy`), whose assumptions state soundness and the bounds of
+widening and narrowing; none asks for monotonicity. Sign,
+Interval, Parity, Congruence and `int_tuple` at each refinement mode
+instantiate it.
 
 ## Numeric precision
 
@@ -101,26 +98,21 @@ Improve interval guards, loop invariants, and widening policies through concrete
 examples. Keep precision engineering independent of the concrete semantic
 reference model.
 
-## Equality backward narrowing (done)
+## Backward narrowing of guards (done)
 
-`inv_eq`, analogous to `inv_less`, is a `sound_refinement` operator alongside
-`inv_less`/`inv_plus`/`inv_minus`/`inv_times` (`Backward_Domain.thy`).
-`bfilter`'s `Eq` case narrows through it on both branches, not only the true
-branch. Sign has a real, monotone instance (`inv_eq_sign`,
-`Sign_Backward.thy`); Interval keeps a sound identity fallback with the
-precision gap documented in-theory (`Interval_Backward.thy`). This is
-separate from the boolean `eq_true`/`eq_false` query interface used for check
-classification (`Numeric_Queries.thy`).
+A guard narrows both operands of a comparison through the domain's `refine_ik`
+(`kind_int_domain`, `Nonrelational_Domain.thy`), after `inv_bin_int` in Goblint's
+`baseInvariant.ml`. The value-level operators `inv_eq`, `inv_less`, `inv_plus`,
+`inv_minus` and `inv_times` (`Backward_Domain.thy`) remain in the domain
+libraries; Sign's `inv_eq_sign` is in `Sign_Backward.thy`. Check classification
+uses the separate `eq_true`/`eq_false` query interface (`Numeric_Queries.thy`).
 
 ## Per-domain configuration duplication (done)
 
-No domain writes its configuration out by hand.
-`manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
-generates each domain's `<Domain>_Analyses` theory: rule-parametric
-registrations of `dg_analysis_exec` (`Voblint_Result`), one per context
-policy the domain lists. The equation system, solve, reader, result table, report and
-soundness endpoints come from those locales, and the generated theory only names
-a domain's own facts.
+No domain writes its configuration out by hand. Each analysis is one constructor
+of `analysis` (`Analysis_Config.thy`); the registrations `mcp_cs`, `mcp_es`,
+`mcp_split` and `mcp_split_es` (`MCP.thy`, `MCP_Split.thy`) supply the equation
+system, solve, reader, result table and soundness endpoints for all of them.
 
 ## Deferred from the Framework and Analysis restructure
 
@@ -128,24 +120,22 @@ Each of these was found with evidence during the restructure and deliberately
 not acted on, either because it needs a semantic decision or because it belongs
 to a larger migration.
 
-**Resolved variable identities.** `gs :: vname => bool` classifies a *textual
-name*, so a carrier with one `vname`-keyed default dictionary per partition
-admits an entry for a name in the dictionary `gs` does not select for it.
-`default_st_rep_is_bot` is the one carrier operation that must consult `gs`, and it
-does so only to skip those entries: the quotient's equality observes both
-dictionaries while the represented function reads each name in only the one `gs`
-selects. The dependency disappears when elaboration resolves each declaration
-to its own identity -- one declaration, one cell, scope as metadata -- which
-also handles shadowing that a textual name cannot.
+**Dictionary ownership.** Variables are identities (`var_id`, `Var_Id.thy`), and
+`is_global` reads the identity's constructor. The executable carrier still keeps
+one default dictionary per partition, so it admits an entry for a variable in the
+dictionary that does not own it. `st_rep_is_bot` (`Nonrelational_Exec.thy`)
+consults `is_global` only to skip those entries: the quotient's equality observes
+both dictionaries while the represented function reads each variable in only the
+one that owns it.
 
 **Names that still need a read before they are changed.** `State_Restriction`
 holds only ownership projections, so `Ownership_Restriction` would be more
 truthful. `DG_Ctx_Activation` abbreviates a
 word its own directory already supplies.
 
-**Refining the dictionary entries.** A `default_dict`'s association list is a
-candidate for an AFP `rbt` map. Keep it independent of the identity migration above, and
-benchmark the generated OCaml rather than Isabelle evaluation.
+**Refining the dictionary entries.** A `gdefault_dict`'s association list is a
+candidate for an AFP `rbt` map. Benchmark the generated OCaml rather than
+Isabelle evaluation.
 
 ## Source extensions
 

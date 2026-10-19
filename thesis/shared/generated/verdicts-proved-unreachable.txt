@@ -6,4 +6,4 @@ None
 Assertion checks
 Location  Point  Condition  Verdict  State
 --------  -----  ---------  -------  -----------------
-11:5      pp3    x > 0      PROVED   interval: x=[1,2]
+12:5      pp3    x > 0      PROVED   interval: x=[1,3]

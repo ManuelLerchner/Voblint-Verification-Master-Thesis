@@ -1,9 +1,8 @@
 (* Regression driver for the generated Voblint_Generated OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
    (never touching Isabelle), runs it through the exported `run_voblint`
-   entry point for every domain, and checks the result against the values
-   src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy's
-   dispatch_demo_* lemmas prove and
+   entry point, and checks the result against the values
+   src/Examples/CLI/Example_Run_Voblint_Regression.thy proves by evaluation and
    tests/regression/ carries as CLI fixtures. This driver is the layer that
    pins the *generated* module's agreement with both.
 
@@ -32,17 +31,15 @@ let unlabelled = (mk_nat 0, mk_nat 0)
    names need no conversion at all. *)
 
 let domain_label = function
-  | Sign_Analysis -> "Sign_Analysis"
-  | Interval_Analysis -> "Interval_Analysis"
-  | Int_Analysis Refine_Fixpoint -> "Int_Analysis"
-  | Int_Analysis Refine_Once -> "Int_Once_Analysis"
-  | Int_Analysis Refine_Never -> "Int_Never_Analysis"
-  | Parity_Analysis -> "Parity_Analysis"
-  | Congruence_Analysis -> "Congruence_Analysis"
-  | Order_Analysis -> "Order_Analysis"
+  | Sign -> "Sign"
+  | Interval -> "Interval"
+  | Ana_Int _ -> "Int"
+  | Parity -> "Parity"
+  | Congruence -> "Congruence"
+  | Order -> "Order"
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
-   Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)
+   Same program as demo_prog in Example_Run_Voblint_Regression.thy. *)
 let check_cond = Less (N (mk_int 0), V "y")
 
 let demo_prog =
@@ -56,7 +53,7 @@ let demo_prog =
          Check ((), unlabelled, check_cond) ))
     []
 
-(* Conditions are compared as show_exp_compact renders them below. *)
+(* Conditions are compared as show_texp_compact renders them below. *)
 let expected_sign =
   [
     (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
@@ -72,15 +69,10 @@ let expected_interval =
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
    Exercises `mk_program`'s procedure list, a procedure's formals, and `Call`
    together -- not just straight-line assignment/check.
-   Same program as tests/regression/04-globals/precision/02-global_var.vimp and its
-   known-imprecision sibling 01-repeated_call_site_widening.vimp; the CFG-shape
+   Same program as tests/regression/04-globals/known-imprecision/04-global_var.vimp
+   and 01-repeated_call_site_widening.vimp, one check each; the CFG-shape
    expectations below have no fixture counterpart and live only here.
-   Interval reaches this program through the warrowing backend: a global read and grown
-   across two calls has no termination guarantee under always-join. total lives in the
-   reachability-lifted local unknown, tracked flow-sensitively through both calls, so the
-   first check (0 < total) is Check_Proved; the second
-   (total < 100) stays Check_Unknown -- inc's entry is reached by two call sites, so warrowing
-   widens the entered parameter's upper bound on the second visit. *)
+   The verdicts are below with the expectations. *)
 let proc_demo_prog =
   mk_program
     [
@@ -99,17 +91,18 @@ let proc_demo_prog =
          Check ((), unlabelled, Less (V "total", N (mk_int 100))) ))
     [ "total" ]
 
+(* Two calls grow a global, without contexts: total + n at i32 may overflow under
+   the default assume_top, so neither domain decides either check. Pinned by
+   Example_Run_Voblint_Regression.thy's proc_demo_sign and proc_demo_interval. *)
 let expected_proc_demo_sign =
   [
-    (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
+    (Statement (mk_nat 5), ("0<total", Lifted Check_Unknown));
     (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown));
   ]
 
-(* Same shape as expected_proc_demo_sign, reached through warrowing: a global read and grown
-   across two calls. *)
 let expected_proc_demo_interval =
   [
-    (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
+    (Statement (mk_nat 5), ("0<total", Lifted Check_Unknown));
     (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown));
   ]
 
@@ -183,42 +176,69 @@ let show_cfg_node_compact = function
   | FunctionEntry s -> "entry_" ^ s
   | FunctionResult s -> "result_" ^ s
 
-(* `exp` is one unified integer-valued expression language (no separate
-   aexp/bexp split -- see VIMP_Syntax.thy), so a single recursive renderer
-   covers arithmetic and comparison/logical constructors alike. *)
-let rec show_exp_compact = function
-  | N i -> show_int i
-  | V s -> s
-  | Plus (a, b) -> "(" ^ show_exp_compact a ^ "+" ^ show_exp_compact b ^ ")"
-  | Minus (a, b) -> "(" ^ show_exp_compact a ^ "-" ^ show_exp_compact b ^ ")"
-  | Times (a, b) -> "(" ^ show_exp_compact a ^ "*" ^ show_exp_compact b ^ ")"
-  | Div (a, b) -> "(" ^ show_exp_compact a ^ "/" ^ show_exp_compact b ^ ")"
-  | Mod (a, b) -> "(" ^ show_exp_compact a ^ "%" ^ show_exp_compact b ^ ")"
-  | Not b -> "!(" ^ show_exp_compact b ^ ")"
-  | And (a, b) -> "(" ^ show_exp_compact a ^ "&&" ^ show_exp_compact b ^ ")"
-  | Or (a, b) -> "(" ^ show_exp_compact a ^ "||" ^ show_exp_compact b ^ ")"
-  | Less (a, b) -> show_exp_compact a ^ "<" ^ show_exp_compact b
-  | LessEq (a, b) -> show_exp_compact a ^ "<=" ^ show_exp_compact b
-  | Greater (a, b) -> show_exp_compact a ^ ">" ^ show_exp_compact b
-  | GreaterEq (a, b) -> show_exp_compact a ^ ">=" ^ show_exp_compact b
-  | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
-  | NotEq (a, b) -> show_exp_compact a ^ "!=" ^ show_exp_compact b
+let show_kind = function
+  | I8 -> "i8"
+  | U8 -> "u8"
+  | I16 -> "i16"
+  | U16 -> "u16"
+  | I32 -> "i32"
+  | U32 -> "u32"
+  | I64 -> "i64"
+  | U64 -> "u64"
+
+(* A variable by its own name: the report qualifies a local by its procedure. *)
+let show_var x =
+  let l = var_label x in
+  match String.rindex_opt l ':' with
+  | Some i -> String.sub l (i + 1) (String.length l - i - 1)
+  | None -> l
+
+let show_aop = function
+  | AAdd -> "+"
+  | ASub -> "-"
+  | AMul -> "*"
+  | ADiv -> "/"
+  | AMod -> "%"
+
+let show_cop = function
+  | CLt -> "<"
+  | CLe -> "<="
+  | CGt -> ">"
+  | CGe -> ">="
+  | CEq -> "=="
+  | CNe -> "!="
+
+(* A typed expression in the same compact form, its kinds left out but for a
+   conversion's. *)
+let rec show_texp_compact = function
+  | TN (_, i) -> show_int i
+  | TVar (_, x) -> show_var x
+  | TArith (_, op, a, b) ->
+      "(" ^ show_texp_compact a ^ show_aop op ^ show_texp_compact b ^ ")"
+  | TCast (k, a) -> "(" ^ show_kind k ^ ")" ^ show_texp_compact a
+  | TCmp (op, a, b) -> show_texp_compact a ^ show_cop op ^ show_texp_compact b
+  | TNot b -> "!(" ^ show_texp_compact b ^ ")"
+  | TAnd (a, b) -> "(" ^ show_texp_compact a ^ "&&" ^ show_texp_compact b ^ ")"
+  | TOr (a, b) -> "(" ^ show_texp_compact a ^ "||" ^ show_texp_compact b ^ ")"
 
 (* One analysis run, reduced to the column this driver compares: the check
-   point, the condition, and the lifted verdict. Every program here is
-   well-formed, so `Malformed_Program` is a defect in the export rather than a
-   failed expectation. *)
+   point, the condition, and the lifted verdict, at the configuration
+   Example_Run_Voblint_Regression.thy's demo_conf names. The programs declare no
+   kinds. Every program here is well-formed, so `Malformed_Program` is a defect
+   in the export rather than a failed expectation. *)
 let report domain prog =
   match
     map_analysis_answer
-      (render_report string_of_abstract_value)
+      (prog_render_report string_of_report_value)
       (run_voblint
-         (Analysis_Config
+         (Voblint_conf_ext
             ( [ domain ],
+              Call_String (mk_nat 0),
               Globals_Warrow,
-              Ctx_None,
-              Program_Globals_Flow_Sensitive ))
-         prog)
+              Program_Globals_Flow_Sensitive,
+              default_sem_conf,
+              () ))
+         [] prog)
   with
   | Invalid_Activation ->
       print_endline ("FAIL " ^ domain_label domain ^ ": invalid activation list");
@@ -235,29 +255,33 @@ let report domain prog =
       List.map
         (fun chk ->
           ( check_point chk,
-            (show_exp_compact (check_exp chk), check_verdict chk) ))
+            (show_texp_compact (check_exp chk), check_verdict chk) ))
         (res_checks res)
 
 let show_edge_action = function
   | EA_Nop -> "nop"
-  | EA_Assign (x, a) -> x ^ " := " ^ show_exp_compact a
-  | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
+  | EA_Assign (x, a) -> show_var x ^ " := " ^ show_texp_compact a
+  | EA_Special (Nondet_Int, x) -> show_var x ^ " := __voblint_nondet_int()"
   | EA_Special (Min (a, b), x) ->
-      x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
+      show_var x ^ " := min(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b
+      ^ ")"
   | EA_Special (Max (a, b), x) ->
-      x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
+      show_var x ^ " := max(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b
+      ^ ")"
   | EA_Body p -> "body(" ^ p ^ ")"
-  | EA_Assume b -> "[" ^ show_exp_compact b ^ "]"
-  | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
+  | EA_Assume b -> "[" ^ show_texp_compact b ^ "]"
+  | EA_AssumeNot b -> "![" ^ show_texp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"
-  | EA_Ret (Some e, _) -> "return " ^ show_exp_compact e
-  | EA_Check (_, b) -> "check(" ^ show_exp_compact b ^ ")"
+  | EA_Ret (Some e, _) -> "return " ^ show_texp_compact e
+  | EA_Check (_, b) -> "check(" ^ show_texp_compact b ^ ")"
 
 let show_call_action = function
   | CallEdge (None, _, es) ->
-      "call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
+      "call(" ^ String.concat "" (List.map show_texp_compact es) ^ ")"
   | CallEdge (Some x, _, es) ->
-      x ^ " := call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
+      show_var x ^ " := call("
+      ^ String.concat "" (List.map show_texp_compact es)
+      ^ ")"
 
 let show_intra_list es =
   String.concat "; "
@@ -318,32 +342,32 @@ let check_case_str ~line label actual expected =
     false)
 
 let () =
-  let actual_sign = report Sign_Analysis demo_prog in
-  let actual_interval = report Interval_Analysis demo_prog in
-  let actual_proc_demo_sign = report Sign_Analysis proc_demo_prog in
-  let actual_proc_demo_interval = report Interval_Analysis proc_demo_prog in
-  let proc_demo_cfg = prog_cfg proc_demo_prog in
-  let actual_proc_demo_intra = show_intra_list (cfg_intra_list proc_demo_cfg) in
-  let actual_proc_demo_calls = show_calls_list (cfg_calls_list proc_demo_cfg) in
-  let actual_no_call_global_self_ref_interval =
-    report Interval_Analysis no_call_global_self_ref_prog
+  let actual_sign = report Sign demo_prog in
+  let actual_interval = report Interval demo_prog in
+  let actual_proc_demo_sign = report Sign proc_demo_prog in
+  let actual_proc_demo_interval = report Interval proc_demo_prog in
+  let proc_demo_cfg = elab_cfg proc_demo_prog [] in
+  let actual_proc_demo_intra =
+    show_intra_list (cfg_intra_edges proc_demo_cfg)
   in
-  let actual_one_call_interval = report Interval_Analysis one_call_prog in
+  let actual_proc_demo_calls = show_calls_list (cfg_call_edges proc_demo_cfg) in
+  let actual_no_call_global_self_ref_interval =
+    report Interval no_call_global_self_ref_prog
+  in
+  let actual_one_call_interval = report Interval one_call_prog in
   let ok_sign =
-    check_case ~line:__LINE__ "Sign_Analysis demo report" actual_sign
-      expected_sign
+    check_case ~line:__LINE__ "Sign demo report" actual_sign expected_sign
   in
   let ok_interval =
-    check_case ~line:__LINE__ "Interval_Analysis demo report" actual_interval
+    check_case ~line:__LINE__ "Interval demo report" actual_interval
       expected_interval
   in
   let ok_proc_demo_sign =
-    check_case ~line:__LINE__ "Sign_Analysis proc_demo report"
-      actual_proc_demo_sign expected_proc_demo_sign
+    check_case ~line:__LINE__ "Sign proc_demo report" actual_proc_demo_sign
+      expected_proc_demo_sign
   in
   let ok_proc_demo_interval =
-    check_case ~line:__LINE__
-      "Interval_Analysis proc_demo report (warrowing, was hanging)"
+    check_case ~line:__LINE__ "Interval proc_demo report"
       actual_proc_demo_interval expected_proc_demo_interval
   in
   let ok_proc_demo_intra =
@@ -356,13 +380,13 @@ let () =
   in
   let ok_no_call_global_self_ref_interval =
     check_case ~line:__LINE__
-      "Interval_Analysis no-call global self-feedback (acceptance A)"
+      "Interval no-call global self-feedback (acceptance A)"
       actual_no_call_global_self_ref_interval
       expected_no_call_global_self_ref_interval
   in
   let ok_one_call_interval =
     check_case ~line:__LINE__
-      "Interval_Analysis interprocedural global self-feedback (acceptance B)"
+      "Interval interprocedural global self-feedback (acceptance B)"
       actual_one_call_interval expected_one_call_interval
   in
   if

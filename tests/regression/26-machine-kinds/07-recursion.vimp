@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// EXPECT-ARITHMETIC
+// The counter is a u8 formal of a recursive procedure; its range bounds every
+// activation.
+fun u8 count(u8 n) {
+  u8 r;
+  if (n == 0) {
+    return 0;
+  }
+  r = count(n - 1);
+  return r + 1; // ARITH: WARN conversion-overflow
+}
+fun main() {
+  u8 c;
+  c = count(3);
+  __voblint_check(c <= 255); // PROVED
+}

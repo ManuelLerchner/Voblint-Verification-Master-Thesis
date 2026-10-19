@@ -31,8 +31,8 @@ text \<open>
   \<open>b = refine mode b <= refine mode (narrow_raw a b)\<close> would follow from
   \<open>b <= narrow_raw a b\<close>. But that needs every value reaching narrowing to
   already be refinement-stable, and this carrier has no such invariant:
-  \<open>Int_Backward\<close>'s own composite examples exercise values such as
-  \<open>STop \<times> [-1,0] \<times> PEven \<times> top\<close>, where \<open>refine mode b ~= b\<close>. Join and
+  the composite value \<open>progressive_refinement_input\<close>,
+  \<open>STop \<times> [-1,0] \<times> PEven \<times> top\<close>, is one where \<open>refine mode b ~= b\<close>. Join and
   widening deliberately do not refine either (mirroring Goblint's
   \<open>~norefine:true\<close> for both), so a value reaching narrowing by way of a
   widened solver state is not guaranteed stable. Building narrowing on an

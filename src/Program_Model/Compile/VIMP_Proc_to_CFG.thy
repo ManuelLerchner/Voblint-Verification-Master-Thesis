@@ -2,10 +2,10 @@ theory VIMP_Proc_to_CFG
   imports "Voblint_CFG.CFG_Def"
 begin
 
-section \<open>Procedure-aware CFG compilation for \<open>com\<close> programs\<close>
+section \<open>Procedure-aware CFG compilation for \<open>src_com\<close> programs\<close>
 
 text \<open>
-  Compile a \<open>com\<close> program directly into the two-relation procedure-aware CFG.  Nodes are
+  Compile a \<open>src_com\<close> program directly into the two-relation procedure-aware CFG.  Nodes are
   \<open>Statement n\<close> (allocated from a counter), \<open>FunctionEntry p\<close>, and \<open>FunctionResult p\<close>.
   The compiler threads the enclosing procedure name \<open>p\<close>, so a source \<open>Return\<close> and the
   normal fall-through both reach \<open>FunctionResult p\<close> through an \<open>EA_Ret\<close> intra edge.
@@ -40,7 +40,7 @@ text \<open>\<open>csize c\<close> is the number of \<open>Statement\<close> ind
   node of \<open>c2\<close> --- the continuation it hands to \<open>c1\<close> --- and that node is
   \<open>Statement (n + csize c1)\<close>.  \<open>compile_next_id\<close> below ties the two together, so the two
   definitions cannot drift apart silently.\<close>
-fun csize :: "'a acom \<Rightarrow> nat" where
+fun csize :: "('a, 'v, 'e) gcom \<Rightarrow> nat" where
   "csize (SKIP i) = 1"
 | "csize (Assign i x a) = 1"
 | "csize (Check i l c) = 1"
@@ -91,17 +91,17 @@ text \<open>
   statements about compiled call edges cite \<open>call_formals\<close> instead of restating the
   case split; the \<open>[simp]\<close> tag keeps it transparent to existing automation.
 \<close>
-definition call_formals :: "'a ptable \<Rightarrow> pname \<Rightarrow> vname list" where
+definition call_formals :: "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> 'v list" where
   [simp]: "call_formals \<Pi> q =
     (case \<Pi> q of
        Some decl \<Rightarrow> formals decl
      | None \<Rightarrow> Code.abort (STR ''call_formals: call to an undeclared procedure'') (\<lambda>_. []))"
 
 fun compile ::
-  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> nat
+  "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> cfg_node \<Rightarrow> nat
    \<Rightarrow> nat \<times> cfg_node
-        \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
-        \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+        \<times> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+        \<times> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
 where
   "compile \<Pi> p (SKIP i) k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
@@ -169,9 +169,9 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   relies on (\<open>prog_node_reaches\<close>).\<close>
 
 definition compile_proc ::
-  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a gproc_decl \<Rightarrow> nat
-   \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
-        \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+  "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> ('a, 'v, 'e) gproc_decl \<Rightarrow> nat
+   \<Rightarrow> nat \<times> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+        \<times> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
 where
   "compile_proc \<Pi> p decl n =
      (let r = n + csize (body decl);
@@ -182,9 +182,9 @@ where
           K))"
 
 fun compile_procs ::
-  "'a ptable \<Rightarrow> pname list \<Rightarrow> nat
-   \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
-        \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+  "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> nat
+   \<Rightarrow> nat \<times> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+        \<times> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
 where
   "compile_procs \<Pi> [] n = (n, {}, {})"
 | "compile_procs \<Pi> (p # ps) n =
@@ -200,23 +200,15 @@ text \<open>The whole program: every declared procedure, plus \<open>main_body \
   no global exit: whole-program completion is \<open>FunctionResult prog_main_name\<close>, and the entry is
   \<open>FunctionEntry prog_main_name\<close>.\<close>
 
-text \<open>\<open>checks\<close> is not collected by a separate counter-threading pass: it is read
-  directly off the compiled edges, exactly the \<^const>\<open>EA_Check\<close> edges
-  \<^const>\<open>compile\<close>'s own \<open>Check l c\<close> clause emits. There is only one representation
-  of "where a check sits and what it says" --- the compiled \<^const>\<open>intra\<close> set
-  itself --- so this field cannot drift from it by construction, not merely by
-  a separately proved agreement lemma.\<close>
 definition compile_prog ::
-  "'a ptable \<Rightarrow> pname list \<Rightarrow> cfg"
+  "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> ('v, 'e) gcfg"
 where
   "compile_prog \<Pi> ps =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
           (n2, Emain, Kmain) =
             compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = main_body \<Pi>\<rparr> n1
       in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain,
-           cfg_entry = FunctionEntry prog_main_name,
-           checks = (\<lambda>(u, a, v). (u, ea_check_cond a))
-             ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>)"
+           cfg_entry = FunctionEntry prog_main_name \<rparr>)"
 
 text \<open>Decomposition of a whole compiled program into the callee pass and the \<open>main\<close>
   fragment.\<close>
@@ -512,5 +504,12 @@ proof -
     unfolding compile_proc_def r_def by (auto simp: Let_def)
   with cb e i show ?thesis unfolding r_def by (auto intro: that)
 qed
+
+section \<open>The elaborated graph\<close>
+
+text \<open>The graph the analyses run on is compiled from the elaborated procedures.\<close>
+
+definition elab_cfg :: "imp_prog \<Rightarrow> kind_decls \<Rightarrow> (var_id, exp) gcfg" where
+  "elab_cfg p ds = compile_prog (elab_ptable p ds) (prog_procs p)"
 
 end

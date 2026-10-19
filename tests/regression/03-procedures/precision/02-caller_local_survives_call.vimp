@@ -3,11 +3,11 @@
 // must leave the caller's own binding of x untouched across the call --
 // the D/G combine step at the call-to-return edge restores the caller's
 // locals rather than merging in anything from the callee's activation.
-fun noop() {
+fun i32 noop() {
   return 0;
 }
 fun main() {
-  x = 5;
+  i32 x = 5;
   noop();
   __voblint_check(x == 5); // PROVED
 }

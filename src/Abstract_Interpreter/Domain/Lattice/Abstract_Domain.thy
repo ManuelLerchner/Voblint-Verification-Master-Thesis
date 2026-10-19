@@ -39,9 +39,6 @@ lemma sound_emptinessD [dest]: "sound_emptiness e \<gamma>' \<Longrightarrow> e 
 lemma exact_emptinessI [intro]: "(\<And>x. e x \<longleftrightarrow> \<gamma>' x = {}) \<Longrightarrow> exact_emptiness e \<gamma>'"
   unfolding exact_emptiness_def by blast
 
-lemma exact_emptinessD: "exact_emptiness e \<gamma>' \<Longrightarrow> e x \<longleftrightarrow> \<gamma>' x = {}"
-  unfolding exact_emptiness_def by blast
-
 lemma exact_emptiness_sound: "exact_emptiness e \<gamma>' \<Longrightarrow> sound_emptiness e \<gamma>'"
   unfolding exact_emptiness_def sound_emptiness_def by blast
 
@@ -85,7 +82,7 @@ text \<open>
   \<^typ>\<open>int set\<close>) and exists purely to state and prove soundness. Splitting the
   class this way keeps \<open>gamma\<close> out of the type-class dictionary that code
   generation must materialize for any constant that only needs \<open>is_empty\<close>
-  (the finite witness-bottom tests over a \<open>default_st\<close>, in
+  (the finite witness-bottom tests over an executable carrier, in
   particular): requesting \<open>'a::executable_domain\<close> there never drags \<^const>\<open>gamma\<close>'s
   code equation into the dependency closure, even though every
   \<^class>\<open>numeric_domain\<close> instance is automatically a \<^class>\<open>executable_domain\<close>

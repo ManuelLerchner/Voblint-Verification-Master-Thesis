@@ -6,9 +6,9 @@ the first improvement over widening a global's accumulated value, and states it
 is "sufficient to recover a precise result in Example 1".
 
 Voblint uses the vendored `TD` solver's own `update_global_warrowing_per_origin`
-rule. It is one of five update rules the solver menu offers, reachable from the
-CLI as `--solver warrow-per-origin` and from `Analysis_Config`'s
-`Solver_WarrowPerOrigin`. There is no domain lift and no separate solver.
+rule. It is one of the five update rules of `globals_rule` (`Globals_Rule.thy`),
+reachable from the CLI as `--globals warrow-per-origin` and in a configuration as
+`Globals_Warrow_Per_Origin`. There is no domain lift and no separate solver.
 
 ## Where it helps, and why that is narrow
 
@@ -32,14 +32,12 @@ makes by default: `base.ml` reads globals from local state without publication a
 (`GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction and publication timing,
 source-checked 2026-08-10).
 
-The other choice is formalized as a lifter. `keyed_split_spec`
+The other choice is formalized as a lifter. `gkeyed_split_spec`
 (`DG_Keyed_Split_Spec.thy`) takes a whole-state specification and keeps each
 declared global at its own global unknown, read where an edge mentions it and
-published where an edge may assign it, proved sound by `keyed_split_contract`.
+published where an edge may assign it, proved sound by `gkeyed_split_contract`.
 `--program-globals flow-insensitive` selects it for the analyzer's combined
 state (`MCP_Split`); the flow-sensitive placement stays the default.
-`ownership_split_lift` (`DG_Ownership_Split_Spec.thy`), which keeps all globals
-in one unknown, remains as the simpler lifter for non-relational bundles.
 
 That single site is enough to reproduce the paper's own chain. With the paper's
 three contributions to `g` arriving in the paper's order:
@@ -52,11 +50,12 @@ three contributions to `g` arriving in the paper's order:
 
 Apinis warrowing reaches `[-inf,+inf]`, the paper's Example 2 result. Per origin
 each cell holds one constant, nothing widens, and the join is `[-17,42]` --
-the paper's Sect. 5.3 figure. Both are machine-checked at the CLI by
-`tests/regression/19-paper-examples/`, whose 02/03 pair pins both bounds, and at
-the solver level by the four `two_writer_slot_*` lemmas in
-`src/Examples/Tooling/Example_Per_Origin_Widening_Precision.thy`, which evaluate
-one slot under each of the four update rules.
+the paper's Sect. 5.3 figure. The CLI regressions in
+`tests/regression/19-paper-examples/` pin both bounds with their 02/03 pair. The
+solver-level `two_writer_slot_*` lemmas of `Example_Per_Origin_Widening_Precision`,
+which evaluated one slot under each of the four update rules, were removed with
+the untyped analysis instances and are not yet restored
+(`docs/theorem-migration.toml`).
 
 Under the default flow-sensitive placement Voblint answers the paper's Fig. 1
 itself exactly -- `g == 42`, `h == 1` -- because it never widens a global

@@ -327,6 +327,18 @@ def index_anchors() -> dict[tuple[str, str], str]:
     return index
 
 
+# A snippet key names its declaration unless snippets.toml overrides it with `name`.
+SNIPPET_NAMES = {
+    key: entry["name"]
+    for key, entry in tomllib.loads(
+        (REPO / "thesis" / "shared" / "snippets.toml").read_text()
+    )
+    .get("snippets", {})
+    .items()
+    if "name" in entry
+}
+
+
 def cited() -> list[tuple[Path, int, str, str]]:
     refs = []
     for path in sorted((REPO / "thesis").rglob("*")):
@@ -342,7 +354,12 @@ def cited() -> list[tuple[Path, int, str, str]]:
         for m in GENERATED_REF.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             kind = "any" if m.group(1) == "thy" else "thm"
-            refs.append((path, line, kind, m.group(2)))
+            name = (
+                SNIPPET_NAMES.get(m.group(2), m.group(2))
+                if kind == "any"
+                else m.group(2)
+            )
+            refs.append((path, line, kind, name))
         for m in THEORY_REF.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             refs.append((path, line, "theory", f"{m.group(1)}.{m.group(2)}"))
@@ -669,6 +686,10 @@ def main() -> int:
         )
         return skip_or_fail(detail, False)
 
+    # A `thy` snippet is looked up by its key, which may differ from the name it cites.
+    for key, name in SNIPPET_NAMES.items():
+        if name in names:
+            names.setdefault(key, names[name])
     payload = (
         json.dumps(
             {"base": base, "links": links, "names": names}, indent=2, sort_keys=True

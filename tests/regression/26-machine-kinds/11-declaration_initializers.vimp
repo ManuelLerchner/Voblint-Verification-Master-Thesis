@@ -1,0 +1,18 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
+// A local declaration may initialize its variables, as in C. `i8 x = e;` is the
+// declaration followed by the assignment `x = e;`, so the value is converted to
+// the local's kind like any assigned value; a declarator without an initializer
+// starts at an arbitrary value of its kind. One declaration may mix both.
+fun main() {
+  i8 u = 127, y;
+  i8 x = u + 1; // ARITH: ERROR conversion-overflow
+  u32 big = -1; // ARITH: ERROR conversion-overflow
+  i32 z = u * 2;
+  __voblint_check(u == 127); // PROVED
+  __voblint_check(x == -128); // PROVED
+  __voblint_check(big == 4294967295); // PROVED
+  __voblint_check(z == 254); // PROVED
+  __voblint_check(y <= 127); // PROVED
+  __voblint_check(y == 0); // UNKNOWN
+}

@@ -1,0 +1,18 @@
+// PARAM: --analysis sign
+// EXPECT-ARITHMETIC
+// An overflow obligation tests the interval of the unwrapped result, built from
+// the operands' intervals. Sign answers no magnitude for x, but a reaching store
+// holds a value of x's kind in x, so x's interval is i32's range. Then x % 2 and
+// x / 2 have a quotient in i32 and raise no warning, although a sign has no
+// finite end. With an unknown divisor y, x % y and x / y may divide INT_MIN by
+// -1, and x + 1 may exceed INT_MAX, so those still warn.
+fun main() {
+  i32 x; i32 y; i32 q;
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  q = x % 2; // ARITH: NONE
+  q = x / 2; // ARITH: NONE
+  q = x % y; // ARITH: WARN remainder-by-zero; WARN signed-overflow
+  q = x / y; // ARITH: WARN division-by-zero; WARN signed-overflow
+  q = x + 1; // ARITH: WARN signed-overflow
+}

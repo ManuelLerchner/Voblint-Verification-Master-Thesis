@@ -1,5 +1,10 @@
 # Gap 5: relational domain architecture — design decision document
 
+Status note (Stage 7): the order analysis now runs over variable identities in
+`Voblint_Analysis_Order` (`Order_Analysis.thy`, interpretation `order_analysis`
+of `gdg_analysis`); `Rel_Order_Domain.thy` and `analysis_contract` below are the
+pre-Stage-7 names (now `ganalysis_contract`).
+
 Status: **decided and implemented (Option 4)** — see "Architectural
 validation (completed)" and "Executable validation (completed)" at the end
 of this document, which describe the current implementation.

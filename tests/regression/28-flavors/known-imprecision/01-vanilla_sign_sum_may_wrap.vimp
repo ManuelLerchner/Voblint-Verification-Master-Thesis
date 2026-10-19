@@ -1,0 +1,11 @@
+// PARAM: --analysis sign
+// Vanilla with Sign. Over the integers the sum of two negatives is negative, so
+// a sign domain proves z < 0 (Monniaux, ETAPS 2024, rule of signs). At i32 the sum
+// of two negative values can wrap to a nonnegative one, and a sign bounds no
+// magnitude, so Sign gives z the kind top although z = -15 in every run.
+fun main() {
+  i32 x = -5;
+  i32 y = -10;
+  i32 z = x + y;
+  __voblint_check(z < 0);  // UNKNOWN
+}

@@ -1,7 +1,8 @@
 chapter Voblint
 
 session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
-  description "The Parity domain: lattice, transfers, executable bridge"
+  description "The Parity domain: warrowing, arithmetic and comparison queries, and the
+    domain at machine kinds"
   sessions
     "Voblint_VIMP"
     "Voblint_CFG"
@@ -10,16 +11,7 @@ session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
     "Voblint_Framework"
     "Voblint_Solver"
     "TD"
-  directories
-    "generated"
   theories
     Parity_Warrowing
     Parity_Domain
-    Parity_Special
-    Parity_Backward
-    Parity_Transfer
-    Parity_Exec
-    Parity_Numeric_Queries
-    Parity_Sound
-    Parity_Classify
-    Parity_Analyses
+    Parity_Kind

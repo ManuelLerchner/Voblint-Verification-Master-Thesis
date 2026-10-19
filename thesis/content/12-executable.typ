@@ -47,160 +47,81 @@
 = From Theorem to Tool <ch:executable>
 
 @ch:results proved that every report #isaconst("run_voblint") returns is
-sound. A user, however, does not evaluate a HOL function. The user writes
-source text and reads a report in a terminal or a browser tab. This chapter
-shows how the proved function becomes the analyzer that runs, and where the proof stops between the source text and the displayed report.
+sound. A user, however, writes source text and reads a report in a terminal or a browser tab instead of evaluating a HOL function.
 
 == From theorem to code #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
-@ch:solving replaced the two objects of the argument that cannot run with executable versions
-(@sec:represented-function, @sec:termination). Every function that
-#isaconst("run_voblint") uses therefore has code equations, and Isabelle's
-code generator @haftmann10 can export it. One #isacmd("export_code")
-declaration emits #isaconst("run_voblint"), #isaconst("render_report"), and the
-constructors and selectors a caller needs into one OCaml file,
+@ch:solving replaced the two objects of the argument that cannot run, the
+function-valued abstract states and the solver defined through its domain
+predicate, with executable versions (@sec:represented-function,
+@sec:termination). Every function that
+#isaconst("run_voblint") uses therefore has _code equations_, the equations
+that determine what code generation emits, and Isabelle's code generator
+@haftmann10 exports it, together with the constructors and
+selectors a caller needs, into one OCaml module,
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
-This module contains the analyzer core that both delivered tools run. The
-command-line tool and the playground reach it only through the facade #link(repo-blob + "cli/voblint.ml")[`cli/voblint.ml`], and no handwritten code takes part in computing an analysis result.
+The command-line tool and the playground reach this module only through the
+facade #link(repo-blob + "cli/voblint.ml")[`cli/voblint.ml`], so no handwritten
+code runs between receiving the syntax tree and returning the report.
 
 The command-line tool links the module with handwritten adapters into a native
-program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the
+program, and for the playground #raw("wasm_of_ocaml", lang: "sh") compiles the
 same code to WebAssembly, which a web worker in the reader's browser calls
-(@fig:build). Both tools thus run the generated code of #isaconst("run_voblint"), the
-function the theorems are about, up to the code generator and the compilers
-(@sec:trust-boundary).
+(@fig:build). Both tools thus run the generated code of the function the
+theorems are about, up to the code generator and the compilers.
 
 #figure(
   image("/shared/generated/svg/build.svg", width: 100%),
   placement: none,
-  caption: [How the generated #isaconst("run_voblint") reaches the browser. Build:
-    #isacmd("export_code") writes #isaconst("run_voblint") into
-    `Voblint_Generated.ml`, which `dune` and #raw("wasm_of_ocaml", lang: "sh")
-    compile with the handwritten adapters into a WebAssembly bundle. Run: a web
-    worker calls the bundle and returns the answer as JSON. Adapted from the
-    project site.],
+  caption: [How the generated #isaconst("run_voblint") reaches the browser.
+    #isacmd("export_code") writes it into `Voblint_Generated.ml`, which `dune`
+    and #raw("wasm_of_ocaml", lang: "sh") compile with the handwritten adapters
+    into a WebAssembly bundle that a web worker calls. Adapted from the project
+    site.],
 ) <fig:build>
-
-#let _bench = json("/shared/generated/bench-init-publications.json").programs
-#let _speedup(prog) = {
-  let r = _bench.at(prog)
-  str(calc.round(r.before.mean_s / r.after.mean_s, digits: 0))
-}
 
 == The generated code <sec:generated-code>
 
-The exported module,
-#link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`],
-runs, but it follows the proofs rather than the habits of OCaml programmers. It has #stat("generated_ocaml") lines. Type classes
-become records of operations passed as arguments, so polymorphic operations
-such as equality go through an indirect call. Finite sets are unsorted lists,
-and the finite maps the code uses are association lists, so membership, insertion, and lookup scan them. The solver keeps
-its valuation as a function. Each update wraps the previous valuation in
-another closure, so a lookup may traverse a chain as long as the number of
-earlier updates, and superseded closures stay reachable.
+The exported module has #stat("generated_ocaml") lines and keeps the data
+representations of the HOL definitions. Type classes become records of
+operations passed as arguments, and finite sets and maps become lists that
+membership and lookup scan. The solver keeps its valuation as a function, and
+each update wraps the previous valuation in another closure, so a lookup may
+traverse a chain as long as the number of earlier updates.
 
-The proofs guarantee that this code computes the proved function, but they say
-nothing about its running time or how it computes the result. One such cost was a defect. A sampling profile of a
-program of 256 chained assignments, taken on one machine, attributed most of
-the CPU time to the compiler, which ran once per equation evaluation. The cause
-was #isaconst("init_publications"). On every equation evaluation it tests
-whether the unknown is the program's entry, and its definition names the entry
-as #isai("cfg_entry (prog_cfg p)"). The generated code evaluates this term as
-written, so it compiled the whole program to find a node that is always the
-entry of `main` (@fig:init-publications).
+Up to the trusted code generator, this code computes the function the
+theorems are about, but no proof says anything about its running time. The
+generated code also evaluates every term as written. A definition that named
+the program's entry node through the compiled graph would recompile the whole
+program at every equation evaluation. The analysis therefore receives the
+entry node as a parameter, fixed to the entry of `main`, and a theorem shows
+that this node is the entry of every compiled graph
+(#isathm("cfg_entry_compile_prog")).
 
-#figure(
-  {
-    set text(size: 7.5pt)
-    set par(first-line-indent: 0pt, justify: false)
-    let box-node(pos, body, name, color: vb.neutral) = node(
-      pos,
-      body,
-      name: name,
-      stroke: 0.6pt + color,
-      fill: white,
-      corner-radius: 2pt,
-      inset: 4pt,
-    )
-    let lab(body) = text(size: 6.5pt, fill: vb.muted, body)
-    diagram(
-      spacing: (8mm, 5mm),
-      box-node((0, 0), [equation evaluation \ of an unknown $x$], <eval>),
-      box-node((1, 0), isaconst("init_publications"), <init>),
-      box-node((2, -0.6), isai("cfg_entry (prog_cfg p)"), <old>, color: vb.unproved),
-      box-node((3, -0.6), [compile the \ whole program], <comp>, color: vb.unproved),
-      box-node((2, 0.6), isai("FunctionEntry prog_main_name"), <new>, color: vb.proved),
-      edge(<eval>, <init>, "-|>", stroke: 0.6pt + vb.neutral),
-      edge(
-        <init>,
-        <old>,
-        "-|>",
-        stroke: 0.6pt + vb.unproved,
-        label: lab[definition],
-        label-side: left,
-      ),
-      edge(<old>, <comp>, "-|>", stroke: 0.6pt + vb.unproved),
-      edge(
-        <init>,
-        <new>,
-        "-|>",
-        stroke: 0.6pt + vb.proved,
-        label: lab[code equation],
-        label-side: right,
-      ),
-    )
-  },
-  kind: image,
-  placement: none,
-  caption: [The entry test of #isaconst("init_publications") in the generated
-    code. Generated from the definition (red), it compiled the program at every
-    equation evaluation. Generated from the proved code equation
-    #isathm("init_publications_code") (green), it compares with a constant.],
-) <fig:init-publications>
-
-Isabelle lets a theory replace the equation that code generation uses for a constant with any proved equation for it. #isathm("init_publications_code")
-states #isaconst("init_publications") with the entry node
-#isai("FunctionEntry prog_main_name") written out and follows from
-#isathm("cfg_entry_compile_prog") by simplification. The definition and every
-theorem about it stay unchanged, and no trust is added (@sec:trust-boundary). The trace hook of @sec:tracing, by contrast, adds a mapping to
-handwritten OCaml to the trusted base.
-The proof establishes that the equations agree, and the unchanged corpus and
-solver traces only confirm that the code generator uses the new one. On the same machine, the
-#link(repo-blob + "scripts/gen_bench_program.py")[generated] chain of 256
-assignments then ran #_speedup("chain256") times faster, and a program of 512
-assignments in procedures of eight statements #_speedup("procs512") times
-faster (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded
-  measurement]).
-
-The remaining cost is spread over report construction, printing, and dictionary calls. Three routes would remove more of it,
-at increasing price. Further proved code equations change the code without
-changing a theorem. Isabelle's library implements sets by red-black trees, but
-only for element types with a linear order. Abstract values, check results, and entry-state contexts have only their lattice order. Replacing the solver's function-valued table with a finite map would remove the closure chains, but it would change the state of the vendored solver and require its proof to be redone. This thesis aims at a sound
-analyzer rather than efficient generated code, so the code was not measured
-further.
+The list representations are hard to replace. Isabelle's library implements
+sets by red-black trees only for element types with a linear order, which abstract values, check results,
+and entry-state contexts lack. A finite map in place of the solver's
+function-valued table would remove the closure chains, but it would change the
+state of the vendored solver and require its proof to be redone. This thesis
+aims at a sound analyzer, and it reports no measurement of the generated
+code's time or memory.
 
 == The unverified shell <sec:ocaml-boundary>
 
-The generated #isaconst("run_voblint") takes a configuration and a syntax tree
-and returns a typed answer, so unverified code has to surround it on both sides. Before it, an
-`ocamllex` lexer and a Menhir parser turn the program text a user writes into
-an #isatype("imp_prog") and write
-each check's source position into its label. After it,
-#isaconst("render_report") turns the report's states into text. Handwritten
-code then prints the command-line report, each check at the position its label
-carries, or serializes the answer as JSON, from which the playground draws the
-graph and places the verdicts and arithmetic diagnostics in the editor. Isabelle's code export maps HOL's mathematical integers to
-arbitrary-precision Zarith integers, so the generated code computes with
-VIMP's integers (@sec:vimp-vs-c). The command-line tool and the playground share the parser,
-the generated module, and the code that turns a request into an analysis
-configuration. They differ in their surroundings: the command-line tool
-manages processes and files, and the playground's worker exchanges JSON with
-the page.
-
-For the program below, @fig:shell shows what crosses this boundary: the call
-#isaconst("run_voblint") receives and its answer after #isaconst("render_report")
-has turned the states into text, serialized by the same code the playground
-uses.
+The generated #isaconst("run_voblint") takes a configuration, kind declarations
+and a syntax tree and returns a typed answer, so unverified code surrounds it on
+both sides. Before it, an `ocamllex` lexer and a Menhir parser turn the program
+text into a surface program (#isatype("imp_prog")) and the kinds of its
+variables. They also resolve block scopes, turn a declaration without
+initializer into a call of `__voblint_nondet_int`, and write each check's
+source position into its label. After it, #isaconst("render_report") turns the
+report's states into text, and handwritten code prints the command-line report
+or serializes the answer as JSON, from which the playground draws the graph and
+places verdicts and arithmetic diagnostics in the editor. The generated code
+computes VIMP's machine-integer values as arbitrary-precision Zarith integers,
+which the semantics keeps within each kind's range by explicit normalization
+(@sec:vimp-vs-c). For the program below, @fig:shell shows the call and the
+answer that cross this boundary.
 
 #listing(lang: "c", claim: "shell-json", read("/shared/programs/shell-json.vimp").trim())
 
@@ -226,46 +147,40 @@ uses.
   placement: none,
   caption: [What the generated analyzer receives and returns for the program
     above (claim #claim-ref("shell-json")). The call carries the configuration
-    and the syntax tree `p` the parser built, of the kind @fig:vimp-ast shows in
-    full; the answer carries the report with its states rendered as text, here
-    with its one check in full. Everything before the call, and the rendering
-    from the answer on, is unverified. `{…}` and `[…×n]` fold parts of the JSON.],
+    and the parsed syntax tree `p` (the surface column of @fig:elab-stages). The
+    answer carries the report with its states rendered as text and its one
+    check in full. Everything before the call, and the rendering from the
+    answer on, is unverified. `{…}` and `[…×n]` fold parts of the JSON. The JSON
+    prints the verdict #isai("Decided Check_Proved") of @sec:verdict-meaning under
+    the name `Lifted` of the constructor that #isai("Decided") abbreviates.],
 ) <fig:shell>
 
 The
 #link(site("playground.html"))[playground]
-is a static page. Its toolbar selects the configuration argument of
-#isaconst("run_voblint") and, independently, whether the surrounding tracer is
-on. #isathm("run_voblint_source_sound") quantifies over that configuration
-whenever #isaconst("run_voblint") returns an #ctor("Analysed") report.
-@fig:pg-overview shows one run.
-
-
+is a static page whose toolbar selects the configuration argument of
+#isaconst("run_voblint"), over which #isathm("run_voblint_source_sound")
+quantifies, and whether the solver's steps are traced (@fig:pg-overview).
 
 == Tracing the exported solver #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
-To explain a run, the command-line tool and the playground can trace the
-solver's steps: which unknown is queried when, which update destabilizes which
-unknown (@tab:eq-trace), where widening applies, as Goblint's tracing of its
-top-down solvers reports them. Tracing must leave the definitions and proofs of
-the vendored solver @tilscher26 untouched. Voblint therefore supplies traced
-versions of its code equations that report each
-step through one constant, #isaconst("trace_event"), which is $()$ in the
-logic. Because it is $()$, each traced equation is proved equal to the one it
-replaces (for example #isathm("solve_rec_c_traced")\; #isathm("cs_route_traced"),
-#isathm("trace_route"), and #isathm("trace_run") do the same for routing and the
-reading of the result). Code export replaces the original equations with these,
-so one generated analyzer serves traced and untraced runs alike. In OCaml, #isaconst("trace_event") is mapped
-to a hook that records the event when tracing is on. This mapping adds one target
-mapping to the trusted base: the hook must return, raise nothing, and leave the
-solver's values alone. The trace, and the playground's replay of it, are
-unverified observations and never feed back into a result. @fig:replay-still
-shows one step of the replay.
+To explain a run, both tools can trace the solver's steps: which unknown is
+queried when, which update destabilizes which unknown (@tab:eq-trace), and
+where widening applies. Tracing must leave the definitions and proofs of the
+vendored solver @tilscher26 untouched. Voblint therefore supplies traced
+versions of its code equations that report each step through one constant,
+#isaconst("trace_event"), which is $()$ in the logic, so each traced equation
+is proved equal to the one it replaces (for example
+#isathm("solve_rec_c_traced")). Code export uses the traced equations, and in
+OCaml #isaconst("trace_event") maps to a hook that records the event when
+tracing is on. This target mapping joins the trusted base, since the hook must
+return, raise nothing, and leave the solver's values alone. The trace and its
+replay in the playground (@fig:replay-still) are unverified observations and
+never feed back into a result.
 
 #subfigures(
   playground-figure(
     "while-loop",
-    width: 74%,
+    width: 60%,
     [one run in three views: the check's verdict in the editor, the state
       inspector at the check, and the solved graph. Settings
       #playground-settings("while-loop")],
@@ -273,7 +188,7 @@ shows one step of the replay.
   <fig:pg-overview>,
   playground-figure(
     "solve-replay-still",
-    width: 72%,
+    width: 66%,
     [one step of the solver replay for the calls of `bump` (@tab:eq-trace): the
       graph shows each unknown's value at this step, and the trace beside it
       marks the step's line. Settings #playground-settings("solve-replay-still")],
@@ -290,38 +205,45 @@ shows one step of the replay.
 
 == The trust boundary <sec:trust-boundary>
 
-Three questions decide what a run of the delivered analyzer establishes, and @fig:intro-trust places the main components on each side.
+@fig:intro-trust places the main components of the delivered analyzer relative to the proof.
 
 *What is proved.* #isathm("run_voblint_source_sound") and the verdict theorems
 of @sec:verdict-meaning hold for every report #isaconst("run_voblint")
 returns, from the syntax tree it receives to the semantic report. The proof
-covers the compiler, the
-well-formedness test, the vendored solver with its executable refinement and
-the executable state carrier.
+covers the elaboration, the compiler, the well-formedness test, the vendored
+solver with its executable refinement and the executable state carrier. The
+vendored solver is a copy of the verified solver of Tilscher et al.
+@tilscher26 with three of the four changes proposed upstream for this thesis
+and its own build fix, and its proofs are checked with the rest of the
+development (@sec:upstream-td). Its repository is
+private, so the development cannot yet be built from public sources alone.
 
 *What is trusted.* Two groups lie outside the proof. The first is the
-handwritten code around the generated analyzer: the lexer, the parser, the
-translation of a request into a configuration, and the presentation, including
-the placement of arithmetic diagnostics. #isaconst("render_report") is
-generated and passes verdicts and diagnostics through unchanged
+handwritten code around the generated analyzer: the lexer, the parser with its
+block-scope resolution and its rewriting of declarations without initializer,
+the translation of a request into a configuration, and the presentation,
+including the placement of arithmetic diagnostics. #isaconst("render_report")
+is generated and passes verdicts and diagnostics through unchanged
 (#isathm("render_report_columns")), but no theorem relates its state strings to
 the semantic values. The second is the foundation: Isabelle's kernel, its code
 generator with the target mappings (#isacmd("code_printing")), the trace hook
 among them, the OCaml and WebAssembly toolchains, Zarith or, in the browser, a
-JavaScript replacement of it, and the browser. Only the tests of
-@sec:eval-corpus cover the handwritten code.
+JavaScript replacement of it, and the browser. Only regression and property
+tests cover the handwritten code.
 
 *Whether the definitions are adequate.* A proof establishes consequences of
-#isaconst("pstep"). It cannot show that #isaconst("pstep") is the language a
-reader has in mind; @sec:vimp-vs-c argues this for the fragment of C that VIMP
+#isaconst("pstep") and cannot show that #isaconst("pstep") is the language a
+reader has in mind. @sec:vimp-vs-c argues this for the fragment of C that VIMP
 models.
 
 *What the soundness theorem does not establish.* A parse error, an
-#isaconst("Invalid_Activation"), #isaconst("Malformed_Program"), or #isaconst("No_Answer") answer, a timeout, an aborted code equation, and a run
-that never returns yield no #ctor("Analysed") report, so the theorem gives no
-verdict. A hang may come from the solve, from the fixpoint reduction of Int,
-whose generated code may loop where the HOL function returns
-(@sec:reduced-product), or from the toolchain.
-
-Both tools thus run generated code for the #isaconst("run_voblint") that
-@ch:results proves sound.
+#isaconst("Invalid_Activation"), #isaconst("Malformed_Program"), or
+#isaconst("No_Answer") answer, a timeout, and a run that never returns yield
+no #ctor("Analysed") report, and neither does an aborted code equation, one
+that raises an exception in OCaml where the logic returns a fallback value,
+for instance when query recursion exceeds its depth bound. The handwritten
+adapter reports this abort as #isaconst("No_Answer"), so the
+#isaconst("No_Answer") a user sees comes from this adapter. In all these cases
+the theorem gives no verdict. A hang may come from the solve, from the
+fixpoint reduction of Int, whose code equation iterates where the HOL function
+gives up and returns its input (@sec:reduced-product), or from the toolchain.

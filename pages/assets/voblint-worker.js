@@ -88,6 +88,7 @@ self.onmessage = async (event) => {
       request.contextDepth,
       request.intRefinement,
       typeof request.placement === "string" ? request.placement : "flow-sensitive",
+      typeof request.settings === "string" ? request.settings : "",
       request.source,
       typeof request.trace === "string" ? request.trace : "off",
     );

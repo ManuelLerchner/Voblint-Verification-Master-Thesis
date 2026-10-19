@@ -1,0 +1,40 @@
+// PARAM: --analysis sign
+// Procedure compute branches on a global input and is called twice from
+// main with opposite-sign inputs, followed by an arithmetic use of the
+// result.
+//
+// Concretely input = -3, result = 3, out = 300 and r = 2 at the checks.
+//
+// input: compute has no formals, so one activation serves both calls. Its
+// entry joins input = SPos with SNeg to STop, and combine reads that STop
+// back into main (also under --context entry-state, which keys on formals).
+// --context call-string --context-depth 1 keeps the two call sites apart.
+//
+// result, out, r: each comes from SPos + SPos or SPos * SPos. Typed Sign has
+// no magnitude, so it cannot exclude i32 wraparound of a sum or product of
+// two positives (local + 1 at local = INT_MAX, 100 * result above
+// INT_MAX / 100), and the transfer returns Top.
+global i32 input, result, out;
+fun compute() {
+  i32 local = 1;
+  if (0 < input) {
+    local = local + 1;
+  } else {
+    local = local + 2;
+  }
+  result = local;
+}
+fun main() {
+  i32 r = 0;
+  input = 5;
+  compute();
+  r = r + 1;
+  input = 0 - 3;
+  compute();
+  r = r + 1;
+  out = 100 * result;
+  __voblint_check(0 < input); // UNKNOWN
+  __voblint_check(0 < result); // UNKNOWN
+  __voblint_check(0 < out); // UNKNOWN
+  __voblint_check(0 < r); // UNKNOWN
+}

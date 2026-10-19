@@ -1,5 +1,5 @@
 fun main() {
-  x = 0;
+  i32 x = 0;
   while (x < 10) {
     x = x + 1;
   }

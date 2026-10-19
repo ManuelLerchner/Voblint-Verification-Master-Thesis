@@ -1,5 +1,6 @@
 theory Routed_Context
-  imports Routed_Call_Programs DG_Ctx_Activation DG_Local_State_Spec
+  imports Routed_Call_Programs DG_Ctx_Activation "Voblint_Framework.MCP_Spec" Transfer_Algebra
+    "Voblint_Domain.Nonrelational_Reachability"
     Activation_Backbone
 begin
 
@@ -53,23 +54,22 @@ text \<open>
   the collecting semantics itself never needs it, and compiled programs have it for free.
 \<close>
 
-locale routed_context =
-  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route
+locale routed_context_base =
+  dg_context_base S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route
     "routed_call_program S global_of seed resolve is_bot"
       "routed_entry_seed_programs seed"
     bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
-  for S :: "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
+  for S ::
+    "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
     and g buffer_key and global_of :: "'v \<Rightarrow> 'k"
     and route ("context\<^sup>\<sharp>")
     and bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'D \<Rightarrow> pname list"
+    and resolve :: "pp \<Rightarrow> pp \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'D \<Rightarrow> pname list"
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set" +
-  fixes adm :: "'c context_policy"
+  fixes adm :: "'c call_context_policy"
   assumes finC: "finite (calls g)"
     and calls_unique: "calls_source_unique g"
     and seed_ne_buffer_key[simp]: "\<And>p ctx. seed p ctx \<noteq> buffer_key"
@@ -83,13 +83,30 @@ locale routed_context =
        \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (genv global_of sigma)
        \<Longrightarrow> p \<in> set (resolve cont u (CallEdge dst pars args)
                        (dg_local (sigma (Inl (u, ctx)))))"
-    and routing_adequate:
+
+text \<open>The routing obligations read the concrete call entry; everything else above is
+  independent of the language.\<close>
+
+locale routed_context =
+  dg_context_activation \<kappa> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route
+    "routed_call_program S global_of seed resolve is_bot"
+      "routed_entry_seed_programs seed"
+    bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M +
+  routed_context_base S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
+    seed resolve is_bot \<gamma>\<^sub>M adm
+  for \<kappa> :: kenv
+    and S ::
+      "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and \<gamma>\<^sub>D\<^sub>G g buffer_key global_of
+    and route ("context\<^sup>\<sharp>")
+    and bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg seed resolve is_bot \<gamma>\<^sub>M adm +
+  assumes routing_adequate:
     "\<And>u ctx dst pars args p cont s ctx'.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (genv global_of sigma)
        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s
-             (call_enter \<G> (CallEdge dst pars args) s)
+             (call_enter \<kappa> (CallEdge dst pars args) s)
        \<Longrightarrow> \<exists>pairs pub deps cont' entry.
              enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) global_of) sigma pairs pub
@@ -97,7 +114,7 @@ locale routed_context =
                (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) global_of) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv global_of sigma)
-           \<and> call_enter \<G> (CallEdge dst pars args) s
+           \<and> call_enter \<kappa> (CallEdge dst pars args) s
                \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)
            \<and> context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
@@ -107,7 +124,7 @@ locale routed_context =
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (genv global_of sigma)
        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) p) s
-                     (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {}"
+                     (call_enter \<kappa> (CallEdge dst pars args) s) \<noteq> {}"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
        (cl, c1) \<in> vars \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
@@ -120,7 +137,7 @@ abbreviation (input) cover :: "pp \<Rightarrow> 'c \<Rightarrow> store set" wher
   "cover v ctx \<equiv> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
 
 abbreviation (input) admits where
-  "admits \<equiv> admits_call_context \<G> g adm"
+  "admits \<equiv> admits_call_context \<kappa> g adm"
 
 text \<open>
   One place unpacks the call's entry protocol. \<open>routing_adequate\<close> is a nest
@@ -138,7 +155,7 @@ lemma routed_enter_witness:
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at u ctx"
     and Rc: "ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s
-               (call_enter \<G> (CallEdge dst pars args) s)"
+               (call_enter \<kappa> (CallEdge dst pars args) s)"
   obtains pairs pub deps cont' entry
     where "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
              (man_at u ctx) sigma pairs pub"
@@ -146,7 +163,7 @@ lemma routed_enter_witness:
              (man_at u ctx) sigma pairs deps"
       and "(cont', entry) \<in> set pairs"
       and "s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv global_of sigma)"
-      and "call_enter \<G> (CallEdge dst pars args) s
+      and "call_enter \<kappa> (CallEdge dst pars args) s
              \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)"
       and "context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args) = ctx'"
       and "(FunctionEntry p, ctx') \<in> vars"
@@ -347,8 +364,8 @@ theorem routed_context_call:
   assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> cover u ctx"
     and Rc: "ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s
-               (call_enter \<G> (CallEdge dst pars args) s)"
-  shows "call_enter \<G> (CallEdge dst pars args) s \<in> cover (FunctionEntry p) ctx'"
+               (call_enter \<kappa> (CallEdge dst pars args) s)"
+  shows "call_enter \<kappa> (CallEdge dst pars args) s \<in> cover (FunctionEntry p) ctx'"
 proof (cases "(u, ctx) \<in> vars")
   case False
   hence "cover u ctx = {}" by (rule sg_uncov)
@@ -366,7 +383,7 @@ next
       and D: "enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
-      and ecov: "call_enter \<G> (CallEdge dst pars args) s \<in> \<gamma>\<^sub>D\<^sub>G entry ?g"
+      and ecov: "call_enter \<kappa> (CallEdge dst pars args) s \<in> \<gamma>\<^sub>D\<^sub>G entry ?g"
       and req: "context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args) = ctx'"
       and covV: "(FunctionEntry p, ctx') \<in> vars"
     by (rule routed_enter_witness[OF True ce sin' Rc])
@@ -468,7 +485,7 @@ theorem routed_context_comb:
     and s: "s \<in> cover cl c1"
     and adm: "admits cl c1 p' s es ctx'"
     and t: "t \<in> cover (FunctionResult p) ctx'"
-  shows "combine_collect \<G> dst s t \<in> cover cont c1"
+  shows "combine_collect \<kappa> dst s t \<in> cover cont c1"
 proof (cases "(cl, c1) \<in> vars")
   case False
   hence "cover cl c1 = {}" by (rule sg_uncov)
@@ -483,12 +500,12 @@ next
       the edge the return reads.\<close>
   from adm obtain dst2 pars2 args2 cont2
     where e2: "(cl, CallEdge dst2 pars2 args2, FunctionEntry p', cont2) \<in> calls g"
-      and es_eq: "es = call_enter \<G> (CallEdge dst2 pars2 args2) s"
+      and es_eq: "es = call_enter \<kappa> (CallEdge dst2 pars2 args2) s"
       and Rc2: "ctx' \<in> adm cl c1 (call_info_of (CallEdge dst2 pars2 args2) p') s es"
     by (rule admits_call_contextE)
   have same: "CallEdge dst2 pars2 args2 = CallEdge dst pars args" and pp': "p' = p"
     using calls_source_unique_edgesD(1,2)[OF calls_unique e2 ce] by simp_all
-  have Rc: "ctx' \<in> adm cl c1 ?ci s (call_enter \<G> (CallEdge dst pars args) s)"
+  have Rc: "ctx' \<in> adm cl c1 ?ci s (call_enter \<kappa> (CallEdge dst pars args) s)"
     using Rc2 unfolding es_eq same pp' .
   obtain pairs pub deps cont' entry
     where Rr: "enter_runs (enter\<^sup>\<sharp> S ?ci)
@@ -497,7 +514,7 @@ next
                 (man_at cl c1) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
       and ccov: "s \<in> \<gamma>\<^sub>D\<^sub>G cont' ?g"
-      and ecov: "call_enter \<G> (CallEdge dst pars args) s \<in> \<gamma>\<^sub>D\<^sub>G entry ?g"
+      and ecov: "call_enter \<kappa> (CallEdge dst pars args) s \<in> \<gamma>\<^sub>D\<^sub>G entry ?g"
       and req: "context\<^sup>\<sharp> cl c1 entry (CallEdge dst pars args) = ctx'"
     by (rule routed_enter_witness[OF True ce sin Rc])
   let ?ex_ctx = "context\<^sup>\<sharp> cl c1 entry (CallEdge dst pars args)"
@@ -531,7 +548,7 @@ next
         using nb
         by (simp add: genv_def Let_def sp_compile_def fun_upd_other[OF knk] del: fun_upd_apply)
     qed
-    have "combine_collect \<G> dst s t
+    have "combine_collect \<kappa> dst s t
         \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_rhs ?sub sigma)) (?g \<squnion> genv global_of (sides_of_rhs ?sub sigma))"
       using combine_sound[where q = cont'
           and r = "dg_local (sigma (Inl (FunctionResult p, ?ex_ctx)))"
@@ -551,7 +568,6 @@ next
   qed
 qed
 
-
 subsection \<open>Activation-collect soundness against the routed local unknown\<close>
 
 text \<open>
@@ -564,7 +580,7 @@ text \<open>
 \<close>
 
 lemma routed_call_context_total:
-  "call_context_total_on cover adm \<G> g"
+  "call_context_total_on \<kappa> cover adm g"
   unfolding call_context_total_on_def
 proof (intro allI impI)
   fix u dst pars args p cont ctx s
@@ -579,7 +595,7 @@ proof (intro allI impI)
   with sin have "s \<in> gamma_at u ctx" by simp
   from routing_total[OF covV ce this]
   show "adm u ctx (call_info_of (CallEdge dst pars args) p) s
-                 (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {}" .
+                 (call_enter \<kappa> (CallEdge dst pars args) s) \<noteq> {}" .
 qed
 
 theorem activation_collect_dg_sound:
@@ -587,7 +603,7 @@ theorem activation_collect_dg_sound:
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v c \<subseteq> cover v c"
+  shows "\<A>\<^bsub>\<kappa>,adm,c\<^sub>0,g,S0\<^esub> v c \<subseteq> cover v c"
 proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
   fix s0 assume s0mem: "s0 \<in> S0"
   have le_local: "d\<^sub>0 \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
@@ -600,15 +616,15 @@ proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
     using entry_cov by simp
 next
   fix u a v' c' s' s''
-  assume "(u, a, v') \<in> intra g" "s' \<in> cover u c'" "s'' \<in> edge_step a s'"
+  assume "(u, a, v') \<in> intra g" "s' \<in> cover u c'" "s'' \<in> edge_step \<kappa> a s'"
   thus "s'' \<in> cover v' c'" by (rule dg_ctx_act_edge)
 next
   fix u dst pars args p cont c' c'' s'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sm: "s' \<in> cover u c'"
     and Rc: "c'' \<in> adm u c' (call_info_of (CallEdge dst pars args) p) s'
-               (call_enter \<G> (CallEdge dst pars args) s')"
-  show "call_enter \<G> (CallEdge dst pars args) s' \<in> cover (FunctionEntry p) c''"
+               (call_enter \<kappa> (CallEdge dst pars args) s')"
+  show "call_enter \<kappa> (CallEdge dst pars args) s' \<in> cover (FunctionEntry p) c''"
     using routed_context_call[OF ce sm Rc] .
 next
   fix cl dst pars args p cont c1 c' p' s' t es
@@ -616,19 +632,19 @@ next
     and sm: "s' \<in> cover cl c1"
     and adm: "admits cl c1 p' s' es c'"
     and tm: "t \<in> cover (FunctionResult p) c'"
-  show "combine_collect \<G> dst s' t \<in> cover cont c1"
+  show "combine_collect \<kappa> dst s' t \<in> cover cont c1"
     using routed_context_comb[OF ce sm adm tm] .
 next
-  show "call_context_total_on cover adm \<G> g"
+  show "call_context_total_on \<kappa> cover adm g"
     by (rule routed_call_context_total)
 qed
 
 text \<open>
   Every valid activation trace of a covered program carries some context under this instance's own
   \<open>adm\<close>: the same four EDGE/CALL/COMB/TOTAL facts that bound the buckets above also make
-  \<open>activation_coverage\<close> total here, so an example such as
-  \<open>Example_Interval_Source_Ctx\<close> can discharge the \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
-  interpretation itself.
+  \<open>activation_coverage\<close> total here, so a caller can discharge the \<open>has_ctx\<close> premise
+  \<open>source_store_in_activation_collect\<close> asks for without restating the interpretation
+  itself.
 \<close>
 
 lemma routed_valid_activation_trace_has_context:
@@ -636,10 +652,10 @@ lemma routed_valid_activation_trace_has_context:
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
-    and tv: "t \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>"
-  shows "\<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
+    and tv: "t \<in> \<T>\<^bsub>\<kappa>,g,S0\<^esub>"
+  shows "\<exists>c. activation_context_rel \<kappa> adm c\<^sub>0 g t c"
 proof -
-  interpret G: activation_coverage g S0 cover adm c\<^sub>0 \<G>
+  interpret G: activation_coverage \<kappa> g S0 cover adm c\<^sub>0
   proof unfold_locales
     fix s0 assume s0mem: "s0 \<in> S0"
     have le_local: "d\<^sub>0 \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
@@ -652,15 +668,15 @@ proof -
       using entry_cov by simp
   next
     fix u a v' c' s' s''
-    assume "(u, a, v') \<in> intra g" "s' \<in> cover u c'" "s'' \<in> edge_step a s'"
+    assume "(u, a, v') \<in> intra g" "s' \<in> cover u c'" "s'' \<in> edge_step \<kappa> a s'"
     thus "s'' \<in> cover v' c'" by (rule dg_ctx_act_edge)
   next
     fix u dst pars args p cont c' c'' s'
     assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
       and sm: "s' \<in> cover u c'"
       and Rc: "c'' \<in> adm u c' (call_info_of (CallEdge dst pars args) p) s'
-                 (call_enter \<G> (CallEdge dst pars args) s')"
-    show "call_enter \<G> (CallEdge dst pars args) s' \<in> cover (FunctionEntry p) c''"
+                 (call_enter \<kappa> (CallEdge dst pars args) s')"
+    show "call_enter \<kappa> (CallEdge dst pars args) s' \<in> cover (FunctionEntry p) c''"
       using routed_context_call[OF ce sm Rc] .
   next
     fix cl dst pars args p cont c1 c' p' s' t es
@@ -668,17 +684,16 @@ proof -
       and sm: "s' \<in> cover cl c1"
       and adm: "admits cl c1 p' s' es c'"
       and tm: "t \<in> cover (FunctionResult p) c'"
-    show "combine_collect \<G> dst s' t \<in> cover cont c1"
+    show "combine_collect \<kappa> dst s' t \<in> cover cont c1"
       using routed_context_comb[OF ce sm adm tm] .
   next
-    show "call_context_total_on cover adm \<G> g"
+    show "call_context_total_on \<kappa> cover adm g"
       by (rule routed_call_context_total)
   qed
   show ?thesis using G.valid_activation_trace_has_context[OF tv] by blast
 qed
 
 end
-
 
 subsection \<open>The context relation a solved entry-state table induces\<close>
 
@@ -703,7 +718,7 @@ text \<open>
 definition routed_entry_context_rel ::
   "(call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list)
      \<Rightarrow> ('D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set) \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state) \<Rightarrow> ('v \<Rightarrow> 'k)
-     \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c context_policy"
+     \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> (var_id, exp) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c call_context_policy"
 where
   "routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma global_of route u ctx ci caller entered =
      {ctx'. \<exists>cont entry.
@@ -711,14 +726,6 @@ where
       \<and> caller \<in> \<gamma>\<^sub>D\<^sub>G cont (genv global_of sigma)
       \<and> entered \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)
       \<and> ctx' = route u ctx entry (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))}"
-
-lemma routed_entry_context_relI:
-  assumes "(cont, entry) \<in> set (alts ci (dg_local (sigma (Inl (u, ctx)))))"
-    and "caller \<in> \<gamma>\<^sub>D\<^sub>G cont (genv global_of sigma)"
-    and "entered \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)"
-  shows "route u ctx entry (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))
-           \<in> routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma global_of route u ctx ci caller entered"
-  using assms unfolding routed_entry_context_rel_def by blast
 
 text \<open>Invoke with \<open>obtain\<close>: the alternative is a witness the classical reasoner should not
   be left to guess.\<close>
@@ -741,140 +748,5 @@ lemma routed_entry_context_rel_total:
     "routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma global_of route u ctx ci caller entered \<noteq> {}"
   using assms unfolding routed_entry_context_rel_def
   by blast
-
-
-subsection \<open>Formal-entry contexts: routing on the callee's declared formals\<close>
-
-text \<open>
-  A context type derived from the callee's declared formals rather than call-site
-  history: \<open>'a list\<close>, one abstract value per formal, in the order \<^const>\<open>CallEdge\<close>
-  already carries them --- populated at compile time from the callee's own
-  declaration, so no separate procedure-table lookup is needed here.
-  \<open>formals_context\<close> is the plain per-variable projection (\<^typ>\<open>'a abs_state\<close> is
-  \<^typ>\<open>vname \<Rightarrow> 'a\<close>, so this is just \<^const>\<open>map\<close>), and the routing functions
-  below apply it to the state they are handed. That state is already the
-  \<^emph>\<open>entered\<close> callee frame:
-  \<^const>\<open>routed_callee_call_program\<close> runs the specification's own enter transfer first and
-  passes its answer to \<open>route\<close>, so a routing function must not enter again.
-  \<open>formals_context_sem\<close> is the trace-semantic counterpart, decoding the concrete
-  entered store's formals the same way, given the point abstraction \<open>decode\<close> a
-  domain provides for a concrete value and the CFG needed to look up a call
-  site's own formal list. Neither definition mentions a domain-specific accessor
-  beyond \<open>decode\<close> itself, nor a specification, so any domain reusing
-  \<^locale>\<open>routed_context\<close> instantiates this pair once instead of
-  hand-writing a per-formal projection.
-\<close>
-
-definition formals_context :: "vname list \<Rightarrow> 'a abs_state \<Rightarrow> 'a list" where
-  "formals_context pars d = map d pars"
-
-text \<open>The formals of the call originating at \<open>u\<close>: at most one, by the compiler's
-  own invariant (\<open>Voblint_Compile.VIMP_Proc_to_CFG\<close> emits a single \<^const>\<open>CallEdge\<close>
-  per \<^const>\<open>Call\<close>); \<open>[]\<close> if \<open>u\<close> has none.\<close>
-
-definition formals_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> vname list" where
-  "formals_at_call_site g u =
-     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
-        (_, CallEdge _ pars _, _, _) # _ \<Rightarrow> pars
-      | _ \<Rightarrow> [])"
-
-definition formals_context_sem ::
-  "cfg \<Rightarrow> (int \<Rightarrow> 'a) \<Rightarrow> cfg_node \<Rightarrow> 'a list \<Rightarrow> store \<Rightarrow> 'a list"
-where
-  "formals_context_sem g decode u ctx s = formals_context (formals_at_call_site g u) (decode \<circ> s)"
-
-text \<open>
-  The whole matched \<^type>\<open>call_action\<close> at a node, not only its formals: an
-  \<open>enterc\<close> built purely from the caller's own solved abstract state (rather than
-  by decoding the concrete entered store, as \<^const>\<open>formals_context_sem\<close> does) needs
-  the callee's actuals too, to recompute the same \<^const>\<open>dgs_enter\<close> the route
-  itself already ran. Same convention as \<^const>\<open>formals_at_call_site\<close>: the head
-  of the filtered call list, \<open>CallEdge None [] []\<close> if \<open>u\<close> has no outgoing call.
-\<close>
-
-definition call_action_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> call_action" where
-  "call_action_at_call_site g u =
-     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
-        (_, ca, _, _) # _ \<Rightarrow> ca
-      | _ \<Rightarrow> CallEdge None [] [])"
-
-
-text \<open>
-  Not a locale theorem, same as routing agreement itself: whether a node has at
-  most one outgoing call is a per-instance fact about \<open>g\<close>, true for
-  \<open>compile_prog\<close> output (\<open>Voblint_Compile.VIMP_Proc_to_CFG\<close>'s
-  \<open>compile_prog_calls_source_unique\<close>) but not for an arbitrary hand-built CFG.
-\<close>
-
-lemma calls_filter_singleton:
-  assumes fin: "finite (calls g)"
-    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
-                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
-                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
-    and ce: "(u, ca, cf, af) \<in> calls g"
-  shows "filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) = [(u, ca, cf, af)]"
-proof -
-  let ?P = "\<lambda>(c, ca, ce, k). c = u"
-  let ?L = "cfg_calls_list g"
-  have mem: "(u, ca, cf, af) \<in> set ?L" using ce fin by simp
-  have distinctL: "distinct ?L" unfolding cfg_calls_list_code by (rule distinct_sorted_list_of_set)
-  have "set (filter ?P ?L) = {(u, ca, cf, af)}"
-  proof (rule set_eqI, rule iffI)
-    fix x assume hx: "x \<in> set (filter ?P ?L)"
-    then have memx: "x \<in> set ?L" and px: "?P x" by auto
-    obtain c ca' ce' af' where x: "x = (c, ca', ce', af')" by (cases x) auto
-    from px x have cU: "c = u" by simp
-    from memx x cU fin have "(u, ca', ce', af') \<in> calls g" by simp
-    with uniq[OF ce] have "ca' = ca" "ce' = cf" "af' = af" by auto
-    thus "x \<in> {(u, ca, cf, af)}" using x cU by simp
-  next
-    fix x assume "x \<in> {(u, ca, cf, af)}"
-    thus "x \<in> set (filter ?P ?L)" using mem by simp
-  qed
-  moreover have "distinct (filter ?P ?L)" using distinctL by (rule distinct_filter)
-  ultimately show ?thesis
-    apply (cases "filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g)")
-    using singleton_iff subset_singletonD by(fastforce)+
-qed
-
-lemma call_action_at_call_site_eq:
-  assumes fin: "finite (calls g)"
-    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
-                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
-                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
-    and ce: "(u, ca, cf, af) \<in> calls g"
-  shows "call_action_at_call_site g u = ca"
-  unfolding call_action_at_call_site_def
-  using calls_filter_singleton[OF fin uniq ce] by simp
-
-
-subsection \<open>Formal-entry contexts at the routed spine's lifted carrier\<close>
-
-text \<open>
-  \<^const>\<open>formals_context\<close> above operates on the unlifted
-  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>routed_context\<close> caller state
-  has. The routed executable spine (\<^locale>\<open>dg_context_activation\<close>, every current
-  instance) instead carries \<^typ>\<open>'a abs_state lifted\<close> throughout, to represent an
-  activation the solver has not yet covered. \<open>formals_route_lifted\<close>/
-  \<open>formals_route_lifted_gen\<close> are the same formal-entry projection at that carrier:
-  a caller point that is \<^const>\<open>Bot\<close> routes to the all-\<open>bot\<close> formal context (the
-  entered callee frame is then \<^const>\<open>Bot\<close> too), the same collapse an EntryState
-  routed instance needs for its own executable/abstract route. Like the
-  projection above, these read the state they are handed and never re-enter, so
-  neither mentions a specification.
-\<close>
-
-definition formals_route_lifted ::
-  "'a::numeric_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
-where
-  "formals_route_lifted d ca =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
-
-definition formals_route_lifted_gen ::
-  "pp \<Rightarrow> 'a list \<Rightarrow> 'a::numeric_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
-where
-  "formals_route_lifted_gen u ctx d ca = formals_route_lifted d ca"
-
 
 end

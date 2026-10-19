@@ -50,7 +50,7 @@ let check_json result (check, position) =
   in
   Printf.sprintf "{\"point\":%s,\"condition\":%s,\"verdict\":%s,\"state\":%s%s}"
     (json_string (A.point_name point))
-    (json_string (Vimp_printer.string_of_exp cnd))
+    (json_string (Typed_printer.string_of_texp cnd))
     (json_string (A.contextual_verdict_name (C.check_verdict check)))
     (json_string state) (location_fields position)
 
@@ -108,8 +108,9 @@ let kind_name = function
   | G.Proc_exit -> "proc_exit"
   | G.Point -> "point"
 
-(* A zero divisor at a node, and the finding line that names it, so a drawing can
-   mark the node compactly and still find the full message among its findings. *)
+(* An arithmetic finding at a node -- a zero divisor or a signed overflow, definite
+   or possible -- and the finding line that names it, so a drawing can mark the
+   node compactly and still find the full message among its findings. *)
 let division_json (verdict, message) =
   Printf.sprintf "{\"verdict\":%s,\"message\":%s}"
     (json_string
@@ -295,7 +296,7 @@ let nodes_json result (graph : G.t) context_key =
         (C.state_point st, A.int_of_nat (C.state_context st))
         st)
     (C.res_states result);
-  (* The same divisions, verdicts and messages Context_graph lists as findings. *)
+  (* The same arithmetic findings, verdicts and messages Context_graph lists. *)
   let divisions (n : G.node) =
     match Hashtbl.find_opt states (n.point, n.context) with
     | None -> []
@@ -304,8 +305,7 @@ let nodes_json result (graph : G.t) context_key =
           (fun (obligation, verdict) ->
             match verdict with
             | C.Lifted ((C.Check_Refuted | C.Check_Unknown) as v) ->
-                Some
-                  (v, A.division_message v (C.arithmetic_operation obligation))
+                Some (v, A.obligation_message v obligation)
             | _ -> None)
           (C.state_diagnostics st)
   in
@@ -359,7 +359,7 @@ let cfg_view_json prog result (graph : G.t) =
   let owner_of = A.owners g in
   let names_of = Context_graph.scope prog g owner_of in
   let id p = "cfg_" ^ A.point_name p in
-  let points = C.cfg_node_list g in
+  let points = C.cfg_points g in
   (* The program's own procedure first, then the others as the CFG lists them. *)
   let owners =
     List.fold_left
@@ -451,7 +451,7 @@ let cfg_view_json prog result (graph : G.t) =
           Printf.sprintf "{\"id\":%s,\"action\":%s,\"writes\":%s,\"join\":%b}"
             (json_string (id after))
             (json_string ("after call " ^ callee))
-            (json_option json_string dst)
+            (json_option json_string (Option.map C.var_label dst))
             (joins_at after))
         calls
     in
@@ -520,7 +520,7 @@ let cfg_view_json prog result (graph : G.t) =
           edge u entry "enter" (A.call_text callee ca);
           edge (C.FunctionResult callee) after "combine"
             (Option.fold ~none:""
-               ~some:(fun x -> x ^ " := " ^ A.call_text callee ca)
+               ~some:(fun x -> A.var_text x ^ " := " ^ A.call_text callee ca)
                dst);
           edge u after "call_to_return" callee;
         ])
@@ -585,6 +585,51 @@ let rec exp_json e =
   | C.And (a, b) -> bin "And" a b
   | C.Or (a, b) -> bin "Or" a b
   | C.Not a -> tagged "Not" [ exp_json a ]
+  | C.Cast (k, a) ->
+      tagged "Cast" [ json_string (Vimp_printer.string_of_kind k); exp_json a ]
+
+let var_json = function
+  | C.GlobalId x -> tagged "GlobalId" [ json_string x ]
+  | C.ScopedId (f, x) -> tagged "ScopedId" [ json_string f; json_string x ]
+  | C.ReturnId f -> tagged "ReturnId" [ json_string f ]
+  | C.ReturnVar -> tagged "ReturnVar" []
+
+let aop_name = function
+  | C.AAdd -> "AAdd"
+  | C.ASub -> "ASub"
+  | C.AMul -> "AMul"
+  | C.ADiv -> "ADiv"
+  | C.AMod -> "AMod"
+
+let cop_name = function
+  | C.CLt -> "CLt"
+  | C.CLe -> "CLe"
+  | C.CGt -> "CGt"
+  | C.CGe -> "CGe"
+  | C.CEq -> "CEq"
+  | C.CNe -> "CNe"
+
+let rec texp_json = function
+  | C.TN (k, i) ->
+      tagged "TN" [ json_string (Vimp_printer.string_of_kind k); int_json i ]
+  | C.TVar (k, x) ->
+      tagged "TVar" [ json_string (Vimp_printer.string_of_kind k); var_json x ]
+  | C.TArith (k, op, a, b) ->
+      tagged "TArith"
+        [
+          json_string (Vimp_printer.string_of_kind k);
+          json_string (aop_name op);
+          texp_json a;
+          texp_json b;
+        ]
+  | C.TCast (k, a) ->
+      tagged "TCast"
+        [ json_string (Vimp_printer.string_of_kind k); texp_json a ]
+  | C.TCmp (op, a, b) ->
+      tagged "TCmp" [ json_string (cop_name op); texp_json a; texp_json b ]
+  | C.TNot a -> tagged "TNot" [ texp_json a ]
+  | C.TAnd (a, b) -> tagged "TAnd" [ texp_json a; texp_json b ]
+  | C.TOr (a, b) -> tagged "TOr" [ texp_json a; texp_json b ]
 
 let rec com_json = function
   | C.SKIP _ -> tagged "SKIP" []
@@ -607,26 +652,26 @@ let cfg_node_json = function
 
 let special_json = function
   | C.Nondet_Int -> tagged "Nondet_Int" []
-  | C.Min (a, b) -> tagged "Min" [ exp_json a; exp_json b ]
-  | C.Max (a, b) -> tagged "Max" [ exp_json a; exp_json b ]
+  | C.Min (a, b) -> tagged "Min" [ texp_json a; texp_json b ]
+  | C.Max (a, b) -> tagged "Max" [ texp_json a; texp_json b ]
 
 let edge_action_json = function
   | C.EA_Nop -> tagged "EA_Nop" []
-  | C.EA_Assign (x, e) -> tagged "EA_Assign" [ json_string x; exp_json e ]
-  | C.EA_Special (sc, x) ->
-      tagged "EA_Special" [ special_json sc; json_string x ]
-  | C.EA_Assume b -> tagged "EA_Assume" [ exp_json b ]
-  | C.EA_AssumeNot b -> tagged "EA_AssumeNot" [ exp_json b ]
+  | C.EA_Assign (x, e) -> tagged "EA_Assign" [ var_json x; texp_json e ]
+  | C.EA_Special (sc, x) -> tagged "EA_Special" [ special_json sc; var_json x ]
+  | C.EA_Assume b -> tagged "EA_Assume" [ texp_json b ]
+  | C.EA_AssumeNot b -> tagged "EA_AssumeNot" [ texp_json b ]
   | C.EA_Body f -> tagged "EA_Body" [ json_string f ]
-  | C.EA_Ret (e, x) -> tagged "EA_Ret" [ json_option exp_json e; json_string x ]
-  | C.EA_Check (l, b) -> tagged "EA_Check" [ check_label_json l; exp_json b ]
+  | C.EA_Ret (e, f) ->
+      tagged "EA_Ret" [ json_option texp_json e; json_string f ]
+  | C.EA_Check (l, b) -> tagged "EA_Check" [ check_label_json l; texp_json b ]
 
 let call_action_json (C.CallEdge (dst, formals, args)) =
   tagged "CallEdge"
     [
-      json_option json_string dst;
-      json_list json_string formals;
-      json_list exp_json args;
+      json_option var_json dst;
+      json_list var_json formals;
+      json_list texp_json args;
     ]
 
 let lifted_json f = function
@@ -638,28 +683,37 @@ let check_result_json = function
   | C.Check_Refuted -> tagged "Check_Refuted" []
   | C.Check_Unknown -> tagged "Check_Unknown" []
 
+let hazard_json = function
+  | C.Division_By_Zero -> tagged "Division_By_Zero" []
+  | C.Signed_Overflow -> tagged "Signed_Overflow" []
+  | C.Remainder_Overflow -> tagged "Remainder_Overflow" []
+  | C.Conversion_Overflow -> tagged "Conversion_Overflow" []
+  | C.Min_Conversion_Overflow -> tagged "Min_Conversion_Overflow" []
+  | C.Max_Conversion_Overflow -> tagged "Max_Conversion_Overflow" []
+
 let obligation_json o =
   json_object
     [
-      ("arithmetic_operation", exp_json (C.arithmetic_operation o));
-      ("arithmetic_divisor", exp_json (C.arithmetic_divisor o));
+      ("arithmetic_hazard", hazard_json (C.arithmetic_hazard o));
+      ("arithmetic_operation", texp_json (C.arithmetic_operation o));
+      ("arithmetic_operand", texp_json (C.arithmetic_operand o));
     ]
 
 let cfg_json g =
   json_object
     [
       ("cfg_entry", cfg_node_json (C.cfg_entry g));
-      ("cfg_node_list", json_list cfg_node_json (C.cfg_node_list g));
+      ("cfg_node_list", json_list cfg_node_json (C.cfg_points g));
       ( "cfg_intra_list",
         json_list
           (json_pair cfg_node_json (json_pair edge_action_json cfg_node_json))
-          (C.cfg_intra_list g) );
+          (C.cfg_intra_edges g) );
       ( "cfg_calls_list",
         json_list
           (json_pair cfg_node_json
              (json_pair call_action_json
                 (json_pair cfg_node_json cfg_node_json)))
-          (C.cfg_calls_list g) );
+          (C.cfg_call_edges g) );
     ]
 
 let context_json = function
@@ -674,12 +728,12 @@ let refine_mode_json = function
   | C.Refine_Never -> tagged "Refine_Never" []
 
 let domain_json = function
-  | C.Sign_Analysis -> tagged "Sign_Analysis" []
-  | C.Interval_Analysis -> tagged "Interval_Analysis" []
-  | C.Int_Analysis mode -> tagged "Int_Analysis" [ refine_mode_json mode ]
-  | C.Parity_Analysis -> tagged "Parity_Analysis" []
-  | C.Congruence_Analysis -> tagged "Congruence_Analysis" []
-  | C.Order_Analysis -> tagged "Order_Analysis" []
+  | C.Sign -> tagged "Sign" []
+  | C.Interval -> tagged "Interval" []
+  | C.Ana_Int mode -> tagged "Ana_Int" [ refine_mode_json mode ]
+  | C.Parity -> tagged "Parity" []
+  | C.Congruence -> tagged "Congruence" []
+  | C.Order -> tagged "Order" []
 
 let field_state_json = function
   | C.Field_Store bs ->
@@ -696,7 +750,7 @@ let state_json st =
       ("state_value", lifted_json view_json (C.state_value st));
       ( "state_checks",
         json_list
-          (json_pair exp_json (lifted_json check_result_json))
+          (json_pair texp_json (lifted_json check_result_json))
           (C.state_checks st) );
       ( "state_diagnostics",
         json_list
@@ -722,12 +776,12 @@ let result_check_json c =
     [
       ("check_point", cfg_node_json (C.check_point c));
       ("check_label", check_label_json (C.check_label c));
-      ("check_exp", exp_json (C.check_exp c));
+      ("check_exp", texp_json (C.check_exp c));
       ("check_verdict", lifted_json check_result_json (C.check_verdict c));
     ]
 
 let result_global_unknown_json = function
-  | C.Global_Named x -> tagged "Global_Named" [ json_string x ]
+  | C.Global_Named x -> tagged "Global_Named" [ json_string (C.var_label x) ]
   | C.Global_Seed (f, i) ->
       tagged "Global_Seed" [ json_string f; json_option nat_json i ]
 
@@ -774,16 +828,12 @@ let globals_rule_json = function
   | C.Globals_Bounded_Narrowing n ->
       tagged "Globals_Bounded_Narrowing" [ nat_json n ]
 
-let context_mode_json = function
-  | C.Ctx_None -> tagged "Ctx_None" []
-  | C.Ctx_EntryState -> tagged "Ctx_EntryState" []
-  | C.Ctx_CallString k -> tagged "Ctx_CallString" [ nat_json k ]
+let context_json_of_policy = function
+  | C.Call_String k -> tagged "Call_String" [ nat_json k ]
+  | C.Entry_State -> tagged "Entry_State" []
 
-let program_globals_json = function
-  | C.Program_Globals_Flow_Sensitive ->
-      tagged "Program_Globals_Flow_Sensitive" []
-  | C.Program_Globals_Flow_Insensitive ->
-      tagged "Program_Globals_Flow_Insensitive" []
+let decl_json (x, k) =
+  json_pair var_json json_string (x, Vimp_printer.string_of_kind k)
 
 (* A program is read through the export's accessors: main's body, then every other
    procedure's declaration, in the order the program lists them. *)
@@ -806,22 +856,41 @@ let program_json p =
       );
     ]
 
-let run_voblint_input_json ~domains ~globals ~ctx ~program_globals program =
+let signed_overflow_json = function
+  | C.Assume_Top -> tagged "Assume_Top" []
+  | C.Assume_Wraparound -> tagged "Assume_Wraparound" []
+
+let program_globals_json = function
+  | C.Program_Globals_Flow_Sensitive ->
+      tagged "Program_Globals_Flow_Sensitive" []
+  | C.Program_Globals_Flow_Insensitive ->
+      tagged "Program_Globals_Flow_Insensitive" []
+
+let conf_json
+    (C.Voblint_conf_ext
+       (domains, ctx, globals, placement, C.Sem_conf_ext (ovp, ()), ())) =
   json_object
     [
-      ("as", json_list domain_json domains);
-      ("rule", globals_rule_json globals);
-      ("ctx", context_mode_json ctx);
-      ("pg", program_globals_json program_globals);
+      ("conf_analyses", json_list domain_json domains);
+      ("conf_context", context_json_of_policy ctx);
+      ("conf_globals", globals_rule_json globals);
+      ("conf_program_globals", program_globals_json placement);
+      ( "conf_sem",
+        json_object [ ("sem_int_signed_overflow", signed_overflow_json ovp) ] );
+    ]
+
+let run_voblint_input_json ~conf ~decls program =
+  json_object
+    [
+      ("conf", conf_json conf);
+      ("ds", json_list decl_json decls);
       ("p", program_json program);
     ]
 
-let run_voblint_json ~domains ~globals ~ctx ~program_globals program answer =
+let run_voblint_json ~conf ~decls program answer =
   json_object
     [
-      ( "input",
-        run_voblint_input_json ~domains ~globals ~ctx ~program_globals program
-      );
+      ("input", run_voblint_input_json ~conf ~decls program);
       ("output", analysis_answer_json answer);
     ]
 
@@ -856,6 +925,7 @@ let shared_json program result =
   let unknown g =
     match C.global_unknown g with
     | C.Global_Named x ->
+        let x = C.var_label x in
         let reachable, lines =
           global_lines (fun y -> y = x) (C.global_state g)
         in
@@ -894,7 +964,8 @@ let seeds_json program result (graph : G.t) =
       | Some (C.Gproc_decl_ext (formals, _, ())) -> formals
       | None -> []
     in
-    List.mem name formals || List.mem name globals
+    List.mem name (List.map (Context_graph.qualify f) formals)
+    || List.mem name globals
   in
   let seed (g, (key, _)) =
     match C.global_unknown g with

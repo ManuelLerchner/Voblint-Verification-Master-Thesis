@@ -6,10 +6,7 @@
 # reported as unresolved rather than silently dropped.
 
 session = "Voblint_CLI"
-theory = "Voblint_CLI.Analysis_Certified"
-
-[facts.node_collect_semantic_postfix]
-why = "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
+theory = "Voblint_CLI.Run_Voblint"
 
 [facts.run_voblint_source_sound]
 why = "The introduction states the source-level soundness result with its actual premises."
@@ -23,31 +20,37 @@ why = "Results chapter: what an analysed answer guarantees about its report."
 [facts.run_voblint_check_sound]
 why = "Check-verdict endpoint cited in the introduction."
 
-[facts.run_voblint_dead_check_unreached]
+[facts.run_voblint_dead_unreached]
 why = "Unreachability endpoint cited in the introduction."
 
 [facts.run_voblint_arithmetic_safe]
 why = "Arithmetic-safety endpoint cited in the introduction."
 
-[facts.run_voblint_arithmetic_intra_safe]
-why = "Results chapter: at a node without a diagnostic, no collected store divides by zero."
-
 [facts.source_run_has_activation_trace]
 why = "Main-statements appendix: source runs are represented by valid traces."
+fact = "compile_prog_run_has_activation_trace"
 
 [facts.csim_step]
 why = "Program-model chapter: one source step is matched by the compiled graph."
+fact = "csim_step"
 
 [facts.source_progress]
 why = "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
+fact = "source_progress"
 session = "Voblint_Compile"
 theory = "Voblint_Compile.Source_Progress"
 
 [facts.csim_star]
 why = "Main-statements appendix: simulation of source runs by the compiled graph."
+fact = "csim_star"
+
+[facts.eval_elaborate]
+why = "Section 3.2: elaboration preserves the meaning of a surface expression."
+fact = "eval_elaborate"
 
 [facts.activation_collect_sound]
 why = "Main-statements appendix: the activation coverage theorem."
+fact = "activation_collect_sound"
 
 [facts.activation_collect_dg_sound]
 why = "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
@@ -60,15 +63,19 @@ theory = "Voblint_Examples.Example_Non_Vacuity"
 
 [facts."pstep.Call"]
 why = "Program-model chapter: the source step rule for a call."
+fact = "pstep.Call"
 
 [facts."pstep.ReturnSome"]
 why = "Program-model chapter: the source step rule for returning a value."
+fact = "pstep.ReturnSome"
 
 [facts."pstep.RestoreStep"]
 why = "Program-model chapter: the source step rule that restores the caller's frame."
+fact = "pstep.RestoreStep"
 
 [facts."pstep.UnwindAct"]
 why = "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
+fact = "pstep.UnwindAct"
 
 [facts."compile.simps(4)"]
 why = "Program-model chapter: compiling a sequence hands the first command the second's entry."
@@ -92,61 +99,39 @@ why = "Chapter 4: dropping TOTAL is unsound."
 session = "Voblint_Examples"
 theory = "Voblint_Examples.Example_Non_Vacuity"
 
-[facts.ov_empty_continuation_bot]
-why = "Chapter 4: without paired entry coverage an executed point is declared unreachable."
-session = "Voblint_Examples_Sign"
-theory = "Voblint_Examples_Sign.Example_Sign_DG_Overlapping_Enter"
-
 [facts.source_reaches_node_collect]
 why = "Chapter 4: source-reachable stores are collected."
-session = "Voblint_Result"
-theory = "Voblint_Result.Source_Activation_Sound"
 
 [facts.node_collect_eq_Union_activation_collect]
 why = "Chapter 4: exhaustive buckets under the coverage contract."
 fact = "activation_coverage.node_collect_eq_Union_activation_collect"
-session = "Voblint_CFG"
-theory = "Voblint_CFG.Activation_Trace_Abstract"
 
 [facts.node_collect_covered]
 why = "Chapter 4: the claims of all contexts contain the node collecting semantics."
 fact = "activation_coverage.node_collect_covered"
-session = "Voblint_CFG"
-theory = "Voblint_CFG.Activation_Trace_Abstract"
 
 [facts.cstep_preserves_activation_trace_repr]
 why = "Chapter 4: one graph step is matched by a trace rule."
-session = "Voblint_Compile"
-theory = "Voblint_Compile.Source_To_Trace"
-
-[facts.bfilter_sound]
-why = "Chapter 5, the guard filter drops no store that passes the guard."
-fact = "sound_refinement.bfilter_sound"
-
-[facts.relc_branch_step_sound]
-why = "Chapter 5, the relational guard refinement drops no store that passes the guard."
+fact = "cstep_preserves_activation_trace_repr"
 
 [facts.ls_channel_sound]
 why = "Cooperation chapter: the channel the framework supplies holds at every store of the state."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.MCP_Spec"
+fact = "ls_channel_sound"
 
 [facts.mcp_combine_sound]
 why = "Cooperation chapter: independent sound components combine into a sound component."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.MCP_Spec"
+fact = "mcp_combine_sound"
+
+[facts.routed_node_rhs_parts]
+why = "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
+
+[facts.routed_node_rhs_buffered_parts]
+why = "Chapter 8, interprocedural equations: the executed buffered generator answers the same join of parts as the reference generator."
+
+[facts.nonrel_refine_sound]
+why = "Chapter 5, the guard refinement drops no store that passes the guard."
 
 [facts.update_rules_example]
 why = "Solving chapter, update-rule figure: one global under each rule after each of four contributions."
 session = "Voblint_Examples_Tooling"
 theory = "Voblint_Examples_Tooling.Example_Update_Rule_Steps"
-
-[facts.routed_node_rhs_parts]
-why = "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.DG_Indexed_Generator"
-
-[facts.routed_node_rhs_buffered_parts]
-why = "Chapter 8, interprocedural equations: the executed buffered generator answers the same join of parts as the reference generator."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.DG_Indexed_Generator"

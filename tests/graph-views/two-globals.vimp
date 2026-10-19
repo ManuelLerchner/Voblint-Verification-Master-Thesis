@@ -1,6 +1,6 @@
-global g, h;
+global i32 g, h;
 fun main() {
-  x = 1;
+  i32 x = 1;
   g = g + 1;
-  y = h;
+  i32 y = h;
 }

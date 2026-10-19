@@ -1,6 +1,6 @@
 """How abstract values read in every output voblint writes.
 
-Each domain prints in Goblint's notation -- `1+3ℤ`, `[0,+∞]`, `⊤` -- but an
+Each domain prints in Goblint's notation -- `1+4ℤ`, `[0,2147483647]`, `⊤` -- but an
 Isabelle string literal holds ASCII only, so the generated printers emit symbol
 tokens such as `<int>` and the CLI decodes them once, on the answer run_voblint
 returns. The `by eval` lemmas beside each printer pin the tokens; this pins
@@ -23,15 +23,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 VOBLINT = REPO_ROOT / "cli" / "voblint"
 
 # One variable per shape a printer distinguishes: a constant (c), an
-# unconstrained value (t), a class with residue zero (e) and without (o), and a
-# half-bounded interval (n, under the guard).
+# unconstrained value (t), a class with residue zero (e) and without (o), and an
+# interval bounded on one side by the guard and on the other by its kind (n).
+# e and o are u32: unsigned arithmetic wraps without an overflow warning, and
+# wrapping modulo 2^32 keeps a class whose modulus divides 2^32.
 PROGRAM = """\
 fun main() {
-  n = __voblint_nondet_int();
-  c = 5;
-  t = n;
-  e = 2 * n;
-  o = 3 * n + 1;
+  i32 n;
+  u32 m;
+  i32 c = 5;
+  i32 t = n;
+  u32 e = 2 * m;
+  u32 o = 4 * m + 1;
   if (n >= 0) {
     __voblint_check(c > 0 && t == t && e == e && o == o && n >= 0);
   }
@@ -62,7 +65,7 @@ def _voblint(*args):
 
 
 def _check_state(report):
-    rows = [line for line in report.splitlines() if line.startswith("8:")]
+    rows = [line for line in report.splitlines() if line.startswith("9:")]
     assert len(rows) == 1, report
     return rows[0].split("UNKNOWN", 1)[1].strip()
 
@@ -70,23 +73,26 @@ def _check_state(report):
 @pytest.mark.parametrize(
     "analysis, state",
     [
-        ("sign", "c=+, t=⊤, e=⊤, o=⊤, n=≥0"),
-        ("interval", "c=[5,5], t=⊤, e=⊤, o=⊤, n=[0,+∞]"),
-        ("parity", "c=1+2ℤ, t=⊤, e=2ℤ, o=⊤, n=⊤"),
-        ("congruence", "c=5, t=⊤, e=2ℤ, o=1+3ℤ, n=⊤"),
+        ("sign", "c=+, t=⊤, e=≥0, o=≥0, n=≥0"),
+        (
+            "interval",
+            "c=[5,5], t=[-2147483648,2147483647], e=[0,4294967295], "
+            "o=[0,4294967295], n=[0,2147483647]",
+        ),
+        ("parity", "c=1+2ℤ, t=⊤, e=2ℤ, o=1+2ℤ, n=⊤"),
+        ("congruence", "c=5, t=⊤, e=2ℤ, o=1+4ℤ, n=⊤"),
         (
             "int",
-            "c=5, t=⊤, "
-            "e=signs:⊤; intervals:[-∞,+∞]; parities:2ℤ; congruences:2ℤ, "
-            "o=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:1+3ℤ, "
-            "n=signs:≥0; intervals:[0,+∞]; parities:ℤ; congruences:ℤ",
+            "c=5, t=intervals:[-2147483648,2147483647]; congruences:⊤, "
+            "e=intervals:[0,4294967294]; congruences:2ℤ, "
+            "o=intervals:[1,4294967293]; congruences:1+4ℤ, "
+            "n=intervals:[0,2147483647]; congruences:⊤",
         ),
     ],
 )
 def test_report_shows_goblint_notation(program, analysis, state):
-    """A standalone top is ⊤ and a product component's is ℤ or [-∞,+∞], as
-    Goblint's integer-domain lifter and its tuple's components print them; a
-    product every component agrees is one integer prints as that integer."""
+    """A standalone top is ⊤, and an interval prints its kind's bounds; a
+    product whose components agree on one integer prints as that integer."""
     assert _check_state(_voblint("--analysis", analysis, program)) == (
         f"{analysis}: {state}"
     )
@@ -111,7 +117,8 @@ def test_no_symbol_token_survives_any_rendering(program, analysis, tmp_path):
         assert not TOKEN.search(text), (
             f"{analysis} {name}: {TOKEN.search(text).group(0)}"
         )
-    assert "⊤" in outputs["report"], outputs["report"]
+    if analysis != "interval":  # an unconstrained interval prints its kind's bounds
+        assert "⊤" in outputs["report"], outputs["report"]
 
 
 def test_product_value_folds_into_named_components(program, tmp_path):
@@ -131,20 +138,15 @@ def test_product_value_folds_into_named_components(program, tmp_path):
     by_var = dict(zip(keys, values, strict=True))
 
     assert by_var["c"].text == "5"
-    assert by_var["t"].text == "⊤"
     components = by_var["o"].find("map")
     assert components is not None, ET.tostring(by_var["o"], encoding="unicode")
     assert [k.text for k in components.findall("key")] == [
-        "signs",
         "intervals",
-        "parities",
         "congruences",
     ]
     assert [v.text for v in components.findall("value")] == [
-        "⊤",
-        "[-∞,+∞]",
-        "ℤ",
-        "1+3ℤ",
+        "[1,4294967293]",
+        "1+4ℤ",
     ]
 
 
@@ -172,4 +174,4 @@ def test_graphviz_keeps_the_glyphs(program):
         encoding="utf-8",
         check=True,
     ).stdout
-    assert "o=1+3ℤ" in svg, svg[:2000]
+    assert "o=1+4ℤ" in svg, svg[:2000]
