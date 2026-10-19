@@ -79,6 +79,65 @@ only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such
 as CIL would join the parser in the trust boundary unless it is verified.
 
+== Building the formalization <sec:building>
+
+Most of the effort in this work went into architecture rather than proofs. The
+hard questions were which parts of Goblint to keep, which to simplify, and
+where a proof would say something new. During the first weeks, a prototype
+mirrored Goblint's structure with every proof obligation left open as `sorry`.
+Only after its definitions and locale boundaries had stabilized were the
+obligations discharged, and many of them then followed from the structure with
+little search for invariants. Goblint's design already separates the concerns
+that a proof has to separate. The analysis contract mentions neither contexts
+nor the solver (@sec:sound-core), the solver enters only through its
+certificate (@sec:certificate), and each analysis of a combination is proved
+against any channel (@sec:coop-channels).
+
+The same separation let precision grow step by step, each step copying one
+more concept from Goblint. Entry-state contexts follow Goblint's choice of the
+entered callee state as the context (@sec:eq-routing), the reduction inside Int
+follows its integer domain tuple (@sec:reduced-product), and queries between
+analyses follow its combination of analyses (@sec:coop-queries). Each step was
+proved at its own layer against the interface of the layer below.
+
+Not every part of Goblint carries over unchanged. The vendored solver
+side-effects only into global unknowns, so the callee's entry state travels
+through a global seed where Goblint writes a local unknown (@sec:eq-seed-global).
+Goblint selects a context with a function, but its enter operation may return
+several entry states, so one concrete call can belong to several contexts.
+Voblint therefore admits contexts through a relation and requires it to be
+total (@sec:eq-routing). Goblint's integer domains are parameterized by the
+machine type, whereas VIMP's integers are unbounded (@sec:vimp-vs-c), and
+Goblint's integer product has six optional components where Int has four fixed
+ones (@sec:reduced-product).
+
+The choice of focus followed the question of where a proof adds something.
+Context sensitivity was the clearest case. In Goblint, routing a call to a
+context is part of the constraint system, and no formal statement says which
+concrete activations the result for a context must describe. Voblint states
+this as an obligation of the context policy and proves that the contexts
+together cover every activation (@sec:eq-routing). Pointers, the heap, and
+threads, in contrast, were left out to keep the semantics small enough for
+proofs from source executions to verdicts (@sec:limitations).
+
+None of this shows that Goblint is correct. The proofs concern Voblint's
+definitions, and the correspondence with Goblint is architectural
+(@sec:rel-goblint). They do show that this architecture admits a soundness
+proof that composes along its own boundaries, provided each analysis and each
+context policy meets its obligations.
+
+Generative AI tools widened the scope that one thesis could take on
+(#link(<ai-use>)[statement on the use of generative AI]). Once the structure was
+fixed, agents wrote many of the proofs, but much of their effect lay around the
+formalization. They largely wrote the browser playground (@ch:executable), the
+regression corpus with its ports of Goblint tests, the source tooling
+`isar-tools` (@sec:isar-tools), and the checks that keep the theories, the
+analyzer, the website, and this thesis consistent (@sec:voblint-repo). Without
+this help, the work would likely have ended at the theorems. Their output was
+not reliable on its own, but Isabelle checks every proof an agent writes, so
+review could concentrate on the definitions and obligations, which no proof
+settles (@sec:outlook-agents).
+
 == Limitations <sec:limitations>
 
 The first limits concern what the theorem covers. It is a partial-correctness
