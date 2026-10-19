@@ -104,8 +104,8 @@
 #include "content/13-evaluation.typ"
 
 #part("Context and Conclusion", lbl: <part:assessment>)
-#include "content/15-related.typ"
-#include "content/16-conclusion.typ"
+#include "content/14-related.typ"
+#include "content/15-conclusion.typ"
 
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)

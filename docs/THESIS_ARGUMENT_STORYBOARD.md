@@ -1,6 +1,6 @@
 # Thesis argument storyboard and coherence review
 
-Review of `thesis/content/01-introduction.typ` to `16-conclusion.typ` (and
+Review of `thesis/content/01-introduction.typ` to `15-conclusion.typ` (and
 `abstract.typ`) at commit `f3e4c49ec`, branch `thesis-review`. This is an
 analysis only, and no thesis file was changed.
 
@@ -751,7 +751,7 @@ performance defect → unverified shell → tracing → trust boundary.
 - §12.3 (`:184-274`): B drifting into performance engineering. Its argumentative
   point (a proved code equation changes code without adding trust,
   `:255-259`) needs one paragraph. The speedup measurements (`:262-267`)
-  contradict `01-introduction.typ:504-506` and `16-conclusion.typ:94`.
+  contradict `01-introduction.typ:504-506` and `15-conclusion.typ:94`.
 - §12.5 tracing: B. It matters for the trust base (one more `code_printing`
   mapping, `:354-358`). Good.
 - §12.6 trust boundary (`:387-420`): A. Uses the three-question frame of the
@@ -798,9 +798,9 @@ cost on programs → tests of unverified parts.
   `abstract.typ:28-30` (source semantics → side-effecting system → verified
   solver), `01-introduction.typ:256-258` (recursion + splitting contexts +
   verified solver), `01-introduction.typ:298-299` (= abstract),
-  `15-related.typ:489-492` (context-indexed collecting semantics over
+  `14-related.typ:489-492` (context-indexed collecting semantics over
   activation traces, covered by equations a verified side-effecting solver
-  computes), `16-conclusion.typ:20-24` ("the central contribution is this
+  computes), `15-conclusion.typ:20-24` ("the central contribution is this
   composition" of four parts). They are compatible, but a reader cannot tell
   which is the claim.
 - §15.5 shows Rival and Mauborgne already define coverings with a relation
