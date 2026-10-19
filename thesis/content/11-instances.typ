@@ -1,5 +1,5 @@
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, thy-badge
+#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, site, thy-badge
 #import "../lib/figures.typ": int-axis, int-strip, printed-set, verdict as verdict-chip
 #import "../lib/math.typ": *
 #import "../lib/claims.typ": claim-ref
@@ -23,7 +23,7 @@
 @ch:results proved that a report is sound regardless of which analyses produced it. A
 user can choose among the numeric domains Sign, Interval, Parity, and Congruence, their combination Int, and the relational order analysis. The four
 base domains are textbook material, and the project site lets readers
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#values")[try them interactively],
+#link(site("index.html#values"))[try them interactively],
 so this chapter treats them briefly. Most of it describes Int, which combines
 the four base domains and gains precision by letting them exchange facts. The
 formalization proves that this exchange preserves a value's meaning and shows

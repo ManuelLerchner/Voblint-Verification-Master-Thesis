@@ -406,9 +406,7 @@ configurations $kappa$, $kappa'$, and a procedure table #isai("\<Pi>"). Its
 closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and @fig:pstep lists its
 rules. No rule inspects an annotation. The rules only copy annotations, from
 the rewritten command or from the procedure table. The
-#link(
-  "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics",
-)[explainer page]
+#link(site("index.html#semantics"))[explainer page]
 animates these steps.
 
 A call evaluates the actuals in the caller's store, resets the locals, binds

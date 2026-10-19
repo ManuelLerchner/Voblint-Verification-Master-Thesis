@@ -1,4 +1,4 @@
-#import "../lib/code.typ": isa, isacmd, isaconst, isalocale, isathm, repo-blob
+#import "../lib/code.typ": isa, isacmd, isaconst, isalocale, isathm, repo-blob, site
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
 
@@ -226,7 +226,7 @@ continuous integration from diverging.
       ),
       end(
         (5, 0),
-        link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/")[website],
+        link(site(""))[website],
         <w>,
       ),
       step(<c>, <a>),

@@ -1,6 +1,8 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig, thy-badge
+#import "../lib/code.typ": (
+  isaconst, isai, isalocale, isathm, isatype, listing, oblig, site, thy-badge,
+)
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, verdict as verdict-chip
@@ -213,7 +215,7 @@ therefore an ordinary call. Its equation reads the result of the callee in
 some context, which creates a cycle of dependencies between unknowns. The
 solver treats this cycle like the cycle of a loop, and the unknown at which a
 read closes it becomes a widening point (@sec:td). The explainer's
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#replay")[solver replay] animates this protocol.
+#link(site("index.html#replay"))[solver replay] animates this protocol.
 
 Formally, a call publishes its entry state to a _seed_
 $ctor("Activation_Seed") thin p space c'$, one global unknown

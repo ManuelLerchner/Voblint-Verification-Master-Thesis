@@ -98,7 +98,15 @@
   raw(if label == none { path } else { label }),
 )
 
-#let playground-base = "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html"
+// The published site. A pull-request preview passes `--input site-url=...`, so
+// the PDF it serves links into its own site rather than main's.
+#let _published = "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/"
+#let site-url = sys.inputs.at("site-url", default: _published)
+#let site(path) = site-url + path
+// Generated data records links into the published site; a preview needs its own.
+#let rebase(url) = if url.starts-with(_published) { site(url.slice(_published.len())) } else { url }
+
+#let playground-base = site("playground.html")
 
 // What the playground selects when a link names nothing (pages/playground.html;
 // the check fails when the page changes them).
@@ -308,7 +316,7 @@
     _links.base != "" and key in _links.links,
     message: "Missing Isabelle HTML link for " + key + "; run pixi run thesis-links-write",
   )
-  _links.base + _links.links.at(key)
+  site-url + _links.links.at(key)
 }
 
 #let isalink(kind, name, body) = link(_url(kind, name), body)

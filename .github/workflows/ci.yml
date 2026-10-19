@@ -7,8 +7,7 @@ permissions:
 
 on:
   # A manual run from any branch assembles the complete Pages site and uploads it
-  # as an artifact; ticking `deploy` also publishes it, which the github-pages
-  # environment only accepts from branches its deployment policy lists.
+  # as an artifact; ticking `deploy` also publishes it to the site root.
   workflow_dispatch:
     inputs:
       deploy:
@@ -18,11 +17,16 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    types: [ opened, synchronize ]
+    types: [ opened, synchronize, reopened ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  # A pull request publishes a preview under pr-preview/pr-<n>/, and its thesis
+  # PDF and sitemap must point there; empty means the published site root.
+  SITE_URL: ${{ github.event_name == 'pull_request' && format('https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/pr-preview/pr-{0}/', github.event.number) || '' }}
 
 jobs:
   # isabelle-build is the sole cross-run heap-cache writer (see #103): a
@@ -363,7 +367,7 @@ jobs:
           fi
 
       - name: Upload GitHub Pages site
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: isabelle-html
@@ -969,10 +973,10 @@ jobs:
           path: thesis/Lerchner_Master_Thesis.pdf
           if-no-files-found: error
 
-  # Builds the site on every push to main and every manual run, so a branch can
-  # exercise the whole pipeline without publishing anything.
+  # Builds the site on every push to main, every pull request and every manual
+  # run, so a branch can exercise the whole pipeline without publishing anything.
   pages-site:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     needs: [isabelle-html, isabelle-pdf, thesis-pdf]
     runs-on: ubuntu-latest
     steps:
@@ -1035,29 +1039,77 @@ jobs:
       - name: Check the assembled site's internal links and theory anchors
         run: pixi run pages-site-links
 
-      # The artifact pages-deploy publishes; downloadable from the run for inspection.
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      # The site the deploy jobs publish; downloadable from the run for inspection.
+      # .nojekyll is hidden, and Pages must see it.
+      - name: Upload the assembled site
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
+          name: pages-site
           path: build/github-pages
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
 
+  # Pages serves the gh-pages branch: main owns its root, and each pull request
+  # owns pr-preview/pr-<n>/. One commit replaces the branch history on every
+  # main deploy, so superseded PDFs do not accumulate in the repository.
   pages-deploy:
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy)
     needs: pages-site
     runs-on: ubuntu-latest
     permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      contents: write
     steps:
-      - name: Setup Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - name: Download the assembled site
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pages-site
+          path: build/github-pages
+
+      - name: Publish the site root
+        uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
+        with:
+          folder: build/github-pages
+          branch: gh-pages
+          clean-exclude: pr-preview/
+          single-commit: true
+
+  # Same-repository pull requests only: a fork's token cannot write gh-pages.
+  # The action keeps one sticky comment on the PR with the preview link;
+  # pages-preview-cleanup.yml removes the preview when the PR closes.
+  pages-preview:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: pages-site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Download the assembled site
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pages-site
+          path: build/github-pages
+
+      - name: Publish the preview and comment its link
+        uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1.8.1
+        with:
+          source-dir: build/github-pages
+          action: deploy
 
   # A link in the thesis points at a page on GitHub Pages, so it can only be
   # validated once that page exists. This is the one check that sees what a

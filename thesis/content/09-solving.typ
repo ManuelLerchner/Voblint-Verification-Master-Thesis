@@ -1,7 +1,7 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": (
-  c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing, thy-badge,
+  c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing, site, thy-badge,
 )
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": *
@@ -657,7 +657,7 @@ they record and whether they widen:
   switched from widening to narrowing. Once the count reaches a bound, every
   later switch to narrowing takes only its first narrowing step.
 @fig:update-rules runs all five on one sequence of contributions, and the
-#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site]
+#link(site("#globals"))[project site]
 runs them on a program with several shared callee entries. In
 #isaconst("run_voblint") the rule decides how a callee's entry state
 accumulates across call sites and, with flow-insensitive program globals

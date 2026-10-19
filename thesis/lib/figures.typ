@@ -3,7 +3,7 @@
 #import "@preview/commute:0.3.0" as commute
 #import "@preview/subpar:0.2.2"
 #import "theme.typ": vb
-#import "code.typ": listing
+#import "code.typ": listing, rebase
 
 // Reusable figure vocabulary. Same principle as the LaTeX style file: a CFG
 // node looks the same everywhere, and restyling all of them is one edit.
@@ -492,7 +492,7 @@
   figure(
     shot,
     placement: placement,
-    caption: [#caption #h(0.4em) #link(r.url, text(fill: vb.accent, size: 0.9em)[open this run]).],
+    caption: [#caption #h(0.4em) #link(rebase(r.url), text(fill: vb.accent, size: 0.9em)[open this run]).],
   )
 }
 
