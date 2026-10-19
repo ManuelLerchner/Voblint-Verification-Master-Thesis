@@ -520,6 +520,7 @@ $ [0, 0] llt [0, 1] llt [0, 2] llt dots. $
 With signed 32-bit bounds, a corresponding chain is finite, but it can still
 have more than two billion elements.
 
+
 #subfigures(
   figure(
     _loop-lattice("wn", scale: 0.5cm, size: 7.5pt),
