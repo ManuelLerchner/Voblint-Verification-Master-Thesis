@@ -24,10 +24,9 @@
 = From Solutions to Verdicts <ch:results>
 
 This chapter answers what the analyzer's output guarantees about the
-executions of the source program. Solving the equation system of
-@ch:equations with the solver of @ch:solving yields an abstract state for
-every pair of a CFG node and a context the solver reached, and a value for
-every global unknown. By @sec:certificate, these states cover every
+executions of the source program. Solving the equations of @ch:equations
+(@ch:solving) gives an abstract state for each CFG node and context the solver
+reached, as well as a value for each global unknown. By @sec:certificate, these states cover every
 execution. A user, however, reads neither states nor contexts. The user reads
 a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
