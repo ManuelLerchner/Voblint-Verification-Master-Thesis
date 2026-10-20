@@ -216,8 +216,8 @@ proof -
   have ecov: "call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s
                 \<in> \<gamma> (\<rho>\<^bsub>twice_gs\<^esub> ?entry)"
     using cov unfolding entry_pairs_cover_def by simp
-  have base: "(exec_formals_route twice_gs (Statement 2) [] ?entry
-         (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))
+  have base: "exec_formals_route twice_gs (Statement 2) [] ?entry
+         (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
       \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
       (Statement 2) [] ?ci s
       (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)"
@@ -253,8 +253,8 @@ proof -
   have ecov: "call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s
                 \<in> \<gamma> (\<rho>\<^bsub>twice_gs\<^esub> ?entry)"
     using cov unfolding entry_pairs_cover_def by simp
-  have base: "(exec_formals_route twice_gs (Statement 3) [] ?entry
-         (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))
+  have base: "exec_formals_route twice_gs (Statement 3) [] ?entry
+         (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
       \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
       (Statement 3) [] ?ci s
       (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)"
@@ -332,7 +332,7 @@ theorem ivl_context_is_entry_state_context_call1:
   assumes cov: "s \<in> \<gamma> (\<rho>\<^bsub>twice_gs\<^esub> (dg_local (snd twice_ctx_sol (Inl (Statement 2, [])))))"
     and es:
       "s' = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
-  shows "(ivl_context (Statement 2) [] s') \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  shows "ivl_context (Statement 2) [] s' \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 2) [] (call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) (STR ''twice''))
            s s'"
 proof -
@@ -345,7 +345,7 @@ theorem ivl_context_is_entry_state_context_call2:
   assumes cov: "s \<in> \<gamma> (\<rho>\<^bsub>twice_gs\<^esub> (dg_local (snd twice_ctx_sol (Inl (Statement 3, [])))))"
     and es:
       "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
-  shows "(ivl_context (Statement 3) [] s') \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  shows "ivl_context (Statement 3) [] s' \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 3) []
            (call_info_of
              (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])

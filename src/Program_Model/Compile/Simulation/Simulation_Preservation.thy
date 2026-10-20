@@ -540,7 +540,7 @@ lemma csim_returning_frames_nonempty:
   by (erule csim.cases) (auto dest: control_at_not_returning)
 
 lemma csim_not_unwind:
-  "\<Pi>, g, \<rho> \<turnstile> ((Unwind i), s, frs) \<approx> cfg' \<Longrightarrow> False"
+  "\<Pi>, g, \<rho> \<turnstile> (Unwind i, s, frs) \<approx> cfg' \<Longrightarrow> False"
   by (erule csim.cases) (auto dest: control_at_not_unwind pop_ready_not_Unwind)
 
 text \<open>

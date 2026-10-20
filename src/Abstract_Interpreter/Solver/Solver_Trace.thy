@@ -171,10 +171,9 @@ lemma solve_rec_c_traced [code]:
         Answer d \<Rightarrow>
           (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Rhs x d :: ('x, 'g, 'd) solver_event)) in
            Some (d, state, ug_state))
-      | QueryL y g \<Rightarrow> (
-          Option.bind (TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.Q (x, y, state, ug_state)))
+      | QueryL y g \<Rightarrow> Option.bind (TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.Q (x, y, state, ug_state)))
             (\<lambda>(yd, state, ug_state).
-              TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.E (x, g yd, sides, state, ug_state))))
+              TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.E (x, g yd, sides, state, ug_state)))
       | QueryG y g \<Rightarrow>
           (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Query_Global x y :: ('x, 'g, 'd) solver_event)) in
            let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Add_Infl (Inr y) x :: ('x, 'g, 'd) solver_event)) in
