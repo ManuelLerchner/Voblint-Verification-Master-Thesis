@@ -316,16 +316,20 @@
 }
 
 .chip-ctx::before {
+  border-radius: 50%;
+}
+
+.chip-ctx::before,
+.chip-dom::before {
   content: "";
   width: 0.55rem;
   height: 0.55rem;
-  border-radius: 50%;
   background: var(--swatch);
 }
 
-.chip-dom {
-  border-color: var(--primary);
-  color: var(--primary);
+/* A square for a domain, a dot for a context, so the two never read as the same key. */
+.chip-dom::before {
+  border-radius: 2px;
 }
 
 .chip-prog {

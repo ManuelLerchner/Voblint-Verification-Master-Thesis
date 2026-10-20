@@ -5428,9 +5428,10 @@ qed</code></pre>
 
       <p class="setting-copy">
         Contexts are where the cost goes. With <a href="#settings">entry-state contexts</a> a
-        recursive procedure gets one context for every argument it is entered with, so
-        <code>h(n)</code> counting down from <em>n</em> keeps <em>n</em>&nbsp;+&nbsp;1 copies of
-        <code>h</code> apart. <span data-profile="depth">That copy count drives the run time.</span>
+        recursive procedure gets one context for every abstract argument it is entered with.
+        Under the interval domain, which tells every number apart, <code>h(n)</code> counting
+        down from <em>n</em> therefore keeps <em>n</em>&nbsp;+&nbsp;1 copies of <code>h</code>
+        apart. <span data-profile="depth">That copy count drives the run time.</span>
         A CPU profile of such a run spends much of its own time in the generated code's list
         lookups, which compare nodes and contexts one at a time.
       </p>

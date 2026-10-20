@@ -190,7 +190,7 @@ const times = (x) => `${x.toFixed(1)}×`;
 /* Configuration values in a reading are chips, so a reader tells settings from prose at a glance. */
 const ctxChip = (c) =>
   `<span class="chip chip-ctx" style="--swatch:${contextColor(c)}">${contextLabel(c)}</span>`;
-const domChip = (d) => `<span class="chip chip-dom">${d}</span>`;
+const domChip = (d) => `<span class="chip chip-dom" style="--swatch:${domainColor(d)}">${d}</span>`;
 const progChip = (t) => `<span class="chip chip-prog">${t}</span>`;
 
 /* The readings are computed from the snapshot, so a new measurement cannot leave them stale. */
@@ -333,7 +333,7 @@ function readQuantile(data, domain) {
   reading("reading-quantile", [
     `For ${domChip(domain)}, the median fixture solves in ${parts.map((p) => `<strong>${fmtMs(p.median)}</strong> under ${ctxChip(p.context)}`).join(", ")}.`,
     heaviest
-      ? `Cost is most concentrated under ${ctxChip(heaviest.context)}: the slowest ${heaviest.top === 1 ? "fixture" : `${heaviest.top} fixtures`} (5%) take <strong>${pct(heaviest.share)}</strong> of its solve time, led by <code>${heaviest.rs[0].fixture}</code> at ${fmtMs(heaviest.rs[0].ms)}.`
+      ? `Cost is most concentrated under ${ctxChip(heaviest.context)}: the slowest ${heaviest.top === 1 ? "fixture" : `${heaviest.top} fixtures`} (5%) ${heaviest.top === 1 ? "takes" : "take"} <strong>${pct(heaviest.share)}</strong> of its solve time, led by <code>${heaviest.rs[0].fixture}</code> at ${fmtMs(heaviest.rs[0].ms)}.`
       : null,
     heaviest && heaviest.share > 0.5
       ? "A corpus total under that policy says more about those programs than about a typical one."
@@ -352,6 +352,15 @@ function slope(points, x, y) {
   return d3.sum(pts, ([a, b]) => (a - mx) * (b - my)) / d3.sum(pts, ([a]) => (a - mx) ** 2);
 }
 
+/* Below this the native solve is too short for a browser/native ratio to mean much. */
+const DEPTH_RATIO_FLOOR_MS = 100;
+/* A fitted exponent this close to 0 is a flat line, not a power law. */
+const FLAT_EXPONENT = 0.2;
+
+/* "a", "a and b", "a, b and c". */
+const listing = (xs) =>
+  xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`;
+
 function readDepth(data) {
   const fits = DOMAINS.map((domain) => {
     const rows = data.depth.filter((d) => (d.domain ?? "interval") === domain);
@@ -360,9 +369,8 @@ function readDepth(data) {
       rows.filter((d) => d.native_ms != null),
       (d) => d.n,
     );
-    const stopped = rows.find((d) => d.status && d.status !== "ok");
     const both = d3.greatest(
-      big.filter((d) => d.wasm_ms != null && d.native_ms != null),
+      rows.filter((d) => d.wasm_ms != null && d.native_ms >= DEPTH_RATIO_FLOOR_MS),
       (d) => d.n,
     );
     return {
@@ -378,35 +386,53 @@ function readDepth(data) {
         "evals",
       ),
       last,
-      stopped,
-      ratio: both ? { n: both.n, x: both.wasm_ms / both.native_ms } : null,
+      stopped: rows.find((d) => d.status && d.status !== "ok"),
+      ratio: both ? both.wasm_ms / both.native_ms : null,
     };
   }).filter((f) => f.last);
   const withSlopes = fits.filter((f) => f.kNative != null);
-  const outgrow = withSlopes.filter((f) => f.kEvals != null && f.kNative > f.kEvals + 0.3);
+  const flat = withSlopes.filter((f) => Math.abs(f.kNative) < FLAT_EXPONENT);
+  /* Domains whose exponents round alike are one statement, not one clause each. */
+  const growing = d3.groups(
+    withSlopes.filter((f) => Math.abs(f.kNative) >= FLAT_EXPONENT),
+    (f) => f.kNative.toFixed(1),
+  );
+  const outgrow = withSlopes.filter(
+    (f) => f.kEvals != null && f.kNative > f.kEvals + 0.3 && !flat.includes(f),
+  );
+  const chips = (fs) => listing(fs.map((f) => domChip(f.domain)));
+  const stopped = d3.groups(
+    fits.filter((f) => f.stopped),
+    (f) => `${f.stopped.n}|${f.stopped.status}`,
+  );
+  const ratios = fits.filter((f) => f.ratio != null);
   reading("reading-depth", [
-    withSlopes.length
-      ? `From n&nbsp;=&nbsp;100 up, solve time grows about as ${withSlopes.map((f) => `<strong>n<sup>${f.kNative.toFixed(1)}</sup></strong> for ${domChip(f.domain)}`).join(", ")}.`
+    growing.length
+      ? `From n&nbsp;=&nbsp;100 up, solve time grows about as ${listing(growing.map(([k, fs]) => `<strong>n<sup>${k}</sup></strong> for ${chips(fs)}`))}.`
+      : null,
+    flat.length
+      ? `It stays flat for ${chips(flat)}: ${flat.length === 1 ? "this domain has" : "these domains have"} only a few abstract values, so the entry states of <code>h</code> collapse to ${listing([...new Set(flat.map((f) => f.last.contexts))].map(String))} contexts at every depth.`
       : null,
     outgrow.length
-      ? `For ${outgrow.map((f) => domChip(f.domain)).join(", ")}, time outgrows the solver's evaluations (n<sup>${d3.mean(outgrow, (f) => f.kEvals).toFixed(1)}</sup> on average), so each evaluation gets slower as contexts accumulate; the CPU profile of <code>h(1000)</code> below shows where that time goes.`
+      ? `For ${chips(outgrow)}, the solver's evaluations grow only as <strong>n<sup>${d3.mean(outgrow, (f) => f.kEvals).toFixed(1)}</sup></strong>, so each evaluation gets slower as contexts accumulate. The CPU profile of <code>h(1000)</code> below shows where that time goes.`
       : null,
-    ...fits
-      .filter((f) => f.stopped)
-      .map(
-        (f) =>
-          `${domChip(f.domain)} reaches n&nbsp;=&nbsp;${f.last.n} (${fmtMs(f.last.native_ms)}, ${(f.last.rss / 2 ** 20).toFixed(0)}&nbsp;MB) and stops at n&nbsp;=&nbsp;${f.stopped.n}: ${f.stopped.status}.`,
-      ),
-    fits.some((f) => f.ratio)
-      ? `At the largest depth both builds finish, WebAssembly takes ${fits
-          .filter((f) => f.ratio)
-          .map(
-            (f) =>
-              `${times(f.ratio.x)} the native time for ${domChip(f.domain)} (n&nbsp;=&nbsp;${f.ratio.n})`,
-          )
-          .join(", ")}.`
+    ...stopped.map(([key, fs]) => {
+      const [n, status] = key.split("|");
+      return `${chips(fs)} ${fs.length === 1 ? "stops" : "stop"} at n&nbsp;=&nbsp;${n} (${status}), after ${listing(fs.map((f) => `${fmtMs(f.last.native_ms)} and ${(f.last.rss / 2 ** 20).toFixed(0)}&nbsp;MB at n&nbsp;=&nbsp;${f.last.n}${fs.length > 1 ? ` for ${domChip(f.domain)}` : ""}`))}.`;
+    }),
+    ratios.length
+      ? `Where a native solve takes at least ${DEPTH_RATIO_FLOOR_MS}&nbsp;ms, WebAssembly needs <strong>${range(
+          ratios.map((f) => f.ratio),
+          times,
+        )}</strong> the native time at the deepest such run (${chips(ratios)}).`
       : null,
   ]);
+}
+
+/* "1.5×" for one value, "1.5×–2.8×" for a spread. */
+function range(xs, f) {
+  const [lo, hi] = d3.extent(xs);
+  return f(lo) === f(hi) ? f(lo) : `${f(lo)}–${f(hi)}`;
 }
 
 function depth(data) {

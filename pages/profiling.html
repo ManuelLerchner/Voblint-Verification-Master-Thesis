@@ -151,11 +151,13 @@
         <h2 id="h-depth">How does recursion depth scale under entry-state contexts?</h2>
       </div>
       <p class="section-intro">
-        Under entry-state contexts, every distinct argument a recursive procedure is entered with
-        becomes its own context. The program below recurses <em>n</em> levels deep, so it creates
-        <em>n</em>&nbsp;+&nbsp;1 contexts of <code>h</code>. Growing <em>n</em> measures how the
-        solver scales in the number of contexts, the case that overflowed the playground's
-        stack before the CPS build.
+        Under entry-state contexts, every distinct abstract argument a recursive procedure is
+        entered with becomes its own context. The program below recurses <em>n</em> levels deep.
+        A domain that tells the arguments apart, such as Interval, therefore creates
+        <em>n</em>&nbsp;+&nbsp;1 contexts of <code>h</code>, while one with few abstract values,
+        such as Sign, creates the same few at every depth. Growing <em>n</em> measures how the
+        solver scales in the number of contexts, the case that overflowed the playground's stack
+        before the CPS build.
       </p>
       <pre class="mock-editor snippet" data-lang="vimp"><span class="ml">fun h(i) {</span>
 <span class="ml">  if (i == 0) { return 3; }</span>
