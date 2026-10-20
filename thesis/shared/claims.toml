@@ -1480,4 +1480,3 @@ argv = [
   "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
 ]
 why = "Evaluation, procedure table: Int on countdown with --context entry-state."
-
