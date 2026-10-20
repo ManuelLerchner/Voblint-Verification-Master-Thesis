@@ -97,8 +97,6 @@ proof -
     obtain u where solution_eq:
       "x - ?q * ?s = ?mp * u"
       using solution unfolding dvd_def by blast
-    have "?s * ?kp - 1 = ?mp * (- ?t)"
-      using unit by (simp add: algebra_simps)
     have q_unit:
       "?q * (?s * ?kp + ?t * ?mp) = ?q"
       using unit by simp
@@ -172,9 +170,6 @@ next
   note r_some = Some
   obtain c m where cm: "cm = (c, m)"
     by (cases cm)
-  have
-    "normalized_congruence_rep (Some (c, m))"
-    using assms r_some cm by simp
   show ?thesis
   proof (cases "m = 0")
     case m_zero: True

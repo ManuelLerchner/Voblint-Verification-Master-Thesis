@@ -99,13 +99,6 @@ proof -
        (\<lambda>x. canonical_refine_step x \<noteq> x)
        canonical_refine_step d = Some r"
     using result unfolding refine_fix_option_def .
-  have
-    "\<And>x.
-       gamma_int_dom x = gamma_int_dom d \<Longrightarrow>
-       canonical_refine_step x \<noteq> x \<Longrightarrow>
-       gamma_int_dom (canonical_refine_step x) =
-       gamma_int_dom d"
-    using canonical_refine_step_exact by simp
   show ?thesis
   proof (rule while_option_rule[
       where P="\<lambda>x.

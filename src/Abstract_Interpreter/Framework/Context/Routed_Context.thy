@@ -363,7 +363,7 @@ next
   obtain pairs pub deps cont' entry
     where Rr: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs pub"
-      and D: "enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
+      and "enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
       and ecov: "call_enter \<G> (CallEdge dst pars args) s \<in> \<gamma>\<^sub>D\<^sub>G entry ?g"
@@ -493,7 +493,7 @@ next
   obtain pairs pub deps cont' entry
     where Rr: "enter_runs (enter\<^sup>\<sharp> S ?ci)
                 (man_at cl c1) sigma pairs pub"
-      and D: "enter_deps (enter\<^sup>\<sharp> S ?ci)
+      and "enter_deps (enter\<^sup>\<sharp> S ?ci)
                 (man_at cl c1) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
       and ccov: "s \<in> \<gamma>\<^sub>D\<^sub>G cont' ?g"
