@@ -5,6 +5,7 @@
 #import "../lib/claims.typ": claim-ref
 #import "../lib/stats.typ": stat
 #import "../lib/sources.typ": thy
+#import "../lib/profiling.typ": prof-times
 
 // The call run_voblint received and the answer it returned (claim shell-json),
 // folded for print: `rule(path)` keeps a value "open" (one key per line),
@@ -115,6 +116,18 @@ program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the
 same code to WebAssembly, which a web worker in the reader's browser calls
 (@fig:build). Both tools thus run the generated code of #isaconst("run_voblint") up to the code generator and the compilers
 (@fig:intro-trust).
+
+Running the same code in the browser, however, has a cost. A browser worker has a much
+smaller stack than a native program, while under entry-state contexts the solver nests one
+query per level of a recursion. A recursion as deep as the one in #fixture(
+  "21-context-sensitivity/precision/04-function_chain_self_recursive_tail.vimp",
+  label: "04-function_chain_self_recursive_tail",
+) therefore overflowed the worker in Chrome. To avoid this, the bundle uses the
+continuation-passing translation of #raw("wasm_of_ocaml", lang: "sh")
+(#raw("--effects=cps", lang: "sh")). Together with WebAssembly itself, this translation
+makes the browser build need #prof-times("browser_ratio_median") the native solve time on
+the median run of the corpus (@sec:eval-runtime, #link(site("profiling.html"))[profiling
+  page]).
 
 #figure(
   image("/shared/generated/svg/build.svg", width: 100%),

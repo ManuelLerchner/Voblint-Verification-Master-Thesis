@@ -181,6 +181,12 @@ rests on examples. The regression corpus is small and its expected verdicts were
 and beyond the small comparison of @sec:eval-flavors, no agreement rate with
 Goblint is measured (@sec:rel-goblint).
 
+Speed was not a goal either. The measurements of @sec:eval-runtime show that the
+analyzer finishes in acceptable time on the corpus, but its time grows faster than its
+work when entry-state contexts multiply. Since the generated code keeps the proofs'
+list-based sets and maps, replacing them with more efficient code representations is
+one starting point for future work.
+
 == Extending Voblint towards C and Goblint <sec:outlook-extending>
 
 Addressing these limitations requires extending Voblint towards the language

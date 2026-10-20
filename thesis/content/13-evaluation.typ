@@ -6,6 +6,9 @@
 )
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": verdict
+#import "../lib/profiling.typ": (
+  depth-plot, prof-exp, prof-int, prof-ms, prof-pct, prof-runs, prof-times, prof-value,
+)
 
 
 = Evaluation of Strength and Precision <ch:evaluation>
@@ -755,3 +758,69 @@ Goblint's full contexts prove, and one more. With call strings, each analyzer
 proves checks the other loses, and without contexts Voblint proves more. Goblint's widening
 then loses the lower bound $0$ of `i` in `h` unless it narrows global unknowns
 (#link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]), whereas Voblint keeps it and turns `i != 0` into `i > 0`.
+
+== Running time <sec:eval-runtime>
+
+A sound result is of little use if the analyzer takes too long to produce it. Speed,
+however, was not a goal of this thesis. Apart from the defect fixed in @sec:codegen, the
+generated code runs as Isabelle emits it. The measurements below therefore ask only
+whether this unoptimized code runs in acceptable time on the regression corpus.
+
+We analyzed each of the #prof-int("fixtures") regression fixtures under each of the
+#prof-int("configurations") combinations of domain and context policy on an
+#prof-value("meta.cpu") and timed the solve alone. Each time is #prof-runs(), measured at
+commit #raw(prof-value("meta.commit")). The #link(site("profiling.html"))[profiling page] shows
+every measurement, how it was taken, and an interactive CPU profile, and @sec:codegen
+gives the cost of the browser build.
+
+Most runs are short. The median run solves in #prof-ms("solve_median_ms"), and 95% of the
+runs finish within #prof-ms("solve_p95_ms"). The slowest 5%, however, take
+#prof-pct("slowest_5pct_share") of the total solve time. They are the recursions of
+@sec:eval-contexts, where entry-state contexts tell successive calls apart.
+
+@fig:runtime-depth isolates this effect with a procedure `h` analyzed at growing
+recursion depth $n$. Sign and Parity have only a few abstract values, so `h` keeps
+#prof-int("depth_fits.sign.contexts_at_max") contexts at every depth and the solve time
+stays flat. Congruence, Interval and Int instead tell the successive arguments apart and
+create $n + 1$ contexts of `h`. From $n = 100$ up, their solve time grows about as
+#prof-exp("depth_fits.interval.time"), while the solver's right-hand-side evaluations
+grow only as #prof-exp("depth_fits.interval.evals"). The solver thus does about linearly
+more work, but each evaluation becomes more expensive.
+
+A CPU profile of `h(1000)` under Interval suggests why. More than a
+third of its samples (#prof-pct("flame.membership_share")) fall inside list membership
+tests (`membera`), both in the solver's bookkeeping of its unknowns and in building the
+report. The generated code keeps finite sets and maps as lists (@sec:codegen), so each
+such test is linear in their size, and these lists grow with the number of contexts. The
+profile thus points to a likely cause of the super-linear growth, although only profiles
+across depths could confirm it.
+
+#figure(
+  {
+    set text(size: 8pt)
+    grid(
+      columns: (5.7cm, 1fr),
+      column-gutter: 10pt,
+      align: horizon,
+      listing(
+        "fun h(i) {\n  if (i == 0) { return 3; }\n  r = h(i - 1);\n  return r;\n}\nfun main() {\n  x = h(1000);\n  __voblint_check(x == 3);\n}",
+        lang: "c",
+        ctx: "entry-state",
+      ),
+      depth-plot(width: 6.8cm, height: 4.4cm),
+    )
+  },
+  kind: image,
+  placement: auto,
+  caption: [Solve time of `h(n)` under entry-state contexts for each domain, log--log. Each
+    point is #prof-runs(). The listing shows $n = 1000$, and the other points vary only
+    that argument. A domain's line ends where its run passed
+    #prof-int("meta.timeout_s")~s.],
+) <fig:runtime-depth>
+
+On the regression corpus, the generated analyzer is therefore fast enough, but its
+list-based representations scale poorly once an analysis distinguishes many contexts.
+Context sensitivity buys precision at a cost that grows faster than the solver's work.
+Replacing these representations is the natural first optimization, and like the fix of
+@sec:codegen, each replacement must come with code equations proved against the verified
+definitions.

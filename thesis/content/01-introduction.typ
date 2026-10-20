@@ -511,9 +511,10 @@ The theorem has the following limits.
   Termination of the solve is not proved for every program (@sec:certificate).
 - _Precision and cost._ No completeness or general precision ordering is
   proved (@sec:eval-precision). The executable uses the same data
-  representations as the proofs. No systematic time or memory evaluation
-  is reported, only the speedup from one fixed performance defect
-  (@sec:codegen).
+  representations as the proofs and was not optimized beyond one fixed
+  performance defect (@sec:codegen). Running time is measured only to show
+  that the analyzer finishes in acceptable time on the corpus
+  (@sec:eval-runtime).
 - _Goblint and evidence._ The correspondence to Goblint is architectural, and
   no theorem transfers to Goblint's implementation (@sec:rel-goblint). The
   regression corpus is small and was written or adapted for this work
