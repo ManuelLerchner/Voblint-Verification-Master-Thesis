@@ -33,6 +33,7 @@ OUT = REPO / "thesis" / "shared" / "generated" / "profiling.json"
 
 RATIO_FLOOR_MS = 1.0
 SLOPE_FROM_N = 100
+EVALS_FROM_N = 20
 # A time exponent this far above the evaluation exponent marks data-structure cost.
 SCALING_GAP = 0.5
 # How each scaling family reads in a sentence ("... grows with the number of variables").
@@ -162,14 +163,24 @@ def summarize(snapshot, source):
     for family, rows in scaling.items():
         big = [r for r in rows if r.get("native_ms") and r["n"] >= SLOPE_FROM_N]
         k_time = slope([(r["n"], r["native_ms"]) for r in big])
-        k_evals = slope([(r["n"], r["evals"]) for r in big if r.get("evals")])
-        families.append({
-            "family": family,
-            "what": SCALING_PHRASES.get(family, rows[0]["what"]),
-            "time": k_time,
-            "evals": k_evals,
-            "gap": None if k_time is None or k_evals is None else k_time - k_evals,
-        })
+        # Evaluations are exact counts, not timings, so every traced size from
+        # EVALS_FROM_N counts; tracing slows a run past the limit sooner than timing does.
+        k_evals = slope(
+            [
+                (r["n"], r["evals"])
+                for r in rows
+                if r.get("evals") and r["n"] >= EVALS_FROM_N
+            ]
+        )
+        families.append(
+            {
+                "family": family,
+                "what": SCALING_PHRASES.get(family, rows[0]["what"]),
+                "time": k_time,
+                "evals": k_evals,
+                "gap": None if k_time is None or k_evals is None else k_time - k_evals,
+            }
+        )
     broken = sorted(
         (f for f in families if f["gap"] is not None and f["gap"] >= SCALING_GAP),
         key=lambda f: -f["gap"],
@@ -180,7 +191,25 @@ def summarize(snapshot, source):
         "scaling": {
             "families": families,
             "broken": [f["what"] for f in broken],
-            "flat": [f["what"] for f in families if f["gap"] is not None and f["gap"] < SCALING_GAP],
+            "count": len(families),
+            "by_family": {f["family"]: f for f in families},
+            "time_min": min(
+                (f["time"] for f in families if f["time"] is not None), default=None
+            ),
+            "time_max": max(
+                (f["time"] for f in families if f["time"] is not None), default=None
+            ),
+            "evals_min": min(
+                (f["evals"] for f in families if f["evals"] is not None), default=None
+            ),
+            "evals_max": max(
+                (f["evals"] for f in families if f["evals"] is not None), default=None
+            ),
+            "flat": [
+                f["what"]
+                for f in families
+                if f["gap"] is not None and f["gap"] < SCALING_GAP
+            ],
         },
         "meta": {
             "commit": meta["commit"],

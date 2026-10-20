@@ -6,7 +6,9 @@
 )
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": verdict
-#import "../lib/profiling.typ": depth-plot, prof-growth, prof-int, prof-list, prof-ms, prof-runs, prof-value
+#import "../lib/profiling.typ": (
+  depth-plot, prof-exp, prof-growth, prof-int, prof-list, prof-ms, prof-runs, prof-value,
+)
 
 
 = Evaluation of Strength and Precision <ch:evaluation>
@@ -764,10 +766,8 @@ however, was not a goal of this thesis. Apart from the defect fixed in @sec:code
 generated code runs as Isabelle emits it. The measurements below therefore ask only
 whether this unoptimized code runs in acceptable time on the regression corpus.
 
-The #link(site("profiling.html"))[profiling page] reports them in full, with solve times
-for every domain and context policy, the comparison with the WebAssembly build, scaling
-experiments, interactive CPU profiles, and how each number was taken. This section
-summarizes the main observations.
+The #link(site("profiling.html"))[profiling page] reports every measurement, the CPU
+profiles, and how each number was taken. This section summarizes them.
 
 #if prof-value("solve_median_ms") < 5 [Most programs of the regression corpus are analyzed
   within a few milliseconds.] else [The median program of the regression corpus is
@@ -783,23 +783,26 @@ solver evaluations grows only #prof-growth("depth_fits.interval.evals").
 The CPU profiles suggest that this gap comes from the data structures of the generated
 code. Its finite sets and maps are lists (@sec:codegen), so a membership test scans the
 list, a union inserts element by element, and removing duplicates compares every pair.
-#if prof-value("scaling.broken").len() > 0 [
-  Programs that grow one size at a time show which sizes reach these lists. Solve time
-  outgrows the solver's evaluations with #prof-list("scaling.broken"),
-  #if prof-value("scaling.flat").len() > 0 [while time and evaluations grow alike with
-    #prof-list("scaling.flat").] else [and with every other size as well.]
-] else [
+#if prof-value("scaling.broken").len() == 0 [
   These lists grow with the number of contexts.
+] else if prof-value("scaling.flat").len() == 0 [
+  Contexts are only one way to reach them. Across #prof-int("scaling.count") generated
+  program families that each grow one size, from variables and statements to call chains,
+  the solver's evaluations grow about linearly while its solve time grows as
+  #prof-exp("scaling.time_min") to #prof-exp("scaling.time_max"), and as
+  #prof-exp("scaling.by_family.points.time") even for $n$ straight-line statements.
+] else [
+  Generated programs that grow one size at a time show which sizes reach these lists. Solve
+  time outgrows the solver's evaluations with #prof-list("scaling.broken"), while time and
+  evaluations grow alike with #prof-list("scaling.flat").
 ]
 
-Isabelle's code generator can instead implement sets and maps by balanced trees or hash
-tables. The Collections Framework @lammich10collections refines abstract sets and maps
-into such structures, and the Light-weight Containers @lochbihler13containers can replace
-the default list-based setup of code generation altogether. Either route still needs code equations for the operations Voblint uses, and possibly linear
-orders on its nodes and contexts, but it changes only the code-generation setup. The
-soundness theorems, stated about the HOL definitions, stay as they are. The generated
-analyzer thus handles the small programs of this thesis efficiently and slows down when a
-program grows along these sizes.
+Balanced trees or hash tables would avoid these scans. The Collections Framework
+@lammich10collections refines abstract sets and maps into such structures, and the
+Light-weight Containers @lochbihler13containers can replace the list-based default of code
+generation altogether. Either route needs code equations for the operations Voblint uses,
+and possibly linear orders on its nodes and contexts, but leaves the soundness theorems,
+which are stated about the HOL definitions, unchanged.
 
 #figure(
   {
