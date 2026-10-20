@@ -44,6 +44,15 @@
 }
 #let prof-exp(path) = $n^#_one-decimal(prof-value(path))$
 
+/// How a fitted power law reads in prose: "nearly constant", "about linearly",
+/// "about quadratically", or the exponent itself when it is none of these.
+#let prof-growth(path) = {
+  let k = prof-value(path)
+  if calc.abs(k) < 0.2 [nearly constant] else if calc.abs(k - 1) < 0.2 [about linearly] else if (
+    calc.abs(k - 2) < 0.3
+  ) [about quadratically] else [as #prof-exp(path)]
+}
+
 // Domains keep the colours they carry in every other figure.
 #let _domain-color = (
   sign: vb.sign,

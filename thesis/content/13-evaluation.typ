@@ -6,9 +6,7 @@
 )
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": verdict
-#import "../lib/profiling.typ": (
-  depth-plot, prof-exp, prof-int, prof-ms, prof-pct, prof-runs, prof-times, prof-value,
-)
+#import "../lib/profiling.typ": depth-plot, prof-growth, prof-int, prof-ms, prof-runs, prof-value
 
 
 = Evaluation of Strength and Precision <ch:evaluation>
@@ -766,34 +764,30 @@ however, was not a goal of this thesis. Apart from the defect fixed in @sec:code
 generated code runs as Isabelle emits it. The measurements below therefore ask only
 whether this unoptimized code runs in acceptable time on the regression corpus.
 
-The measurements cover the #prof-int("fixtures") fixtures of the regression corpus
-(@sec:eval-corpus), each under the
-#prof-int("configurations") combinations of domain and context policy. They time the
-solve alone on an #prof-value("meta.cpu"), and each time is #prof-runs() at commit
-#raw(prof-value("meta.commit")). The #link(site("profiling.html"))[profiling page] shows
-every measurement, how it was taken, and an interactive CPU profile.
+The #link(site("profiling.html"))[profiling page] reports them in full, with solve times
+for every domain and context policy, the comparison with the WebAssembly build, scaling
+experiments, interactive CPU profiles, and how each number was taken. This section
+summarizes the main observations.
 
-Most runs are short. The median run solves in #prof-ms("solve_median_ms"), and 95% of the
-runs finish within #prof-ms("solve_p95_ms"). The slowest 5%, however, take
-#prof-pct("slowest_5pct_share") of the total solve time. They are the recursions of
-@sec:eval-contexts, where entry-state contexts tell successive calls apart.
+#if prof-value("solve_median_ms") < 5 [Most programs of the regression corpus are analyzed
+  within a few milliseconds.] else [The median program of the regression corpus is
+  analyzed in #prof-ms("solve_median_ms").]
+The expensive cases are recursive programs under entry-state contexts, where successive
+calls can create distinct contexts. @fig:runtime-depth measures such a recursion at
+growing depth. Sign and Parity have only a few abstract values, so the number of contexts
+stays bounded and the solve time is #prof-growth("depth_fits.sign.time"). Congruence,
+Interval and Int tell the successive arguments apart and create one context per level.
+Their solve time grows #prof-growth("depth_fits.interval.time"), although the number of
+solver evaluations grows only #prof-growth("depth_fits.interval.evals").
 
-@fig:runtime-depth isolates this effect with a procedure `h` analyzed at growing
-recursion depth $n$. Sign and Parity have only a few abstract values, so `h` keeps
-#prof-int("depth_fits.sign.contexts_at_max") contexts at every depth and the solve time
-stays flat. Congruence, Interval and Int instead tell the successive arguments apart and
-create $n + 1$ contexts of `h`. From $n = 100$ up, their solve time grows about as
-#prof-exp("depth_fits.interval.time"), while the solver's right-hand-side evaluations
-grow only as #prof-exp("depth_fits.interval.evals"). The solver thus does about linearly
-more work, but each evaluation becomes more expensive.
-
-A CPU profile of `h(1000)` under Interval suggests why. More than a
-third of its samples (#prof-pct("flame.membership_share")) fall inside list membership
-tests (`membera`), both in the solver's bookkeeping of its unknowns and in building the
-report. The generated code keeps finite sets and maps as lists (@sec:codegen), so each
-such test is linear in their size, and these lists grow with the number of contexts. The
-profile thus points to a likely cause of the super-linear growth, although only profiles
-across depths could confirm it.
+The CPU profiles suggest that this gap comes partly from the data structures of the
+generated code. Some finite sets and maps are lists (@sec:codegen), so their operations
+become more expensive as the number of contexts grows. Replacing them with more efficient
+representations is a promising optimization, but each replacement needs code equations
+proved against the verified definitions, as the fix of @sec:codegen had. The generated
+analyzer thus handles the small programs of this thesis efficiently and slows down when
+an analysis creates many contexts. This limitation concerns the implementation only and
+leaves the soundness guarantees of the formalization untouched.
 
 #figure(
   {
@@ -817,10 +811,3 @@ across depths could confirm it.
     that argument. A domain's line ends where its run passed
     #prof-int("meta.timeout_s")~s.],
 ) <fig:runtime-depth>
-
-On the regression corpus, the generated analyzer is therefore fast enough, but its
-list-based representations scale poorly once an analysis distinguishes many contexts.
-Context sensitivity buys precision at a cost that grows faster than the solver's work.
-Replacing these representations is the natural first optimization, and like the fix of
-@sec:codegen, each replacement must come with code equations proved against the verified
-definitions.
