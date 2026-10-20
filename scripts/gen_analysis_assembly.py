@@ -43,19 +43,8 @@ PACK_WIDTH = 90
 SYMBOL = re.compile(r"\\<\^?[A-Za-z][A-Za-z0-9_']*>")
 ISABELLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_'.]*$")
 
-# Named explicitly rather than relied on transitively: an implicit dependency is
-# what turns a later unrelated import prune into a failure nobody can place.
-COMMON_IMPORTS = [
-    '"Voblint_Result.DG_Live_Unknowns"',
-    '"Voblint_Framework.Call_String_Context"',
-    '"Voblint_Framework.Routed_Context"',
-    '"Voblint_Solver.TD_Solver_Bridge"',
-    '"Voblint_Solver.Globals_Rule"',
-    '"Voblint_VIMP.VIMP_Program"',
-]
-
-INTERP = "TD_side_rule_Interp"
-CERTIFIED = "td_certified_solver"
+# The theory whose locales discharge every context policy's obligations once.
+COMMON_IMPORTS = ['"Voblint_Nonrelational.Nonrel_Registration"']
 
 GENERATED_NOTICE = (
     "GENERATED FILE. Source: \\<^verbatim>\\<open>manifests/analyses.yaml\\<close>; generator:\n"
@@ -108,47 +97,29 @@ FIELD_ROLES = [
     "answer_sound",
 ]
 
-# What distinguishes the three contexts: the global and seed keys, the route on
-# the executable and on the abstract carrier, and the route agreement, which says the
-# route reads only what the abstraction preserves.
+# Each context policy is one locale of Nonrel_Registration, which states its
+# keys, routes and route agreement; a registration supplies only its parameters.
 CONTEXTS = [
     {
         "key": "unit",
         "suffix": "",
         "title": "the unit context",
-        "gk": lambda vt: "(unit, unit) global_unknown",
-        "keys": '"Analysis_Global ()" Analysis_Global Activation_Seed "\\<lambda>_. route_unit" "()"',
-        "route_abs": '"\\<lambda>_. route_unit"',
+        "locale": "nonrel_unit_rule",
         "params": "r",
-        "case_route": ["  case (1 \\<G> u ctx d ca) show ?case by simp"],
     },
     {
         "key": "entry-state",
         "suffix": "_es",
         "title": "the entry-state context",
-        "gk": lambda vt: f"(unit, {vt} list) global_unknown",
-        "keys": '"Analysis_Global ()" Analysis_Global Activation_Seed exec_formals_route "[]"',
-        "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
+        "locale": "nonrel_es_rule",
         "params": "r",
-        "case_route": [
-            "  case (1 \\<G> u ctx d ca) show ?case",
-            "    by (rule exec_formals_route_commute[symmetric])",
-        ],
     },
     {
         "key": "call-string",
         "suffix": "_cs",
         "title": "the call-string context",
-        "gk": lambda vt: "call_string_gk",
-        "keys": (
-            'Call_String_Context.Global "\\<lambda>_. Call_String_Context.Global"\n'
-            '    Call_String_Context.Seed "\\<lambda>_. cs_route k" "[]"'
-        ),
-        "route_abs": '"\\<lambda>_. cs_route k"',
+        "locale": "nonrel_cs_rule",
         "params": "k r",
-        "case_route": [
-            "  case (1 \\<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
-        ],
     },
 ]
 
@@ -311,71 +282,21 @@ def text_block(body):
     return lines + ["\\<close>"]
 
 
-def rule_step(rule):
-    one = f"    by (rule {rule})"
-    if symbol_len(one) <= MAX_LINE:
-        return [one]
-    head, _, bracket = rule.partition("[")
-    return [f"    by (rule {head}", f"          [{bracket})"]
-
-
-def pack_operands(groups):
-    """One line per group where that fits, else filled by width."""
-    lines = ["    " + " ".join(gs) for gs in groups]
-    if all(symbol_len(packed) <= MAX_LINE for packed in lines):
-        return lines
-    out, line = [], "   "
-    for op in [op for gs in groups for op in gs]:
-        if symbol_len(f"{line} {op}") > PACK_WIDTH:
-            out.append(line)
-            line = "   "
-        line = f"{line} {op}"
-    return out + [line]
-
-
-def const_name(role):
-    return role["const"] if isinstance(role, dict) else role
-
-
 def registration(dom, ctx):
-    """One registration. The bundle's certificate discharges every domain
-    obligation; the four left are the context's two, the solver's and the
-    initial state's, and only the route agreement varies with the context."""
+    """One registration: the context's locale at the domain's bundle and initial
+    state. The bundle certificate and the initial state's coverage are the only
+    facts the domain supplies; the locale discharges the rest."""
     r = dom.roles()
-    t = {k: role_term(v) for k, v in r.items()}
-    vt = dom.value_type
-    out = [
-        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: dg_analysis_exec",
-        *pack_operands([[t["tf_st"], t["enter_st"], t["init_st"]]]),
-        f"    {ctx['keys']}",
+    ops = ops_term(dom.ops)
+    ops = f'"{ops}"' if " " in ops else ops
+    tf = r["exec_intro"].removesuffix(".dg_analysis_execI")
+    return [
+        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule:",
+        f"    {ctx['locale']} {ops} {role_term(r['init_st'])} {ctx['params']}",
+        f"  for {ctx['params']}",
+        f"  by (intro {ctx['locale']}I nonrel_registrationI",
+        f"      {tf}.sound_nonrelational_ops_axioms {r['init_gamma']})",
     ]
-    out += [
-        f'    "{INTERP}_solve r"',
-        f'    "{INTERP}.solve_dom TYPE({ctx["gk"](vt)})',
-        f'       TYPE(({vt} default_st lifted, {vt} default_st lifted) dg_state) r"',
-        f"    bot {t['classifier']}",
-    ]
-    groups = [
-        [t[k] for k in ["skip", "assign", "special", "branch", "body", "return"]],
-        [t["enter_ci"], t["event"], ctx["route_abs"]],
-        [f'"{INTERP}_solve_c r"'],
-    ]
-    out += pack_operands(groups)
-    out.append(f"  for {ctx['params']}")
-    out += [
-        f"proof (rule {r['exec_intro']}, goal_cases)",
-        *ctx["case_route"],
-        "next",
-        "  case (2 v ctx) show ?case by simp",
-        "next",
-        f"  case 3 show ?case by (rule {CERTIFIED})",
-        "next",
-        f"  case (4 \\<G>) show ?case by (rule {r['init_gamma']})",
-        "next",
-        "  case (5 n) show ?case by simp",
-        "qed",
-    ]
-    return out
 
 
 def render(dom):

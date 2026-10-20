@@ -4,12 +4,7 @@ theory Interval_Analyses
     Interval_Classify
     Interval_Transfer
     Interval_Exec
-    "Voblint_Result.DG_Live_Unknowns"
-    "Voblint_Framework.Call_String_Context"
-    "Voblint_Framework.Routed_Context"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Solver.Globals_Rule"
-    "Voblint_VIMP.VIMP_Program"
+    "Voblint_Nonrelational.Nonrel_Registration"
 begin
 
 section \<open>Registering Interval at every context and update rule\<close>
@@ -33,79 +28,26 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation interval_rule: dg_analysis_exec
-    "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
-    bot interval_classify_check
-    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-    enter_ivl_ci_for event_ivl "\<lambda>_. route_unit"
-    "TD_side_rule_Interp_solve_c r"
+global_interpretation interval_rule:
+    nonrel_unit_rule ivl_ops cinit_ivl_st r
   for r
-proof (rule ivl_tf.dg_analysis_execI, goal_cases)
-  case (1 \<G> u ctx d ca) show ?case by simp
-next
-  case (2 v ctx) show ?case by simp
-next
-  case 3 show ?case by (rule td_certified_solver)
-next
-  case (4 \<G>) show ?case by (rule interval_cinit_gamma)
-next
-  case (5 n) show ?case by simp
-qed
+  by (intro nonrel_unit_ruleI nonrel_registrationI
+      ivl_tf.sound_nonrelational_ops_axioms interval_cinit_gamma)
 
 subsection \<open>At the entry-state context\<close>
 
-global_interpretation interval_es_rule: dg_analysis_exec
-    "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
-    "Analysis_Global ()" Analysis_Global Activation_Seed exec_formals_route "[]"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, ivl list) global_unknown)
-       TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
-    bot interval_classify_check
-    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-    enter_ivl_ci_for event_ivl "\<lambda>_. formals_route_lifted_gen"
-    "TD_side_rule_Interp_solve_c r"
+global_interpretation interval_es_rule:
+    nonrel_es_rule ivl_ops cinit_ivl_st r
   for r
-proof (rule ivl_tf.dg_analysis_execI, goal_cases)
-  case (1 \<G> u ctx d ca) show ?case
-    by (rule exec_formals_route_commute[symmetric])
-next
-  case (2 v ctx) show ?case by simp
-next
-  case 3 show ?case by (rule td_certified_solver)
-next
-  case (4 \<G>) show ?case by (rule interval_cinit_gamma)
-next
-  case (5 n) show ?case by simp
-qed
+  by (intro nonrel_es_ruleI nonrel_registrationI
+      ivl_tf.sound_nonrelational_ops_axioms interval_cinit_gamma)
 
 subsection \<open>At the call-string context\<close>
 
-global_interpretation interval_cs_rule: dg_analysis_exec
-    "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
-    Call_String_Context.Global "\<lambda>_. Call_String_Context.Global"
-    Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
-       TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
-    bot interval_classify_check
-    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-    enter_ivl_ci_for event_ivl "\<lambda>_. cs_route k"
-    "TD_side_rule_Interp_solve_c r"
+global_interpretation interval_cs_rule:
+    nonrel_cs_rule ivl_ops cinit_ivl_st k r
   for k r
-proof (rule ivl_tf.dg_analysis_execI, goal_cases)
-  case (1 \<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)
-next
-  case (2 v ctx) show ?case by simp
-next
-  case 3 show ?case by (rule td_certified_solver)
-next
-  case (4 \<G>) show ?case by (rule interval_cinit_gamma)
-next
-  case (5 n) show ?case by simp
-qed
+  by (intro nonrel_cs_ruleI nonrel_registrationI
+      ivl_tf.sound_nonrelational_ops_axioms interval_cinit_gamma)
 
 end

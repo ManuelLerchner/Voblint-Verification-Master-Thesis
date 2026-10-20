@@ -4,12 +4,7 @@ theory Int_Never_Analyses
     Int_Classify
     Int_Transfer
     Int_Exec
-    "Voblint_Result.DG_Live_Unknowns"
-    "Voblint_Framework.Call_String_Context"
-    "Voblint_Framework.Routed_Context"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Solver.Globals_Rule"
-    "Voblint_VIMP.VIMP_Program"
+    "Voblint_Nonrelational.Nonrel_Registration"
 begin
 
 section \<open>Registering \<open>Int_Never\<close> at every context and update rule\<close>
@@ -31,29 +26,10 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation int_never_rule: dg_analysis_exec
-    "generic_tf_st_for (int_dom_ops Refine_Never)"
-    "generic_enter_st_for (int_dom_ops Refine_Never)" cinit_int_dom_st
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((int_dom default_st lifted, int_dom default_st lifted) dg_state) r"
-    bot "int_classify_check Refine_Never"
-    skip_int_dom "assign_int_dom Refine_Never" "special_int_dom Refine_Never"
-    "branch_int_dom_for Refine_Never" body_int_dom "return_int_dom Refine_Never"
-    "enter_int_dom_ci_for Refine_Never" event_int_dom "\<lambda>_. route_unit"
-    "TD_side_rule_Interp_solve_c r"
+global_interpretation int_never_rule:
+    nonrel_unit_rule "int_dom_ops Refine_Never" cinit_int_dom_st r
   for r
-proof (rule int_tf.dg_analysis_execI, goal_cases)
-  case (1 \<G> u ctx d ca) show ?case by simp
-next
-  case (2 v ctx) show ?case by simp
-next
-  case 3 show ?case by (rule td_certified_solver)
-next
-  case (4 \<G>) show ?case by (rule int_cinit_gamma)
-next
-  case (5 n) show ?case by simp
-qed
+  by (intro nonrel_unit_ruleI nonrel_registrationI
+      int_tf.sound_nonrelational_ops_axioms int_cinit_gamma)
 
 end

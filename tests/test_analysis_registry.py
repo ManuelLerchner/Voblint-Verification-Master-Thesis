@@ -79,7 +79,7 @@ def test_every_domain_registers_its_unit_route(generated, domain):
     found = [interpretation_params(text, name) for text in generated.values()]
     found = [f for f in found if f]
     assert len(found) == 1, f"{name}: {len(found)} registrations"
-    assert found[0] == ("dg_analysis_exec", ["r"])
+    assert found[0] == ("nonrel_unit_rule", ["r"])
 
 
 @pytest.mark.parametrize("name,locale,params", MCP_ROUTES)
@@ -130,8 +130,8 @@ def test_applied_roles_reach_isabelle_as_one_argument():
     import gen_analysis_assembly as gen
 
     domain = dict(manifest["domains"][0])
-    domain["roles"] = {"tf_st": {"const": "tf_for", "args": ["Some_Mode"]}}
-    assert '"tf_for Some_Mode"' in gen.render(gen.Domain(domain))
+    domain["ops"] = {"const": "ops_for", "args": ["Some_Mode"]}
+    assert '"ops_for Some_Mode"' in gen.render(gen.Domain(domain))
 
     # a fact takes no arguments, so applying one is a registry error
     domain["roles"] = {"init_gamma": {"const": "g", "args": ["m"]}}

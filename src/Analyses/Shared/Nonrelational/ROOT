@@ -11,6 +11,8 @@ session Voblint_Nonrelational in "." = "Voblint_Result" +
     "Voblint_Domain"
     "Voblint_Framework"
     "Voblint_Exec"
+    "Voblint_Solver"
+    "TD"
     "HOL-Computational_Algebra"
   theories
     Abstract_Arithmetic
@@ -18,3 +20,4 @@ session Voblint_Nonrelational in "." = "Voblint_Result" +
     Nonrelational_Transfer
     Nonrelational_Ops
     Exec_Backward
+    Nonrel_Registration

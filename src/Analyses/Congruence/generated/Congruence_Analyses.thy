@@ -4,12 +4,7 @@ theory Congruence_Analyses
     Congruence_Classify
     Congruence_Transfer
     Congruence_Exec
-    "Voblint_Result.DG_Live_Unknowns"
-    "Voblint_Framework.Call_String_Context"
-    "Voblint_Framework.Routed_Context"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Solver.Globals_Rule"
-    "Voblint_VIMP.VIMP_Program"
+    "Voblint_Nonrelational.Nonrel_Registration"
 begin
 
 section \<open>Registering Congruence at every context and update rule\<close>
@@ -31,27 +26,10 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation congruence_rule: dg_analysis_exec
-    "generic_tf_st_for congruence_ops" "generic_enter_st_for congruence_ops" cinit_congruence_st
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((congruence default_st lifted, congruence default_st lifted) dg_state) r"
-    bot congruence_classify_check
-    skip_congruence assign_congruence special_congruence branch_congruence body_congruence
-    return_congruence enter_congruence_ci_for event_congruence "\<lambda>_. route_unit"
-    "TD_side_rule_Interp_solve_c r"
+global_interpretation congruence_rule:
+    nonrel_unit_rule congruence_ops cinit_congruence_st r
   for r
-proof (rule congruence_tf.dg_analysis_execI, goal_cases)
-  case (1 \<G> u ctx d ca) show ?case by simp
-next
-  case (2 v ctx) show ?case by simp
-next
-  case 3 show ?case by (rule td_certified_solver)
-next
-  case (4 \<G>) show ?case by (rule congruence_cinit_gamma)
-next
-  case (5 n) show ?case by simp
-qed
+  by (intro nonrel_unit_ruleI nonrel_registrationI
+      congruence_tf.sound_nonrelational_ops_axioms congruence_cinit_gamma)
 
 end

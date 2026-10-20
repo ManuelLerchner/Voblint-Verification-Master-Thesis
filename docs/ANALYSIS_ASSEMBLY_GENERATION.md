@@ -18,15 +18,15 @@ manifests/analyses.yaml
 ```
 
 Every domain gets the same theory. It holds one `global_interpretation` per
-listed context policy, all over the single rule-parametric solver
-interpretation `TD_side_rule_Interp`. Every domain lists `unit`; Interval also
+listed context policy, each of that policy's locale in
+`Voblint_Nonrelational.Nonrel_Registration`. Every domain lists `unit`; Interval also
 lists `entry-state` and `call-string`, which its examples read:
 
 | Registration | Locale | Context policy | Parameters |
 | --- | --- | --- | --- |
-| `<d>_rule` | `dg_analysis_exec` | unit | `r` |
-| `<d>_es_rule` | `dg_analysis_exec` | entry state | `r` |
-| `<d>_cs_rule` | `dg_analysis_exec` | call string | `k r` |
+| `<d>_rule` | `nonrel_unit_rule` | unit | `r` |
+| `<d>_es_rule` | `nonrel_es_rule` | entry state | `r` |
+| `<d>_cs_rule` | `nonrel_cs_rule` | call string | `k r` |
 
 `r :: globals_rule` is the global update rule, so one registration serves every
 solver discipline; `k` is the call-string bound. None of them has a `defines`
@@ -41,13 +41,14 @@ README.
 
 ## What is generated, and what is not
 
-Generated: the interpretations and their proofs. Each proof applies
-`<impl>_tf.dg_analysis_execI`, which the domain's bundle certificate already
-provides: the transfer, the step and entry equations on the represented
-function and the classifier are discharged once in `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`). Six
-obligations remain per registration: the routing agreement, the seed key, the
-three solver contracts and the initial state. Between the contexts only the
-context terms and the routing agreement differ.
+Generated: the interpretations and their one-step proofs. Each policy's locale
+is a sublocale of `dg_analysis_exec`, proved once in `Nonrel_Registration.thy`
+from `sound_nonrelational_ops.dg_analysis_execI`: the transfer, the step and
+entry equations and the classifier come from the bundle certificate, and the
+routing agreement, the seed key and the solver contracts from the policy. A
+registration supplies only the bundle certificate
+`<impl>_tf.sound_nonrelational_ops_axioms` and the initial state's coverage
+`<d>_cinit_gamma`.
 
 Not generated, ever: the mathematics. Every obligation is discharged by citing
 a fact the registry only *names* -- the domain's own, or the rule-parametric
@@ -60,7 +61,7 @@ position Isabelle checks.
 
 Because the proof text is uniform, a domain has to satisfy the shape it cites
 into. Each role has a conventional spelling built from `impl`:
-`cinit_<impl>_st`, `<impl>_tf.dg_analysis_execI`, and so on. The executable step
+`cinit_<impl>_st`, `<impl>_tf.sound_nonrelational_ops_axioms`, and so on. The executable step
 and entry are not roles: they are always `generic_tf_st_for` and
 `generic_enter_st_for` at the domain's bundle, `ops` (`<impl>_ops` unless the
 manifest names another, as Int's `int_dom_ops` at each refinement mode), so a

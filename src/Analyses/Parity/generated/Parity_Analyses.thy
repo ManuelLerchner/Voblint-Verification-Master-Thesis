@@ -4,12 +4,7 @@ theory Parity_Analyses
     Parity_Classify
     Parity_Transfer
     Parity_Exec
-    "Voblint_Result.DG_Live_Unknowns"
-    "Voblint_Framework.Call_String_Context"
-    "Voblint_Framework.Routed_Context"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Solver.Globals_Rule"
-    "Voblint_VIMP.VIMP_Program"
+    "Voblint_Nonrelational.Nonrel_Registration"
 begin
 
 section \<open>Registering Parity at every context and update rule\<close>
@@ -31,27 +26,10 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation parity_rule: dg_analysis_exec
-    "generic_tf_st_for parity_ops" "generic_enter_st_for parity_ops" cinit_parity_st
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((parity default_st lifted, parity default_st lifted) dg_state) r"
-    bot parity_classify_check
-    skip_parity assign_parity special_parity branch_parity body_parity return_parity
-    enter_parity_ci_for event_parity "\<lambda>_. route_unit"
-    "TD_side_rule_Interp_solve_c r"
+global_interpretation parity_rule:
+    nonrel_unit_rule parity_ops cinit_parity_st r
   for r
-proof (rule parity_tf.dg_analysis_execI, goal_cases)
-  case (1 \<G> u ctx d ca) show ?case by simp
-next
-  case (2 v ctx) show ?case by simp
-next
-  case 3 show ?case by (rule td_certified_solver)
-next
-  case (4 \<G>) show ?case by (rule parity_cinit_gamma)
-next
-  case (5 n) show ?case by simp
-qed
+  by (intro nonrel_unit_ruleI nonrel_registrationI
+      parity_tf.sound_nonrelational_ops_axioms parity_cinit_gamma)
 
 end
