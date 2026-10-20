@@ -33,6 +33,19 @@ OUT = REPO / "thesis" / "shared" / "generated" / "profiling.json"
 
 RATIO_FLOOR_MS = 1.0
 SLOPE_FROM_N = 100
+# A time exponent this far above the evaluation exponent marks data-structure cost.
+SCALING_GAP = 0.5
+# How each scaling family reads in a sentence ("... grows with the number of variables").
+SCALING_PHRASES = {
+    "variables": "the number of variables",
+    "points": "the number of statements",
+    "globals": "the number of globals",
+    "call-sites-k1": "the number of call sites with one context each",
+    "call-sites-entry": "the number of call sites sharing one context",
+    "procedures": "the length of a call chain",
+    "loops": "the number of loops",
+    "recursion": "the recursion depth",
+}
 # The CPU profile the thesis describes, by its title in the snapshot.
 STRESS_PROFILE = "h(1000)"
 LOOKUP_FRAMES = ("Voblint_Generated.membera", "caml_apply2")
@@ -140,8 +153,35 @@ def summarize(snapshot, source):
             "profiler": profile.get("profiler"),
         }
 
+    # Families that grow one program size each: where solve time outgrows the solver's
+    # evaluations by at least SCALING_GAP, a list the solver consults grows with that size.
+    scaling = {}
+    for row in snapshot.get("scaling") or []:
+        scaling.setdefault(row["family"], []).append(row)
+    families = []
+    for family, rows in scaling.items():
+        big = [r for r in rows if r.get("native_ms") and r["n"] >= SLOPE_FROM_N]
+        k_time = slope([(r["n"], r["native_ms"]) for r in big])
+        k_evals = slope([(r["n"], r["evals"]) for r in big if r.get("evals")])
+        families.append({
+            "family": family,
+            "what": SCALING_PHRASES.get(family, rows[0]["what"]),
+            "time": k_time,
+            "evals": k_evals,
+            "gap": None if k_time is None or k_evals is None else k_time - k_evals,
+        })
+    broken = sorted(
+        (f for f in families if f["gap"] is not None and f["gap"] >= SCALING_GAP),
+        key=lambda f: -f["gap"],
+    )
+
     return {
         "source": source,
+        "scaling": {
+            "families": families,
+            "broken": [f["what"] for f in broken],
+            "flat": [f["what"] for f in families if f["gap"] is not None and f["gap"] < SCALING_GAP],
+        },
         "meta": {
             "commit": meta["commit"],
             "date": meta["date"],

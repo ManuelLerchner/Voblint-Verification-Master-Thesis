@@ -6,7 +6,7 @@
 )
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": verdict
-#import "../lib/profiling.typ": depth-plot, prof-growth, prof-int, prof-ms, prof-runs, prof-value
+#import "../lib/profiling.typ": depth-plot, prof-growth, prof-int, prof-list, prof-ms, prof-runs, prof-value
 
 
 = Evaluation of Strength and Precision <ch:evaluation>
@@ -780,14 +780,26 @@ Interval and Int tell the successive arguments apart and create one context per 
 Their solve time grows #prof-growth("depth_fits.interval.time"), although the number of
 solver evaluations grows only #prof-growth("depth_fits.interval.evals").
 
-The CPU profiles suggest that this gap comes partly from the data structures of the
-generated code. Some finite sets and maps are lists (@sec:codegen), so their operations
-become more expensive as the number of contexts grows. Replacing them with more efficient
-representations is a promising optimization, but each replacement needs code equations
-proved against the verified definitions, as the fix of @sec:codegen had. The generated
-analyzer thus handles the small programs of this thesis efficiently and slows down when
-an analysis creates many contexts. This limitation concerns the implementation only and
-leaves the soundness guarantees of the formalization untouched.
+The CPU profiles suggest that this gap comes from the data structures of the generated
+code. Its finite sets and maps are lists (@sec:codegen), so a membership test scans the
+list, a union inserts element by element, and removing duplicates compares every pair.
+#if prof-value("scaling.broken").len() > 0 [
+  Programs that grow one size at a time show which sizes reach these lists. Solve time
+  outgrows the solver's evaluations with #prof-list("scaling.broken"),
+  #if prof-value("scaling.flat").len() > 0 [while time and evaluations grow alike with
+    #prof-list("scaling.flat").] else [and with every other size as well.]
+] else [
+  These lists grow with the number of contexts.
+]
+
+Isabelle's code generator can instead implement sets and maps by balanced trees or hash
+tables. The Collections Framework @lammich10collections refines abstract sets and maps
+into such structures, and the Light-weight Containers @lochbihler13containers can replace
+the default list-based setup of code generation altogether. Either route still needs code equations for the operations Voblint uses, and possibly linear
+orders on its nodes and contexts, but it changes only the code-generation setup. The
+soundness theorems, stated about the HOL definitions, stay as they are. The generated
+analyzer thus handles the small programs of this thesis efficiently and slows down when a
+program grows along these sizes.
 
 #figure(
   {

@@ -37,6 +37,11 @@
 }
 #let prof-times(path) = [#_one-decimal(prof-value(path))$times$]
 #let prof-int(path) = str(prof-value(path))
+/// A list of strings as prose: "a", "a and b", "a, b and c".
+#let prof-list(path) = {
+  let xs = prof-value(path)
+  if xs.len() < 2 { xs.join("") } else { xs.slice(0, -1).join(", ") + " and " + xs.last() }
+}
 /// "the median of 3 runs", or "a single run" when the snapshot repeated nothing.
 #let prof-runs() = {
   let n = prof-value("meta.reps")
