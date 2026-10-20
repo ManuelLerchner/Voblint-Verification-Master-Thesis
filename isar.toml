@@ -9,7 +9,6 @@ include = ["vendor/td-verification"]
 # Generated theories belong to their generators; the drift checks compare them.
 # The thesis snippets are quoted verbatim by `pixi run thesis-snippets-write`.
 exclude = [
-  "src/**/generated/**",
   "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy",
   "thesis/shared/generated/**",
   # Local scratch copies (.git/info/exclude), e.g. regenerated theories.

@@ -15,8 +15,6 @@ session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
     "Voblint_Analysis_Parity"
     "Voblint_Analysis_Congruence"
     "TD"
-  directories
-    "generated"
   theories
     Int_Warrowing
     Int_Refinement

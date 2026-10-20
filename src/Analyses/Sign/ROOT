@@ -10,8 +10,6 @@ session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
     "Voblint_Framework"
     "Voblint_Solver"
     "TD"
-  directories
-    "generated"
   theories
     Sign_Warrowing
     Sign_Arithmetic

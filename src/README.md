@@ -78,13 +78,9 @@ Each domain follows the same layer chain, so a reader who knows one knows them a
                      global update rule: solve, result table, report, soundness endpoints
 ```
 
-The last one is generated from `manifests/analyses.yaml` (each domain's `generated/`
-folder).
-
-Everything under a `generated/` folder is emitted by
-`scripts/gen_analysis_assembly.py`: change the yaml or the generator, never the
-file. A theory outside `generated/` is hand-written, which is why the folders are
-not symmetric across domains.
+The last one is a few lines per context policy: each registration interprets one
+locale of `Shared/Nonrelational/Nonrel_Registration` with the domain's operations,
+initial state and initial-state fact.
 
 `Congruence` is both a selectable analysis and the fourth component of `Int`.
 `Relational` is a single theory, kept to prove the generic pipeline never assumed

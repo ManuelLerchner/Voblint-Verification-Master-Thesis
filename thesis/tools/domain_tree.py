@@ -81,6 +81,11 @@ def bundle(arg: str) -> str:
     return " ".join(arg.replace('"', " ").replace("(", " ").replace(")", " ").split())
 
 
+def head(arg: str) -> str:
+    """The constant at the head of an interpretation's first argument."""
+    return arg.replace('"', " ").replace("(", " ").split()[0]
+
+
 def extends(locale: str, node: str, parents: dict[str, list[str]]) -> bool:
     seen, todo = set(), [locale]
     while todo:
@@ -110,6 +115,8 @@ def main() -> int:
             listed_instances = {snippets.get(n, {}).get("name") for n in listed}
             # A listed interpretation covers the lemma it is built from.
             covered = {bundle(arg) for name, _, arg in interps if name in listed}
+            # A registration that reuses a listed bundle implements nothing new.
+            reused = {head(arg) for name, _, arg in interps if name in listed}
             for ty, cls in instance_rows:
                 if cls == node and f"{ty} :: {cls}" not in listed_instances:
                     missing.append(f"{key}/{node}: instantiation {ty} :: {cls}")
@@ -120,8 +127,12 @@ def main() -> int:
                     and bundle(arg) not in covered
                 ):
                     missing.append(f"{key}/{node}: lemma {name} ({locale})")
-            for name, locale, _ in interps:
-                if extends(locale, node, parents) and name not in listed:
+            for name, locale, arg in interps:
+                if (
+                    extends(locale, node, parents)
+                    and name not in listed
+                    and head(arg) not in reused
+                ):
                     missing.append(f"{key}/{node}: interpretation {name} ({locale})")
 
     if missing:

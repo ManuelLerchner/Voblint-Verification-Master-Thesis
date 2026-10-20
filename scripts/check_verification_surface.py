@@ -40,6 +40,9 @@ CI_ONLY_TASKS = {
 }
 
 RETIRED_TASKS = {
+    "analysis-registry-check",
+    "assembly-check",
+    "assembly-generate",
     "bench",
     "bootstrap",
     "build",

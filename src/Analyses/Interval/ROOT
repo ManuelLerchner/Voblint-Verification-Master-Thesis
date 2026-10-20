@@ -10,8 +10,6 @@ session Voblint_Analysis_Interval in "." = "Voblint_Nonrelational" +
     "Voblint_Framework"
     "Voblint_Solver"
     "TD"
-  directories
-    "generated"
   theories
     Interval_Warrowing
     Interval_Arithmetic

@@ -19,14 +19,12 @@ Executable witnesses live under
 | `Interval_Point_Digest.thy` | the point abstraction: an integer as its singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Interval_Classify.thy` | the derived check classifier; its executable tests live in `src/Examples/Interval/Interval_Regression.thy` |
-| `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule`, `interval_es_rule` and `interval_cs_rule`, each of the shared `dg_analysis_exec`, at the unit, entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
+| `Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule`, `interval_es_rule` and `interval_cs_rule`, each of the shared `dg_analysis_exec`, at the unit, entry-state and call-string contexts; see below |
 
 ## The contextual configurations
 
-`generated/Interval_Analyses.thy` is machine-written from
-`manifests/analyses.yaml`, so the orientation a reader needs lives here rather
-than in a header the generator owns. The registry spells Interval's constants
-with the `ivl` prefix (`ivl_ops`, `cinit_ivl_st`) while the registrations,
+The registrations spell Interval's constants
+with the `ivl` prefix (`ivl_ops`, `cinit_ivl_st`) while the interpretations,
 the classifier and the initial-state fact carry the domain name
 (`interval_rule`, `interval_classify_check`, `interval_cinit_gamma`).
 

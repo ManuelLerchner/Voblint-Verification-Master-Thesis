@@ -784,8 +784,8 @@ is easy to demonstrate in one diagram.
 **Claim.** A domain proves its facts without mentioning a context, a routing
 function, a seed key, or a solver. A context policy proves its facts without
 mentioning a domain. Their composition is proved once. 60 configurations
-inherit one theorem, and each domain's registrations are *generated* from
-`manifests/analyses.yaml` rather than written.
+inherit one theorem, and each domain registers itself with one short locale
+interpretation per context policy (`Nonrel_Registration`).
 
 **Evidence.** `Sign_Sound.thy` / `Interval_Sound.thy` / `Parity_Sound.thy` /
 `Congruence_Sound.thy` / `Int_Sound.thy` (each explicitly says it mentions no

@@ -200,7 +200,7 @@ Not proved:
 ## Adding an executable analysis
 
 "One generator, six layers" in `src/Abstract_Interpreter/Framework/README.md` is
-the procedure and
-`docs/ANALYSIS_ASSEMBLY_GENERATION.md` the registration format. Re-run the full
+the procedure, and the domain READMEs under `src/Analyses/` show the
+registrations. Re-run the full
 batch build (`docs/ISABELLE_AGENT_NOTES.md`) and `pixi run codegen` before
 claiming the new analysis is connected end to end.

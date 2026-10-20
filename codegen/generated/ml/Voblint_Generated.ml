@@ -5126,18 +5126,17 @@ let rec fmdrop _A a = fmfilter (fun aa -> not (eq _A aa a));;
 
 let rec slot1 r = pleft r;;
 
-let rec slot2 r = pleft (pright r);;
+let rec slot2 r = slot1 (pright r);;
 
-let rec slot3 r = pleft (pright (pright r));;
+let rec slot3 r = slot2 (pright r);;
 
-let rec slot4 r = pleft (pright (pright (pright r)));;
+let rec slot4 r = slot3 (pright r);;
 
-let rec slot5 r = pleft (pright (pright (pright (pright r))));;
+let rec slot5 r = slot4 (pright r);;
 
-let rec slot6 r = pleft (pright (pright (pright (pright (pright r)))));;
+let rec slot6 r = slot5 (pright r);;
 
-let rec slot7
-  r = pleft (pright (pright (pright (pright (pright (pright r))))));;
+let rec slot7 r = slot6 (pright r);;
 
 let rec slot8
   r = pright (pright (pright (pright (pright (pright (pright r))))));;
@@ -8759,89 +8758,30 @@ let rec program_vars
 
 let rec set_slot8
   r v = Product
-          (pleft r,
+          (slot1 r,
             Product
-              (pleft (pright r),
+              (slot2 r,
                 Product
-                  (pleft (pright (pright r)),
+                  (slot3 r,
                     Product
-                      (pleft (pright (pright (pright r))),
+                      (slot4 r,
                         Product
-                          (pleft (pright (pright (pright (pright r)))),
-                            Product
-                              (pleft (pright
-                                       (pright (pright (pright (pright r))))),
-                                Product
-                                  (pleft (pright
-   (pright (pright (pright (pright (pright r)))))),
-                                    v)))))));;
-
-let rec set_slot7
-  r v = Product
-          (pleft r,
-            Product
-              (pleft (pright r),
-                Product
-                  (pleft (pright (pright r)),
-                    Product
-                      (pleft (pright (pright (pright r))),
-                        Product
-                          (pleft (pright (pright (pright (pright r)))),
-                            Product
-                              (pleft (pright
-                                       (pright (pright (pright (pright r))))),
-                                Product
-                                  (v, pright
-(pright (pright (pright (pright (pright (pright r)))))))))))));;
-
-let rec set_slot6
-  r v = Product
-          (pleft r,
-            Product
-              (pleft (pright r),
-                Product
-                  (pleft (pright (pright r)),
-                    Product
-                      (pleft (pright (pright (pright r))),
-                        Product
-                          (pleft (pright (pright (pright (pright r)))),
-                            Product
-                              (v, pright
-                                    (pright
-                                      (pright
-(pright (pright (pright r)))))))))));;
-
-let rec set_slot5
-  r v = Product
-          (pleft r,
-            Product
-              (pleft (pright r),
-                Product
-                  (pleft (pright (pright r)),
-                    Product
-                      (pleft (pright (pright (pright r))),
-                        Product
-                          (v, pright
-                                (pright (pright (pright (pright r)))))))));;
-
-let rec set_slot4
-  r v = Product
-          (pleft r,
-            Product
-              (pleft (pright r),
-                Product
-                  (pleft (pright (pright r)),
-                    Product (v, pright (pright (pright (pright r)))))));;
-
-let rec set_slot3
-  r v = Product
-          (pleft r,
-            Product
-              (pleft (pright r), Product (v, pright (pright (pright r)))));;
-
-let rec set_slot2 r v = Product (pleft r, Product (v, pright (pright r)));;
+                          (slot5 r,
+                            Product (slot6 r, Product (slot7 r, v)))))));;
 
 let rec set_slot1 r v = Product (v, pright r);;
+
+let rec set_slot2 r v = Product (pleft r, set_slot1 (pright r) v);;
+
+let rec set_slot3 r v = Product (pleft r, set_slot2 (pright r) v);;
+
+let rec set_slot4 r v = Product (pleft r, set_slot3 (pright r) v);;
+
+let rec set_slot5 r v = Product (pleft r, set_slot4 (pright r) v);;
+
+let rec set_slot6 r v = Product (pleft r, set_slot5 (pright r) v);;
+
+let rec set_slot7 r v = Product (pleft r, set_slot6 (pright r) v);;
 
 let rec registration_of
   = function

@@ -78,16 +78,24 @@ When the same information is maintained by hand in several files, the copies
 tend to diverge after a change. The repository therefore keeps a few sources and derives everything else from them (@fig:pipeline). One
 grammar file yields the Isabelle syntax of VIMP, the analyzer's parser, and its
 printer, so the unverified parser (@fig:intro-trust) and the syntax the proofs
-use come from one language description. An analysis manifest names each
-analysis, its value type, and the theories that prove it sound. From it, a
-generator writes the registration of each numeric domain
-(@sec:instances-supply) and the product state of @ch:cooperation, and Isabelle
-checks every generated proof. The generator exists because this repetition
-lies outside what a theory can express. Each domain is registered once per
-context policy and update rule, and the product state has one field per
-analysis, each of a different type. A dependently typed logic could express
-such a heterogeneous structure inside the logic @chlipala13cpdt[ch. 9], but
-HOL's simple types cannot.
+use come from one language description. The analysis registrations, in
+contrast, are written by hand. Each numeric domain registers itself in a few
+lines per context policy by interpreting a shared locale
+(@sec:instances-supply). The product state of
+@ch:cooperation is written by hand, with one field per analysis, each of a
+different type. A dependently typed logic could express such a heterogeneous
+structure once @chlipala13cpdt[ch. 9], but HOL's simple types cannot, so adding
+an analysis adds a field and one case to each function over the analyses.
+
+The most important derived file is the analyzer itself. Isabelle's code
+generator exports #isaconst("run_voblint") as OCaml, and the repository commits
+the exported #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[module]
+so that the command-line tool and the playground build without Isabelle. A
+committed copy can fall behind the theories, however. The continuous
+integration therefore regenerates the export from the built session and fails
+if the result differs from the committed file. Local builds record a hash of
+the theories the export was generated from and warn when it no longer matches,
+so a stale analyzer is noticed before it reaches the continuous integration.
 
 #figure(
   {
@@ -144,40 +152,19 @@ HOL's simple types cannot.
       gen(<g>, <g1>),
       gen(<g>, <g2>),
       gen(<g>, <g3>),
-      src(
-        (0, 4),
-        link(repo-blob + "manifests/analyses.yaml")[analysis manifest \ `analyses.yaml`],
-        <m>,
-      ),
+      src((0, 4.5), link(repo-blob + "src")[theories, built session \ and analyzer], <t>),
       out(
         (1, 3.5),
-        link(
-          repo-blob + "src/Analyses/Sign/generated/Sign_Analyses.thy",
-        )[per-domain registration theories],
-        <m1>,
-      ),
-      out(
-        (1, 4.5),
-        link(
-          repo-blob + "src/Executable_Surface/CLI/generated/MCP_Carrier.thy",
-        )[product state of all analyses],
-        <m2>,
-      ),
-      gen(<m>, <m1>),
-      gen(<m>, <m2>),
-      src((0, 7), link(repo-blob + "src")[theories, built session \ and analyzer], <t>),
-      out(
-        (1, 6),
         link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[generated OCaml analyzer],
         <t1>,
       ),
       out(
-        (1, 7),
+        (1, 4.5),
         link(repo-blob + "thesis/shared/generated")[theorem statements, snippets, links],
         <t2>,
       ),
       out(
-        (1, 8),
+        (1, 5.5),
         link(repo-blob + "thesis/shared/generated")[quoted analyzer output, figures],
         <t3>,
       ),

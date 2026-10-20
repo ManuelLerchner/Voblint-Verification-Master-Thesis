@@ -65,7 +65,7 @@ and terminates without acceleration.
 | `Congruence_Exec.thy` | the same eight operations on the compact state the solver stores, each shown to agree with its abstract counterpart |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
 | `Congruence_Classify.thy` | the derived check classifier; its executable tests live in `src/Examples/Congruence/Congruence_Regression.thy` |
-| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `dg_analysis_exec` at the unit route, at any global update rule; see below |
+| `Congruence_Analyses.thy` | `congruence_rule`, the interpretation of the shared `dg_analysis_exec` at the unit route, at any global update rule; see below |
 
 ## Worked example
 
@@ -79,11 +79,7 @@ see `tests/regression/16-composite-domain/` for the composite version and
 
 ## Congruence in the entry-state and call-string runs
 
-`generated/Congruence_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
-so the orientation a reader needs lives here rather than in a header the
-generator owns.
-
-Congruence's own generated file registers only the context-insensitive run,
+Congruence's own registration file registers only the context-insensitive run,
 `congruence_rule`. The entry-state and call-string runs are the CLI's combined
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Congruence is one of

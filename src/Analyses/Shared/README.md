@@ -50,7 +50,7 @@ result table, the contextual report and the activation-indexed soundness
 endpoints, so a policy costs an interpretation rather than a pipeline. The
 context-insensitive route is the same locale at the unit route, local to a
 domain: `sign_rule` is a `global_interpretation` of `dg_analysis_exec`
-in Sign's own generated theory, `Sign_Analyses`. Every registration takes the global update rule as a
+in Sign's own registration theory, `Sign_Analyses`. Every registration takes the global update rule as a
 parameter, and the combined ones take the activation list besides. Sign
 contributes the lattice and the transfer functions. Every other piece of those
 sentences is from here.

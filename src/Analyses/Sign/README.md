@@ -16,10 +16,7 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Sign_Classify.thy` | consumer-facing names for the derived check classifier; its executable tests live in `src/Examples/Sign/Sign_Regression.thy` |
-| `generated/Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `dg_analysis_exec` at the unit route. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the soundness endpoints come out |
-
-`generated/Sign_Analyses.thy` is written by `scripts/gen_analysis_assembly.py`
-from `manifests/analyses.yaml`; edit those, not the theory.
+| `Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `dg_analysis_exec` at the unit route. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the soundness endpoints come out |
 
 Sign's soundness endpoints live here rather than in `Voblint_CLI` because
 nothing in them needs to see another domain: `sign_rule.fun_route_source_sound`,
@@ -32,10 +29,7 @@ analyses run alongside Sign.
 
 ## Sign in the entry-state and call-string runs
 
-`generated/Sign_Analyses.thy` is machine-written, so the orientation a reader
-needs lives here rather than in the generated header.
-
-Sign's own generated file registers only the context-insensitive run,
+Sign's own registration file registers only the context-insensitive run,
 `sign_rule`. The entry-state and call-string runs are the CLI's combined
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Sign is one of those
