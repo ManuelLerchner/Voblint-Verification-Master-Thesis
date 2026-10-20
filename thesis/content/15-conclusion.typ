@@ -183,9 +183,10 @@ Goblint is measured (@sec:rel-goblint).
 
 Speed was not a goal either. The measurements of @sec:eval-runtime show that the
 analyzer finishes in acceptable time on the corpus, but its time grows faster than its
-work when entry-state contexts multiply. Since the generated code keeps the proofs'
-list-based sets and maps, replacing them with more efficient code representations is
-one starting point for future work.
+work when a program grows along the sizes that reach the generated code's list-based sets
+and maps. Generating these from balanced trees through Isabelle's container libraries
+@lochbihler13containers is one starting point for future work, and it would leave the
+soundness theorems unchanged.
 
 == Extending Voblint towards C and Goblint <sec:outlook-extending>
 
