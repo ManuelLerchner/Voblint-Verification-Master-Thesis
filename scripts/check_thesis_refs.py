@@ -98,6 +98,9 @@ ALLOWED = {
     "ctx",
     "combine_env",
     "id_binary_log",
+    # Values of Goblint's sem.int.signed_overflow option, in the flavors comparison.
+    "assume_top",
+    "assume_none",
     # OCaml toolchain packages, named in the tooling chapter.
     "js_of_ocaml",
     "wasm_of_ocaml",

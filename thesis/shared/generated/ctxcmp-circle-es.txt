@@ -1,0 +1,21 @@
+tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition   Verdict  State
+--------  -----  ----------  -------  ------------
+26:13     pp20   a == 2      PROVED   int: a=2
+27:13     pp22   b == 101    PROVED   int: b=101
+28:13     pp24   c == 265    PROVED   int: c=265
+29:14     pp26   d == 429    PROVED   int: d=429
+30:13     pp28   e == 1      PROVED   int: e=1
+31:13     pp30   h == 25     PROVED   int: h=25
+32:13     pp32   k == 101    PROVED   int: k=101
+33:13     pp34   l == 265    PROVED   int: l=265
+34:14     pp36   m == 233    REFUTED  int: m=1817
+35:3      pp37   m == 1817   PROVED   int: m=1817
+36:14     pp39   n == 52756  PROVED   int: n=52756
+37:14     pp41   o == 2940   PROVED   int: o=2940
+38:14     pp43   p == 85361  PROVED   int: p=85361

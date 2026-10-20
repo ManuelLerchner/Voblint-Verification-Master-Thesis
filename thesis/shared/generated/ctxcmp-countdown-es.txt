@@ -1,0 +1,11 @@
+tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------
+18:16     pp7    a == 0     PROVED   int: a=0
+19:18     pp9    b == 0     PROVED   int: b=0
+20:20     pp11   c == 0     PROVED   int: c=0

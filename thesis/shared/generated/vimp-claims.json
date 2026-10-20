@@ -245,6 +245,266 @@
       "placement": "flow-sensitive"
     }
   },
+  "ctxcmp-chain3-cs1": {
+    "fixture": "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+    "program": "fun h(i) {\n  if (i == 0) { return 3; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 13;\n}\nfun g(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 12;\n}\nfun f(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 11;\n}\nfun main() {\n  a = f(11); __voblint_check(a == 3);\n  b = g(12); __voblint_check(b == 3);\n  c = g(20); __voblint_check(c == 3);\n  d = f(20); __voblint_check(d == 3);\n  e = h(40); __voblint_check(e == 3);\n  x = h(300); __voblint_check(x == 3);\n  y = f(300); __voblint_check(y == 3);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 1,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain3-cs5": {
+    "fixture": "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+    "program": "fun h(i) {\n  if (i == 0) { return 3; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 13;\n}\nfun g(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 12;\n}\nfun f(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 11;\n}\nfun main() {\n  a = f(11); __voblint_check(a == 3);\n  b = g(12); __voblint_check(b == 3);\n  c = g(20); __voblint_check(c == 3);\n  d = f(20); __voblint_check(d == 3);\n  e = h(40); __voblint_check(e == 3);\n  x = h(300); __voblint_check(x == 3);\n  y = f(300); __voblint_check(y == 3);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 5,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain3-es": {
+    "fixture": "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+    "program": "fun h(i) {\n  if (i == 0) { return 3; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 13;\n}\nfun g(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 12;\n}\nfun f(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 11;\n}\nfun main() {\n  a = f(11); __voblint_check(a == 3);\n  b = g(12); __voblint_check(b == 3);\n  c = g(20); __voblint_check(c == 3);\n  d = f(20); __voblint_check(d == 3);\n  e = h(40); __voblint_check(e == 3);\n  x = h(300); __voblint_check(x == 3);\n  y = f(300); __voblint_check(y == 3);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "entry-state",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain3-none": {
+    "fixture": "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+    "program": "fun h(i) {\n  if (i == 0) { return 3; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 13;\n}\nfun g(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 12;\n}\nfun f(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 11;\n}\nfun main() {\n  a = f(11); __voblint_check(a == 3);\n  b = g(12); __voblint_check(b == 3);\n  c = g(20); __voblint_check(c == 3);\n  d = f(20); __voblint_check(d == 3);\n  e = h(40); __voblint_check(e == 3);\n  x = h(300); __voblint_check(x == 3);\n  y = f(300); __voblint_check(y == 3);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain3-none-bn": {
+    "fixture": "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+    "program": "fun h(i) {\n  if (i == 0) { return 3; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 13;\n}\nfun g(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 12;\n}\nfun f(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 11;\n}\nfun main() {\n  a = f(11); __voblint_check(a == 3);\n  b = g(12); __voblint_check(b == 3);\n  c = g(20); __voblint_check(c == 3);\n  d = f(20); __voblint_check(d == 3);\n  e = h(40); __voblint_check(e == 3);\n  x = h(300); __voblint_check(x == 3);\n  y = f(300); __voblint_check(y == 3);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "bounded-narrowing",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain5-cs1": {
+    "fixture": "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+    "program": "global m;\nfun a(i) {\n  if (i == 0) { return 11; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 1;\n}\nfun b(i) {\n  if (i == 0) { return 12; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 2;\n}\nfun c(i) {\n  if (i == 0) { return 13; }\n  if (0 < i) { r = b(i - 1); return r; }\n  return 3;\n}\nfun f(i) {\n  if (0 < i) { r = e(i - 1); return r; }\n  return 2;\n}\nfun e(i) {\n  r = f(i - 1);\n  return r + 1;\n}\nfun h(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 0;\n}\nfun k(i) {\n  if (i == 2) { r = h(i - 1); return r + 1; }\n  if (0 < i) { r = k(i - 1); return r; }\n  return 1;\n}\nfun o(i) {\n  if (0 < i) { i = i - 1; m = i; o(i); }\n  return 0;\n}\nfun main() {\n  x0 = a(7); __voblint_check(x0 == 11);\n  x1 = a(8); __voblint_check(x1 == 11);\n  x2 = c(11); __voblint_check(x2 == 11);\n  x3 = b(21); __voblint_check(x3 == 11);\n  y0 = e(5); __voblint_check(y0 == 5);\n  y1 = e(7); __voblint_check(y1 == 6);\n  z0 = k(9); __voblint_check(z0 == 2);\n  z1 = k(10); __voblint_check(z1 == 2);\n  m = 20; o(5); __voblint_check(m == 0);\n  m = 20; o(6); __voblint_check(m == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 1,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain5-cs5": {
+    "fixture": "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+    "program": "global m;\nfun a(i) {\n  if (i == 0) { return 11; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 1;\n}\nfun b(i) {\n  if (i == 0) { return 12; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 2;\n}\nfun c(i) {\n  if (i == 0) { return 13; }\n  if (0 < i) { r = b(i - 1); return r; }\n  return 3;\n}\nfun f(i) {\n  if (0 < i) { r = e(i - 1); return r; }\n  return 2;\n}\nfun e(i) {\n  r = f(i - 1);\n  return r + 1;\n}\nfun h(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 0;\n}\nfun k(i) {\n  if (i == 2) { r = h(i - 1); return r + 1; }\n  if (0 < i) { r = k(i - 1); return r; }\n  return 1;\n}\nfun o(i) {\n  if (0 < i) { i = i - 1; m = i; o(i); }\n  return 0;\n}\nfun main() {\n  x0 = a(7); __voblint_check(x0 == 11);\n  x1 = a(8); __voblint_check(x1 == 11);\n  x2 = c(11); __voblint_check(x2 == 11);\n  x3 = b(21); __voblint_check(x3 == 11);\n  y0 = e(5); __voblint_check(y0 == 5);\n  y1 = e(7); __voblint_check(y1 == 6);\n  z0 = k(9); __voblint_check(z0 == 2);\n  z1 = k(10); __voblint_check(z1 == 2);\n  m = 20; o(5); __voblint_check(m == 0);\n  m = 20; o(6); __voblint_check(m == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 5,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain5-es": {
+    "fixture": "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+    "program": "global m;\nfun a(i) {\n  if (i == 0) { return 11; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 1;\n}\nfun b(i) {\n  if (i == 0) { return 12; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 2;\n}\nfun c(i) {\n  if (i == 0) { return 13; }\n  if (0 < i) { r = b(i - 1); return r; }\n  return 3;\n}\nfun f(i) {\n  if (0 < i) { r = e(i - 1); return r; }\n  return 2;\n}\nfun e(i) {\n  r = f(i - 1);\n  return r + 1;\n}\nfun h(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 0;\n}\nfun k(i) {\n  if (i == 2) { r = h(i - 1); return r + 1; }\n  if (0 < i) { r = k(i - 1); return r; }\n  return 1;\n}\nfun o(i) {\n  if (0 < i) { i = i - 1; m = i; o(i); }\n  return 0;\n}\nfun main() {\n  x0 = a(7); __voblint_check(x0 == 11);\n  x1 = a(8); __voblint_check(x1 == 11);\n  x2 = c(11); __voblint_check(x2 == 11);\n  x3 = b(21); __voblint_check(x3 == 11);\n  y0 = e(5); __voblint_check(y0 == 5);\n  y1 = e(7); __voblint_check(y1 == 6);\n  z0 = k(9); __voblint_check(z0 == 2);\n  z1 = k(10); __voblint_check(z1 == 2);\n  m = 20; o(5); __voblint_check(m == 0);\n  m = 20; o(6); __voblint_check(m == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "entry-state",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain5-none": {
+    "fixture": "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+    "program": "global m;\nfun a(i) {\n  if (i == 0) { return 11; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 1;\n}\nfun b(i) {\n  if (i == 0) { return 12; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 2;\n}\nfun c(i) {\n  if (i == 0) { return 13; }\n  if (0 < i) { r = b(i - 1); return r; }\n  return 3;\n}\nfun f(i) {\n  if (0 < i) { r = e(i - 1); return r; }\n  return 2;\n}\nfun e(i) {\n  r = f(i - 1);\n  return r + 1;\n}\nfun h(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 0;\n}\nfun k(i) {\n  if (i == 2) { r = h(i - 1); return r + 1; }\n  if (0 < i) { r = k(i - 1); return r; }\n  return 1;\n}\nfun o(i) {\n  if (0 < i) { i = i - 1; m = i; o(i); }\n  return 0;\n}\nfun main() {\n  x0 = a(7); __voblint_check(x0 == 11);\n  x1 = a(8); __voblint_check(x1 == 11);\n  x2 = c(11); __voblint_check(x2 == 11);\n  x3 = b(21); __voblint_check(x3 == 11);\n  y0 = e(5); __voblint_check(y0 == 5);\n  y1 = e(7); __voblint_check(y1 == 6);\n  z0 = k(9); __voblint_check(z0 == 2);\n  z1 = k(10); __voblint_check(z1 == 2);\n  m = 20; o(5); __voblint_check(m == 0);\n  m = 20; o(6); __voblint_check(m == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-chain5-none-bn": {
+    "fixture": "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+    "program": "global m;\nfun a(i) {\n  if (i == 0) { return 11; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 1;\n}\nfun b(i) {\n  if (i == 0) { return 12; }\n  if (0 < i) { r = a(i - 1); return r; }\n  return 2;\n}\nfun c(i) {\n  if (i == 0) { return 13; }\n  if (0 < i) { r = b(i - 1); return r; }\n  return 3;\n}\nfun f(i) {\n  if (0 < i) { r = e(i - 1); return r; }\n  return 2;\n}\nfun e(i) {\n  r = f(i - 1);\n  return r + 1;\n}\nfun h(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = h(i - 1); return r; }\n  return 0;\n}\nfun k(i) {\n  if (i == 2) { r = h(i - 1); return r + 1; }\n  if (0 < i) { r = k(i - 1); return r; }\n  return 1;\n}\nfun o(i) {\n  if (0 < i) { i = i - 1; m = i; o(i); }\n  return 0;\n}\nfun main() {\n  x0 = a(7); __voblint_check(x0 == 11);\n  x1 = a(8); __voblint_check(x1 == 11);\n  x2 = c(11); __voblint_check(x2 == 11);\n  x3 = b(21); __voblint_check(x3 == 11);\n  y0 = e(5); __voblint_check(y0 == 5);\n  y1 = e(7); __voblint_check(y1 == 6);\n  z0 = k(9); __voblint_check(z0 == 2);\n  z1 = k(10); __voblint_check(z1 == 2);\n  m = 20; o(5); __voblint_check(m == 0);\n  m = 20; o(6); __voblint_check(m == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "bounded-narrowing",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-circle-cs1": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i + 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r1 = g(i - 2); r2 = g(i - 3); return r1 + r2; }\n  return 12;\n}\nfun main() {\n  a = f(0); __voblint_check(a == 2);\n  b = f(7); __voblint_check(b == 101);\n  c = f(9); __voblint_check(c == 265);\n  d = f(10); __voblint_check(d == 429);\n  e = g(0); __voblint_check(e == 1);\n  h = g(3); __voblint_check(h == 25);\n  k = g(6); __voblint_check(k == 101);\n  l = g(8); __voblint_check(l == 265);\n  m = f(13); __voblint_check(m == 233);\n  __voblint_check(m == 1817);\n  n = f(20); __voblint_check(n == 52756);\n  o = g(13); __voblint_check(o == 2940);\n  p = g(20); __voblint_check(p == 85361);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 1,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-circle-cs5": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i + 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r1 = g(i - 2); r2 = g(i - 3); return r1 + r2; }\n  return 12;\n}\nfun main() {\n  a = f(0); __voblint_check(a == 2);\n  b = f(7); __voblint_check(b == 101);\n  c = f(9); __voblint_check(c == 265);\n  d = f(10); __voblint_check(d == 429);\n  e = g(0); __voblint_check(e == 1);\n  h = g(3); __voblint_check(h == 25);\n  k = g(6); __voblint_check(k == 101);\n  l = g(8); __voblint_check(l == 265);\n  m = f(13); __voblint_check(m == 233);\n  __voblint_check(m == 1817);\n  n = f(20); __voblint_check(n == 52756);\n  o = g(13); __voblint_check(o == 2940);\n  p = g(20); __voblint_check(p == 85361);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 5,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-circle-es": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i + 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r1 = g(i - 2); r2 = g(i - 3); return r1 + r2; }\n  return 12;\n}\nfun main() {\n  a = f(0); __voblint_check(a == 2);\n  b = f(7); __voblint_check(b == 101);\n  c = f(9); __voblint_check(c == 265);\n  d = f(10); __voblint_check(d == 429);\n  e = g(0); __voblint_check(e == 1);\n  h = g(3); __voblint_check(h == 25);\n  k = g(6); __voblint_check(k == 101);\n  l = g(8); __voblint_check(l == 265);\n  m = f(13); __voblint_check(m == 233);\n  __voblint_check(m == 1817);\n  n = f(20); __voblint_check(n == 52756);\n  o = g(13); __voblint_check(o == 2940);\n  p = g(20); __voblint_check(p == 85361);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "entry-state",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-circle-none": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i + 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r1 = g(i - 2); r2 = g(i - 3); return r1 + r2; }\n  return 12;\n}\nfun main() {\n  a = f(0); __voblint_check(a == 2);\n  b = f(7); __voblint_check(b == 101);\n  c = f(9); __voblint_check(c == 265);\n  d = f(10); __voblint_check(d == 429);\n  e = g(0); __voblint_check(e == 1);\n  h = g(3); __voblint_check(h == 25);\n  k = g(6); __voblint_check(k == 101);\n  l = g(8); __voblint_check(l == 265);\n  m = f(13); __voblint_check(m == 233);\n  __voblint_check(m == 1817);\n  n = f(20); __voblint_check(n == 52756);\n  o = g(13); __voblint_check(o == 2940);\n  p = g(20); __voblint_check(p == 85361);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-circle-none-bn": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i + 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r1 = g(i - 2); r2 = g(i - 3); return r1 + r2; }\n  return 12;\n}\nfun main() {\n  a = f(0); __voblint_check(a == 2);\n  b = f(7); __voblint_check(b == 101);\n  c = f(9); __voblint_check(c == 265);\n  d = f(10); __voblint_check(d == 429);\n  e = g(0); __voblint_check(e == 1);\n  h = g(3); __voblint_check(h == 25);\n  k = g(6); __voblint_check(k == 101);\n  l = g(8); __voblint_check(l == 265);\n  m = f(13); __voblint_check(m == 233);\n  __voblint_check(m == 1817);\n  n = f(20); __voblint_check(n == 52756);\n  o = g(13); __voblint_check(o == 2940);\n  p = g(20); __voblint_check(p == 85361);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "bounded-narrowing",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-countdown-cs1": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+    "program": "fun f(x, y) {\n  if (x == 0) { return y; }\n  r = f(x - 1, y - 1);\n  return r;\n}\nfun main() {\n  a = f(8, 8); __voblint_check(a == 0);\n  b = f(20, 20); __voblint_check(b == 0);\n  c = f(300, 300); __voblint_check(c == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 1,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-countdown-cs5": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+    "program": "fun f(x, y) {\n  if (x == 0) { return y; }\n  r = f(x - 1, y - 1);\n  return r;\n}\nfun main() {\n  a = f(8, 8); __voblint_check(a == 0);\n  b = f(20, 20); __voblint_check(b == 0);\n  c = f(300, 300); __voblint_check(c == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 5,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-countdown-es": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+    "program": "fun f(x, y) {\n  if (x == 0) { return y; }\n  r = f(x - 1, y - 1);\n  return r;\n}\nfun main() {\n  a = f(8, 8); __voblint_check(a == 0);\n  b = f(20, 20); __voblint_check(b == 0);\n  c = f(300, 300); __voblint_check(c == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "entry-state",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-countdown-none": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+    "program": "fun f(x, y) {\n  if (x == 0) { return y; }\n  r = f(x - 1, y - 1);\n  return r;\n}\nfun main() {\n  a = f(8, 8); __voblint_check(a == 0);\n  b = f(20, 20); __voblint_check(b == 0);\n  c = f(300, 300); __voblint_check(c == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-countdown-none-bn": {
+    "fixture": "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+    "program": "fun f(x, y) {\n  if (x == 0) { return y; }\n  r = f(x - 1, y - 1);\n  return r;\n}\nfun main() {\n  a = f(8, 8); __voblint_check(a == 0);\n  b = f(20, 20); __voblint_check(b == 0);\n  c = f(300, 300); __voblint_check(c == 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "bounded-narrowing",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-ctxs3-cs1": {
+    "fixture": "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+    "program": "fun f(j) {\n  return j + 1;\n}\nfun main() {\n  i = 0;\n  while (i < 10) {\n    t = f(i);\n    i = 1 + t;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 1,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-ctxs3-cs5": {
+    "fixture": "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+    "program": "fun f(j) {\n  return j + 1;\n}\nfun main() {\n  i = 0;\n  while (i < 10) {\n    t = f(i);\n    i = 1 + t;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 5,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-ctxs3-es": {
+    "fixture": "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+    "program": "fun f(j) {\n  return j + 1;\n}\nfun main() {\n  i = 0;\n  while (i < 10) {\n    t = f(i);\n    i = 1 + t;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "entry-state",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-ctxs3-none": {
+    "fixture": "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+    "program": "fun f(j) {\n  return j + 1;\n}\nfun main() {\n  i = 0;\n  while (i < 10) {\n    t = f(i);\n    i = 1 + t;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctxcmp-ctxs3-none-bn": {
+    "fixture": "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+    "program": "fun f(j) {\n  return j + 1;\n}\nfun main() {\n  i = 0;\n  while (i < 10) {\n    t = f(i);\n    i = 1 + t;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "bounded-narrowing",
+      "placement": "flow-sensitive"
+    }
+  },
   "dom-conjunct-order": {
     "fixture": "tests/regression/02-control-flow/known-imprecision/05-conjunct_order.vimp",
     "program": "fun main() {\n  i = __voblint_nondet_int();\n  j = __voblint_nondet_int();\n  if (0 < i && i < j && j < 10) {\n    __voblint_check(i <= 8);\n    __voblint_check(j >= 2);\n  }\n  if (j < 10 && i < j && 0 < i) {\n    __voblint_check(i <= 8);\n    __voblint_check(j >= 2);\n  }\n}",
@@ -388,6 +648,297 @@
   "dom-stride2-sign": {
     "fixture": "tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp",
     "program": "fun main() {\n  v = 1;\n  while (v < 51) {\n    __voblint_check(v >= 1);\n    v = v + 2;\n    __voblint_check(v <= 52);\n  }\n  __voblint_check(v >= 51);\n  __voblint_check(v <= 52);\n  __voblint_check(v == 51);\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-coffee-int": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = 0;\n  if (-1000 <= x && x <= 2000) {\n    if (x < 0) {\n      y = -x;\n    } else {\n      y = x;\n    }\n    if (y >= 1) {\n      __voblint_check(x != 0);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-coffee-int-order": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = 0;\n  if (-1000 <= x && x <= 2000) {\n    if (x < 0) {\n      y = -x;\n    } else {\n      y = x;\n    }\n    if (y >= 1) {\n      __voblint_check(x != 0);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-coffee-interval": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = 0;\n  if (-1000 <= x && x <= 2000) {\n    if (x < 0) {\n      y = -x;\n    } else {\n      y = x;\n    }\n    if (y >= 1) {\n      __voblint_check(x != 0);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-coffee-sign": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = 0;\n  if (-1000 <= x && x <= 2000) {\n    if (x < 0) {\n      y = -x;\n    } else {\n      y = x;\n    }\n    if (y >= 1) {\n      __voblint_check(x != 0);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-fudge-int": {
+    "fixture": "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (i < 10) {\n    i = i + 1;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-fudge-int-order": {
+    "fixture": "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (i < 10) {\n    i = i + 1;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-fudge-interval": {
+    "fixture": "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (i < 10) {\n    i = i + 1;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-fudge-sign": {
+    "fixture": "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (i < 10) {\n    i = i + 1;\n  }\n  __voblint_check(i == 10);\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-not-inductive-int": {
+    "fixture": "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+    "program": "fun main() {\n  i = 6;\n  i = i - 2;\n  while (i != 0) {\n    __voblint_check(i > 0);\n    i = i - 2;\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-not-inductive-int-never": {
+    "fixture": "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+    "program": "fun main() {\n  i = 6;\n  i = i - 2;\n  while (i != 0) {\n    __voblint_check(i > 0);\n    i = i - 2;\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive",
+      "refinement": "never"
+    }
+  },
+  "flavors-not-inductive-int-order": {
+    "fixture": "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+    "program": "fun main() {\n  i = 6;\n  i = i - 2;\n  while (i != 0) {\n    __voblint_check(i > 0);\n    i = i - 2;\n  }\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-not-inductive-interval": {
+    "fixture": "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+    "program": "fun main() {\n  i = 6;\n  i = i - 2;\n  while (i != 0) {\n    __voblint_check(i > 0);\n    i = i - 2;\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-not-inductive-sign": {
+    "fixture": "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+    "program": "fun main() {\n  i = 6;\n  i = i - 2;\n  while (i != 0) {\n    __voblint_check(i > 0);\n    i = i - 2;\n  }\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-bound-int": {
+    "fixture": "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i >= 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n    __voblint_check(i >= 0);\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-bound-int-order": {
+    "fixture": "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i >= 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n    __voblint_check(i >= 0);\n  }\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-bound-interval": {
+    "fixture": "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i >= 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n    __voblint_check(i >= 0);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-bound-sign": {
+    "fixture": "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i >= 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n    __voblint_check(i >= 0);\n  }\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-eq-int": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i == 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-eq-int-order": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i == 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-eq-interval": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i == 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-reset-eq-sign": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    i = i + 1;\n    if (i == 10) {\n      i = 0;\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-skipped-int": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    c = __voblint_nondet_int();\n    if (c) {\n      i = i + 1;\n      if (i >= 10) {\n        i = 0;\n      }\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-skipped-int-order": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    c = __voblint_nondet_int();\n    if (c) {\n      i = i + 1;\n      if (i >= 10) {\n        i = 0;\n      }\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-skipped-interval": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    c = __voblint_nondet_int();\n    if (c) {\n      i = i + 1;\n      if (i >= 10) {\n        i = 0;\n      }\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-skipped-sign": {
+    "fixture": "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+    "program": "fun main() {\n  i = 0;\n  while (true) {\n    c = __voblint_nondet_int();\n    if (c) {\n      i = i + 1;\n      if (i >= 10) {\n        i = 0;\n      }\n    }\n    __voblint_check(i <= 9);\n  }\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-vanilla-int": {
+    "fixture": "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+    "program": "fun main() {\n  x = -5;\n  y = -10;\n  z = x + y;\n  __voblint_check(z < 0);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-vanilla-int-order": {
+    "fixture": "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+    "program": "fun main() {\n  x = -5;\n  y = -10;\n  z = x + y;\n  __voblint_check(z < 0);\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-vanilla-interval": {
+    "fixture": "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+    "program": "fun main() {\n  x = -5;\n  y = -10;\n  z = x + y;\n  __voblint_check(z < 0);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "flavors-vanilla-sign": {
+    "fixture": "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+    "program": "fun main() {\n  x = -5;\n  y = -10;\n  z = x + y;\n  __voblint_check(z < 0);\n}",
     "settings": {
       "analysis": "sign",
       "context": "none",

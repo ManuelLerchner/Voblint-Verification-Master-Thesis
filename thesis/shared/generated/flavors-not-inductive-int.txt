@@ -1,0 +1,9 @@
+tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------------------------------------------------------------
+11:5      pp3    i > 0      PROVED   int: i=signs:+; intervals:[2,4]; parities:2ℤ; congruences:2ℤ

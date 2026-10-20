@@ -1,0 +1,9 @@
+tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----------------------------------------------------------------------
+16:7      pp7    x != 0     UNKNOWN  int: x=signs:⊤; intervals:[-1000,2000]; parities:ℤ; congruences:ℤ

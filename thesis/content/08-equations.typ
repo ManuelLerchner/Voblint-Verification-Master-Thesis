@@ -11,16 +11,6 @@
 )
 #import "../lib/sources.typ": proved, thy
 
-// A verdict or state of a registered CLI claim (shared/claims.toml), read from
-// the checked output rather than typed.
-#let _cli(name, cond, col) = {
-  let cells = read("/shared/generated/" + name + ".txt")
-    .split("\n")
-    .map(l => l.trim().split(regex("\s{2,}")))
-    .find(c => c.len() == 5 and c.at(2) == cond)
-  assert(cells != none, message: "claim " + name + " has no check " + cond)
-  raw(cells.at(col))
-}
 
 = Context-Indexed Equations and Routing <ch:equations>
 
@@ -433,7 +423,9 @@ routing keep them apart.
       )),
     ))
     v(2pt)
-    align(center, text(size: 6.5pt)[`a == 2`: #verdict-chip(verdict) \ #raw(state)])
+    align(center, text(
+      size: 6.5pt,
+    )[`a == 2`: #verdict-chip(verdict) \ #raw("a=")#absval(raw(state.slice(2)))])
   })
 }
 

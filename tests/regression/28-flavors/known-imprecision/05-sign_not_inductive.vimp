@@ -1,0 +1,13 @@
+// PARAM: --analysis sign
+// Optimal only among inductive invariants (Monniaux, ETAPS 2024, slide 27): i
+// takes 4 and 2 at the check, so i > 0 holds there, but + is not inductive,
+// because i - 2 of a positive value may have any sign. Sign reaches every sign
+// at the loop head. Int proves the check (precision/04-int_proves_not_inductive).
+fun main() {
+  i = 6;
+  i = i - 2;
+  while (i != 0) {
+    __voblint_check(i > 0); // UNKNOWN
+    i = i - 2;
+  }
+}

@@ -23,15 +23,28 @@
 // The run was stopped by `--timeout`: the report is the CLI's rejection line.
 #let claim-timed-out(name) = claim-text(name).contains("did not finish within")
 
+// The CLI heads each analysis's part of a state with its name. The text names
+// the analysis of a single-analysis run, so only a combined state keeps them.
+#let _state(s) = {
+  let m = s.match(regex("^[a-z]+: (.*)$"))
+  if m == none or s.matches(regex("; [a-z]+: ")).len() > 0 { s } else { m.captures.at(0) }
+}
+
+#let _rows(name) = claim-text(name).split("\n").map(l => l.trim().split(regex("\s{2,}")))
+
 // One row of the check table of a textual report:
 // (location, point, condition, verdict, state).
 #let claim-check(name, cond) = {
-  let cells = claim-text(name)
-    .split("\n")
-    .map(l => l.trim().split(regex("\s{2,}")))
-    .find(c => c.len() == 5 and c.at(2) == cond)
+  let cells = _rows(name).find(c => c.len() == 5 and c.at(2) == cond)
   assert(cells != none, message: "claim " + name + " has no check " + cond)
-  cells
+  cells.slice(0, 4) + (_state(cells.at(4)),)
+}
+
+// The same row found by its source location, as (verdict, state).
+#let claim-row(name, loc) = {
+  let row = _rows(name).find(c => c.len() >= 4 and c.at(0) == loc)
+  assert(row != none, message: "no row " + loc + " in claim " + name)
+  (verdict: row.at(3), state: if row.len() > 4 { _state(row.at(4)) } else { "" })
 }
 
 // A `--graph-snapshot` report, parsed into

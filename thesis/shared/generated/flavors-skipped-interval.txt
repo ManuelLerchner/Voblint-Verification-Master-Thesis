@@ -1,0 +1,9 @@
+tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------
+17:5      pp9    i <= 9     UNKNOWN  interval: i=[0,+∞]

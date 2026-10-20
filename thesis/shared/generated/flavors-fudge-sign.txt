@@ -1,0 +1,9 @@
+tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------
+9:3       pp3    i == 10    UNKNOWN  sign: i=+

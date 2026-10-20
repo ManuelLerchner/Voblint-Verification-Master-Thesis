@@ -1,0 +1,9 @@
+tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp [int,order]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------------------------------------------
+9:3       pp3    z < 0      PROVED   int: z=-15; order: {y≤x ∧ z≤x ∧ z≤y}

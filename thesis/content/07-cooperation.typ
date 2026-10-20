@@ -5,18 +5,8 @@
 #import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": definition
 #import "../lib/figures.typ": verdict as verdict-chip
-#import "../lib/claims.typ": claim-check, claim-ref
+#import "../lib/claims.typ": claim-check, claim-ref, claim-row
 
-// One row of a registered analyzer run (thesis/shared/claims.toml), found by
-// its source location, so a table cell cannot drift from what the CLI prints.
-#let claim-row(name, loc) = {
-  let rows = read("/shared/generated/" + name + ".txt")
-    .split("\n")
-    .map(l => l.trim().split(regex("\s{2,}")))
-  let row = rows.find(c => c.len() >= 4 and c.at(0) == loc)
-  assert(row != none, message: "no row " + loc + " in claim " + name)
-  (verdict: row.at(3), state: if row.len() > 4 { row.at(4) } else { "" })
-}
 #let verdict(name, loc) = verdict-chip(claim-row(name, loc).verdict)
 #let state(name, loc) = absval(raw(claim-row(name, loc).state))
 
@@ -238,7 +228,7 @@ fun main() {
 ```)
 
 Int alone joins the branches, so `z` lies only in
-#raw(_z("coop-mutual-int").at(4).split("intervals:").at(1).split(";").at(0)),
+#absval(raw(_z("coop-mutual-int").at(4).split("intervals:").at(1).split(";").at(0))),
 and the check is #verdict-chip(_z("coop-mutual-int").at(3)). The order analysis
 alone cannot compare a variable with a constant and reports
 #verdict-chip(_z("coop-mutual-order").at(3)). Together, at both assignments to

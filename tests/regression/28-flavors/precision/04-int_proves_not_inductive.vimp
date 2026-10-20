@@ -1,0 +1,14 @@
+// PARAM: --analysis int
+// Optimal only among inductive invariants (Monniaux, ETAPS 2024, slide 27): i
+// takes 4 and 2 at the check. Sign cannot express an inductive invariant that
+// proves i > 0 (known-imprecision/05-sign_not_inductive), but Int can: Interval
+// bounds i above by 4, Congruence keeps i even, and their refinement under the
+// guard i != 0 leaves i = [2,4].
+fun main() {
+  i = 6;
+  i = i - 2;
+  while (i != 0) {
+    __voblint_check(i > 0); // PROVED
+    i = i - 2;
+  }
+}

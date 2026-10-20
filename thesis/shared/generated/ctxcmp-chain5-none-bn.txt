@@ -1,0 +1,18 @@
+tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------------------------------------------------------
+70:14     pp63   x0 == 11   PROVED   int: x0=11
+71:14     pp65   x1 == 11   PROVED   int: x1=11
+72:15     pp67   x2 == 11   PROVED   int: x2=11
+73:15     pp69   x3 == 11   PROVED   int: x3=11
+74:14     pp71   y0 == 5    UNKNOWN  int: y0=signs:+; intervals:[3,+∞]; parities:ℤ; congruences:ℤ
+75:14     pp73   y1 == 6    UNKNOWN  int: y1=signs:+; intervals:[3,+∞]; parities:ℤ; congruences:ℤ
+76:14     pp75   z0 == 2    UNKNOWN  int: z0=signs:+; intervals:[1,2]; parities:ℤ; congruences:ℤ
+77:15     pp77   z1 == 2    UNKNOWN  int: z1=signs:+; intervals:[1,2]; parities:ℤ; congruences:ℤ
+78:17     pp80   m == 0     UNKNOWN  int: m=signs:≥0; intervals:[0,+∞]; parities:ℤ; congruences:ℤ
+79:17     pp83   m == 0     UNKNOWN  int: m=signs:≥0; intervals:[0,+∞]; parities:ℤ; congruences:ℤ

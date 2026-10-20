@@ -1,0 +1,9 @@
+tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----------
+16:7      pp7    x != 0     UNKNOWN  sign: x=⊤
