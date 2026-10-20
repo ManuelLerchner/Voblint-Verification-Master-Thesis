@@ -1,0 +1,19 @@
+// PARAM: --analysis int,order
+// The bounded variant of coffee: x in [-1000, 2000], y = |x|. The check needs
+// y <= |x|, a disjunction of y = x and y = -x. After the join Int keeps x at
+// [-1000,2000] and the order analysis keeps only x <= y, which does not
+// exclude x = 0, so x != 0 stays open although it holds in every run.
+fun main() {
+  x = __voblint_nondet_int();
+  y = 0;
+  if (-1000 <= x && x <= 2000) {
+    if (x < 0) {
+      y = -x;
+    } else {
+      y = x;
+    }
+    if (y >= 1) {
+      __voblint_check(x != 0); // UNKNOWN
+    }
+  }
+}

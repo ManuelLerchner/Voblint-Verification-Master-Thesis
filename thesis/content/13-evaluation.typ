@@ -2,7 +2,7 @@
 #import "../lib/stats.typ": stat
 #import "../lib/math.typ": absval, conc, ivl, parity-name, signval
 #import "../lib/claims.typ": (
-  claim-check, claim-ref, claim-snapshot, claim-timed-out, snapshot-verdict,
+  claim-check, claim-ref, claim-snapshot, claim-text, claim-timed-out, snapshot-verdict,
 )
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": verdict
@@ -18,7 +18,7 @@ satisfies it as well (#isathm("unknown_everywhere_sound")). Following
 #cite(<kim26regulatory>, form: "prose", supplement: [§6]), this chapter first
 checks that the premises can hold and that the obligations exclude real
 errors. It then shows, on concrete programs, what precision the analyzer reaches
-and how the code outside the theorem is tested. Several facts below concern one
+and where it ends. Several facts below concern one
 fixed program and are proved by `eval`, which runs generated code and therefore
 also trusts the code generator (@fig:intro-trust).
 
@@ -241,8 +241,7 @@ explosion by omitting intervals from the contexts of recursive functions
   ))
   if claim-timed-out(name) { return [#text(fill: vb.unproved)[no answer \ in 5~s] #button] }
   let r = claim-check(name, cond)
-  // Every run is Interval, so the printer's domain prefix is dropped.
-  let st = r.at(4).split(": ").slice(1).join(": ")
+  let st = r.at(4)
   let m = st.match(regex("^(.*=)([^=]*)$"))
   let state = if m == none { raw(st) } else {
     [#raw(m.captures.at(0))#absval(raw(m.captures.at(1)))]
@@ -328,32 +327,431 @@ programs.
     the run. "No answer in 5 s": stopped by `--timeout 5`.],
 ) <fig:rules-programs>
 
-== Testing the unverified components <sec:eval-corpus>
+== Comparing precision with Goblint <sec:eval-flavors>
 
-The theorem stops at the generated analyzer, so the handwritten OCaml around it
-(@tab:sizes) is tested rather than proved. A
-#link(repo-blob + "tests/regression")[regression corpus] runs the analyzer end
-to end. It holds #stat("corpus.cases") VIMP fixtures in #stat("corpus.groups")
-groups, some of which are adapted from Goblint's regression tests, as each header
-records. Each fixture states its command-line flags and the verdict expected at
-each check.  In
-`soundness/`, the program has executions on both sides of the check, so
-#verdict("UNKNOWN") is the only sound answer. In `known-imprecision/`, the
-concrete result is fixed, but the abstraction cannot establish it, and the
-header names the mechanism that loses the information. The remaining #stat("corpus.kinds.other") fixtures pin other output, such as graph snapshots.
+#let _gob = {
+  let rows = (:)
+  for line in read("../shared/code/goblint-flavors/results.tsv").split("\n") {
+    let cells = line.split("\t")
+    if cells.len() == 3 { rows.insert(cells.at(0) + "/" + cells.at(1), cells.at(2)) }
+  }
+  rows
+}
+// One check of one Goblint run, in the thesis's verdict words.
+// A path-sensitive run prints one verdict per path, so a check is proved only
+// if every path's verdict succeeds.
+#let _gv(prog, config, cond) = {
+  let outs = _gob.at(prog + "/" + config).split(";").filter(c => c.starts-with(cond + ":"))
+  assert(outs.len() > 0, message: "results.tsv has no check " + cond + " for " + prog)
+  verdict(if outs.all(o => o.ends-with("will succeed")) { "PROVED" } else { "UNKNOWN" })
+}
+#let _vv(name, cond) = verdict(claim-check(name, cond).at(3))
+#let _flavor(name) = listing(_vimp-claims.at(name).program, lang: "c", claim: name)
 
-The runner matches results by source line, which tests the position
-bookkeeping of @sec:ocaml-boundary.
-#link(repo-blob + "tests/solver-trace")[Golden files] pin the solver trace
-(@sec:tracing) of three programs step by step. When
+
+The programs of @sec:eval-precision were selected because a mechanism succeeds
+on them, which biases them toward Voblint's strengths. Its limits are better
+measured on programs selected by someone else. Monniaux's tutorial on the flavors of abstract
+interpretation walks through finite lattices, relational domains, widening and
+narrowing, and alternatives to iterative solving. For each, it gives a small
+program on which a standard analysis gains or loses precision @monniaux24.
+Every program of the tutorial that VIMP can express is transliterated into a
+regression fixture of
+#link(repo-blob + "tests/regression/28-flavors")[`28-flavors`], and Voblint's
+verdicts on them are registered as claims. Each check holds in every execution, so each
+#verdict("UNKNOWN") below is lost precision.
+
+#figure(
+  {
+    set text(size: 7.5pt)
+    set par(first-line-indent: 0pt, justify: false)
+    // (header, Voblint claim suffix, check, Goblint program); the reset at
+    // bound has two checks, so it has two columns.
+    let progs = (
+      ([rule of \ signs], "vanilla", "z < 0", "vanilla"),
+      ([not \ inductive], "not-inductive", "i > 0", "sign_not_inductive"),
+      ([absolute \ value], "coffee", "x != 0", "coffee_bounded"),
+      ([bounded \ loop], "fudge", "i == 10", "fudge"),
+      ([reset at \ bound], "reset-bound", "i <= 9", "narrow_works_lb"),
+      ([reset at \ bound], "reset-bound", "i >= 0", "narrow_works_lb"),
+      ([skipped \ increment], "skipped", "i <= 9", "blackcurrant"),
+      ([reset at \ equality], "reset-eq", "i <= 9", "reset_eq"),
+    )
+    let voblint = (
+      ([Sign], "sign"),
+      ([Interval], "interval"),
+      ([Int], "int"),
+      ([Int, Order], "int-order"),
+    )
+    let goblint = (
+      ([Interval], "interval"),
+      ([delay 10], "interval+gas10"),
+      ([Int, delay 3], "int+gas3"),
+      ([thresholds], "interval+thresholds"),
+      ([comparisons], "interval+thresholds-comparisons"),
+      ([octagons], "octagon"),
+      ([octagons, paths], "octagon+branches"),
+    )
+    let group(name, n) = table.cell(rowspan: n, align: left + horizon, rotate(
+      -90deg,
+      reflow: true,
+      strong(name),
+    ))
+    table(
+      columns: (auto, auto) + (1fr,) * progs.len(),
+      align: (left + horizon, left + horizon) + (center + horizon,) * progs.len(),
+      stroke: none,
+      inset: (x: 2pt, y: 2pt),
+      table.hline(start: 2, stroke: 0.5pt),
+      [], [],
+      // The column groups are the paragraphs that discuss them below.
+      ..(
+        ([finite lattices], 2),
+        ([paths and \ convexity], 1),
+        ([widening and narrowing], 3),
+        ([narrowing foiled], 2),
+      ).map(((name, n)) => table.cell(colspan: n, emph(name))),
+      ..(2, 4, 5, 8, 10).map(x => table.vline(x: x, stroke: 0.25pt)),
+      ..range(4).map(i => {
+        let starts = (2, 4, 5, 8)
+        let ends = (4, 5, 8, 10)
+        table.hline(start: starts.at(i), end: ends.at(i), stroke: 0.25pt)
+      }),
+      [], [], ..progs.map(((what, _, _, _)) => what),
+      [], [], ..progs.map(((_, key, _, _)) => vimp-button(claim-playground(
+        "flavors-" + key + "-interval",
+      ))),
+      [], [*check*], ..progs.map(((_, _, cond, _)) => raw(cond)),
+      table.hline(stroke: 0.4pt),
+      ..voblint
+        .enumerate()
+        .map(((i, (label, cfg))) => (
+          ..if i == 0 { (group("Voblint", voblint.len()),) },
+          label,
+          ..progs.map(((_, key, cond, _)) => _vv("flavors-" + key + "-" + cfg, cond)),
+        ))
+        .flatten(),
+      table.hline(stroke: 0.4pt),
+      ..goblint
+        .enumerate()
+        .map(((i, (label, cfg))) => (
+          ..if i == 0 { (group("Goblint", goblint.len()),) },
+          label,
+          ..progs.map(((_, _, cond, gprog)) => _gv(gprog, cfg, cond)),
+        ))
+        .flatten(),
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: table,
+  placement: auto,
+  caption: [The flavors programs @monniaux24 under each analysis setting of
+    Voblint (#link(repo-blob + "tests/regression/28-flavors")[`28-flavors`]) and
+    of Goblint (#link(repo-blob + "thesis/shared/code/goblint-flavors")[C
+      versions], #link(repo-blob + "thesis/shared/code/goblint-flavors/results.tsv")[`results.tsv`]). Each VIMP button opens the program in the
+    playground. Goblint's "will succeed" is shown as
+    #verdict("PROVED"), "is unknown" as #verdict("UNKNOWN").],
+) <tab:flavors>
+
+
+For comparison, Goblint at revision
 #link(
-  "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/pull/256",
-)[pull request 256]
-published a call's seed before reading its exit at nodes where one call
-returns, as Goblint does, the trace
-of the running example shrank from 241 to 155 steps.
+  "https://github.com/goblint/analyzer/tree/6127869c56c61fa184a830a3fcfb7df44de33829",
+)[`6127869`]
+ran on C versions of the same programs (@tab:flavors). VIMP's integers are
+unbounded (@sec:vimp-vs-c), whereas Goblint analyzes C's `int`. On these
+programs, the difference does not change what the programs compute, since no
+execution leaves the range of `int`. It can still change an analysis result,
+because an abstract value may reach the limit of `int` although no execution
+does. Goblint then applies its default setting `assume_top` of
+#link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L1640")[`sem.int.signed_overflow`], which gives a
+signed operation that may overflow the whole range of its type. This happens
+for one check, discussed in @sec:flavors-widening.
 
-The parser is trusted to hand the analyzer the program the user wrote.
-Property tests print random syntax trees, built from the constructors exported
-from Isabelle, and require the parser to read back the same tree and to finish
-on mutated programs without a crash.
+The settings of @tab:flavors are chosen such that each analyzer has its best
+chance on each flavor. Voblint runs Sign, Interval, Int, the reduced product of its four
+non-relational domains (@sec:reduced-product), and Int with the order
+analysis, its only relational information. No other Voblint option affects
+these programs. Its solver has neither widening delays nor thresholds, and
+calling contexts and the update rules for global unknowns need procedures,
+which a second benchmark compares (@tab:flavors-ctx). The Goblint rows
+"delay 10", "thresholds", and "comparisons" apply the repairs the literature
+proposes for failed narrowing, and $10$ is the smallest delay that proves a
+check Interval leaves unknown. In "Int, delay 3", Goblint's closest
+counterpart of Voblint's Int, Interval and Congruence refine each other. The last two rows add Apron's octagons @jeannet09apron, the second together with Goblint's
+#link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/analyses/branchSet.ml")[`branchSet`] analysis, which keeps
+a separate state for each set of branches taken.
+
+The following subsections discuss the column groups of @tab:flavors from left
+to right.
+
+=== Finite lattices <sec:flavors-lattices>
+
+The tutorial opens with the rule of signs, which says that
+the sum of two negative numbers is negative @monniaux24[slide 8]. Over unbounded integers, the rule is sound, and Sign proves `z < 0` after
+`z = x + y` with $x = -5$ and $y = -10$ (claim
+#claim-ref("flavors-vanilla-sign")).
+
+A set of states at a loop head is an _inductive_ invariant if it contains the states that first
+reach the head, and if one more iteration of the loop from any of its states
+stays inside it. In the terms of @sec:lattices, it is a post-fixpoint of the loop's
+transfer function that contains the initial states. The abstract value that an
+analyzer computes at a loop head describes such an invariant, so a check that
+the analyzer proves follows from an inductive invariant that its domain can
+express. The converse fails: widening may miss an invariant the domain can
+express (@sec:flavors-foiled).
+
+#_flavor("flavors-not-inductive-sign")
+
+In this loop from the tutorial @monniaux24[slide 27], `i` takes the values $4$
+and $2$ at the check, so `i > 0` holds. The property
+is not inductive, however. If all that is known at the loop head is that `i`
+is positive, `i` may be $1$, and the next iteration then yields $-1$. Sign can
+express `i > 0` but nothing stronger about `i`, so the loop head reaches every
+sign, and the check is #_vv("flavors-not-inductive-sign", "i > 0") (claim
+#claim-ref("flavors-not-inductive-sign")). Int, in contrast, can express a stronger
+property that is inductive: at the loop head, `i` is nonnegative, at most $4$,
+and even. A positive `i` with these bounds is $2$ or $4$, so the next iteration
+yields $0$ or $2$ and stays inside the property.
+
+Int finds this invariant through the reduction of its components. Widening
+drops Interval's lower bound at the loop head, but Sign keeps $i gt.eq 0$. The guard `i != 0` then
+makes the sign positive, and the reduction (@sec:reduced-product) moves the interval to $absval(ivl(1, 4))$ and, since `i`
+is even, to $absval(ivl(2, 4))$. From there, `i - 2` returns to
+$absval(ivl(0, 2))$, which the head value already covers, and the check is
+#_vv("flavors-not-inductive-int", "i > 0"). Without the reduction, the check sees $i in absval(ivl(-infinity, 4))$ and is
+#_vv("flavors-not-inductive-int-never", "i > 0") (claims
+#claim-ref("flavors-not-inductive-int") and
+#claim-ref("flavors-not-inductive-int-never")). Goblint proves the check only with a widening delay of $3$ or with thresholds
+at the constants of comparisons (@tab:flavors, #link(repo-blob + "thesis/shared/code/goblint-flavors/results.tsv")[`results.tsv`]).
+
+=== Paths and convexity <sec:flavors-paths>
+
+The tutorial's coffee example computes an absolute value
+and checks that it is positive only for a nonzero argument
+@monniaux24[slide 38]:
+
+#_flavor("flavors-coffee-int-order")
+
+The check needs $y lt.eq |x|$ after the branch, which holds only as the
+disjunction of $y = x$ on one path and $y = -x$ on the other. A non-relational
+domain loses both relations. A convex relational domain joins the branches
+into their convex hull @cousot78[§4.4], which keeps $y gt.eq |x|$ but loses
+$y lt.eq |x|$, so polyhedra fail as well @monniaux24[slides 42--43]. Voblint's
+order analysis ends with $x lt.eq y$, which does not exclude $x = 0$, and the
+check is #_vv("flavors-coffee-int-order", "x != 0") (claim
+#claim-ref("flavors-coffee-int-order")). Proving the check requires keeping
+the two branches apart, as trace partitioning and path partitioning do
+@rival07[§1.1] @blanchet03[§7.1.5] @mine17[§6.3.4]. In Goblint, neither octagons
+nor path sensitivity alone proves the check, but octagons partitioned by the
+branches taken do. Voblint has no such
+partitioning, which would need its own soundness proof.
+
+=== Widening and narrowing <sec:flavors-widening>
+
+Voblint's Interval proves both widening examples that narrowing repairs: the
+bounded loop, which counts `i` to $10$ (claim
+#claim-ref("flavors-fudge-interval")), and the reset at bound:
+
+#_flavor("flavors-reset-bound-interval")
+
+Widening sends the upper bound of `i` to $+infinity$, and narrowing through the
+test `i >= 10` brings it back to $9$ @monniaux24[slide 59]. Both checks are
+#_vv("flavors-reset-bound-interval", "i <= 9") over
+#absval(raw(claim-check("flavors-reset-bound-interval", "i >= 0").at(4).split("i=").at(1)))
+(claim #claim-ref("flavors-reset-bound-interval")). Goblint's
+Interval proves `i <= 9` but loses `i >= 0` because its widening stops at the
+largest `int`, where `i + 1` may overflow and `assume_top` gives the sum the
+whole range of `int`. With `assume_none`, which assumes that no signed
+operation overflows, Goblint proves `i >= 0` as well (#link(repo-blob + "thesis/shared/code/goblint-flavors/results.tsv")[`results.tsv`]).
+
+=== Narrowing foiled <sec:flavors-foiled>
+
+Two variants of the same counter defeat narrowing. In the
+skipped increment (left), a nondeterministic branch may skip the increment
+@monniaux24[slide 60]. In the reset at equality (right), the counter resets on
+`i == 10` instead of `i >= 10` @monniaux24[slide 77]:
+
+#grid(
+  columns: (1fr, 1fr),
+  column-gutter: 8pt,
+  _flavor("flavors-skipped-interval"), _flavor("flavors-reset-eq-interval"),
+  align(center, text(size: 8pt)[skipped increment]),
+  align(center, text(size: 8pt)[reset at equality]),
+)
+
+In the skipped increment, the skipping path carries the loop-head value back
+unchanged. Every interval $absval(ivl(0, c))$ with $c gt.eq 9$ is therefore a
+fixpoint, the widened value included, and a decreasing iteration cannot descend
+below a fixpoint @mine17[§4.7.3, Ex. 4.7] @halbwachs12. In the reset at
+equality, the test removes no bound from an interval, so nothing stops the
+widened bound at $9$. Both checks are #_vv("flavors-skipped-interval", "i <= 9") in
+Voblint, with $i in absval(ivl(0, +infinity))$ (claims
+#claim-ref("flavors-skipped-interval") and #claim-ref("flavors-reset-eq-interval")).
+Goblint's octagons do not help either, since the loss comes from the
+iteration.
+
+The known repairs change how the solver iterates. Goblint proves both checks
+when it delays widening by $10$ rounds @blanchet03[§7.1.3], but not by $9$, so
+the delay must exceed the loop bound. It also proves them with threshold
+widening @blanchet03[§7.1.2], but only when the thresholds include the $9$ of
+the check itself. Policy iteration @costan05[§3.2] and guided static analysis
+@gopan07 replace the decreasing iteration altogether. In Voblint, each repair
+would change the vendored solver and its partial-correctness proof.
+
+The flavors benchmark has eight checks on small programs, so it compares the
+mechanisms of the two analyzers and says little about their precision on
+larger programs. On these checks, Voblint loses no precision to verification
+on the mechanisms both analyzers share. With Int and the order
+analysis, it proves five of the eight checks of @tab:flavors, and Goblint's
+plain Interval proves three. Across all its settings, Goblint proves all eight,
+though no single setting does, using widening delays, thresholds, and path
+partitioning. Voblint lacks these techniques, and each would bring its own
+proof obligation.
+
+=== Procedures <sec:flavors-procedures>
+
+The second benchmark compares calling contexts and the update rules for
+global unknowns on five programs from Goblint's own regression suite, adapted
+to VIMP (@tab:flavors-ctx). Goblint runs on C versions whose checks all hold
+in a native run
+(#link(repo-blob + "thesis/shared/code/goblint-contexts")[`goblint-contexts`]).
+Voblint runs Int, and Goblint runs Interval
+with its default domain of excluded values, so both refine a guard such as
+`i != 0`.
+
+In _three contexts_, a loop steps `i` by `f(i) = i + 1` and then checks
+`i == 10`. The _deep call chain_ consists of recursive procedures that call
+each other up to $21$ levels deep, and its ten checks ask for their results. In the _chain with guards_, `f` calls `g`, `g` calls `h`, and
+`h` counts its argument down to $0$ behind the guards `i == 0` and `0 < i`, and all seven calls, with arguments up to $300$, return $3$. In the
+_mutual recursion_, $f(i) = g(i-2) + g(i-3)$ and $g(i) = f(i+1)$, and twelve
+checks ask for exact values. The _two-formal countdown_
+`f(x, y)` decrements both arguments until `x` reaches $0$ and returns `y`, so its three calls return $0$.
+
+#let _ctx-gob = {
+  let rows = (:)
+  for line in read("../shared/code/goblint-contexts/results.tsv").split("\n") {
+    let cells = line.split("\t")
+    if cells.len() == 4 { rows.insert(cells.at(0) + "/" + cells.at(1), cells) }
+  }
+  rows
+}
+// Proved checks out of those that hold. A check Goblint reports nothing for
+// was found unreachable, which counts as proved, like Voblint's DEAD.
+#let _ratio(k, n) = {
+  let fill = if k == n { vb.proved } else if k == 0 { vb.unproved } else { vb.neutral }
+  text(fill: fill)[#k/#n]
+}
+#let _ctx-v(key, cfg) = {
+  let rows = claim-text("ctxcmp-" + key + "-" + cfg)
+    .split("\n")
+    .map(l => l.trim().split(regex("\s{2,}")))
+    .filter(c => c.len() == 5 and c.at(3) in ("PROVED", "REFUTED", "UNKNOWN", "DEAD"))
+    // The circle fixture also pins Goblint's wrong annotation f(13) = 233.
+    .filter(c => c.at(2) != "m == 233")
+  _ratio(rows.filter(c => c.at(3) in ("PROVED", "DEAD")).len(), rows.len())
+}
+#let _ctx-g(prog, cfg) = {
+  let cells = _ctx-gob.at(prog + "/" + cfg)
+  let n = int(cells.at(2))
+  let reported = cells.at(3).split(";").filter(c => c != "")
+  let ok = reported.filter(c => c.ends-with("will succeed")).len() + n - reported.len()
+  _ratio(ok, n)
+}
+
+#figure(
+  {
+    set text(size: 7.5pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let progs = (
+      ([three \ contexts], "ctxs3"),
+      ([deep call \ chain], "chain5"),
+      ([chain with \ guards], "chain3"),
+      ([mutual \ recursion], "circle"),
+      ([two-formal \ countdown], "countdown"),
+    )
+    let voblint = (
+      ([none], "none"),
+      ([bounded narrowing], "none-bn"),
+      ([call string, $k = 1$], "cs1"),
+      ([call string, $k = 5$], "cs5"),
+      ([entry state], "es"),
+    )
+    let goblint = (
+      ([none], "insensitive"),
+      ([narrowing globals], "insensitive+narrow-globs"),
+      ([call string, $k = 1$], "callstring1"),
+      ([call string, $k = 5$], "callstring5"),
+      ([full], "full"),
+      ([gas 10], "gas10"),
+    )
+    let group(name, n) = table.cell(
+      rowspan: n,
+      align: left + horizon,
+      rotate(-90deg, reflow: true, strong(name)),
+    )
+    table(
+      columns: (auto, auto) + (1fr,) * progs.len(),
+      align: (left + horizon, left + horizon) + (center + horizon,) * progs.len(),
+      stroke: none,
+      inset: (x: 3pt, y: 2pt),
+      table.hline(stroke: 0.5pt),
+      [], [], ..progs.map(((what, _)) => what),
+      [], [], ..progs.map(((_, key)) => vimp-button(claim-playground("ctxcmp-" + key + "-es"))),
+      table.hline(stroke: 0.4pt),
+      ..voblint
+        .enumerate()
+        .map(((i, (label, cfg))) => (
+          ..if i == 0 { (group("Voblint", voblint.len()),) },
+          label,
+          ..progs.map(((_, key)) => _ctx-v(key, cfg)),
+        ))
+        .flatten(),
+      table.hline(stroke: 0.4pt),
+      ..goblint
+        .enumerate()
+        .map(((i, (label, cfg))) => (
+          ..if i == 0 { (group("Goblint", goblint.len()),) },
+          label,
+          ..progs.map(((_, key)) => _ctx-g(key, cfg)),
+        ))
+        .flatten(),
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: table,
+  placement: bottom,
+  caption: [Checks proved out of those that hold, on procedure programs adapted
+    from Goblint's regression suite (Voblint with Int, Goblint with Interval).
+    Voblint: no contexts, also with bounded
+    narrowing; call strings of length $k$; entry-state contexts. Goblint
+    (#link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]):
+    context gas $0$, also with narrowing of global unknowns; call strings
+    of length $k$; its default full contexts; context gas $10$.],
+) <tab:flavors-ctx>
+
+Goblint's context gas $0$, call strings, full contexts, and narrowing of
+global unknowns
+(#link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L2595")[`solvers.td3.narrow-globs`])
+correspond to Voblint's policy without contexts, its call strings,
+entry-state contexts, and bounded narrowing (@sec:update-rules). Context gas $10$
+(#link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L1061")[`ana.context.gas_value`]),
+which keeps full contexts only for the first ten recursive calls, has no
+counterpart.
+
+With entry-state contexts, Voblint proves every check of all five programs.
+Goblint's full contexts prove every check except the one of the three-contexts
+program. After its loop,
+an interval only bounds `i` to $absval(ivl(10, 11))$. Voblint's Int also knows
+that `i` is even, which leaves $10$, and Goblint's configuration has no parity
+or congruence component. With bounded contexts,
+Goblint proves more on the deep call chain and Voblint more on the mutual
+recursion. The two-formal
+countdown recurses up to $300$ levels deep and needs a context per level,
+which only entry-state contexts provide.
+
+On this benchmark, Voblint's entry-state contexts prove every check that
+Goblint's full contexts prove, and one more. With call strings, each analyzer
+proves checks the other loses, and without contexts Voblint proves more. Goblint's widening
+then loses the lower bound $0$ of `i` in `h` unless it narrows global unknowns
+(#link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]), whereas Voblint keeps it and turns `i != 0` into `i > 0`.

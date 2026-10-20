@@ -1,0 +1,15 @@
+tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------
+35:14     pp28   a == 3     PROVED   int: a=3
+36:14     pp30   b == 3     PROVED   int: b=3
+37:14     pp32   c == 3     PROVED   int: c=3
+38:14     pp34   d == 3     PROVED   int: d=3
+39:14     pp36   e == 3     PROVED   int: e=3
+40:15     pp38   x == 3     PROVED   int: x=3
+41:15     pp40   y == 3     PROVED   int: y=3

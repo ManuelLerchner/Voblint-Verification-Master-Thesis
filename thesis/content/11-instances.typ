@@ -3,18 +3,8 @@
 #import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, site, thy-badge
 #import "../lib/figures.typ": int-axis, int-strip, printed-set, verdict as verdict-chip
 #import "../lib/math.typ": *
-#import "../lib/claims.typ": claim-ref
+#import "../lib/claims.typ": claim-ref, claim-row
 
-// One row of a registered analyzer run (thesis/shared/claims.toml), found by
-// its source location, so a table cell cannot drift from what the CLI prints.
-#let claim-row(name, loc) = {
-  let rows = read("/shared/generated/" + name + ".txt")
-    .split("\n")
-    .map(l => l.trim().split(regex("\s{2,}")))
-  let row = rows.find(c => c.len() >= 4 and c.at(0) == loc)
-  assert(row != none, message: "no row " + loc + " in claim " + name)
-  (verdict: row.at(3), state: if row.len() > 4 { row.at(4) } else { "" })
-}
 #let verdict(name, loc) = verdict-chip(claim-row(name, loc).verdict)
 #let state(name, loc) = absval(raw(claim-row(name, loc).state))
 
@@ -137,9 +127,8 @@ $v = 51$, so every check holds.
 )
 
 #let _v(dom, loc) = verdict("dom-stride2-" + dom, loc)
-// The domain column already names the domain, so the cell drops the printer's prefix.
 #let _s-cell(dom, loc) = {
-  let s = claim-row("dom-stride2-" + dom, loc).state.split(": ").slice(1).join(": ")
+  let s = claim-row("dom-stride2-" + dom, loc).state
   absval(raw(if dom == "parity" { parity-name(s) } else { s }))
 }
 #let _adds = (

@@ -285,7 +285,7 @@ configuration it can select (#isathm("run_voblint_source_sound")).
 #subfigures(
   playground-figure(
     "while-loop",
-    width: 74%,
+    width: 68%,
     [one run in three views: the check's verdict in the editor, the state
       inspector at the check, and the solved graph. Settings
       #playground-settings("while-loop")],
@@ -293,7 +293,7 @@ configuration it can select (#isathm("run_voblint_source_sound")).
   <fig:pg-overview>,
   playground-figure(
     "solve-replay-still",
-    width: 72%,
+    width: 66%,
     [one step of the solver replay for the calls of `bump`: the
       graph shows each unknown's value at this step, and the solver trace beside it
       marks the step's line. Settings #playground-settings("solve-replay-still")],
@@ -306,3 +306,13 @@ configuration it can select (#isathm("run_voblint_source_sound")).
     @fig:build in the reader's browser. The screenshots are illustrative.],
   label: <fig:playground>,
 )
+
+== Testing the unverified components <sec:eval-corpus>
+
+The handwritten OCaml around the generated analyzer (@tab:sizes) is tested.
+A #link(repo-blob + "tests/regression")[regression corpus] of
+#stat("corpus.cases") VIMP fixtures pins the expected verdicts: a definite one
+in `precision/`, #verdict("UNKNOWN") in `soundness/`, and a documented loss in
+`known-imprecision/`. #link(repo-blob + "tests/solver-trace")[Golden files] pin
+solver traces (@sec:tracing), and property tests check that the parser reads
+back random syntax trees.

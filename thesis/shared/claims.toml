@@ -960,3 +960,523 @@ argv = [
   "tests/regression/17-call-string/precision/05-callstring_graph_sign.vimp",
 ]
 why = "Evaluation, contexts: at call-string depth 2 the two activations of g keep their own contexts, and both sign checks are PROVED."
+
+# The flavors suite (Monniaux, ETAPS 2024), Chapter 13 "Where precision ends":
+# every program under every analysis setting of the table.
+
+[claims.flavors-vanilla-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+]
+why = "Evaluation, flavors table: Sign on the vanilla program, check z < 0."
+
+[claims.flavors-vanilla-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+]
+why = "Evaluation, flavors table: Interval on the vanilla program, check z < 0."
+
+[claims.flavors-vanilla-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+]
+why = "Evaluation, flavors table: Int on the vanilla program, check z < 0."
+
+[claims.flavors-vanilla-int-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp",
+]
+why = "Evaluation, flavors table: Int with the order analysis on the vanilla program, check z < 0."
+
+[claims.flavors-not-inductive-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+]
+why = "Evaluation, flavors table: Sign on the not-inductive program, check i > 0."
+
+[claims.flavors-not-inductive-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+]
+why = "Evaluation, flavors table: Interval on the not-inductive program, check i > 0."
+
+[claims.flavors-not-inductive-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+]
+why = "Evaluation, flavors table: Int on the not-inductive program, check i > 0."
+
+[claims.flavors-not-inductive-int-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+]
+why = "Evaluation, flavors table: Int with the order analysis on the not-inductive program, check i > 0."
+
+[claims.flavors-coffee-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+]
+why = "Evaluation, flavors table: Sign on the coffee program, check x != 0."
+
+[claims.flavors-coffee-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+]
+why = "Evaluation, flavors table: Interval on the coffee program, check x != 0."
+
+[claims.flavors-coffee-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+]
+why = "Evaluation, flavors table: Int on the coffee program, check x != 0."
+
+[claims.flavors-coffee-int-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/known-imprecision/02-coffee_absolute_value_bounded.vimp",
+]
+why = "Evaluation, flavors table: Int with the order analysis on the coffee program, check x != 0."
+
+[claims.flavors-fudge-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+]
+why = "Evaluation, flavors table: Sign on the fudge program, check i == 10."
+
+[claims.flavors-fudge-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+]
+why = "Evaluation, flavors table: Interval on the fudge program, check i == 10."
+
+[claims.flavors-fudge-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+]
+why = "Evaluation, flavors table: Int on the fudge program, check i == 10."
+
+[claims.flavors-fudge-int-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/precision/02-fudge_widening_narrowing.vimp",
+]
+why = "Evaluation, flavors table: Int with the order analysis on the fudge program, check i == 10."
+
+[claims.flavors-reset-bound-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+]
+why = "Evaluation, flavors table: Sign on the reset-bound program, check i <= 9 and i >= 0."
+
+[claims.flavors-reset-bound-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+]
+why = "Evaluation, flavors table: Interval on the reset-bound program, check i <= 9 and i >= 0."
+
+[claims.flavors-reset-bound-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+]
+why = "Evaluation, flavors table: Int on the reset-bound program, check i <= 9 and i >= 0."
+
+[claims.flavors-reset-bound-int-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp",
+]
+why = "Evaluation, flavors table: Int with the order analysis on the reset-bound program, check i <= 9 and i >= 0."
+
+[claims.flavors-skipped-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+]
+why = "Evaluation, flavors table: Sign on the skipped program, check i <= 9."
+
+[claims.flavors-skipped-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+]
+why = "Evaluation, flavors table: Interval on the skipped program, check i <= 9."
+
+[claims.flavors-skipped-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+]
+why = "Evaluation, flavors table: Int on the skipped program, check i <= 9."
+
+[claims.flavors-skipped-int-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/known-imprecision/03-blackcurrant_narrowing_foiled.vimp",
+]
+why = "Evaluation, flavors table: Int with the order analysis on the skipped program, check i <= 9."
+
+[claims.flavors-reset-eq-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+]
+why = "Evaluation, flavors table: Sign on the reset-eq program, check i <= 9."
+
+[claims.flavors-reset-eq-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+]
+why = "Evaluation, flavors table: Interval on the reset-eq program, check i <= 9."
+
+[claims.flavors-reset-eq-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+]
+why = "Evaluation, flavors table: Int on the reset-eq program, check i <= 9."
+
+[claims.flavors-reset-eq-int-order]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp",
+]
+why = "Evaluation, flavors table: Int with the order analysis on the reset-eq program, check i <= 9."
+
+[claims.flavors-not-inductive-int-never]
+argv = [
+  "--analysis",
+  "int",
+  "--int-refinement",
+  "never",
+  "tests/regression/28-flavors/precision/04-int_proves_not_inductive.vimp",
+]
+why = "Without refinement between Int's components, widening loses the lower bound, i = [-inf,4], and i > 0 is UNKNOWN."
+
+# Procedures adapted from Goblint's regression suite, Chapter 13 "Where precision ends":
+# every program under every context policy and update rule of the table.
+
+[claims.ctxcmp-ctxs3-none]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+]
+why = "Evaluation, procedure table: Int on ctxs3 with --context none."
+
+[claims.ctxcmp-ctxs3-none-bn]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+]
+why = "Evaluation, procedure table: Int on ctxs3 with --context none --globals bounded-narrowing."
+
+[claims.ctxcmp-ctxs3-cs1]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+]
+why = "Evaluation, procedure table: Int on ctxs3 with --context call-string --context-depth 1."
+
+[claims.ctxcmp-ctxs3-cs5]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "5",
+  "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+]
+why = "Evaluation, procedure table: Int on ctxs3 with --context call-string --context-depth 5."
+
+[claims.ctxcmp-ctxs3-es]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "entry-state",
+  "tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp",
+]
+why = "Evaluation, procedure table: Int on ctxs3 with --context entry-state."
+
+[claims.ctxcmp-chain5-none]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+]
+why = "Evaluation, procedure table: Int on chain5 with --context none."
+
+[claims.ctxcmp-chain5-none-bn]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+]
+why = "Evaluation, procedure table: Int on chain5 with --context none --globals bounded-narrowing."
+
+[claims.ctxcmp-chain5-cs1]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+]
+why = "Evaluation, procedure table: Int on chain5 with --context call-string --context-depth 1."
+
+[claims.ctxcmp-chain5-cs5]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "5",
+  "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+]
+why = "Evaluation, procedure table: Int on chain5 with --context call-string --context-depth 5."
+
+[claims.ctxcmp-chain5-es]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "entry-state",
+  "tests/regression/17-call-string/known-imprecision/03-depth5_collapsed_deep_chain.vimp",
+]
+why = "Evaluation, procedure table: Int on chain5 with --context entry-state."
+
+[claims.ctxcmp-chain3-none]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+]
+why = "Evaluation, procedure table: Int on chain3 with --context none."
+
+[claims.ctxcmp-chain3-none-bn]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+]
+why = "Evaluation, procedure table: Int on chain3 with --context none --globals bounded-narrowing."
+
+[claims.ctxcmp-chain3-cs1]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+]
+why = "Evaluation, procedure table: Int on chain3 with --context call-string --context-depth 1."
+
+[claims.ctxcmp-chain3-cs5]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "5",
+  "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+]
+why = "Evaluation, procedure table: Int on chain3 with --context call-string --context-depth 5."
+
+[claims.ctxcmp-chain3-es]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "entry-state",
+  "tests/regression/21-context-sensitivity/known-imprecision/02-context_insensitive_chain_disequality_guard.vimp",
+]
+why = "Evaluation, procedure table: Int on chain3 with --context entry-state."
+
+[claims.ctxcmp-circle-none]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+]
+why = "Evaluation, procedure table: Int on circle with --context none."
+
+[claims.ctxcmp-circle-none-bn]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+]
+why = "Evaluation, procedure table: Int on circle with --context none --globals bounded-narrowing."
+
+[claims.ctxcmp-circle-cs1]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+]
+why = "Evaluation, procedure table: Int on circle with --context call-string --context-depth 1."
+
+[claims.ctxcmp-circle-cs5]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "5",
+  "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+]
+why = "Evaluation, procedure table: Int on circle with --context call-string --context-depth 5."
+
+[claims.ctxcmp-circle-es]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "entry-state",
+  "tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp",
+]
+why = "Evaluation, procedure table: Int on circle with --context entry-state."
+
+[claims.ctxcmp-countdown-none]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+]
+why = "Evaluation, procedure table: Int on countdown with --context none."
+
+[claims.ctxcmp-countdown-none-bn]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+]
+why = "Evaluation, procedure table: Int on countdown with --context none --globals bounded-narrowing."
+
+[claims.ctxcmp-countdown-cs1]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+]
+why = "Evaluation, procedure table: Int on countdown with --context call-string --context-depth 1."
+
+[claims.ctxcmp-countdown-cs5]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "5",
+  "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+]
+why = "Evaluation, procedure table: Int on countdown with --context call-string --context-depth 5."
+
+[claims.ctxcmp-countdown-es]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "entry-state",
+  "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
+]
+why = "Evaluation, procedure table: Int on countdown with --context entry-state."

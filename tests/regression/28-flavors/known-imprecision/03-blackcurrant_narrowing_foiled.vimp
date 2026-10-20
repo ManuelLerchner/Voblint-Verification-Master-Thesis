@@ -1,0 +1,19 @@
+// PARAM: --analysis interval
+// Narrowing is foiled (Monniaux, ETAPS 2024, slide 60): the counter of
+// precision/03 is incremented only when a nondeterministic test holds. The path
+// that skips the increment carries the loop-head value back unchanged, so every
+// [0,c] with c >= 9 is a fixpoint, the widened [0,+inf] included, and narrowing
+// cannot shrink it. i <= 9 holds in every run.
+fun main() {
+  i = 0;
+  while (true) {
+    c = __voblint_nondet_int();
+    if (c) {
+      i = i + 1;
+      if (i >= 10) {
+        i = 0;
+      }
+    }
+    __voblint_check(i <= 9); // UNKNOWN
+  }
+}

@@ -1,0 +1,15 @@
+// PARAM: --analysis interval
+// Narrowing works (Monniaux, ETAPS 2024, slide 59): i counts up and resets at
+// 10. Widening sends the upper bound to +inf, and narrowing through i >= 10
+// brings it back to 9, so both checks see i = [0,9].
+fun main() {
+  i = 0;
+  while (true) {
+    i = i + 1;
+    if (i >= 10) {
+      i = 0;
+    }
+    __voblint_check(i <= 9); // PROVED
+    __voblint_check(i >= 0); // PROVED
+  }
+}

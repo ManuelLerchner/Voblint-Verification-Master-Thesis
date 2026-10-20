@@ -1,0 +1,9 @@
+tests/regression/28-flavors/known-imprecision/04-reset_at_equality.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------------------------------------------------------
+12:5      pp6    i <= 9     UNKNOWN  int: i=signs:≥0; intervals:[0,+∞]; parities:ℤ; congruences:ℤ

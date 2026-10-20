@@ -1,0 +1,21 @@
+tests/regression/21-context-sensitivity/precision/01-mutual_recursion_nonlinear_values.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition   Verdict  State
+--------  -----  ----------  -------  -----------------------------------------------------------------
+26:13     pp20   a == 2      PROVED   int: a=2
+27:13     pp22   b == 101    UNKNOWN  int: b=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+28:13     pp24   c == 265    UNKNOWN  int: c=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+29:14     pp26   d == 429    UNKNOWN  int: d=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+30:13     pp28   e == 1      PROVED   int: e=1
+31:13     pp30   h == 25     UNKNOWN  int: h=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+32:13     pp32   k == 101    UNKNOWN  int: k=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+33:13     pp34   l == 265    UNKNOWN  int: l=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+34:14     pp36   m == 233    UNKNOWN  int: m=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+35:3      pp37   m == 1817   UNKNOWN  int: m=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+36:14     pp39   n == 52756  UNKNOWN  int: n=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+37:14     pp41   o == 2940   UNKNOWN  int: o=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ
+38:14     pp43   p == 85361  UNKNOWN  int: p=signs:+; intervals:[2,+∞]; parities:ℤ; congruences:ℤ

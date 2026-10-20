@@ -1202,6 +1202,29 @@ adequacy section to the end of the program-model chapter, the relational state
 to the instances chapter (`sec:rel-state`), and gave procedures and calling
 contexts their own background section (`sec:interproc`).
 
+**Conclusion insights (2026-10-20, author decision).** "How the formalization
+was built" (`sec:building`) became "Lessons from the formalization"
+(`sec:lessons`): four lessons (an existing analyzer is a starting point but not
+a formal model; settle definitions and interfaces before proofs; modularity
+that separates reasons for correctness; executable examples and checks beside
+the proofs) and a closing strategy. The build chronology was cut, and the Int
+narrowing restriction stays in chapter 11.
+
+**Evaluation close (2026-10-20, author decision).** "Testing the unverified
+components" (`sec:eval-corpus`) moved to the end of the executable chapter,
+beside the trusted components it tests, and was shortened. The evaluation now
+ends on "Comparing precision with Goblint" (formerly "Where precision ends") gained a second benchmark of procedure
+programs adapted from Goblint's regression suite (`sec:flavors-procedures`).
+
+**Precision boundary (2026-10-20, author decision).** The evaluation gains
+"Where precision ends" (`sec:eval-flavors`) between the precision section and
+the tests. It reverses the 2026-10-08 cut of known imprecision for one reason:
+its programs come from an external suite (Monniaux, ETAPS 2024), pinned in
+`tests/regression/28-flavors`, not from cases picked after the fact. Voblint's
+verdicts come from claims, one per program and analysis setting. Goblint's come
+from `thesis/shared/code/goblint-flavors` (Goblint 6127869 built with Apron;
+Goblint is not in CI).
+
 **Evaluation cut (2026-10-08, author decision).** The evaluation chapter
 repeated earlier chapters, so it now runs: non-vacuity (`sec:nonvacuity`); "Do
 the obligations exclude real errors?" (`sec:eval-1161`), which absorbs the

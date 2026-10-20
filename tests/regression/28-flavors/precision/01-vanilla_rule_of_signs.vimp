@@ -1,0 +1,10 @@
+// PARAM: --analysis sign
+// Vanilla (Monniaux, "Flavors of abstract interpretation", ETAPS 2024, slide 8):
+// by the rule of signs the sum of two negative integers is negative. Over
+// VIMP's unbounded integers the rule is sound, so Sign proves z < 0 (z = -15).
+fun main() {
+  x = -5;
+  y = -10;
+  z = x + y;
+  __voblint_check(z < 0); // PROVED
+}

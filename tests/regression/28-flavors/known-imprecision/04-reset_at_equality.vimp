@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// Another example (Monniaux, ETAPS 2024, slide 77): the counter resets on
+// i == 10, so i stays in [0,9], but an equality test cuts no interval bound,
+// widening reaches +inf, and narrowing does not recover it.
+fun main() {
+  i = 0;
+  while (true) {
+    i = i + 1;
+    if (i == 10) {
+      i = 0;
+    }
+    __voblint_check(i <= 9); // UNKNOWN
+  }
+}

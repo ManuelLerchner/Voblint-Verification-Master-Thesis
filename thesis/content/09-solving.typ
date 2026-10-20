@@ -4,18 +4,9 @@
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
-#import "../lib/claims.typ": claim-ref, claim-snapshot, claim-text
+#import "../lib/claims.typ": claim-check, claim-ref, claim-snapshot, claim-text
+#import "../lib/figures.typ": verdict
 
-// A verdict or state of a registered CLI claim (shared/claims.toml), read from
-// the checked output rather than typed.
-#let _cli(name, cond, col) = {
-  let cells = read("/shared/generated/" + name + ".txt")
-    .split("\n")
-    .map(l => l.trim().split(regex("\s{2,}")))
-    .find(c => c.len() == 5 and c.at(2) == cond)
-  assert(cells != none, message: "claim " + name + " has no check " + cond)
-  raw(cells.at(col))
-}
 #let _b = $italic("bump")$
 
 = Solving the Equations <ch:solving>
@@ -123,8 +114,8 @@ entry. As global unknowns, they are merged by the update rule for globals
 (@sec:update-rules), which may widen an entry state even when no loop or
 recursion is involved. Without contexts, both calls of the running example
 publish to the one seed of `bump`, and warrowing widens it. The analyzer then
-reports #_cli("pg-contexts-none", "a == 6", 3) for `a == 6` with
-#_cli("pg-contexts-none", "a == 6", 4), whose lower bound $-infinity$ comes
+reports #verdict(claim-check("pg-contexts-none", "a == 6").at(3)) for `a == 6` with
+#absval(raw(claim-check("pg-contexts-none", "a == 6").at(4))), whose lower bound $-infinity$ comes
 from this widening.
 
 === Local and global values in one product #thy-badge("Voblint_Framework", "DG_State") <sec:global-unknowns>

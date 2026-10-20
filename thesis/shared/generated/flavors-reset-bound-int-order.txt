@@ -1,0 +1,10 @@
+tests/regression/28-flavors/precision/03-narrowing_recovers_reset.vimp [int,order]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----------------------------------------------------------------------------
+12:5      pp6    i <= 9     PROVED   int: i=signs:≥0; intervals:[0,9]; parities:ℤ; congruences:ℤ; order: ⊤
+13:5      pp7    i >= 0     PROVED   int: i=signs:≥0; intervals:[0,9]; parities:ℤ; congruences:ℤ; order: ⊤

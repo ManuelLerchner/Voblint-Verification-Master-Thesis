@@ -64,9 +64,9 @@ the text. The markers below appear throughout the text.
     [A coloured monospace word on a tinted background is a verdict as the
       analyzer reports it (@sec:verdict-meaning).],
     [#claim-ref("intro-answers")],
-    [An underlined blue name marks a registered analyzer run. Every verdict and
-      state quoted in the text is read from such a run, which the build
-      repeats, and the name opens it in the playground.],
+    [An underlined blue name marks a _claim_, a registered analyzer run. Every
+      verdict and state of Voblint quoted in the text is read from a claim,
+      which the build repeats, and the name opens the run in the playground.],
     [#fixture(
       "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
       label: "01-unbounded_…",

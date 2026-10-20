@@ -1,0 +1,9 @@
+tests/regression/28-flavors/precision/01-vanilla_rule_of_signs.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------------------
+9:3       pp3    z < 0      PROVED   interval: z=[-15,-15]

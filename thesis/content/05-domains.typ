@@ -8,18 +8,8 @@
 #import "../lib/theorems.typ": definition, lemma, theorem
 #import "../lib/theme.typ": vb
 #import "@preview/cetz:0.5.2"
-#import "../lib/claims.typ": claim-ref
+#import "../lib/claims.typ": claim-ref, claim-row
 
-// One row of a registered analyzer run (thesis/shared/claims.toml), found by
-// its source location, so a table cell cannot drift from what the CLI prints.
-#let claim-row(name, loc) = {
-  let rows = read("/shared/generated/" + name + ".txt")
-    .split("\n")
-    .map(l => l.trim().split(regex("\s{2,}")))
-  let row = rows.find(c => c.len() >= 4 and c.at(0) == loc)
-  assert(row != none, message: "no row " + loc + " in claim " + name)
-  (verdict: row.at(3), state: if row.len() > 4 { row.at(4) } else { "" })
-}
 
 = Abstract Domains <ch:domains>
 
@@ -790,7 +780,7 @@ $
 Negation keeps _unknown_. The connectives `!`, `&&`, and `||` combine the answers
 of their operands in three-valued logic. A definite _false_ decides `&&`, and a
 definite _true_ decides `||`, regardless of the other operand's answer. Both
-operands are evaluated in the same state, so for $x$ in $ivl(1, 2)$,
+operands are evaluated in the same state, so for $x$ in $absval(ivl(1, 2))$,
 `x == 1 || x == 2` stays unknown, although every store satisfies it (claim
 #claim-ref("dom-disjunction-one-state")). Goblint is more precise here. CIL
 compiles `&&` and `||` into branches

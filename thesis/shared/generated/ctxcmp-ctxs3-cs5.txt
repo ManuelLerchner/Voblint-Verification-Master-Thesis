@@ -1,0 +1,9 @@
+tests/regression/16-composite-domain/precision/03-3ctxs_parity_bounds_entry_state.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------------------------------------------------------
+25:3      pp6    i == 10    UNKNOWN  int: i=signs:+; intervals:[10,+∞]; parities:2ℤ; congruences:2ℤ
