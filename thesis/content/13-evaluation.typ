@@ -766,12 +766,12 @@ however, was not a goal of this thesis. Apart from the defect fixed in @sec:code
 generated code runs as Isabelle emits it. The measurements below therefore ask only
 whether this unoptimized code runs in acceptable time on the regression corpus.
 
-We analyzed each of the #prof-int("fixtures") regression fixtures under each of the
-#prof-int("configurations") combinations of domain and context policy on an
-#prof-value("meta.cpu") and timed the solve alone. Each time is #prof-runs(), measured at
-commit #raw(prof-value("meta.commit")). The #link(site("profiling.html"))[profiling page] shows
-every measurement, how it was taken, and an interactive CPU profile, and @sec:codegen
-gives the cost of the browser build.
+The measurements cover the #prof-int("fixtures") fixtures of the regression corpus
+(@sec:eval-corpus), each under the
+#prof-int("configurations") combinations of domain and context policy. They time the
+solve alone on an #prof-value("meta.cpu"), and each time is #prof-runs() at commit
+#raw(prof-value("meta.commit")). The #link(site("profiling.html"))[profiling page] shows
+every measurement, how it was taken, and an interactive CPU profile.
 
 Most runs are short. The median run solves in #prof-ms("solve_median_ms"), and 95% of the
 runs finish within #prof-ms("solve_p95_ms"). The slowest 5%, however, take
