@@ -29,13 +29,16 @@ theories that every Isabelle name in this thesis links to.
 
 The vendored TD solver of Tilscher et al. @tilscher26 carries four changes made
 for this thesis, each proposed upstream and none changing the algorithm. They
-restore the build under Isabelle2025-2 @td15, remove the stabilization
+restore the build under Isabelle2025-2
+(#link("https://github.com/stilscher/td-verification/pull/15")[PR 15]), remove the stabilization
 assumptions from the classes #isalocale("widening") and
-#isalocale("narrowing"), which only termination proofs use @td13
-(@sec:domain-carrier-laws), rename short field and constructor names that
-clashed with downstream theories @td14, and add facts about the solver's
+#isalocale("narrowing"), which only termination proofs use
+(#link("https://github.com/stilscher/td-verification/pull/13")[PR 13], @sec:domain-carrier-laws), rename short field and constructor names that
+clashed with downstream theories
+(#link("https://github.com/stilscher/td-verification/pull/14")[PR 14]), and add facts about the solver's
 definitions, such as #isathm("solve_dom_of_solve_c"), that
-#isathm("td_certified_solver") uses @td16 (@sec:certificate). At the time of
+#isathm("td_certified_solver") uses
+(#link("https://github.com/stilscher/td-verification/pull/16")[PR 16], @sec:certificate). At the time of
 writing, all four pull requests await review. The solver's repository is
 private, so the development cannot yet be built from public sources alone,
 and there are plans to publish the solver in the Archive of Formal Proofs.
@@ -212,14 +215,16 @@ links to the rendered theories can also fall out of date without affecting the
 build. In a development of #stat("isabelle.theories") theories, such problems
 accumulate.
 
-#link("https://github.com/ManuelLerchner/isar-tools")[`isar-tools`]
-@isartools, written for this thesis and published separately, addresses them.
+#link("https://github.com/ManuelLerchner/isar-tools")[`isar-tools`],
+written for this thesis and published separately, addresses them.
 The command-line tool reads theory and `ROOT` files the way Isabelle's build
 finds them and never runs Isabelle itself, so it answers in seconds, fits a
 pre-commit hook, and also works on theories that do not yet build. Related
-tools cover parts of this ground. The Isabelle Linter checks proof style inside
-Isabelle @isabellelinter, and `isabelle-query` answers source-level queries
-about declarations, dependencies, and unfinished proofs @isabellequery.
+tools cover parts of this ground. The
+#link("https://github.com/isabelle-prover/isabelle-linter")[Isabelle Linter]
+checks proof style inside Isabelle, and
+#link("https://github.com/ott2/isabelle-query")[`isabelle-query`] answers
+source-level queries about declarations, dependencies, and unfinished proofs.
 
 The tool has three parts. `isar fmt` changes only layout. `isar check` offers
 about fifty checks in groups. Checks for unfinished proofs and unreached
