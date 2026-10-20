@@ -18,7 +18,7 @@ and much of the surrounding code (#link(<ai-use>)[statement on the use of
 therefore counts as done only when deterministic checks pass, so the checks,
 not the agent, decide whether the repository is consistent.
 
-== The repository
+== Repository contents and the vendored solver
 
 One repository holds everything this thesis describes: the Isabelle theories,
 a submodule reference to the vendored TD solver, the exported analyzer with its
