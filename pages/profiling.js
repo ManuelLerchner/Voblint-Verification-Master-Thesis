@@ -517,6 +517,8 @@ function depth(data) {
   );
 }
 
+/* Evaluations are exact counts, so every traced size from here counts in their fit. */
+const EVALS_FROM_N = 20;
 /* A gap between the time and evaluation exponents this large marks data-structure cost. */
 const SCALING_GAP = 0.5;
 
@@ -528,7 +530,7 @@ function scalingFits(data) {
       const big = ok.filter((r) => r.n >= 100);
       const kTime = slope(big, "n", "native_ms");
       const kEvals = slope(
-        big.filter((r) => r.evals),
+        ok.filter((r) => r.evals && r.n >= EVALS_FROM_N),
         "n",
         "evals",
       );
@@ -617,18 +619,29 @@ function scaling(data) {
     .sort((a, b) => b.gap - a.gap);
   const fine = fits.filter((f) => f.gap != null && f.gap < SCALING_GAP);
   const stopped = fits.filter((f) => f.stopped);
+  const range = (fs, key) => {
+    const [lo, hi] = d3.extent(fs, (f) => f[key]);
+    return lo.toFixed(1) === hi.toFixed(1)
+      ? `n<sup>${lo.toFixed(1)}</sup>`
+      : `n<sup>${lo.toFixed(1)}</sup> to n<sup>${hi.toFixed(1)}</sup>`;
+  };
+  const measured = fits.filter((f) => f.gap != null);
   reading("reading-scaling", [
-    broken.length
-      ? `Solve time outgrows the solver's evaluations for ${listing(broken.map((f) => `<strong>${f.what}</strong> (time n<sup>${f.kTime.toFixed(1)}</sup>, evaluations n<sup>${f.kEvals.toFixed(1)}</sup>)`))}: along ${broken.length === 1 ? "this dimension" : "these dimensions"}, each evaluation gets more expensive as the program grows, so a list the solver consults grows with it.`
-      : "No family's solve time outgrows its evaluations by a full power, so none of these dimensions alone drives a list the solver scans per evaluation.",
+    broken.length && broken.length === measured.length
+      ? `In all ${broken.length} families, solve time grows as <strong>${range(broken, "kTime")}</strong> while the solver's evaluations grow only as ${range(broken, "kEvals")}. Each evaluation therefore gets more expensive as the program grows along every size measured, from variables and straight-line statements to call chains and recursion depth. That fits lists each evaluation scans, and the cost is not specific to contexts.`
+      : broken.length
+        ? `Solve time outgrows the solver's evaluations for ${listing(broken.map((f) => `<strong>${f.what}</strong> (time n<sup>${f.kTime.toFixed(1)}</sup>, evaluations n<sup>${f.kEvals.toFixed(1)}</sup>)`))}: along ${broken.length === 1 ? "this dimension" : "these dimensions"}, each evaluation gets more expensive as the program grows, so a list the solver consults grows with it.`
+        : "No family's solve time outgrows its evaluations by a full power, so none of these dimensions alone drives a list the solver scans per evaluation.",
     fine.length
       ? `For ${listing(fine.map((f) => f.what))}, time and work grow at about the same rate, so the generated code's per-evaluation cost stays flat there.`
       : null,
-    stopped.length
-      ? `${listing(stopped.map((f) => `${f.what} passed the time limit at n&nbsp;=&nbsp;${f.stopped.n}`))}.`
-      : null,
+    stopped.length === fits.length
+      ? `Every family stops at the ${data.meta.timeout_s}&nbsp;s limit, ${listing(stopped.map((f) => `${f.family} at n&nbsp;=&nbsp;${f.stopped.n}`))}.`
+      : stopped.length
+        ? `${listing(stopped.map((f) => `${f.what} passed the time limit at n&nbsp;=&nbsp;${f.stopped.n}`))}.`
+        : null,
     broken.length
-      ? `The CPU profile of <code>${broken[0].family}</code> below shows which functions that time goes to.`
+      ? `The CPU profile of the family with the widest gap is among the profiles below.`
       : null,
   ]);
 }

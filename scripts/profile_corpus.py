@@ -464,23 +464,27 @@ def loglog_slope(points):
 
 
 def scaling_target(rows):
-    """The family whose solve time outgrows its evaluations most, at its largest finished n."""
+    """The family whose solve time outgrows its evaluations most, at its largest finished n.
+
+    Times are fitted from n = 100, where start-up no longer dominates; evaluations are
+    exact counts and fitted from every traced size from n = 20, since tracing passes the
+    time limit at smaller n than timing does."""
     best = None
     for family, (_, program, domain, context) in SCALING.items():
-        big = [
+        timed = [
             r
             for r in rows
-            if r["family"] == family
-            and r.get("native_ms")
-            and r.get("evals")
-            and r["n"] >= 100
+            if r["family"] == family and r.get("native_ms") and r["n"] >= 100
         ]
-        if len(big) < 3:
+        traced = [
+            r for r in rows if r["family"] == family and r.get("evals") and r["n"] >= 20
+        ]
+        if len(timed) < 3 or len(traced) < 3:
             continue
-        gap = loglog_slope([(r["n"], r["native_ms"]) for r in big]) - loglog_slope(
-            [(r["n"], r["evals"]) for r in big]
+        gap = loglog_slope([(r["n"], r["native_ms"]) for r in timed]) - loglog_slope(
+            [(r["n"], r["evals"]) for r in traced]
         )
-        top = max(big, key=lambda r: r["n"])
+        top = max(timed, key=lambda r: r["n"])
         if best is None or gap > best[0]:
             best = (
                 gap,
