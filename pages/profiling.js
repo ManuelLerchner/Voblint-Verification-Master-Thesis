@@ -952,7 +952,7 @@ function method(meta) {
 }
 
 async function load(entry) {
-  const data = await fetch(entry.file).then((r) => r.json());
+  const data = await fetchJson(entry.file);
   /* Parse-error and ill-formed fixtures test the frontend; they have nothing to profile. */
   data.runs = data.runs.filter((r) => ["ok", "rejected", "timeout"].includes(r.status));
   data.browser ??= [];
@@ -1030,8 +1030,46 @@ async function load(entry) {
   };
 }
 
-const index = await fetch("data/profiling/index.json").then((r) => r.json());
-const select = $("snapshot-select");
-select.replaceChildren(...index.snapshots.map((s, i) => new Option(s.label, String(i))));
-select.addEventListener("change", () => load(index.snapshots[Number(select.value)]));
-await load(index.snapshots[0]);
+/* A missing or unreadable snapshot says so in place of the numbers, never as a blank page. */
+function showUnavailable(message) {
+  $("snapshot-bar").hidden = true;
+  const note = document.createElement("p");
+  note.className = "reading";
+  note.textContent = message;
+  $("kpis").replaceChildren(note);
+  for (const section of document.querySelectorAll("main.profiling > section.section")) {
+    section.hidden = true;
+  }
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+  return response.json();
+}
+
+async function loadSafely(entry) {
+  try {
+    await load(entry);
+  } catch (error) {
+    console.error(error);
+    showUnavailable(`The snapshot “${entry.label}” could not be read: ${error.message}`);
+  }
+}
+
+let index = null;
+try {
+  index = await fetchJson("data/profiling/index.json");
+} catch (error) {
+  console.error(error);
+}
+if (!index?.snapshots?.length) {
+  showUnavailable(
+    "No profiling snapshot has been recorded yet. Run `pixi run profile` to measure one; it lands in pages/data/profiling/.",
+  );
+} else {
+  const select = $("snapshot-select");
+  select.replaceChildren(...index.snapshots.map((s, i) => new Option(s.label, String(i))));
+  select.addEventListener("change", () => loadSafely(index.snapshots[Number(select.value)]));
+  await loadSafely(index.snapshots[0]);
+}
