@@ -88,7 +88,7 @@ intersection of the concretizations when the components are pairwise framed
 (`mcp_independent`). `dg_spec_of_contract` turns a sound component into an
 `analysis_contract`. `lens_of` runs a component on one field of the combined
 record; `analysis_product` (`Local_Spec_Product.thy`) is the componentwise
-ordered pair the generated carrier nests.
+ordered pair the carrier nests.
 
 ## Components and wrappers
 

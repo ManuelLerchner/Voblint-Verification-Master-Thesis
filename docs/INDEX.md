@@ -27,8 +27,6 @@ These documents describe the supported architecture and its verification.
   — what is proved, what is generated, and what is handwritten.
 - [Activation trace semantics](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) —
   why `valid_activation_trace` is the concrete foundation and how contexts project from it.
-- [Analysis registration generation](ANALYSIS_ASSEMBLY_GENERATION.md) — the
-  `manifests/analyses.yaml` registry and what it generates.
 - [HTML result viewer](HTML_REPORT.md) — `voblint --html` output and
   `pixi run html-report-serve`.
 

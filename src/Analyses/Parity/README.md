@@ -27,12 +27,9 @@ Parity_Domain      arithmetic, comparisons, and the expression evaluator
   -> Parity_Sound                       what the initial abstract state describes
   -> Parity_Numeric_Queries             numeric queries used by check discharge
   -> Parity_Classify                    classification of one check condition
-  -> generated/Parity_Analyses          the unit, entry-state and call-string
+  -> Parity_Analyses                    the unit, entry-state and call-string
                                         registrations, each at any global update rule
 ```
-
-`generated/Parity_Analyses` is written by `scripts/gen_analysis_assembly.py`
-from `manifests/analyses.yaml`.
 
 `Parity_Analyses` holds one `global_interpretation`, `parity_rule`, with the
 global update rule `r` as a parameter: `dg_analysis_exec`
@@ -68,11 +65,7 @@ singleton, so it can never prove a positive equality.
 
 ## Parity in the entry-state and call-string runs
 
-`generated/Parity_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
-so the orientation a reader needs lives here rather than in a header the
-generator owns.
-
-Parity's own generated file registers only the context-insensitive run,
+Parity's own registration file registers only the context-insensitive run,
 `parity_rule`. The entry-state and call-string runs are the CLI's combined
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Parity is one of

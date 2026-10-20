@@ -12,8 +12,6 @@ session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
     "Voblint_Exec"
     "HOL-Computational_Algebra"
     "TD"
-  directories
-    "generated"
   theories
     Congruence_Warrowing
     Congruence_Arithmetic

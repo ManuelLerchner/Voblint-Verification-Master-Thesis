@@ -42,15 +42,15 @@ imply `DEAD res v`, and `UNKNOWN` does not imply `ℛ⇘res⇙ v ≠ ∅`.
 - `analysis_result`, `config_terminates` and `analysis_result_covers` each repeat the
   same three-way split over the context policy (`mcp_rule`, `mcp_es_rule`,
   `mcp_cs_rule`).
-- The generated carrier spreads one analysis over parallel functions
+- The carrier spreads one analysis over parallel functions
   (`local_spec_of`, `part_gamma`, `part_empty`, `val_answer`, `field_of`, …), each
   with its own split over `analysis_domain`.
 
 ## Target architecture
 
 ```text
-manifests/analyses.yaml
-      │  generator
+MCP_Carrier.thy
+      │
       ▼
 registration_of :: analysis_domain ⇒ registration       (one split over analyses)
       │
@@ -89,7 +89,7 @@ report theorems, and nothing above the report reads them.
 | `Framework/Result/Analysis_Result` (renamed `Solved_Table`) | `solved_table`, coverage metadata, `lookup_table` |
 | `Analyses/Shared/Result/DG_Analysis` | `solved_run`, `solved_run_of`, `run`, `solve_c_run` |
 | `Solver/Solver_Trace` | `solve_c_traced` |
-| `CLI/generated/MCP_Carrier` | `registration_of` and its accessors |
+| `CLI/MCP_Carrier` | `registration_of` and its accessors |
 | `CLI/Analysis_Run` | `analysis_config`, `analysis_report`, the one policy dispatch, `run_voblint` |
 | `CLI/Analysis_Render` (new) | `run_result` (rendered), `render_report` |
 | `CLI/Analysis_Report` (new) | `ℛ⇘res⇙ v`, `𝒱`, CAPS queries, the three facts |

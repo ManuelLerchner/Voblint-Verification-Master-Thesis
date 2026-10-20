@@ -201,9 +201,8 @@ cover:
 ## One dispatcher
 
 `analysis_report_of` is the one function that reads the context policy.
-`scripts/gen_analysis_assembly.py` emits one combined state from
-`manifests/analyses.yaml` (`generated/MCP_Carrier.thy`): a nested product with one
-lifted field per listed analysis. `MCP_Analyses.thy` registers this state once per
+`MCP_Carrier.thy` defines one combined state: a nested product with one lifted
+field per registered analysis. `MCP_Analyses.thy` registers this state once per
 context policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for
 `as k r`. Each branch solves its registration's equations with `solve_c` and builds
 the report from the `solved_run` that answer gives (`DG_Analysis.thy`). The
@@ -226,7 +225,7 @@ instance on the abstraction order. The abstraction order and the listing order a
 unrelated structures; `order_key` exists only to enumerate finite context sets
 deterministically. `Dispatch_Carrier.thy` supplies `order_key`
 (`Key_Int | Key_Node | Key_List`) with a derived `linorder`, and every abstract value
-has an injective key (`inj_abstract_value_key`). `report_of` lists contexts with
+has an injective key (`abstract_value_key_inject`). `report_of` lists contexts with
 `ordered_by_key`: unit contexts by `Key_List []`, call strings by
 `Key_List (map Key_Node ...)`, entry-state contexts by `entry_ctx_key`, whose first
 component is the active analyses' formal values (the display order) and whose

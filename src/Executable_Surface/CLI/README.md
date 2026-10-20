@@ -12,7 +12,7 @@ A domain's own context-free registration is not one of those things. Its
 solve, result table and report over an arbitrary `imp_prog`, paired with its
 soundness endpoints, depend on that domain and on the shared `Voblint_Result`
 locales, never on a sibling, so it lives in that domain's own analysis session
-(`sign_rule` in the generated `Sign_Analyses` of `Voblint_Analysis_Sign`, and
+(`sign_rule` in `Sign_Analyses` of `Voblint_Analysis_Sign`, and
 so on). What does need all five is the combined run: `MCP_Analyses.thy` runs
 every active analysis as a field of one state and proves the combination
 sound for any distinct, nonempty activation, citing each active domain's own
@@ -39,11 +39,11 @@ part that really does see all five.
 
 | File | What |
 | --- | --- |
-| `Analysis_Config.thy` | `context_mode`, the context-policy selection datatype; `globals_rule` comes from `Voblint_Solver.Globals_Rule`. The analyses a caller may activate are named in the generated `analysis_domain` (below), a plain `analysis_domain list`. |
-| `Dispatch_Carrier.thy` | each domain's injective ordering key for listing contexts, and how a field's state is shown; the value union itself is generated into `MCP_Carrier.thy` |
+| `Analysis_Config.thy` | `context_mode`, the context-policy selection datatype; `globals_rule` comes from `Voblint_Solver.Globals_Rule`. The analyses a caller may activate are named in `analysis_domain` (below), a plain `analysis_domain list`. |
+| `Dispatch_Carrier.thy` | each domain's injective ordering key for listing contexts, and how a field's state is shown; the value union itself is in `MCP_Carrier.thy` |
 | `Arithmetic_Diagnostics.thy` | arithmetic occurrences, extraction completeness, nonzero-divisor obligations, and structured diagnostics |
-| `generated/MCP_Carrier.thy` | generated from `manifests/analyses.yaml`: `analysis_domain`, one field per registered analysis in the combined state, and each analysis's own component, publication map, query and entry-state cases; proves nothing beyond citing each analysis's own registration |
-| `MCP_Field.thy` | the two lemmas that turn one analysis's soundness on its own field of the combined state into soundness of that field, and show it leaves every other field alone -- stated once for any field, so the generated carrier only cites them |
+| `MCP_Carrier.thy` | `analysis_domain`, one field per registered analysis in the combined state, and each analysis's own component, publication map, query and entry-state cases; proves nothing beyond citing each analysis's own registration |
+| `MCP_Field.thy` | the two lemmas that turn one analysis's soundness on its own field of the combined state into soundness of that field, and show it leaves every other field alone -- stated once for any field, so the carrier only cites them |
 | `MCP_Analyses.thy` | runs the active fields as one component, proves the combination sound for any distinct, nonempty activation, and registers it at every context policy: `mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` |
 | `MCP_Split.thy` | the carrier laws that let the combined state split by global name, field by field (`ownership_split`), and the flow-insensitive registrations at every context policy: `mcp_split_rule`, `mcp_split_es_rule`, `mcp_split_cs_rule`, all from `mcp_keyed_dg_analysis` |
 | `Analysis_Run.thy` | `analysis_config`, the semantic `analysis_report`, its builder `report_of`, `analysis_report_of` (the one function that reads the context policy, solving with the executable `solve_c`), and `run_voblint`: one configuration, run once, answering `Invalid_Activation`, `Malformed_Program`, `No_Answer`, or one report. The constant `export_code` exports. |
@@ -108,7 +108,7 @@ the shared layer forbids ("nothing here may mention a concrete domain"). That la
 of every domain session, so keeping it there put a datatype naming `Sign_Analysis`
 inside a session `Voblint_Analysis_Sign` inherits from: not a cycle, but upside down.
 
-Nothing under `src/Analyses/` depends on it. Within this session, the generated
+Nothing under `src/Analyses/` depends on it. Within this session,
 `MCP_Carrier` and `MCP_Analyses` case over it field by field to build and run the
 combined state; `globals_rule` names no domain, so it lives with the solver in
 `Voblint_Solver`.

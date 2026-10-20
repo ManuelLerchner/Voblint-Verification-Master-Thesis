@@ -514,12 +514,14 @@ relational Order analysis writes its `local_spec` by hand
 transfer functions from certified value operations follows Nipkow's Isabelle
 abstract interpreter (see [Foundations](#foundations)).
 
-The registrations and the combined analyzer state are generated from
-[`manifests/analyses.yaml`](manifests/analyses.yaml) by
-`pixi run assembly-generate`. A new numeric domain needs its lattice with
-widening and narrowing, its concretization, the certified operation record, a
-lemma that the initial state covers the initial stores, and a manifest entry.
-The CLI's analysis names are still added by hand. No step needs source-level
+Each domain registers itself in a few lines per context policy, by interpreting
+the locales of
+[`Nonrel_Registration`](src/Analyses/Shared/Nonrelational/Nonrel_Registration.thy).
+A new numeric domain needs its lattice with widening and narrowing, its
+concretization, the certified operation record, a lemma that the initial state
+covers the initial stores, these registrations, and a field in the combined state
+([`MCP_Carrier`](src/Executable_Surface/CLI/MCP_Carrier.thy)). The CLI's analysis
+names are added by hand as well. No step needs source-level
 reasoning.
 
 ## Building

@@ -642,12 +642,6 @@ jobs:
       - name: Site links' theory anchors match the theory sources
         run: pixi run theory-anchors-check
 
-      - name: Generated analysis assembly drift
-        run: pixi run assembly-check
-
-      - name: Analysis registry support policy
-        run: pixi run analysis-registry-check
-
       - name: Generated OCaml public API
         run: pixi run codegen-api-check
 

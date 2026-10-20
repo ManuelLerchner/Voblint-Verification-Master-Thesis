@@ -57,13 +57,6 @@ pre-commit:
               - "cli/frontend/vimp_printer.ml"
             run: pixi run grammar-printer-check
 
-          - name: analysis-assembly-drift
-            glob:
-              - "manifests/analyses.yaml"
-              - "scripts/gen_analysis_assembly.py"
-              - "src/Analyses/**/*.thy"
-            run: pixi run assembly-check
-
     # ----------------------------------------------------------------------
     # Formatters
     #
@@ -261,16 +254,6 @@ pre-commit:
               - "scripts/gen_vimp_isabelle.py"
               - "tests/test_gen_isabelle_id_position.py"
             run: pixi run grammar-id-position-check
-
-          # The manifest controls supported analysis configurations; make sure
-          # the handwritten support policy still agrees with it.
-          - name: analysis-registry
-            glob:
-              - "manifests/analyses.yaml"
-              - "tests/test_analysis_registry.py"
-              - "src/Analyses/**/*.thy"
-              - "cli/**/*.ml"
-            run: pixi run analysis-registry-check
 
           # Site pages: every internal link and same-page anchor resolves to a
           # source file. Needs no site build; theory anchors only warn, as the

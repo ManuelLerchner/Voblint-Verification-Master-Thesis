@@ -32,9 +32,9 @@ Int_Refinement_Control  the three refine modes
                                                      their commutation, at every mode
   -> Int_Classify                                    check discharge
   -> Int_Sound                                       initial-state facts
-  -> generated/Int_Fixpoint_Analyses                 the unit-context registrations at
-     generated/Int_Once_Analyses                     Refine_Fixpoint, Refine_Once and
-     generated/Int_Never_Analyses                    Refine_Never (generated; see below)
+  -> Int_Fixpoint_Analyses                           the unit-context registrations at
+     Int_Once_Analyses                               Refine_Fixpoint, Refine_Once and
+     Int_Never_Analyses                              Refine_Never (see below)
 ```
 
 Like Interval, Int has a component with infinite ascending chains, so the global
@@ -103,11 +103,7 @@ choice) would break the solver's `narrow_ge` bracket.
 
 ## Int in the entry-state and call-string runs
 
-`generated/Int_Fixpoint_Analyses.thy` and its two siblings are machine-written from `manifests/analyses.yaml`,
-so the orientation a reader needs lives here rather than in a header the
-generator owns.
-
-Int's own generated file registers only the context-insensitive run,
+Int's own registration files register only the context-insensitive run,
 `int_fixpoint_rule`. The entry-state and call-string runs are the CLI's combined
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Int is one of those
@@ -123,11 +119,9 @@ that includes it.
 `mode` is Int's refinement axis. Every obligation asked of Int's field is
 discharged by one of Int's own mode-generic facts — `int_tf.is_sound_nonrelational_transfer`,
 `int_tf.tf_st_for_commute`, `int_tf.enter_st_for_commute`, `int_cinit_gamma`, the
-two classifier laws — so each would hold at an arbitrary `refine_mode`. The
-manifest registers one analysis per mode by naming the bundle at that mode
-(`ops: {const: int_dom_ops, args: [Refine_Fixpoint]}`, and likewise at
-`Refine_Once` and `Refine_Never`) and the mode-taking abstract operations as applied
-roles, because each field needs one concrete choice;
+two classifier laws — so each would hold at an arbitrary `refine_mode`. Each
+registration fixes one mode (`int_dom_ops Refine_Fixpoint`, and likewise at
+`Refine_Once` and `Refine_Never`), because each field needs one concrete choice;
 the facts it cites are the same at every mode.
 
 The global update rule is the second axis. `int_fixpoint_rule` leaves it free as `r`,

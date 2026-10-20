@@ -114,13 +114,13 @@ classification (`Numeric_Queries.thy`).
 
 ## Per-domain configuration duplication (done)
 
-No domain writes its configuration out by hand.
-`manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
-generates each domain's `<Domain>_Analyses` theory: rule-parametric
-registrations of `dg_analysis_exec` (`Voblint_Result`), one per context
-policy the domain lists. The equation system, solve, reader, result table, report and
-soundness endpoints come from those locales, and the generated theory only names
-a domain's own facts.
+No domain writes its configuration out at length. Each domain's
+`<Domain>_Analyses` theory interprets the locales of `Nonrel_Registration`, one
+rule-parametric registration per context policy the domain uses, in a few lines
+each. The equation system, solve, reader, result table, report and soundness
+endpoints come from those locales, and the theory only names a domain's own
+facts. The earlier generator for these theories (`manifests/analyses.yaml`) was
+removed once the registrations had shrunk to this size.
 
 ## Deferred from the Framework and Analysis restructure
 
