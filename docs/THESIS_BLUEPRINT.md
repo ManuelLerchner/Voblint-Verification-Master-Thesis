@@ -1202,6 +1202,14 @@ adequacy section to the end of the program-model chapter, the relational state
 to the instances chapter (`sec:rel-state`), and gave procedures and calling
 contexts their own background section (`sec:interproc`).
 
+**Conclusion insights (2026-10-20, author decision).** "How the formalization
+was built" (`sec:building`) became "Lessons from the formalization"
+(`sec:lessons`): four lessons (an existing analyzer is a starting point but not
+a formal model; settle definitions and interfaces before proofs; modularity
+that separates reasons for correctness; executable examples and checks beside
+the proofs) and a closing strategy. The build chronology was cut, and the Int
+narrowing restriction stays in chapter 11.
+
 **Evaluation close (2026-10-20, author decision).** "Testing the unverified
 components" (`sec:eval-corpus`) moved to the end of the executable chapter,
 beside the trusted components it tests, and was shortened. The evaluation now
