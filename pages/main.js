@@ -326,10 +326,10 @@ const rawViews = Object.fromEntries(
   ]),
 );
 
-/* A cancelled run's output is the absence of an answer, not a JSON value. */
+/* A stopped run's output is the absence of an answer, not a JSON value. */
 function rawText(part) {
-  return rawRunProgram.cancelled && part === "output"
-    ? "Cancelled: the run was stopped before run_voblint returned."
+  return rawRunProgram.stopped && part === "output"
+    ? rawRunProgram.stopped.output
     : formatJson(rawRunProgram[part] ?? null);
 }
 
@@ -433,8 +433,8 @@ function renderRawCall(raw) {
   /* Before any run the title asks for one. */
   let result = [callPart("?", "arg"), callPart("  run the analysis to see the answer", "observed")];
 
-  if (raw?.cancelled) {
-    result = [callPart("cancelled", "observed")];
+  if (raw?.stopped) {
+    result = [callPart(raw.stopped.label, "observed")];
   } else if (input && typeof output === "string") {
     result = [callPart(output, "ctor")];
   } else if (input) {
@@ -533,6 +533,19 @@ function workerError(message) {
   }
 
   return error;
+}
+
+/* Chrome and Safari report a stack overflow as a RangeError, Firefox as "too much recursion". */
+function isStackOverflow(error) {
+  return /maximum call stack|too much recursion/i.test(error?.message ?? "");
+}
+
+function analyzerFailureHint(error) {
+  return isStackOverflow(error)
+    ? "The solver recursed deeper than the browser's stack allows. The solver nests one " +
+        "query per context it discovers, so deep recursion under context sensitivity can " +
+        "exhaust it: try context None, or run the CLI, which has a larger stack."
+    : null;
 }
 
 /*
@@ -2043,23 +2056,44 @@ function offerSolverTrace(run) {
     run === null
       ? null
       : trace
-        ? `trace: ${countLines(trace).toLocaleString("en")} lines, recorded by trace_event during this run${run.cancelled ? " until it was cancelled" : ""}`
+        ? `trace: ${countLines(trace).toLocaleString("en")} lines, recorded by trace_event during this run${run.stopped?.summary ?? ""}`
         : "trace: not produced",
   );
 }
 
+/* How a run that never answered ended, as the raw call panel and the trace pane word it. */
+const CANCELLED = {
+  label: "cancelled",
+  output: "Cancelled: the run was stopped before run_voblint returned.",
+  summary: " until it was cancelled",
+  marker: "Cancelled here: the run was stopped.",
+};
+
+function failedStop(message) {
+  return {
+    label: "failed",
+    output: `Failed before run_voblint returned: ${message}`,
+    summary: " until it failed",
+    marker: `Failed here: ${message}`,
+  };
+}
+
+function hasTrace(live) {
+  return live !== null && (live.chunks.length > 0 || live.input !== null);
+}
+
 /*
- * A cancelled run has no answer. The panel shows what reached the page before its
- * worker was terminated: the call's input, posted before the solve, and the trace.
+ * A cancelled or failed run has no answer. The panel shows what reached the page
+ * before it ended: the call's input, posted before the solve, and the trace.
  */
-function showCancelledTrace(live) {
-  showRawRunProgram({ input: live.input, output: null, cancelled: true });
+function showStoppedTrace(live, stopped) {
+  showRawRunProgram({ input: live.input, output: null, stopped });
   rawResultEmpty.hidden = true;
   rawResultPanes.hidden = false;
   offerSolverTrace({
     ...live,
-    trace: `${live.chunks.join("")}\nCancelled here: the run was stopped.\n`,
-    cancelled: true,
+    trace: `${live.chunks.join("")}\n${stopped.marker}\n`,
+    stopped,
   });
 }
 
@@ -4352,9 +4386,9 @@ function cancelRun() {
   retireActiveRun("Analysis cancelled.");
   clearResults();
 
-  if (live && (live.chunks.length > 0 || live.input)) {
+  if (hasTrace(live)) {
     showStatus("Analysis cancelled \u00b7 its trace so far is under run_voblint: call and answer");
-    showCancelledTrace(live);
+    showStoppedTrace(live, CANCELLED);
   } else {
     showStatus("Analysis cancelled \u00b7 run again when ready");
   }
@@ -4630,8 +4664,27 @@ async function run() {
       clearGraph();
 
       const message = error instanceof Error ? error.message : String(error);
-      showStatus("Browser analysis failed", "error");
-      showProblem({ title: "The analyzer stopped", message });
+      const live = liveTrace;
+      liveTrace = null;
+      const traced = hasTrace(live);
+
+      showStatus(
+        traced
+          ? "Browser analysis failed · its trace so far is under run_voblint: call and answer"
+          : "Browser analysis failed",
+        "error",
+      );
+      showProblem({
+        title: "The analyzer stopped",
+        message,
+        note: [analyzerFailureHint(error), "The browser console has the full error and its stack."]
+          .filter(Boolean)
+          .join(" "),
+      });
+
+      if (traced) {
+        showStoppedTrace(live, failedStop(message));
+      }
 
       if (error instanceof Error) {
         console.error(`${error.name}: ${error.message}\n\n${error.stack ?? ""}`);
