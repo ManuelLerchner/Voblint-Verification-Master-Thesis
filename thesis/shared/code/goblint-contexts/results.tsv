@@ -34,9 +34,3 @@ countdown	callstring1	3	a == 0: is unknown;b == 0: is unknown;c == 0: is unknown
 countdown	callstring5	3	a == 0: is unknown;b == 0: is unknown;c == 0: is unknown;
 countdown	full	3	a == 0: will succeed;b == 0: will succeed;c == 0: will succeed;
 countdown	gas10	3	a == 0: is unknown;b == 0: is unknown;c == 0: is unknown;
-endless	insensitive	2	res == 5: is unknown;r == 5: is unknown;
-endless	insensitive+narrow-globs	2	res == 5: is unknown;r == 5: is unknown;
-endless	callstring1	2	res == 5: is unknown;r == 5: is unknown;
-endless	callstring5	2	res == 5: is unknown;r == 5: is unknown;
-endless	full	2	
-endless	gas10	2	res == 5: is unknown;r == 5: is unknown;

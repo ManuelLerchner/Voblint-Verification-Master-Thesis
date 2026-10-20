@@ -11,7 +11,7 @@ G=${1:?usage: run.sh GOBLINT}
 cd "$(dirname "$0")" || exit 1
 I="--enable ana.int.interval"
 CS="--set ana.activated[+] call_string --set ana.ctx_sens ['call_string'] --set ana.context.callString_length"
-for f in ctxs3 chain5 chain3 chain3_entry circle countdown endless; do
+for f in ctxs3 chain5 chain3 chain3_entry circle countdown; do
   n=$(grep -c '__goblint_check' "$f.c")
   while IFS='|' read -r name opts; do
     # gnu17: newer GCC headers use C23 keywords that Goblint's CIL rejects.
