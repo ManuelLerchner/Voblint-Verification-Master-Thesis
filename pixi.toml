@@ -73,6 +73,10 @@ matplotlib-base = ">=3.10"
 voblint-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = [
   "cli-build",
 ], description = "Benchmark selected abstract domains over one VIMP program." }
+profile = { cmd = "python3 scripts/profile_corpus.py", depends-on = [
+  "cli-build",
+  "browser-build",
+], description = "Profile the regression corpus natively and in WebAssembly, and record a snapshot with its device under pages/data/profiling for the site's profiling page." }
 
 # Git hooks (.lefthook.yaml) and the formatters and linters they gate on.
 [feature.lint.dependencies]
