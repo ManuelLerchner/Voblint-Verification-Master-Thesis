@@ -4,8 +4,9 @@ The browser runs the analyzer on a much smaller stack than the native CLI, so
 code that recurses once per event or per list element can pass every native
 test and still stop the playground with "Maximum call stack size exceeded".
 Each fixture runs here with its own settings and the compact trace on, the
-heaviest path a page session takes, on Node's default stack, about what a
-browser gives a worker. The deepest fixtures need over 800 KiB of it, so a
+heaviest path a page session takes, on the stack a Chrome worker gets. Before
+the bundle was compiled with --effects=cps, the deepest fixtures needed about
+650 KiB and overflowed in Chrome while passing on Node's default stack, so a
 change that deepens the solver's recursion shows up here first. Fixtures that
 are meant to diverge, the ones whose header bounds the run with --timeout, are
 left out.
@@ -34,8 +35,9 @@ BUNDLE = Path(
 )
 HARNESS = REPO_ROOT / "tests/voblint_web_calls.cjs"
 CORPUS = REPO_ROOT / "tests/regression"
-# KiB: Node's default, about the 1 MiB a browser gives a worker.
-STACK_KIB = 984
+# KiB: a Chrome 155 worker recurses as deep as Node at about 520 KiB, under half
+# of Node's 984 KiB default.
+STACK_KIB = 512
 # Seconds per fixture; a run this slow under WebAssembly is a regression.
 BUDGET_S = 20
 CHUNK = 40
