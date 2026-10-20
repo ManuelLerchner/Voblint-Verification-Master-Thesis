@@ -36,7 +36,8 @@ let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
-   N] [--int-refinement never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
+   N] [--int-refinement never|once|fixpoint] [--dot] [--timeout SECONDS] \
+   [--timing]\n\
   \  [--trace] [--verbose|--compact] [--trace-sys SYS[,...]] [--format \
    text|jsonl]\n\
   \  [--output FILE]\n\
@@ -151,6 +152,11 @@ let usage =
   \                             not proved total (see CLI_DESIGN.md's Interval\n\
   \                             containment note), so it runs in a killable\n\
   \                             child process rather than in-process.\n\
+  \  --timing                   Also print the analysis time to stderr as\n\
+  \                             `voblint-timing: analysis_ms=T`, measured\n\
+  \                             around the solve alone, without start-up,\n\
+  \                             parsing or printing, as the browser build\n\
+  \                             measures it. For profiling.\n\
   \  --trace                    Also write a trace of the solver's steps to\n\
   \                             stderr (or --output FILE). Standard output is\n\
   \                             unchanged. The trace is written once the\n\
@@ -439,6 +445,7 @@ let () =
   let parse_only = ref false in
   let ast = ref false in
   let timeout = ref 10.0 in
+  let timing = ref false in
   let trace = ref false in
   let trace_verbose = ref false in
   let trace_format = ref Solver_trace.Text in
@@ -542,6 +549,9 @@ let () =
     | "--output" :: v :: rest ->
         trace := true;
         trace_output := Some v;
+        parse_args rest
+    | "--timing" :: rest ->
+        timing := true;
         parse_args rest
     | "--timeout" :: v :: rest ->
         (try timeout := float_of_string v
@@ -704,10 +714,15 @@ let () =
         Fun.protect ~finally:(fun () -> close_out oc) (fun () -> write oc)
   in
   let solve () =
-    match
+    let started = Unix.gettimeofday () in
+    let answer =
       Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
         ~program_globals:placement prog
-    with
+    in
+    if !timing then
+      Printf.eprintf "voblint-timing: analysis_ms=%.3f\n%!"
+        ((Unix.gettimeofday () -. started) *. 1000.);
+    match answer with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
     | C.No_Answer -> failwith "voblint: the solver returned no answer"
