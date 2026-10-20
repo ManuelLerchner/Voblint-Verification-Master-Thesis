@@ -143,21 +143,35 @@ def analysis_ms(stderr):
     return float(m.group(1)) if m else None
 
 
+# Tracing slows a run down, and the counts need no timing, so a traced run may take longer.
+TRACE_TIME_FACTOR = 4
+
+
 def solver_work(path, domain, context, timeout):
-    """Counts from a traced run's JSON Lines events, which the CLI writes to stderr."""
-    p = subprocess.run(
-        [
-            *cli_args(domain, context, timeout),
-            "--trace",
-            "--compact",
-            "--format",
-            "jsonl",
-            str(path),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=timeout + 10,
-    )
+    """Counts from a traced run's JSON Lines events, which the CLI writes to stderr.
+
+    A traced run that does not finish leaves a cut-off trace, so its counts are unknown
+    rather than whatever part of the trace was written."""
+    unknown = {"evals": None, "unknowns": None, "contexts": None}
+    limit = timeout * TRACE_TIME_FACTOR
+    try:
+        p = subprocess.run(
+            [
+                *cli_args(domain, context, limit),
+                "--trace",
+                "--compact",
+                "--format",
+                "jsonl",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=limit + 10,
+        )
+    except subprocess.TimeoutExpired:
+        return unknown
+    if p.returncode != 0:
+        return unknown
     evals = 0
     unknowns, contexts = set(), set()
     for line in p.stderr.splitlines():
@@ -859,15 +873,47 @@ def write_snapshot(snapshot, label):
 
 
 PHASES = ("native", "wasm", "depth", "scaling", "flame")
+# Where each phase stores its results in a snapshot.
+PHASE_KEYS = {
+    "native": "runs",
+    "wasm": "browser",
+    "depth": "depth",
+    "scaling": "scaling",
+    "flame": "flame",
+}
 
 
-def browser_runs(fixtures, reps, timeout):
+def browser_runs(fixtures, runs, reps, timeout):
+    """The browser bundle on every fixture and configuration whose native solve finished.
+
+    The Node harness has no timeout of its own, so a program that runs past the limit
+    natively would stall its whole batch; such runs are recorded as skipped instead."""
+    finished = {
+        (r["fixture"], r["domain"], r["context"])
+        for r in runs
+        if r.get("status") == "ok"
+    }
     rows = []
     for domain in DOMAINS:
         for context in CONTEXTS:
             print(f"  {domain} / {context}", flush=True)
-            for i in range(0, len(fixtures), 40):
-                batch = fixtures[i : i + 40]
+            todo = []
+            for p in fixtures:
+                name = str(p.relative_to(CORPUS))
+                if (name, domain, context) in finished:
+                    todo.append(p)
+                else:
+                    rows.append(
+                        {
+                            "fixture": name,
+                            "domain": domain,
+                            "context": context,
+                            "wasm_ms": None,
+                            "skipped": "native run did not finish",
+                        }
+                    )
+            for i in range(0, len(todo), 40):
+                batch = todo[i : i + 40]
                 times = wasm_reps(batch, domain, context, reps, timeout)
                 for p, ms in zip(batch, times, strict=True):
                     rows.append(
@@ -930,6 +976,11 @@ def main():
         type=Path,
         help="re-run --phases into this existing snapshot instead of writing a new one",
     )
+    ap.add_argument(
+        "--resume",
+        action="store_true",
+        help="continue a run that stopped, from build/profiling-partial.json",
+    )
     args = ap.parse_args()
     phases = [x for x in args.phases.split(",") if x]
     if unknown := set(phases) - set(PHASES):
@@ -954,7 +1005,35 @@ def main():
     )
     started = time.time()
 
-    if "native" in phases:
+    # Each finished phase is saved, so a run that dies keeps what it measured; --resume
+    # continues it, but only at the commit that measured it.
+    partial_path = REPO / "build" / "profiling-partial.json"
+    head = revision()["commit_sha"]
+    if args.resume and partial_path.exists():
+        partial = json.loads(partial_path.read_text())
+        if partial.get("commit_sha") == head and not args.update:
+            snapshot.update(partial["snapshot"])
+            print(
+                f"resuming: {', '.join(partial['done'])} already measured", flush=True
+            )
+        else:
+            print(
+                "not resuming: the partial run was measured at another commit",
+                flush=True,
+            )
+
+    def done(phase, key):
+        partial_path.parent.mkdir(parents=True, exist_ok=True)
+        finished = [p for p, k in PHASE_KEYS.items() if k in snapshot]
+        partial_path.write_text(
+            json.dumps({"commit_sha": head, "done": finished, "snapshot": snapshot})
+        )
+        print(f"  saved {phase} to {partial_path.relative_to(REPO)}", flush=True)
+
+    def wanted(phase):
+        return phase in phases and (args.update or PHASE_KEYS[phase] not in snapshot)
+
+    if wanted("native"):
         jobs = [(p, d, c) for p in fixtures for d in DOMAINS for c in CONTEXTS]
         print(
             f"native: {len(jobs)} runs x {args.reps} reps, {args.jobs} at a time",
@@ -964,16 +1043,26 @@ def main():
             snapshot["runs"] = list(
                 pool.map(lambda j: native(j, args.reps, args.timeout), jobs)
             )
-    if "wasm" in phases:
+        done("native", "runs")
+    if wanted("wasm"):
         print("wasm: every domain and context policy", flush=True)
-        snapshot["browser"] = browser_runs(fixtures, args.reps, args.timeout)
-    if "depth" in phases:
+        if "runs" not in snapshot:
+            sys.exit(
+                "the browser phase compares against the native runs; run that phase"
+            )
+        snapshot["browser"] = browser_runs(
+            fixtures, snapshot["runs"], args.reps, args.timeout
+        )
+        done("wasm", "browser")
+    if wanted("depth"):
         print("depth sweep", flush=True)
         snapshot["depth"] = depth_sweep(args.reps, args.timeout)
-    if "scaling" in phases:
+        done("depth", "depth")
+    if wanted("scaling"):
         print("scaling families", flush=True)
         snapshot["scaling"] = scaling_sweep(args.reps, args.timeout)
-    if "flame" in phases:
+        done("scaling", "scaling")
+    if wanted("flame"):
         print("CPU profiles", flush=True)
         if "runs" not in snapshot:
             sys.exit(
@@ -982,6 +1071,7 @@ def main():
         snapshot["flame"] = flame_profiles(
             flame_targets(snapshot["runs"], snapshot.get("scaling")), args.timeout
         )
+        done("flame", "flame")
 
     if args.update:
         # A partial re-run keeps the original measurement's metadata and says what changed.
@@ -1015,6 +1105,7 @@ def main():
         "filter": args.filter or None,
     }
     path = write_snapshot(snapshot, args.label)
+    partial_path.unlink(missing_ok=True)
     print(f"wrote {path.relative_to(REPO)} in {snapshot['meta']['duration_s']} s")
 
 
