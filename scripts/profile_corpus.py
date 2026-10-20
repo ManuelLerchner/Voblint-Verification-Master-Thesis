@@ -14,6 +14,7 @@ import argparse
 import bisect
 import gzip
 import json
+import math
 import os
 import platform
 import re
@@ -320,23 +321,181 @@ def depth_sweep(reps, timeout):
     return rows
 
 
+# Programs that each grow one size parameter n and keep everything else small, so a
+# solve time that grows faster than the solver's evaluations exposes the cost of the
+# generated code's list-based sets and maps along that one dimension.
+def _vars(n):
+    xs = [f"x{k}" for k in range(n)]
+    body = "".join(f"  {x} = {k};\n" for k, x in enumerate(xs))
+    loop = "".join(f"    {x} = {x} + 1;\n" for x in xs)
+    return (
+        f"fun main() {{\n{body}  i = 0;\n  while (i < 3) {{\n{loop}    i = i + 1;\n  }}\n"
+        f"  __voblint_check(0 < x{n - 1});\n}}\n"
+    )
+
+
+def _points(n):
+    body = "".join("  x = x + 1;\n" for _ in range(n))
+    return f"fun main() {{\n  x = 0;\n{body}  __voblint_check(0 < x);\n}}\n"
+
+
+def _globals(n):
+    # One declaration: VIMP takes a single comma-separated global list.
+    decls = "global " + ", ".join(f"g{k}" for k in range(n)) + ";\n"
+    writes = "".join(f"  g{k} = {k + 1};\n" for k in range(n))
+    return (
+        f"{decls}fun set() {{\n{writes}  return 0;\n}}\n"
+        f"fun main() {{\n  set();\n  __voblint_check(0 < g0);\n}}\n"
+    )
+
+
+def _call_sites(n):
+    calls = "".join(f"  y{k} = f(1);\n" for k in range(n))
+    return (
+        f"fun f(a) {{\n  return a;\n}}\n"
+        f"fun main() {{\n{calls}  __voblint_check(y0 == 1);\n}}\n"
+    )
+
+
+def _procs(n):
+    chain = "".join(
+        f"fun p{k}(a) {{\n  r = p{k + 1}(a);\n  return r;\n}}\n" for k in range(n - 1)
+    )
+    return (
+        f"{chain}fun p{n - 1}(a) {{\n  return a;\n}}\n"
+        f"fun main() {{\n  x = p0(1);\n  __voblint_check(x == 1);\n}}\n"
+    )
+
+
+def _loops(n):
+    loop = "  i = 0;\n  while (i < 10) {\n    i = i + 1;\n  }\n"
+    return f"fun main() {{\n{loop * n}  __voblint_check(i == 10);\n}}\n"
+
+
+# name -> (what grows, program, domain, context policy). Call sites run twice: call
+# strings give each site its own context, while entry-state shares one context across the
+# identical calls, which separates the number of contexts from the number of call sites.
+SCALING = {
+    "variables": ("variables in one procedure", _vars, "interval", "none"),
+    "points": ("straight-line statements", _points, "interval", "none"),
+    "globals": ("globals written by one procedure", _globals, "interval", "none"),
+    "call-sites-k1": (
+        "call sites, one context each (call strings, k = 1)",
+        _call_sites,
+        "interval",
+        "call-string-1",
+    ),
+    "call-sites-entry": (
+        "call sites sharing one context (entry-state)",
+        _call_sites,
+        "interval",
+        "entry-state",
+    ),
+    "procedures": ("procedures in a call chain", _procs, "interval", "none"),
+    "loops": ("sequential loops", _loops, "interval", "none"),
+    "recursion": (
+        "recursion depth (entry-state)",
+        depth_program,
+        "interval",
+        "entry-state",
+    ),
+}
+SCALING_SIZES = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
+
+
+def scaling_sweep(reps, timeout):
+    """Each family at growing n until a run passes the timeout or fails."""
+    rows = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for family, (what, program, domain, context) in SCALING.items():
+            for n in SCALING_SIZES:
+                f = Path(tmp) / f"{family}-{n}.vimp"
+                f.write_text(program(n))
+                row = {
+                    "family": family,
+                    "what": what,
+                    "domain": domain,
+                    "context": context,
+                    "n": n,
+                    "native_ms": None,
+                }
+                try:
+                    result = timed_reps(f, domain, context, reps, timeout)
+                except subprocess.TimeoutExpired:
+                    result = {"status": "timeout"}
+                if result["status"] == "ok":
+                    row.update(
+                        native_ms=result["ms"],
+                        wall_ms=result["wall_ms"],
+                        rss=result["rss"],
+                        **solver_work(f, domain, context, timeout),
+                    )
+                else:
+                    row["status"] = result["status"]
+                rows.append(row)
+                print(f"  {family} n={n}: {row['native_ms']}", flush=True)
+                if result["status"] != "ok":
+                    break  # larger programs only take longer
+    return rows
+
+
+def loglog_slope(points):
+    pts = [(math.log(x), math.log(y)) for x, y in points if x > 0 and y > 0]
+    if len(pts) < 2:
+        return 0.0
+    mx = sum(p[0] for p in pts) / len(pts)
+    my = sum(p[1] for p in pts) / len(pts)
+    den = sum((a - mx) ** 2 for a, _ in pts)
+    return sum((a - mx) * (b - my) for a, b in pts) / den if den else 0.0
+
+
+def scaling_target(rows):
+    """The family whose solve time outgrows its evaluations most, at its largest finished n."""
+    best = None
+    for family, (_, program, domain, context) in SCALING.items():
+        big = [
+            r
+            for r in rows
+            if r["family"] == family
+            and r.get("native_ms")
+            and r.get("evals")
+            and r["n"] >= 100
+        ]
+        if len(big) < 3:
+            continue
+        gap = loglog_slope([(r["n"], r["native_ms"]) for r in big]) - loglog_slope(
+            [(r["n"], r["evals"]) for r in big]
+        )
+        top = max(big, key=lambda r: r["n"])
+        if best is None or gap > best[0]:
+            best = (
+                gap,
+                (f"{family} n={top['n']}", None, domain, context, program(top["n"])),
+            )
+    return best[1] if best else None
+
+
 # The recursion stress case is always profiled; the rest are the corpus's slowest fixtures.
-STRESS_TARGET = ("h(1000)", None, "interval", "entry-state")
+STRESS_TARGET = ("h(1000)", None, "interval", "entry-state", depth_program(1000))
 SLOWEST_PROFILED = 3
 
 
-def flame_targets(runs):
-    """h(1000), then the slowest distinct fixtures, each under its slowest configuration."""
+def flame_targets(runs, scaling=None):
+    """h(1000), the scaling family whose time outgrows its work most, then the slowest
+    distinct fixtures, each under its slowest configuration."""
     targets, seen = [STRESS_TARGET], set()
+    extra = scaling_target(scaling) if scaling else None
+    if extra:
+        targets.append(extra)
     ok = [r for r in runs if r.get("status") == "ok" and r.get("ms") is not None]
     for r in sorted(ok, key=lambda r: -r["ms"]):
         if r["fixture"] in seen:
             continue
         seen.add(r["fixture"])
         targets.append(
-            (Path(r["fixture"]).stem, r["fixture"], r["domain"], r["context"])
+            (Path(r["fixture"]).stem, r["fixture"], r["domain"], r["context"], None)
         )
-        if len(targets) > SLOWEST_PROFILED:
+        if len(targets) > SLOWEST_PROFILED + (1 if extra else 0):
             break
     return targets
 
@@ -642,10 +801,10 @@ def flame_profiles(targets, timeout):
     profiles = []
     sources = SourceIndex()
     with tempfile.TemporaryDirectory() as tmp:
-        for title, fixture, domain, context in targets:
-            src = CORPUS / fixture if fixture else Path(tmp) / "h1000.vimp"
+        for title, fixture, domain, context, source in targets:
+            src = CORPUS / fixture if fixture else Path(tmp) / "program.vimp"
             if not fixture:
-                src.write_text(depth_program(1000))
+                src.write_text(source)
             cmd = [*cli_args(domain, context, timeout), str(src)]
             tree = (
                 record_samply(cmd, tmp)
@@ -699,7 +858,7 @@ def write_snapshot(snapshot, label):
     return OUT_DIR / name
 
 
-PHASES = ("native", "wasm", "depth", "flame")
+PHASES = ("native", "wasm", "depth", "scaling", "flame")
 
 
 def browser_runs(fixtures, reps, timeout):
@@ -811,6 +970,9 @@ def main():
     if "depth" in phases:
         print("depth sweep", flush=True)
         snapshot["depth"] = depth_sweep(args.reps, args.timeout)
+    if "scaling" in phases:
+        print("scaling families", flush=True)
+        snapshot["scaling"] = scaling_sweep(args.reps, args.timeout)
     if "flame" in phases:
         print("CPU profiles", flush=True)
         if "runs" not in snapshot:
@@ -818,7 +980,7 @@ def main():
                 "CPU profiles pick their programs from the native runs; run that phase"
             )
         snapshot["flame"] = flame_profiles(
-            flame_targets(snapshot["runs"]), args.timeout
+            flame_targets(snapshot["runs"], snapshot.get("scaling")), args.timeout
         )
 
     if args.update:

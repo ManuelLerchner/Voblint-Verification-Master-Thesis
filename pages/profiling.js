@@ -517,6 +517,122 @@ function depth(data) {
   );
 }
 
+/* A gap between the time and evaluation exponents this large marks data-structure cost. */
+const SCALING_GAP = 0.5;
+
+function scalingFits(data) {
+  return d3
+    .groups(data.scaling ?? [], (r) => r.family)
+    .map(([family, rows]) => {
+      const ok = rows.filter((r) => r.native_ms != null);
+      const big = ok.filter((r) => r.n >= 100);
+      const kTime = slope(big, "n", "native_ms");
+      const kEvals = slope(
+        big.filter((r) => r.evals),
+        "n",
+        "evals",
+      );
+      return {
+        family,
+        what: rows[0].what,
+        context: rows[0].context,
+        maxN: d3.max(ok, (r) => r.n),
+        stopped: rows.find((r) => r.status && r.status !== "ok"),
+        kTime,
+        kEvals,
+        gap: kTime != null && kEvals != null ? kTime - kEvals : null,
+      };
+    });
+}
+
+function scaling(data) {
+  const section = $("scaling-section");
+  if (!data.scaling?.length) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  const fits = scalingFits(data);
+  const families = fits.map((f) => f.family);
+  const color = {
+    domain: families,
+    range: families.map((_, i) => PALETTE[i % PALETTE.length]),
+    legend: true,
+  };
+  const rows = data.scaling.filter((r) => r.native_ms != null);
+  const el = $("chart-scaling");
+  el.replaceChildren(
+    Plot.plot({
+      width: width(el),
+      height: 380,
+      marginLeft: 56,
+      style: axisStyle,
+      color,
+      x: { type: "log", label: "Size n →", grid: true },
+      y: { type: "log", label: "↑ Solve time (ms)", grid: true },
+      marks: [
+        Plot.line(rows, { x: "n", y: "native_ms", stroke: "family", strokeWidth: 2 }),
+        Plot.dot(rows, {
+          x: "n",
+          y: "native_ms",
+          fill: "family",
+          r: 3.5,
+          stroke: "white",
+          strokeWidth: 1.5,
+          tip: true,
+          title: (d) =>
+            `${d.family}, n = ${d.n}\n${fmtMs(d.native_ms)}${d.evals ? `\n${d3.format(",")(d.evals)} evaluations` : ""}`,
+        }),
+      ],
+    }),
+  );
+  const fmtK = (k) => (k == null ? "" : k.toFixed(1));
+  $("scaling-table").tBodies[0].replaceChildren(
+    ...[...fits]
+      .sort((a, b) => (b.gap ?? -9) - (a.gap ?? -9))
+      .map((f) => {
+        const tr = document.createElement("tr");
+        const cells = [
+          [f.family, "path"],
+          [f.what, ""],
+          [contextLabel(f.context), ""],
+          [`${f.maxN}${f.stopped ? ` (${f.stopped.status} at ${f.stopped.n})` : ""}`, "num"],
+          [fmtK(f.kTime), "num"],
+          [fmtK(f.kEvals), "num"],
+          [fmtK(f.gap), "num"],
+        ];
+        tr.replaceChildren(
+          ...cells.map(([text, cls]) => {
+            const td = document.createElement("td");
+            td.className = cls;
+            td.textContent = text;
+            return td;
+          }),
+        );
+        return tr;
+      }),
+  );
+  const broken = fits
+    .filter((f) => f.gap != null && f.gap >= SCALING_GAP)
+    .sort((a, b) => b.gap - a.gap);
+  const fine = fits.filter((f) => f.gap != null && f.gap < SCALING_GAP);
+  const stopped = fits.filter((f) => f.stopped);
+  reading("reading-scaling", [
+    broken.length
+      ? `Solve time outgrows the solver's evaluations for ${listing(broken.map((f) => `<strong>${f.what}</strong> (time n<sup>${f.kTime.toFixed(1)}</sup>, evaluations n<sup>${f.kEvals.toFixed(1)}</sup>)`))}: along ${broken.length === 1 ? "this dimension" : "these dimensions"}, each evaluation gets more expensive as the program grows, so a list the solver consults grows with it.`
+      : "No family's solve time outgrows its evaluations by a full power, so none of these dimensions alone drives a list the solver scans per evaluation.",
+    fine.length
+      ? `For ${listing(fine.map((f) => f.what))}, time and work grow at about the same rate, so the generated code's per-evaluation cost stays flat there.`
+      : null,
+    stopped.length
+      ? `${listing(stopped.map((f) => `${f.what} passed the time limit at n&nbsp;=&nbsp;${f.stopped.n}`))}.`
+      : null,
+    broken.length
+      ? `The CPU profile of <code>${broken[0].family}</code> below shows which functions that time goes to.`
+      : null,
+  ]);
+}
+
 /* Who wrote a frame's code, which is also how far the proofs reach into it. */
 const FLAME_KINDS = [
   [
@@ -1005,6 +1121,7 @@ async function load(entry) {
   );
   quantile(data, quantileDomain);
   depth(data);
+  scaling(data);
   let flameIndex = 0;
   segmented(
     $("flame-targets"),
@@ -1050,6 +1167,7 @@ async function load(entry) {
       tradeoff(data);
       quantile(data, quantileDomain);
       depth(data);
+      scaling(data);
       flame(data, flameIndex);
       browser(data, browserDomain, browserContext);
     }, 150);

@@ -201,6 +201,64 @@
       </details>
     </section>
 
+    <section class="section" id="scaling-section" aria-labelledby="h-scaling">
+      <div class="section-heading">
+        <p class="eyebrow">Data structures</p>
+        <h2 id="h-scaling">Which program size breaks the generated data structures?</h2>
+      </div>
+      <p class="section-intro">
+        The generated code keeps sets and maps as lists. A membership test scans the list, a
+        union inserts element by element, and removing duplicates compares every pair. Each of
+        the families below grows one size of a program and keeps the rest small, so the
+        dimension that drives one of these lists shows up as solve time that grows faster than
+        the solver's work.
+      </p>
+      <figure class="chart-card">
+        <div id="chart-scaling" class="chart"></div>
+        <figcaption>
+          Native solve time against the size <em>n</em> of each family's program, log–log, under
+          Interval. A line ends at the first <em>n</em> whose run passed the time limit.
+        </figcaption>
+      </figure>
+      <div class="table-wrap">
+        <table class="fixture-table" id="scaling-table">
+          <thead>
+            <tr>
+              <th>Family</th>
+              <th>What grows</th>
+              <th>Context policy</th>
+              <th class="num">Largest <em>n</em></th>
+              <th class="num">Time exponent</th>
+              <th class="num">Evaluation exponent</th>
+              <th class="num">Gap</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="reading" id="reading-scaling"></p>
+      <details class="method">
+        <summary>How this was measured</summary>
+        <ul>
+          <li>Each family is a generated VIMP program with one size parameter <em>n</em>: as many
+            variables, straight-line statements, globals, call sites, procedures in a chain,
+            sequential loops, or recursion levels. Every program ends in a check the analyzer
+            proves, so each run does the full work of a real analysis.</li>
+          <li>Call sites run twice. Call strings with <em>k</em>&nbsp;=&nbsp;1 give every site
+            its own context, while entry-state contexts merge the identical calls into one,
+            which separates the cost of contexts from the cost of call sites.</li>
+          <li>Times are the CLI's own solve timing, the median of
+            <span data-meta="reps"></span> runs; evaluations come from a traced run, as in the
+            recursion plot. Exponents are least-squares fits on log–log axes from
+            <em>n</em>&nbsp;=&nbsp;100 up. A gap of about 1 or more means each evaluation gets
+            roughly <em>n</em> times more expensive, the signature of a linear scan inside the
+            solver's loop.</li>
+          <li>The family with the largest gap also gets a CPU profile, listed with the others in
+            the section below.</li>
+        </ul>
+      </details>
+    </section>
+
     <section class="section" aria-labelledby="h-flame">
       <div class="section-heading">
         <p class="eyebrow">CPU profile</p>
