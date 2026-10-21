@@ -58,42 +58,28 @@
   ) [about quadratically] else [as #prof-exp(path)]
 }
 
-// Domains keep the colours they carry in every other figure.
-#let _domain-color = (
-  sign: vb.sign,
-  interval: vb.ivl,
-  parity: vb.par,
-  congruence: vb.cong,
-  int: vb.neutral,
-)
-#let _order = ("sign", "parity", "congruence", "interval", "int")
-
-/// Solve time of h(n) under entry-state contexts, one line per domain, log-log.
-#let depth-plot(width: 6.4cm, height: 4.6cm) = {
-  let series = prof-value("depth")
+/// Fitted growth exponents of solve time and of solver evaluations, one pair of bars per
+/// scaling family. A gap between the bars is cost per evaluation that grows with n.
+#let scaling-plot(width: 12cm, height: 5cm) = {
+  let fams = prof-value("scaling.families").filter(f => f.time != none and f.evals != none)
+  let xs = range(fams.len())
+  set text(size: 7pt)
   lq.diagram(
     width: width,
     height: height,
-    xscale: "log",
-    yscale: "log",
-    xlabel: [recursion depth $n$],
-    ylabel: [solve time (ms)],
-    legend: (position: left + top),
-    ..(
-      _order
-        .filter(d => d in series)
-        .map(d => {
-          let pts = series.at(d)
-          lq.plot(
-            pts.map(p => p.n),
-            pts.map(p => p.native_ms),
-            label: d,
-            color: _domain-color.at(d, default: vb.neutral),
-            mark: "o",
-            mark-size: 3pt,
-          )
-        })
+    ylabel: [fitted exponent $k$],
+    ylim: (0, 4),
+    yaxis: (ticks: range(4)),
+    xaxis: (ticks: xs.zip(fams.map(f => f.label.split("\n").join(linebreak()))), subticks: none),
+    legend: (position: right + top),
+    lq.bar(xs, fams.map(f => f.time), offset: -0.2, width: 0.4, fill: vb.ivl, label: [solve time]),
+    lq.bar(
+      xs,
+      fams.map(f => f.evals),
+      offset: 0.2,
+      width: 0.4,
+      fill: vb.muted,
+      label: [evaluations],
     ),
   )
 }
-

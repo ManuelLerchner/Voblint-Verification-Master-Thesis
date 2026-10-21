@@ -7,7 +7,7 @@
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": verdict
 #import "../lib/profiling.typ": (
-  depth-plot, prof-exp, prof-growth, prof-int, prof-list, prof-ms, prof-runs, prof-value,
+  prof-exp, prof-growth, prof-int, prof-list, prof-ms, prof-runs, prof-value, scaling-plot,
 )
 
 
@@ -766,63 +766,58 @@ however, was not a goal of this thesis. Apart from the defect fixed in @sec:code
 generated code runs as Isabelle emits it. The measurements below therefore ask only
 whether this unoptimized code runs in acceptable time on the regression corpus.
 
-The #link(site("profiling.html"))[profiling page] reports every measurement, the CPU
-profiles, and how each number was taken. This section summarizes them.
+The #link(site("profiling.html"))[profiling page] reports the measurements in full. They
+cover the #prof-int("fixtures") regression fixtures under all #prof-int("configurations")
+combinations of domain and context policy, the WebAssembly build, generated programs of
+growing size, and CPU profiles. This section summarizes them.
 
 #if prof-value("solve_median_ms") < 5 [Most programs of the regression corpus are analyzed
   within a few milliseconds.] else [The median program of the regression corpus is
   analyzed in #prof-ms("solve_median_ms").]
-The expensive cases are recursive programs under entry-state contexts, where successive
-calls can create distinct contexts. @fig:runtime-depth measures such a recursion at
-growing depth. Sign and Parity have only a few abstract values, so the number of contexts
-stays bounded and the solve time is #prof-growth("depth_fits.sign.time"). Congruence,
-Interval and Int tell the successive arguments apart and create one context per level.
-Their solve time grows #prof-growth("depth_fits.interval.time"), although the number of
-solver evaluations grows only #prof-growth("depth_fits.interval.evals").
+#if prof-value("timeouts") > 0 [Of its #prof-int("runs") runs, #prof-int("timeouts") pass
+  the limit of #prof-int("meta.timeout_s")~s.]
+The expensive cases include recursive programs under entry-state contexts, where successive
+calls can create distinct contexts. A procedure `h` that calls itself $n$ times with
+arguments $n, n - 1, dots, 0$ shows the effect. Sign and Parity have only a few abstract
+values, so the number of contexts stays bounded and the solve time is
+#prof-growth("depth_fits.sign.time"). Congruence, Interval and Int tell the successive
+arguments apart and create one context per level. Their solve time grows
+#prof-growth("depth_fits.interval.time"), although the number of solver evaluations grows
+only #prof-growth("depth_fits.interval.evals").
 
-The CPU profiles suggest that this gap comes from the data structures of the generated
-code. Its finite sets and maps are lists (@sec:codegen), so a membership test scans the
-list, a union inserts element by element, and removing duplicates compares every pair.
 #if prof-value("scaling.broken").len() == 0 [
-  These lists grow with the number of contexts.
+  Generated programs that grow other sizes, such as variables or statements, show no such
+  gap, so the growth is tied to contexts.
 ] else if prof-value("scaling.flat").len() == 0 [
-  Contexts are only one way to reach them. Across #prof-int("scaling.count") generated
-  program families that each grow one size, from variables and statements to call chains,
-  the solver's evaluations grow about linearly while its solve time grows as
-  #prof-exp("scaling.time_min") to #prof-exp("scaling.time_max"), and as
-  #prof-exp("scaling.by_family.points.time") even for $n$ straight-line statements.
+  The same gap appears without recursion. The profiling page grows
+  #prof-int("scaling.count") sizes of a program independently, from variables and
+  statements to call chains. In all of them the number of evaluations grows about linearly,
+  while solve time grows as #prof-exp("scaling.time_min") to #prof-exp("scaling.time_max")
+  (@fig:runtime-scaling). Each evaluation therefore gets more expensive as the program
+  grows, along every size measured.
 ] else [
-  Generated programs that grow one size at a time show which sizes reach these lists. Solve
-  time outgrows the solver's evaluations with #prof-list("scaling.broken"), while time and
-  evaluations grow alike with #prof-list("scaling.flat").
+  Generated programs that grow one size at a time show the same gap with
+  #prof-list("scaling.broken"), while time and evaluations grow alike with
+  #prof-list("scaling.flat") (@fig:runtime-scaling).
 ]
+The CPU profiles trace this cost to the data structures of the generated code. Its finite
+sets and maps are lists (@sec:codegen), so a membership test scans the list, a union
+inserts element by element, and removing duplicates compares every pair. Balanced trees or
+hash tables would avoid these scans. The Collections Framework @lammich10collections
+refines abstract sets and maps into such structures, and the Light-weight Containers
+@lochbihler13containers can replace the list-based default of code generation altogether.
+Either route needs only targeted replacements in the code setup and no change to the
+soundness proofs.
 
-Balanced trees or hash tables would avoid these scans. The Collections Framework
-@lammich10collections refines abstract sets and maps into such structures, and the
-Light-weight Containers @lochbihler13containers can replace the list-based default of code
-generation altogether. Either route needs code equations for the operations Voblint uses,
-and possibly linear orders on its nodes and contexts, but leaves the soundness theorems,
-which are stated about the HOL definitions, unchanged.
+The generated analyzer therefore handles the regression corpus in acceptable time, while
+its data structures limit how far it scales. These measurements cover small programs on
+one machine and give no performance guarantee beyond them.
 
 #figure(
-  {
-    set text(size: 8pt)
-    grid(
-      columns: (5.7cm, 1fr),
-      column-gutter: 10pt,
-      align: horizon,
-      listing(
-        "fun h(i) {\n  if (i == 0) { return 3; }\n  r = h(i - 1);\n  return r;\n}\nfun main() {\n  x = h(1000);\n  __voblint_check(x == 3);\n}",
-        lang: "c",
-        ctx: "entry-state",
-      ),
-      depth-plot(width: 6.8cm, height: 4.4cm),
-    )
-  },
+  scaling-plot(width: 12.5cm, height: 4.6cm),
   kind: image,
-  placement: auto,
-  caption: [Solve time of `h(n)` under entry-state contexts for each domain, log--log. Each
-    point is #prof-runs(). The listing shows $n = 1000$, and the other points vary only
-    that argument. A domain's line ends where its run passed
-    #prof-int("meta.timeout_s")~s.],
-) <fig:runtime-depth>
+  placement: bottom,
+  caption: [Fitted exponents $k$ of $n^k$ for solve time and solver evaluations, each family
+    growing one program size $n$ under Interval. The fits describe the measured ranges and
+    are no complexity bounds.],
+) <fig:runtime-scaling>

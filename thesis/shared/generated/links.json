@@ -138,6 +138,7 @@
     "const:procs_embedded": "Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.procs_embedded%7Cconst",
     "const:prog_cfg": "Voblint/Voblint_Compile/Compile_Invariants.html#Compile_Invariants.prog_cfg%7Cconst",
     "const:prog_main": "Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.prog_main%7Cconst",
+    "const:prog_main_name": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.prog_main_name%7Cconst",
     "const:prog_procs": "Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.prog_procs%7Cconst",
     "const:prog_table": "Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.prog_table%7Cconst",
     "const:pstep": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst",

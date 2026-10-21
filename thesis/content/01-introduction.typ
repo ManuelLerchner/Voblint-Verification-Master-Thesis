@@ -18,7 +18,7 @@ without running the program, so the answers have to be right. The analyzer,
 however, is itself a program, and its errors produce confident answers that
 real executions contradict. In Goblint
 #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156], Goblint
-claimed that `c % 2 == 1` holds for $c in {-5, -7}$ @goblint1156, although the
+claimed that `c % 2 == 1` holds for $c in {-5, -7}$, although the
 truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$ for both values. The
 congruence domain had ignored the sign of the dividend, and
 #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] fixed
@@ -237,8 +237,8 @@ analyzer is incomplete in the same way as testing any other program
 participation in SV-COMP in 2021, a competition on benchmark programs with
 known verdicts, Goblint has never produced a false negative on the
 competition's benchmark suite @seidl26. Still, its issue tracker lists more
-than a hundred issues labeled as unsound that have been opened since 2021
-@goblint-unsound.
+than a hundred #link("https://github.com/goblint/analyzer/issues?q=label%3Aunsound")[issues labeled as unsound]
+that have been opened since 2021.
 The two observations do not contradict each other. A test finds an error only when
 someone thinks of exactly the scenario that triggers it, and every other error
 waits until it misleads a user who then reports it. The Goblint defect at the

@@ -106,39 +106,10 @@ code generator @haftmann10 can export it. One #isacmd("export_code")
 declaration emits #isaconst("run_voblint"), #isaconst("render_report"), and the
 constructors and selectors a caller needs into one OCaml file,
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
-Both delivered tools call this module through the facade
+The command-line tool and the browser playground both call this module through the facade
 #link(repo-blob + "cli/voblint.ml")[`cli/voblint.ml`], which re-exports the
 generated module unchanged. Every analysis result is therefore computed by generated
 code.
-
-The command-line tool links the module with the handwritten OCaml into a native
-program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the
-same code to WebAssembly, which a web worker in the reader's browser calls
-(@fig:build). Both tools thus run the generated code of #isaconst("run_voblint") up to the code generator and the compilers
-(@fig:intro-trust).
-
-Running the same code in the browser, however, has a cost. A browser worker has a much
-smaller stack than a native program, while under entry-state contexts the solver nests one
-query per level of a recursion. A recursion as deep as the one in #fixture(
-  "21-context-sensitivity/precision/04-function_chain_self_recursive_tail.vimp",
-  label: "04-function_chain_self_recursive_tail",
-) therefore overflowed the worker in Chrome. To avoid this, the bundle uses the
-continuation-passing translation of #raw("wasm_of_ocaml", lang: "sh")
-(#raw("--effects=cps", lang: "sh")). Together with WebAssembly itself, this translation
-makes the browser build need #prof-times("browser_ratio_median") the native solve time on
-the median run of the corpus (@sec:eval-runtime, #link(site("profiling.html"))[profiling
-  page]).
-
-#figure(
-  image("/shared/generated/svg/build.svg", width: 100%),
-  placement: none,
-  caption: [How the generated #isaconst("run_voblint") reaches the browser. Build:
-    #isacmd("export_code") writes #isaconst("run_voblint") into
-    `Voblint_Generated.ml`, which `dune` and #raw("wasm_of_ocaml", lang: "sh")
-    compile with the handwritten OCaml into a WebAssembly bundle. Run: a web
-    worker calls the bundle and returns the answer as JSON. Adapted from the
-    project site.],
-) <fig:build>
 
 #let _bench = json("/shared/generated/bench-init-publications.json").programs
 #let _speedup(prog) = {
@@ -155,8 +126,9 @@ The code that runs is a small part of the development (@tab:sizes). Code
 generation keeps only the definitions that #isaconst("run_voblint") depends on and
 drops every proof, so the theories and the imported part of the vendored TD solver shrink
 to the generated module. The handwritten OCaml around this module is smaller
-still. Of the code that runs, it is the only part that has to be checked by
-hand, alongside the trusted code generator and OCaml compiler.
+still. Together with the playground's JavaScript, which draws the answer, it is the
+code that has to be checked by hand, while Zarith, the code generator, the compilers
+and the browser are trusted (@sec:ocaml-boundary).
 
 #figure(
   {
@@ -187,24 +159,50 @@ hand, alongside the trusted code generator and OCaml compiler.
       table.hline(),
     )
   },
-  placement: auto,
+  placement: none,
   caption: [The parts of the development by size and status. Line counts
     are measured on the repository at build time.],
 ) <tab:sizes>
 
 The proofs say nothing about running time, and the generated code can be very
-inefficient. Profiling revealed one case. A sampling profile of a program with
-256 chained assignments attributed most of the CPU time to a single
-function. The generated
+inefficient. In one case, a sampling profile of 256 chained assignments attributed
+most of the CPU time to a single function. The generated
 code of #isaconst("init_publications") recompiled the whole program at every
 equation evaluation, because its definition names the program's entry through the compiler from
-VIMP to control-flow graphs (@sec:compile). A proved code equation that names the entry directly fixed this
-without changing any theorem (#isathm("init_publications_code")), and on the same machine, the chain of 256 assignments then ran
+VIMP to control-flow graphs (@sec:compile). A proved code equation, #isathm("init_publications_code"), that names
+the entry directly as #ctor("FunctionEntry") #isaconst("prog_main_name") fixed this
+without changing any theorem, and the chain of 256 assignments then ran
 #_speedup("chain256") times faster and a program of 512 assignments in
 procedures of eight statements #_speedup("procs512") times faster, in one
 measurement each
 (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded]).
 Finding further inefficiencies and improving the generated code is future work.
+
+The command-line tool links the module with the handwritten OCaml into a native
+program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the same code to
+WebAssembly, which a web worker in the reader's browser calls (@fig:build). Both tools
+thus run the generated code of #isaconst("run_voblint") up to the code generator and the
+compilers (@fig:intro-trust).
+
+A browser worker, however, has a much smaller stack than a native program. Deep
+recursions such as the one in #fixture(
+  "21-context-sensitivity/precision/04-function_chain_self_recursive_tail.vimp",
+  label: "04-function_chain_self_recursive_tail",
+) can therefore overflow it. The bundle attempts to avoid this with the continuation-passing
+translation of #raw("wasm_of_ocaml", lang: "sh") (#raw("--effects=cps", lang: "sh")).
+With it, the browser build needs #prof-times("browser_ratio_median") the native solve
+time on the median run (@sec:eval-runtime, #link(site("profiling.html"))[profiling page]).
+
+#figure(
+  image("/shared/generated/svg/build.svg", width: 100%),
+  placement: none,
+  caption: [How the generated #isaconst("run_voblint") reaches the browser. Build:
+    #isacmd("export_code") writes #isaconst("run_voblint") into
+    `Voblint_Generated.ml`, which `dune` and #raw("wasm_of_ocaml", lang: "sh")
+    compile with the handwritten OCaml into a WebAssembly bundle. Run: a web
+    worker calls the bundle and returns the answer as JSON. Adapted from the
+    project site.],
+) <fig:build>
 
 == Tracing solver steps without changing the proofs #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 

@@ -24,8 +24,8 @@ literature searches, checked citations and claims against cited sources, and
 drafted and revised the chapter structure, text, and figures.
 
 Separately, Grammarly was used to check spelling and grammar in the thesis text.
-The Isabelle interfaces of AutoCorrode @autocorrode served as proof-development
-infrastructure, and the proof work followed the human-guided workflow proposed
+The Isabelle interfaces of AutoCorrode @autocorrode and the Isabelle PIDE MCP server
+@pidemcp served as proof-development infrastructure, and the proof work followed the human-guided workflow proposed
 by Kappelmann et al. @kappelmann26.
 
 The assistance also extended to design. To formalize calling contexts, the
@@ -51,7 +51,10 @@ structure while leaving proof obligations as `sorry`. Once the definitions and
 locale boundaries had stabilized, many of the remaining proof obligations were
 short and were discharged with substantial agent assistance.
 
-The assistants' output was not reliable on its own. Agents proposed incorrect
+Throughout the project, the author also explored how such tools can be used
+responsibly and correctly in a formal development of this size. Agent output was
+treated as a proposal until Isabelle, a test or the author's review confirmed it. This
+caution was necessary, since the assistants' output was not reliable on its own. Agents proposed incorrect
 lemmas and, in one case, introduced a premise into the end-to-end soundness theorem that
 no program satisfied, making the theorem vacuous until the solver run was
 redesigned. Audits of theorem statements and full batch builds exposed these
@@ -119,7 +122,8 @@ generator (@fig:intro-trust). This establishes the stated propositions
 relative to their definitions and assumptions, but does not establish that those
 definitions faithfully capture the intended language or analysis. Definitions
 and theorem statements were therefore also checked against example programs, the
-regression corpus, and the documented differences between VIMP and C11.
+regression corpus, and the documented differences between VIMP and C11, much as a human
+audit checks the statements of AI-generated formal proofs @hales26lean[Sec. "Is Lean reliable?"].
 Related-work claims were checked against the cited sources, often with agent
 assistance and subsequent author review.
 

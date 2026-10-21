@@ -553,6 +553,7 @@
         "evals": 0.8707220497770422,
         "family": "call-sites-entry",
         "gap": 1.7420099131301008,
+        "label": "call sites\n(entry)",
         "time": 2.612731962907143,
         "what": "the number of call sites sharing one context"
       },
@@ -560,6 +561,7 @@
         "evals": 0.9847160307277864,
         "family": "call-sites-k1",
         "gap": 1.8764511124233745,
+        "label": "call sites\n(k = 1)",
         "time": 2.8611671431511607,
         "what": "the number of call sites with one context each"
       },
@@ -567,6 +569,7 @@
         "evals": 0.8575088439613947,
         "family": "globals",
         "gap": 1.907425977739163,
+        "label": "globals",
         "time": 2.7649348217005576,
         "what": "the number of globals"
       },
@@ -574,6 +577,7 @@
         "evals": 0.9937247805572782,
         "family": "loops",
         "gap": 1.8191473473521063,
+        "label": "loops",
         "time": 2.8128721279093845,
         "what": "the number of loops"
       },
@@ -581,6 +585,7 @@
         "evals": 0.9583751302440698,
         "family": "points",
         "gap": 1.675435774063052,
+        "label": "statements",
         "time": 2.633810904307122,
         "what": "the number of statements"
       },
@@ -588,6 +593,7 @@
         "evals": 0.9911363423106873,
         "family": "procedures",
         "gap": 1.0188990614008855,
+        "label": "call\nchain",
         "time": 2.010035403711573,
         "what": "the length of a call chain"
       },
@@ -595,6 +601,7 @@
         "evals": 0.9847988870321581,
         "family": "recursion",
         "gap": 1.0982020432274449,
+        "label": "recursion",
         "time": 2.083000930259603,
         "what": "the recursion depth"
       },
@@ -602,6 +609,7 @@
         "evals": 0.9525455983930743,
         "family": "variables",
         "gap": 1.7151378351139135,
+        "label": "variables",
         "time": 2.667683433506988,
         "what": "the number of variables"
       }
@@ -614,6 +622,7 @@
         "evals": 0.9525455983930743,
         "family": "variables",
         "gap": 1.7151378351139135,
+        "label": "variables",
         "time": 2.667683433506988,
         "what": "the number of variables"
       },
@@ -621,6 +630,7 @@
         "evals": 0.9583751302440698,
         "family": "points",
         "gap": 1.675435774063052,
+        "label": "statements",
         "time": 2.633810904307122,
         "what": "the number of statements"
       },
@@ -628,6 +638,7 @@
         "evals": 0.8575088439613947,
         "family": "globals",
         "gap": 1.907425977739163,
+        "label": "globals",
         "time": 2.7649348217005576,
         "what": "the number of globals"
       },
@@ -635,6 +646,7 @@
         "evals": 0.9847160307277864,
         "family": "call-sites-k1",
         "gap": 1.8764511124233745,
+        "label": "call sites\n(k = 1)",
         "time": 2.8611671431511607,
         "what": "the number of call sites with one context each"
       },
@@ -642,6 +654,7 @@
         "evals": 0.8707220497770422,
         "family": "call-sites-entry",
         "gap": 1.7420099131301008,
+        "label": "call sites\n(entry)",
         "time": 2.612731962907143,
         "what": "the number of call sites sharing one context"
       },
@@ -649,6 +662,7 @@
         "evals": 0.9911363423106873,
         "family": "procedures",
         "gap": 1.0188990614008855,
+        "label": "call\nchain",
         "time": 2.010035403711573,
         "what": "the length of a call chain"
       },
@@ -656,6 +670,7 @@
         "evals": 0.9937247805572782,
         "family": "loops",
         "gap": 1.8191473473521063,
+        "label": "loops",
         "time": 2.8128721279093845,
         "what": "the number of loops"
       },
@@ -663,6 +678,7 @@
         "evals": 0.9847988870321581,
         "family": "recursion",
         "gap": 1.0982020432274449,
+        "label": "recursion",
         "time": 2.083000930259603,
         "what": "the recursion depth"
       }
@@ -674,5 +690,6 @@
   "slowest_5pct_share": 0.8865588479026512,
   "solve_median_ms": 0.235,
   "solve_p95_ms": 1.48,
-  "source": "pages/data/profiling/2026-10-21-17fcb363d.json"
+  "source": "pages/data/profiling/2026-10-21-17fcb363d.json",
+  "timeouts": 21
 }

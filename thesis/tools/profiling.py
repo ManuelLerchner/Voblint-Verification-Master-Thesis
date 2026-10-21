@@ -47,6 +47,17 @@ SCALING_PHRASES = {
     "loops": "the number of loops",
     "recursion": "the recursion depth",
 }
+# Each family's axis label in the scaling figure.
+SCALING_LABELS = {
+    "variables": "variables",
+    "points": "statements",
+    "globals": "globals",
+    "call-sites-k1": "call sites\n(k = 1)",
+    "call-sites-entry": "call sites\n(entry)",
+    "procedures": "call\nchain",
+    "loops": "loops",
+    "recursion": "recursion",
+}
 # The CPU profile the thesis describes, by its title in the snapshot.
 STRESS_PROFILE = "h(1000)"
 LOOKUP_FRAMES = ("Voblint_Generated.membera", "caml_apply2")
@@ -176,6 +187,7 @@ def summarize(snapshot, source):
             {
                 "family": family,
                 "what": SCALING_PHRASES.get(family, rows[0]["what"]),
+                "label": SCALING_LABELS.get(family, family),
                 "time": k_time,
                 "evals": k_evals,
                 "gap": None if k_time is None or k_evals is None else k_time - k_evals,
@@ -223,6 +235,7 @@ def summarize(snapshot, source):
         "fixtures": len({r["fixture"] for r in runs}),
         "configurations": len({(r["domain"], r["context"]) for r in runs}),
         "runs": len(runs),
+        "timeouts": sum(r["status"] == "timeout" for r in runs),
         "solve_median_ms": statistics.median(solves),
         "solve_p95_ms": solves[min(len(solves) - 1, math.ceil(0.95 * len(solves)) - 1)],
         "slowest_5pct_share": top_share,
