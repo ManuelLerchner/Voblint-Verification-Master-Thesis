@@ -537,6 +537,7 @@ function scalingFits(data) {
       return {
         family,
         what: rows[0].what,
+        domain: rows[0].domain,
         context: rows[0].context,
         maxN: d3.max(ok, (r) => r.n),
         stopped: rows.find((r) => r.status && r.status !== "ok"),
@@ -604,13 +605,26 @@ function scaling(data) {
           [fmtK(f.gap), "num"],
         ];
         tr.replaceChildren(
-          ...cells.map(([text, cls]) => {
+          ...cells.map(([text, cls], i) => {
             const td = document.createElement("td");
             td.className = cls;
-            td.textContent = text;
+            if (i === 0 && data.scaling_examples?.[f.family]) {
+              const button = document.createElement("button");
+              button.type = "button";
+              button.className = "family-link";
+              button.textContent = text;
+              button.title = "Show the program this family generates";
+              td.append(button);
+            } else {
+              td.textContent = text;
+            }
             return td;
           }),
         );
+        if (data.scaling_examples?.[f.family]) {
+          tr.className = "linked";
+          tr.addEventListener("click", () => showFamily(f, data.scaling_examples[f.family]));
+        }
         return tr;
       }),
   );
@@ -707,6 +721,32 @@ function readFlame(profile) {
 }
 
 /* A frame's definition at the commit the snapshot was measured on. */
+/* A family's program at a readable size, with a playground link for exactly that program. */
+function showFamily(fit, example) {
+  const dialog = $("family-dialog");
+  $("family-heading").textContent = `${fit.family}: ${fit.what}`;
+  $("family-note").innerHTML =
+    `The generator at <em>n</em>&nbsp;=&nbsp;${example.n}. The measured programs repeat the same pattern up to <em>n</em>&nbsp;=&nbsp;${fit.maxN}, analysed with ${domChip(fit.domain)} and context policy ${ctxChip(fit.context)}.`;
+  $("family-program").replaceChildren(
+    ...example.source
+      .trimEnd()
+      .split("\n")
+      .flatMap((line, i) => {
+        const span = document.createElement("span");
+        span.className = "ml";
+        span.textContent = line;
+        return i ? ["\n", span] : [span];
+      }),
+  );
+  const open = $("family-open");
+  open.hidden = true;
+  profileLink({ domain: fit.domain, context: fit.context, source: example.source }).then((href) => {
+    open.href = href;
+    open.hidden = false;
+  });
+  dialog.showModal();
+}
+
 function sourceUrl(source, meta) {
   if (!source || !meta.commit_sha || !meta.repo_url) return null;
   return `${meta.repo_url}/blob/${meta.commit_sha}/${source.path}#L${source.line}`;
@@ -1148,6 +1188,10 @@ async function load(entry) {
   flame(data, flameIndex);
   $("flame-search").oninput = (e) => flameChart?.search(e.target.value);
   $("flame-reset").onclick = () => flameChart?.resetZoom();
+  const familyDialog = $("family-dialog");
+  $("family-close").onclick = () => familyDialog.close();
+  /* A click on the backdrop lands on the dialog itself, outside its panel. */
+  familyDialog.onclick = (e) => e.target === familyDialog && familyDialog.close();
   let browserDomain = quantileDomain;
   let browserContext = CONTEXTS[0];
   segmented(

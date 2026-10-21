@@ -358,3 +358,41 @@
 .flame-open:hover {
   text-decoration: underline;
 }
+
+.family-link {
+  padding: 0;
+  font: inherit;
+  color: var(--primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.family-link:hover {
+  text-decoration: underline;
+}
+
+.family-dialog {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.family-dialog .examples-body {
+  padding-top: 16px;
+}
+
+.family-dialog .snippet {
+  margin: 0 0 14px;
+}
+
+.family-open {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.family-open:hover {
+  text-decoration: underline;
+}

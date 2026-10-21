@@ -217,7 +217,7 @@
         <div id="chart-scaling" class="chart"></div>
         <figcaption>
           Native solve time against the size <em>n</em> of each family's program, log–log, under
-          Interval. A line ends at the first <em>n</em> whose run passed the time limit.
+          Interval. A line ends at the first <em>n</em> whose run passed the time limit. Click a family in the table below to see the program it generates.
         </figcaption>
       </figure>
       <div class="table-wrap">
@@ -258,6 +258,28 @@
         </ul>
       </details>
     </section>
+
+    <dialog id="family-dialog" class="examples-dialog family-dialog" aria-labelledby="family-heading">
+      <div class="examples-panel">
+        <div class="examples-header">
+          <div>
+            <p class="eyebrow">Scaling family</p>
+            <h2 id="family-heading"></h2>
+          </div>
+          <button id="family-close" class="examples-close" type="button" aria-label="Close">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+        <p class="examples-note" id="family-note"></p>
+        <div class="examples-body">
+          <pre class="mock-editor snippet" id="family-program" data-lang="vimp"></pre>
+          <a class="family-open" id="family-open" target="_blank" rel="noopener">
+            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            Open this program in the playground
+          </a>
+        </div>
+      </div>
+    </dialog>
 
     <section class="section" aria-labelledby="h-flame">
       <div class="section-heading">

@@ -415,6 +415,16 @@ SCALING = {
     ),
 }
 SCALING_SIZES = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
+# The size at which the page shows each family's program: large enough to show the
+# repeated pattern, small enough to read.
+EXAMPLE_N = 4
+
+
+def scaling_examples():
+    return {
+        family: {"n": EXAMPLE_N, "source": program(EXAMPLE_N)}
+        for family, (_, program, _, _) in SCALING.items()
+    }
 
 
 def scaling_sweep(reps, timeout):
@@ -1065,6 +1075,7 @@ def main():
     if wanted("scaling"):
         print("scaling families", flush=True)
         snapshot["scaling"] = scaling_sweep(args.reps, args.timeout)
+        snapshot["scaling_examples"] = scaling_examples()
         done("scaling", "scaling")
     if wanted("flame"):
         print("CPU profiles", flush=True)
@@ -1113,4 +1124,5 @@ def main():
     print(f"wrote {path.relative_to(REPO)} in {snapshot['meta']['duration_s']} s")
 
 
-main()
+if __name__ == "__main__":
+    main()
