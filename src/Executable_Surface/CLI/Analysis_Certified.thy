@@ -48,7 +48,8 @@ theorem run_voblint_sound:
 text \<open>
   The common point of the source-level results. Whatever configuration produced
   the report, the policy it runs with gives every valid activation trace a context,
-  and every context's activation bucket lies in the report's semantics. The
+  and every context's activation bucket lies in what the report's states for that
+  context describe. The
   context-free coverage below and the per-context spine both start here.
 \<close>
 
@@ -56,6 +57,33 @@ theorem run_voblint_contexts:
   assumes "run_voblint config p = Analysed res"
   shows "context_sound p res (run_policy config p) (run_root config)"
   using run_voblint_report_sound [OF assms] by blast
+
+text \<open>
+  Per context: the stores every valid activation trace carrying context \<open>c\<close> reaches
+  at \<open>v\<close>, under the policy the run uses, lie in the stores the report's states for
+  \<open>c\<close> at \<open>v\<close> describe. A context the report lists no state for at \<open>v\<close>
+  therefore reaches no store there.
+\<close>
+
+theorem run_voblint_context_covers:
+  assumes "run_voblint config p = Analysed res"
+  shows "\<A>\<^bsub>declared_global p,run_policy config p,run_root config,prog_cfg p,
+            cinit_stores (declared_global p)\<^esub> v c
+           \<subseteq> report_context_sem res v c"
+  using run_voblint_contexts [OF assms] unfolding context_sound_def by blast
+
+corollary run_voblint_context_absent:
+  assumes "run_voblint config p = Analysed res" and "report_states_in res v c = {}"
+  shows "\<A>\<^bsub>declared_global p,run_policy config p,run_root config,prog_cfg p,
+            cinit_stores (declared_global p)\<^esub> v c = {}"
+  using run_voblint_context_covers [OF assms(1), of v c] assms(2)
+  unfolding report_context_sem_def by blast
+
+text \<open>
+  So a report's context column is exhaustive at each point: by
+  @{thm [source] run_voblint_context_absent}, an activation in a context the report
+  lists no state for at a point never reaches that point.
+\<close>
 
 lemma run_voblint_consistent:
   "run_voblint config p = Analysed res \<Longrightarrow> consistent_report res"
@@ -90,7 +118,9 @@ proof -
           = (\<Union>c. \<A>\<^bsub>declared_global p,run_policy config p,run_root config,prog_cfg p,
                        cinit_stores (declared_global p)\<^esub> v c)"
     by (rule node_collect_eq_Union_activation_of_has_context) (use ctx in blast)
-  with ctx show ?thesis by blast
+  also have "\<dots> \<subseteq> \<R>\<^bsub>res\<^esub> v"
+    using context_sound_point [OF run_voblint_contexts [OF assms]] by blast
+  finally show ?thesis .
 qed
 
 text \<open>

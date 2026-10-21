@@ -74,9 +74,11 @@ $
 where #isai("\<gamma>\<^bsub>res\<^esub>") is the concretization of the
 configured analyses. The union drops the contexts, since a source execution
 carries no context to compare with, and a user asks what holds at a program
-point, whichever call led there. Inside the proof, each per-context state
-still bounds the activation collecting semantics of its context
-(@sec:certificate).
+point, whichever call led there. The report keeps them nonetheless: each state
+names its context, and the states at $v$ under one context $c$ describe
+#isai("report_context_sem res v c") (#isaconst("report_states_in"),
+#isaconst("report_context_sem")), a subset of
+#isai("\<R>\<^bsub>res\<^esub> v"). @sec:chain uses these per-context sets.
 
 == Computing check verdicts from the report <sec:verdicts>
 
@@ -205,9 +207,19 @@ meets it through #oblig("TOTAL") on the solution (@sec:contract). The third
 inclusion is the analyzer's soundness result. Its proof combines the second
 step with the per-context bound of @ch:equations, which places the activation
 collecting semantics of each context inside the state solved for it
-(#isathm("activation_collect_dg_sound")). The theorem itself states only the
-outer sets, #isai("\<C>") and #isai("\<R>\<^bsub>res\<^esub>"), so it does not
-say which state covers a given store, and the contexts stay inside its proof.
+(#isathm("activation_collect_dg_sound")). The same bound holds for the report
+itself, context by context. Take #isai("adm") and #isai("c\<^sub>0") to be the
+policy and root context the run uses (#isaconst("run_policy"),
+#isaconst("run_root")). Then the stores of every
+context $c$ at $v$ lie in the stores that the report's states for $c$ at $v$
+describe,
+$
+  #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") subset.eq #isai("report_context_sem res v c")
+$
+(#isathm("run_voblint_context_covers")). A context for which the report holds
+no state at $v$ therefore reaches no store there
+(#isathm("run_voblint_context_absent")). The third inclusion follows by
+taking the union over all contexts.
 The fourth inclusion is that of @sec:verdicts and depends only on the
 report and its consistency.
 
@@ -340,8 +352,8 @@ quantifies over an arbitrary analysis configuration and program, the arguments
 of #isaconst("run_voblint") (@sec:report). Whenever the analyzer returns a
 report, every store that a finite source execution reaches is covered by that
 report and satisfies its definite verdicts. Of the sets in the chain, its conclusion keeps the node collecting semantics,
-#isai("\<R>\<^bsub>res\<^esub> v"), and the verdict set. The contexts appear only inside its
-proof.
+#isai("\<R>\<^bsub>res\<^esub> v"), and the verdict set. Its per-context
+counterpart is #isathm("run_voblint_context_covers") (@sec:chain).
 
 The theorem is about #isaconst("run_voblint") itself, the constant that code
 generation exports. It therefore concerns the analyzer that the command-line

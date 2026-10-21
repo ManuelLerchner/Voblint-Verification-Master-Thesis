@@ -400,7 +400,10 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
   per-context states of an analysis their concrete counterpart. Each trace
   follows one procedure activation and records which activation called it, so
   the contexts of a call can be read off the concrete execution. Splitting the
-  concrete stores by context then loses no execution (@sec:contract). The
+  concrete stores by context then loses no execution (@sec:contract), and every
+  report the analyzer returns covers, for each context, the stores of the
+  activations in that context with its states for that context
+  (#isathm("run_voblint_context_covers")). The
   semantics may admit several contexts for one call, so that an analysis can
   split a call into cases, for instance, one per path-sensitive state. The
   shipped analyses use at most one context per caller context (@sec:contexts).
