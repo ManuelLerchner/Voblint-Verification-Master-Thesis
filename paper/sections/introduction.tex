@@ -13,21 +13,20 @@ translating a program into a \emph{side-effecting constraint
 system}~\cite{seidl03,apinis12}. This is a system of inequations over unknowns
 indexed by program point and context, whose right-hand sides may also
 contribute to other unknowns. A generic top-down solver then solves the
-system.
+system. Goblint's soundness rests on tests: its issue tracker lists more than a
+hundred issues labeled as unsound since 2021, and a defect in any of these
+layers can turn a verdict false.
 
 That solver has been verified. Stade et al.\ proved it partially correct in
 Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extended the proof to side
 effects~\cite{tilscher26}. When the solver terminates, it returns a
-post-solution on the unknowns it solved, a set closed under the reads of
+\emph{post-solution}, a valuation that satisfies the inequations, on the
+unknowns it solved, a set closed under the reads of
 right-hand sides. Whether the equations describe the program lies outside
 that theorem. Closing the gap needs a concrete semantics in which a
 per-context state has something to cover. Such semantics are classical on
-paper. Sharir and Pnueli distinguish the call-string and functional
-approaches~\cite{sharir81}. Jeannet and Serwe derive interprocedural analyses
-by abstracting a stack semantics~\cite{jeannet04}, and Van Horn and Might
-derive sound analyses from abstract machines by bounding their
-stores~\cite{vanhorn10}.
-What has not been mechanized, to our knowledge, is the connection from a
+paper~\cite{sharir81,knoop92,jeannet04,vanhorn10} (\cref{sec:related}). What
+has not been mechanized, to our knowledge, is the connection from a
 source semantics through such a context-indexed semantics to a side-effecting
 constraint system and its verified solver.
 
@@ -35,9 +34,8 @@ We mechanize this connection. The development, Voblint, is written in
 Isabelle/HOL and contains no \texttt{sorry}. Its parts are the following.
 \begin{itemize}
   \item We adapt the local traces of Schwarz et al.~\cite{schwarz21} to
-    procedure activations. An \emph{activation trace} records one activation
-    and the activation that created it. A context policy, which may admit
-    several contexts for one call, relates traces to contexts. We prove that
+    procedure activations. A context policy, which may admit several contexts
+    for one call, relates these activation traces to contexts. We prove that
     five local obligations on a cover bound every valid trace in every admitted
     context, over an arbitrary control-flow graph (\cref{sec:traces}).
   \item We prove that every post-solution of the generated, context-routed
@@ -45,10 +43,9 @@ Isabelle/HOL and contains no \texttt{sorry}. Its parts are the following.
     the routing of the equations. The verified solver enters only through its
     certificate (\cref{sec:equations}).
   \item We prove an end-to-end theorem about the analyzer function that
-    Isabelle exports to OCaml. Whenever it returns a report, every store that a
-    finite source execution from an initial store reaches is covered by the
-    report at the corresponding program point and satisfies every definite
-    verdict there. This holds for every configuration the function offers
+    Isabelle exports to OCaml. Whenever it returns a report, every store a finite
+    source execution reaches is covered by the report at its program point
+    and satisfies the definite verdicts there, for every configuration
     (\cref{sec:theorem}).
   \item We show that the theorem is not vacuous, that a domain obligation
     rejects a real Goblint defect, and how calling contexts change verdicts on
@@ -64,6 +61,7 @@ The scope is limited. The source language, VIMP, has integer variables,
 global variables, and recursive procedures with parameters and return values,
 but no pointers, arrays, or heap. The result is partial correctness: the
 analyzer answers only when its solver run terminates, and termination is not
-proved for every program. The parser, Isabelle's code generator, the OCaml
-toolchain, and a solver-tracing hook are trusted.
+proved for every program. The parser and the report printer are unverified
+handwritten code. Isabelle's code generator, the OCaml toolchain, and a
+solver-tracing hook are trusted.
 

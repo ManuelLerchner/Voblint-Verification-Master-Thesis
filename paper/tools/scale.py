@@ -37,6 +37,13 @@ def grouped(n: int) -> str:
 
 
 def main() -> int:
+    if not (pages_stats.TD_DIR / "ROOT").is_file():
+        # collect() alone would count the missing solver as zero theories.
+        print(
+            "vendor/td-verification is not checked out; run `pixi run vendor-init`",
+            file=sys.stderr,
+        )
+        return 1
     stats = pages_stats.collect()
     areas = {a["name"]: a for a in stats["isabelle"]["sessions"]}
     missing = [name for name, _ in LAYERS if name not in areas]

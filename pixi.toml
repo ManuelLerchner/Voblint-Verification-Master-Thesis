@@ -164,9 +164,9 @@ thesis-facts-write = { cmd = "python3 thesis/tools/facts.py --write", descriptio
 
 thesis-figures = { cmd = "python3 thesis/tools/explainer_svg.py --check", description = "Check extracted explainer figures against pages/index.html." }
 
-paper-generated = { cmd = "python3 paper/tools/snippets.py --write && python3 paper/tools/bib.py --write && python3 paper/tools/stats.py && python3 paper/tools/contexts.py && python3 paper/tools/scale.py", description = "Regenerate the paper's Isabelle snippets, bibliography, statistics and tables from the thesis sources." }
+paper-generated = { cmd = "python3 paper/tools/snippets.py --write && python3 paper/tools/bib.py --write && python3 paper/tools/stats.py && python3 paper/tools/contexts.py && python3 paper/tools/costs.py && python3 paper/tools/scale.py", description = "Regenerate the paper's Isabelle snippets, bibliography, statistics and tables from the thesis sources." }
 paper-check = { cmd = "python3 paper/tools/snippets.py --check && python3 paper/tools/bib.py --check", description = "Check the paper's snippets and bibliography against the thesis sources." }
-paper = { cmd = "python3 paper/tools/stats.py && python3 paper/tools/contexts.py && cd paper && latexmk -interaction=nonstopmode -halt-on-error main.tex", depends-on = [
+paper = { cmd = "python3 paper/tools/stats.py && python3 paper/tools/contexts.py && python3 paper/tools/costs.py && python3 paper/tools/scale.py && cd paper && latexmk -interaction=nonstopmode -halt-on-error main.tex", depends-on = [
   "paper-check",
 ], description = "Build the paper PDF (needs a system TeX Live with latexmk)." }
 thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", description = "Re-extract explainer figures into thesis assets." }

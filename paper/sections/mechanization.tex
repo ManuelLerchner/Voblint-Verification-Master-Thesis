@@ -5,8 +5,11 @@
 counts the theories that the sessions list, and lemmas, theorems and
 corollaries as proved statements. The development reuses part of the verified
 solver of Tilscher et al.~\cite{tilscher26}. The solver is vendored with four
-changes made for this work and proposed upstream: a build fix, renames, a
-removed assumption, and added facts. They leave its algorithm unchanged.
+changes made for this work and proposed upstream. They restore the build
+under Isabelle2025-2, remove from the widening and narrowing classes the
+stabilization assumptions that only termination proofs use, rename clashing
+names, and add facts such as \isaname{solve_dom_of_solve_c}. None changes the
+algorithm.
 Neither Voblint nor the imported solver theories contain \texttt{sorry} or
 \texttt{oops}. Code generation emits \stat{generated_ocaml} lines of OCaml, and
 \stat{handwritten_ocaml} lines of handwritten OCaml parse programs, print
@@ -25,8 +28,9 @@ the grammar manifest (\texttt{VIMP\_Grammar\_Generated}).}
 \end{table}
 
 \subparagraph*{Design choices and their alternatives.}
-Four choices shaped the proof. Only for the first was an alternative
-implemented and abandoned.
+Besides the relational context policy (\cref{sec:traces}) and the solver
+as a parameter (\cref{sec:equations}), two choices shaped the proof. Only for
+the first was an alternative implemented and abandoned.
 \begin{itemize}
   \item \emph{Activation traces as the soundness target.} A first prototype
     used whole-program executions with calls inlined. To account for one call,
@@ -38,37 +42,24 @@ implemented and abandoned.
     the whole stack. Activation traces turn it into a fact about the caller
     chain, recovered through $\mathit{caller\_of}$, and keep contexts out of
     the concrete semantics, so the policy can be a parameter.
-  \item \emph{Contexts as a relation.} The unit and call-string policies are
-    functions and discharge \oblig{Total} once for every cover. The relational
-    form is needed for an enter that returns overlapping alternatives and for
-    the entry-state policy. That policy admits no context for stores the
-    analysis excludes, and it proves \oblig{Total} from the solution.
-  \item \emph{The solver as a parameter.} The analysis locale assumes four
-    facts about a solver instead of reasoning about the top-down solver's run.
-    The vendored solver discharges them under all five update rules, and the
-    semantic proofs never unfold its definition.
   \item \emph{Two-default executable states.} Soundness is stated over total
-    functions on variable names. The solver runs on a quotient
-    type~\cite{huffman13} of defaults and a finite override list, as in
-    Concrete Semantics~\cite[§13.6]{nipkow14}, with separate defaults for
-    locals ($\top$) and zero-initialized globals ($0^\sharp$)
-    (\isaname{exec_local_spec_sound}).
+    functions on variable names; the solver runs on a quotient
+    type~\cite{huffman13} of a finite override list with separate defaults
+    for locals and zero-initialized globals (\isaname{exec_local_spec_sound}),
+    refining the single default of Concrete Semantics~\cite[§13.6]{nipkow14}.
 \end{itemize}
 
-The coverage contract, the analysis contract, the routing conditions, and
-the certified solver are each a locale~\cite{ballarin14}, and a domain is
-registered with one locale interpretation per context policy.
+The contracts of \cref{sec:traces,sec:equations} and the certified solver
+are locales~\cite{ballarin14}; a domain is registered with one locale
+interpretation per context policy.
 
 \subparagraph*{Feedback on the proof assistant.}
-Two points cost effort that the tooling could reduce. First, HOL admits only
-terminating recursion. The solver is therefore defined with a domain predicate
-and an executable variant that returns only when the recursion finishes, and a
-returned run must be transported to the logical definition. A lemma added to
-the vendored solver proves this transport once (\isaname{solve_dom_of_solve_c}).
+Two points cost effort that the tooling could reduce. First, functions in Isabelle/HOL are total. A solver that may diverge is
+therefore defined with a domain predicate, next to an executable variant that
+returns only when the recursion finishes, and a returned run must be
+transported to the logical definition. A lemma added to the vendored solver
+proves this transport once (\isaname{solve_dom_of_solve_c}).
 Second, code generation turns finite sets and maps into lists that every
-lookup scans. One definition recompiled the whole program at every equation
-evaluation until a proved code equation replaced it, without changing any
-theorem. CPU profiles attribute most of the remaining solve time to list
-membership and lookup. The Collections Framework or the Containers library
-could replace these structures in the code setup alone, without touching the
-soundness proofs. We leave this to future work.
+lookup scans, and CPU profiles attribute most of the solve time to these scans.
+The Containers library could replace them in the code setup alone, without
+touching the proofs; we leave this to future work.

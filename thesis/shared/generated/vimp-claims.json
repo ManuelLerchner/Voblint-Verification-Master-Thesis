@@ -233,7 +233,28 @@
       "placement": "flow-sensitive"
     }
   },
+  "ctx-mutual-entry-dot": {
+    "fixture": "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i - 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 12;\n}\nfun main() {\n  i = 200;\n  while (0 < i) {\n    res1 = f(2);\n    res2 = g(2);\n    __voblint_check(res1 == 2);\n    __voblint_check(res2 == 1);\n    i = i - 1;\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "entry-state",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "ctx-mutual-k1": {
+    "fixture": "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i - 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 12;\n}\nfun main() {\n  i = 200;\n  while (0 < i) {\n    res1 = f(2);\n    res2 = g(2);\n    __voblint_check(res1 == 2);\n    __voblint_check(res2 == 1);\n    i = i - 1;\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 1,
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctx-mutual-k1-dot": {
     "fixture": "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
     "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i - 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 12;\n}\nfun main() {\n  i = 200;\n  while (0 < i) {\n    res1 = f(2);\n    res2 = g(2);\n    __voblint_check(res1 == 2);\n    __voblint_check(res2 == 1);\n    i = i - 1;\n  }\n}",
     "settings": {
@@ -255,7 +276,28 @@
       "placement": "flow-sensitive"
     }
   },
+  "ctx-mutual-k2-dot": {
+    "fixture": "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i - 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 12;\n}\nfun main() {\n  i = 200;\n  while (0 < i) {\n    res1 = f(2);\n    res2 = g(2);\n    __voblint_check(res1 == 2);\n    __voblint_check(res2 == 1);\n    i = i - 1;\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "call-string",
+      "globals": "warrow",
+      "k": 2,
+      "placement": "flow-sensitive"
+    }
+  },
   "ctx-mutual-none": {
+    "fixture": "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+    "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i - 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 12;\n}\nfun main() {\n  i = 200;\n  while (0 < i) {\n    res1 = f(2);\n    res2 = g(2);\n    __voblint_check(res1 == 2);\n    __voblint_check(res2 == 1);\n    i = i - 1;\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "ctx-mutual-none-dot": {
     "fixture": "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
     "program": "fun g(i) {\n  if (i == 0) { return 1; }\n  if (0 < i) { r = f(i - 1); return r; }\n  return 11;\n}\nfun f(i) {\n  if (i == 0) { return 2; }\n  if (0 < i) { r = g(i - 1); return r; }\n  return 12;\n}\nfun main() {\n  i = 200;\n  while (0 < i) {\n    res1 = f(2);\n    res2 = g(2);\n    __voblint_check(res1 == 2);\n    __voblint_check(res2 == 1);\n    i = i - 1;\n  }\n}",
     "settings": {

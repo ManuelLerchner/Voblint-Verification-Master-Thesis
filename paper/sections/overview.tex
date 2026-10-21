@@ -72,7 +72,7 @@ violet arrows are calls (enter), dashed blue arrows are returns (combine), and
 dashed gray arrows link a call site to its continuation. Both checks are
 \verdict{PROVED}. Without contexts, the single copy of \texttt{bump} joins both
 calls and both checks are \verdict{UNKNOWN}. States are analyzer output with
-the warrowing update rule; the intermediate node of \texttt{bump}'s body and the unreachable node after
+the warrowing update rule for global unknowns (\cref{sec:equations}); the intermediate node of \texttt{bump}'s body and the unreachable node after
 \texttt{return} are omitted.}
 \label{fig:running}
 \end{figure}
@@ -92,18 +92,12 @@ store (\cref{sec:theorem}).
 
 From the graph, the analyzer generates inequations over \emph{local unknowns}
 $(v, c)$ for a node $v$ and a context $c$, and over \emph{global unknowns}
-without a program point. At the call \texttt{a = bump(5)}, the right-hand side
-of the continuation reads the caller's state and applies the analysis's
-\emph{enter} operation. Enter returns an \emph{entry pair} of a resume state,
-which describes the caller, and an entry state, which binds \texttt{n} to
-$[5,5]$. The entry state is \emph{routed} to the callee context $c_1 = [5,5]$.
-Which contexts a callee is entered in becomes known only while the equations
-are solved, so the callee's entry equation cannot list its callers. The call
-instead publishes its entry state as a side effect to a global \emph{seed}
-unknown for $(\texttt{bump}, c_1)$, which the entry equation of \texttt{bump}
-in $c_1$ reads. The continuation then reads the callee's exit state in $c_1$
-and \emph{combines} it with the resume state. The second call routes to
-$c_2 = [4,4]$, so both checks are proved.
+without a program point. At \texttt{a = bump(5)}, the analysis's \emph{enter}
+operation binds \texttt{n} to $[5,5]$, and this entry state is \emph{routed}
+to the callee context $c_1 = [5,5]$; the second call routes to
+$c_2 = [4,4]$. \Cref{sec:equations} gives the equations of a call. Each
+activation of \texttt{bump} is analyzed in its own copy, and both checks are
+proved.
 
 For these per-context states to mean something, the concrete semantics has to
 say which stores belong to $c_1$. Activation traces (\cref{sec:traces}) supply
@@ -125,8 +119,6 @@ inclusions at every node:
 \;\subseteq\; \Report_{\mathit{res}}(v)
 \;\subseteq\; \Verd_{\mathit{res}}(v).
 \end{equation}
-Each inclusion may add stores that no execution reaches, which costs
-precision. None may lose a reached store. The contexts appear in the middle of
-the chain and disappear at its ends. The end-to-end theorem
-(\cref{sec:theorem}) states the outer inclusions for every report the
-analyzer returns.
+Each inclusion may add unreached stores, which costs precision, but none may
+lose a reached store. Contexts appear only in the middle of the chain; the
+end-to-end theorem (\cref{sec:theorem}) states its outer inclusions.

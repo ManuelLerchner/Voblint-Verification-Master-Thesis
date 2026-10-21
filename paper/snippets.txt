@@ -1,12 +1,2 @@
 # Isabelle snippets the paper shows, rendered from thesis/shared/generated/snippets.
-activation_trace
-valid_activation_trace
-context_policy
-activation_context_rel
-activation_collect
-activation_coverage
-activation_collect_sound
-node_collect_eq_Union_activation_collect
-part_post_solution
-activation_collect_dg_sound
 run_voblint_source_sound

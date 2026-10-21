@@ -9,8 +9,9 @@ premises can hold and that the obligations have force, and then measure what
 contexts and domains buy on concrete programs. Each item states its kind of
 evidence. Facts about one fixed program are proved by \texttt{eval}, which runs
 generated code and therefore also trusts the code generator. Analyzer outputs
-are registered claims that \texttt{pixi run thesis-claims} re-checks against
-the analyzer, and the paper's tables are generated from them.
+are registered claims that \texttt{pixi run thesis-claims} re-checks;
+\cref{tab:contexts,tab:costs} are generated from claims and from the committed
+profiling data.
 
 \subparagraph*{The theorem is not vacuous (machine-checked, one program each).}
 For the program of \cref{fig:running}, analyzed with Interval, entry-state
@@ -19,31 +20,31 @@ that returns from both calls. Evaluation shows that the analyzer answers with
 both checks \verdict{PROVED}, and \isaname{nv_source_certified} instantiates
 \cref{thm:headline} with every premise discharged. Companion instances do the
 same for a single check (\isaname{nv_check_proved_sound}) and for a
-\verdict{DEAD} check (\isaname{nv_dead_unreached}). These show that the
-premises are satisfiable. They do not measure how often the analyzer answers.
+\verdict{DEAD} check (\isaname{nv_dead_unreached}). They show that the premises are satisfiable.
 
 \subparagraph*{The obligations have force (machine-checked).}
 \oblig{Total} is needed: \isaname{total_dropped_unsound} exhibits a cover that
 meets the other four obligations and misses a reached store. At the domain
 level, Goblint once claimed \texttt{c \% 2 == 1} for $c \in \{-5, -7\}$,
 although C's truncating remainder gives $-1$ (issue 1156, fixed
-in~\cite{goblint1161}). This defect involves no contexts. It violates a domain
-law. In Voblint, the congruence domain's remainder must satisfy
-\isaname{congruence_mod_sound}, an assumption of the locale through which the
-domain is registered. The law requires the truncating remainder of any two
-concrete values to lie in the concretization of the abstract result.
-\isaname{prefix_congruence_mod_unsound} proves that every abstract remainder
-returning the constant~$1$ for $(1 + 2\mathbb{Z}) \bmod 2$ violates it at
-$-5$. The defective operator therefore cannot discharge the obligation.
+in~\cite{goblint1161}). The defect is in a domain, not in contexts. Every Voblint
+domain's remainder must meet \isaname{mod_sound} of the locale
+\isaname{sound_arith_ops} (the truncating remainder of concrete values lies in
+the concretization of the abstract one), which the shipped congruence
+remainder discharges by \isaname{congruence_mod_sound}. \isaname{prefix_congruence_mod_unsound} proves
+that every abstract remainder returning the constant~$1$ for
+$(1 + 2\mathbb{Z}) \bmod 2$ violates the obligation at $-5$, so the defective
+operator could not be registered.
 
 \subparagraph*{Contexts decide checks on recursive programs (executable).}
 \Cref{tab:contexts} runs one regression program under every context policy.
 Mutually recursive procedures \texttt{f} and \texttt{g} return $2$ and $1$ at
 the bottom of the recursion. \texttt{main} calls \texttt{f(2)} and
 \texttt{g(2)} inside a loop of 200 iterations and checks both results. Each
-call chain is three call sites deep. With one context per procedure, or with
-call strings of length 1, the activations of different depths share a state
-and both results widen to $[1,12]$. With call strings of length 2 or with
+call chain is three call sites deep. The table also counts the copies of
+\texttt{f} and \texttt{g} the analysis creates. With one context per
+procedure, or with call strings of length 1, the activations of different
+depths share a state and both results widen to $[1,12]$. With call strings of length 2 or with
 entry-state contexts, the depths stay apart and both checks are proved. The
 loop adds no contexts, because the callee contexts do not depend on the loop
 counter. For a related program, the theories prove that the solution of the
@@ -57,37 +58,46 @@ two solutions computed by \texttt{eval}. It concerns neither
 \centering
 \small
 \input{generated/contexts}
-\caption{Verdicts and computed values for the two checks of
-\texttt{17-call-string/precision/09-depth2\_mutual\_recursion\_in\_loop.vimp}
+\caption{Callee contexts of \texttt{f} and \texttt{g}, verdicts and computed
+values for the two checks of the regression fixture
+\texttt{09-depth2\_mutual\_recursion\_in\_loop} (group \texttt{17-call-string})
 under Interval, per context policy. Concretely, \texttt{res1} is always $2$ and
 \texttt{res2} always $1$. Generated from registered claims.}
 \label{tab:contexts}
 \end{table}
 
-\subparagraph*{Programs we did not choose (executable).}
-Monniaux's tutorial on the flavors of abstract interpretation gives small
-programs on which standard analyses gain or lose precision~\cite{monniaux24}.
-On the eight checks of the programs VIMP can express, all of which hold in
-every execution, Voblint's best setting (Int) proves five. The other three
-need path partitioning, or a widening delay or thresholds, which Voblint lacks.
-The thesis~\cite{voblint} compares these verdicts with Goblint's under several
-settings.
+The thesis~\cite{voblint} also runs Voblint on the programs of Monniaux's
+tutorial on the flavors of abstract interpretation~\cite{monniaux24} and
+compares the verdicts with Goblint's.
 
 \subparagraph*{Running time (empirical).}
 Speed was not a goal: the generated code runs as Isabelle emits it, plus one
-proved code equation. We ran the \stat{prof.fixtures} regression fixtures
-that set no timeout of their own under \stat{prof.configurations} combinations
-of domain and context policy, three repetitions each on an Apple M4 Pro, at repository revision
-\texttt{17fcb363d}. Over
-these \stat{prof.runs} fixture/configuration cases, the median solve takes
-\stat{prof.solve_median_ms}\,ms and the 95th percentile
-\stat{prof.solve_p95_ms}\,ms. \stat{prof.timeouts} cases exceed the 30\,s
-limit. The expensive cases include recursive programs under entry-state
-contexts, where domains such as Interval create one context per recursion
-level. On generated programs that grow one size at a time, the number of
-solver evaluations grows about linearly. Solve time grows with fitted
-exponents between \stat{prof.scaling.time_min} and
-\stat{prof.scaling.time_max} over the measured ranges, which CPU profiles
-attribute to list-based sets and maps in the generated code
+proved code equation. The profiling run at repository revision
+\texttt{17fcb363d} analyzed the 380 regression fixtures that set no timeout of
+their own under 15 configurations: five domains times three context
+policies (none, call strings of length 1, entry states). Eleven fixtures are
+ill-formed programs and are excluded, which leaves \stat{prof.fixtures}
+fixtures and \stat{prof.runs} cases. A case's time is the median of three repetitions on an
+Apple M4 Pro; a case that times out (30\,s) or fails in any repetition counts
+as failed. \Cref{tab:costs} summarizes the successful cases
+per policy. All \stat{prof.timeouts} timeouts are entry-state cases with
+Interval, Int or Congruence on seven recursive fixtures, where each recursion
+level creates a new context. One is
+\texttt{24-site-figures/precision/13-recursion\_grows\_warrow.vimp}: \texttt{f(x)}
+checks \texttt{x >= 0} and calls \texttt{f(x + 1)}. It is proved without contexts and
+does not terminate with entry-state contexts. Call strings of length 2 were
+not profiled. On generated programs of growing size, solve time
+grows with fitted exponents of \stat{prof.scaling.time_min} to
+\stat{prof.scaling.time_max} while solver evaluations grow about linearly
 (\cref{sec:mechanization}). These measurements cover small programs on one
 machine and imply no performance bound.
+
+\begin{table}[t]
+\centering
+\small
+\input{generated/costs}
+\caption{Solve time per context policy (milliseconds over successful cases),
+timeouts, and the largest number of contexts a successful case created.
+Generated from the committed profiling snapshot.}
+\label{tab:costs}
+\end{table}

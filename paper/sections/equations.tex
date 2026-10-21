@@ -18,20 +18,27 @@ analysis supplies the record \isaname{dg_spec}, the counterpart of Goblint's
 \texttt{Spec}: one transfer per kind of edge action, an enter operation, and
 two combine operations. A call needs two states. After the return, the
 caller's locals come from before the call, while the globals and the result
-come from the callee. Enter therefore returns a list of entry pairs $(q, e)$:
-a resume state $q$ that describes the caller's store, and an entry state $e$
-that describes the store in which the callee starts. Combine builds the state
-after the call from $q$ and the callee's exit state.
+come from the callee. Enter therefore returns a list of entry pairs $(q, d)$:
+a resume state $q$ that describes the caller's store, and an entry state $d$
+that describes the store in which the callee starts. After the return,
+\emph{combine\_env} merges the callee's exit state into $q$, taking the
+callee's globals, and \emph{combine\_assign} then writes the return value to
+the call's destination. Together they mirror the concrete
+$\mathit{combine}_e$ of \cref{sec:traces}. A transfer may also publish to
+the analysis's global unknowns, and its output is read in the previous global
+values joined with what it publishes.
 
-The local soundness laws form the locale \isaname{analysis_contract}. The
-concretization is monotone, every transfer loses no successor store, and
-combine covers $\mathit{combine}_e(s, t)$ whenever $q$ covers $s$ and the exit
-state covers $t$. In addition, enter must return a pair that covers the
-caller's store and the entered store (\isaname{entry_pairs_cover}). A numeric
+The local soundness laws of transfers and combine form the locale
+\isaname{analysis_contract}: the concretization is monotone, every transfer
+loses no successor store, and combine covers $\mathit{combine}_e(s, t)$
+whenever $q$ covers $s$ and the exit state covers $t$. Enter is not part of
+that locale. That enter returns a pair covering the caller's store and the
+entered store (\isaname{entry_pairs_cover}) is used by the routing conditions
+below, which each context policy discharges. A numeric
 domain proves only its abstract operations sound. The framework derives the
 transfers once for all domains, following Nipkow and Klein's generic
 interpreter~\cite[Sect.~13.5]{nipkow14}. The shipped domains are Sign,
-Interval, Parity, Congruence, and their reduced product.
+Interval, Parity, Congruence, and their reduced product Int.
 
 \subsection{Context-indexed equations and routing}
 
@@ -44,12 +51,25 @@ right-hand side joins four sources (\isaname{routed_node_rhs_parts}):
   \item the combined result of each call returning to $v$;
   \item at a procedure entry, the entry states published to it.
 \end{itemize}
-At a call, a \emph{routing function} chooses the callee context from the call
-site, the caller context, and the entry state. Each call publishes its entry
-state as a side effect to a global seed unknown for the callee and the chosen
-context, which the callee's entry equation reads. A recursive call needs no
-special treatment: its equation reads an exit state that depends on the
-caller's own unknowns, and the solver handles the cycle as it handles a loop.
+At a call, a \emph{routing function} $\mathit{route}$ chooses the callee
+context from the call site, the caller context, the entry state and the call.
+For a call edge $(u, e, \ctor{FunctionEntry}\;p, k)$ and caller context $c$,
+the right-hand side of the continuation $(k, c)$ contains, for every entry pair
+$(q, d)$ that enter returns for $\sol(u, c)$
+(\isaname{routed_call_alternative_program}): $\mathit{combine}(q, \bot)$ if $d$
+is bottom, and otherwise, with $c' = \mathit{route}(u, c, d, e)$, the program
+\[
+\text{publish } d \text{ to } \mathit{seed}(p, c');\quad
+r \leftarrow \text{read } (\ctor{FunctionResult}\;p, c');\quad
+\mathit{combine}(q, r).
+\]
+The entry equation of $(\ctor{FunctionEntry}\;p, c')$ reads the global unknown
+$\mathit{seed}(p, c')$. In the running example, the call \texttt{bump(5)} in
+$c_0$ publishes $n \in [5,5]$ to $\mathit{seed}(\texttt{bump}, [5,5])$, reads
+the result of \texttt{bump} in $[5,5]$, and combines it with the resume state
+of \texttt{main}. A recursive call needs no special treatment: its equation
+reads a result that depends on the caller's own unknowns, and the solver
+handles the cycle as it handles a loop.
 
 The equations choose a callee context from an abstract state, while the
 concrete semantics chooses one from the concrete call through the policy
@@ -58,7 +78,7 @@ locale \isaname{routed_context}.
 \begin{description}
   \item[Adequacy] (\isaname{routing_adequate}). If $\adm$ admits $c'$ for a call
     from a store that the caller's solved state describes, then enter produces
-    a pair $(q, e)$ that is routed to $c'$, whose resume state covers the
+    a pair $(q, d)$ that is routed to $c'$, whose resume state covers the
     caller's store and whose entry state covers the entered store. The
     callee's entry unknown in $c'$ is solved.
   \item[Totality] (\isaname{routing_total}). $\adm$ admits at least one context
@@ -72,93 +92,98 @@ unknown being solved.
 For entry-state contexts, the policy \isaname{routed_entry_context_rel} is
 defined from the solved valuation $\sol$:
 \begin{multline*}
-\adm_{u,c}(e, s, s') \;=\; \{\, \mathit{route}(u, c, e') \mid {}\\
-(q, e') \in \mathit{enter}(\sol(u, c)),\; s \in \conc(q),\; s' \in \conc(e') \,\}.
+\adm_{u,c}(e, s, s') \;=\; \{\, \mathit{route}(u, c, d, e) \mid {}\\
+(q, d) \in \mathit{enter}_e(\sol(u, c)),\; s \in \conc(q),\; s' \in \conc(d) \,\}.
 \end{multline*}
 That is, a context is admitted when an entry pair of the solved caller state
 covers both concrete stores and is routed there. The definition is not
 circular. $\sol$ is fixed before the policy is applied, and the final
 guarantee concerns $\NodeColl$, which no policy changes. The policy only
-decides how $\NodeColl$ is split among contexts inside the proof. The
-construction resembles the a posteriori soundness of Might and Manolios,
-whose abstraction maps can only be built after the analysis has
-run~\cite{might09}. In our case the abstraction is fixed in advance, and the
-solution fixes the relation between traces and contexts. A consequence
+decides how $\NodeColl$ is split among contexts inside the proof. \Cref{sec:related} compares this with a posteriori
+soundness~\cite{might09}. A consequence
 matters for reading the result: under entry-state contexts, $\ActColl(v, c)$
 is relative to the analysis that produced $\sol$.
 
 \begin{table}[t]
 \centering
-\small
-\begin{tabular}{@{}lp{0.6\textwidth}@{}}
+\footnotesize
+\begin{tabular}{@{}lp{0.58\textwidth}@{}}
 \toprule
 Hypothesis & Reading \\
 \midrule
-\texttt{analysis\_contract} & transfers, enter and combine are sound \\
-\texttt{pp} (\texttt{post\_bounded}) & $\sol$ bounds every right-hand side on the solved set $V$ \\
-\texttt{fwd} & an intraprocedural edge from a solved unknown with a non-empty state leads to a solved unknown \\
-\texttt{comb\_fwd} & a call's continuation is solved in the caller's context \\
-\texttt{routing\_adequate}, \texttt{routing\_total} & the policy agrees with the routing \\
+\texttt{analysis\_contract} & transfers and combine are sound \\
+\texttt{pp} (\texttt{post\_bounded}) & the query is in $W$, and at each unknown of $W$, $\sol$ bounds the right-hand side and every side effect it publishes \\
+\texttt{sg\_cov}, \texttt{sg\_uncov} & the cover is $\conc(\sol(v,c), \rho)$ on $W$ and $\emptyset$ elsewhere \\
+\texttt{fwd} & an intraprocedural edge from an unknown of $W$ with a non-empty state leads into $W$ \\
+\texttt{comb\_fwd} & a call's continuation is in $W$ in the caller's context \\
+\texttt{routing\_adequate}, & the policy agrees with the routing \\
+\quad\texttt{routing\_total} & \\
 \texttt{resolve\_sound} & callee resolution lists every procedure a covered store can call \\
 \texttt{calls\_unique} & each call site has one call edge (\isaname{calls_source_unique}) \\
-\texttt{is\_bot\_sound} & a state classified as bottom describes no store, so skipping its call is sound \\
+\texttt{is\_bot\_sound}, \texttt{is\_bot\_bot} & a state classified as bottom describes no store, and $\bot$ is classified as bottom \\
+\texttt{cmb\_wf}, \texttt{extra\_wf} & the generated call and seed contributions are well-formed programs over unknowns \\
 \texttt{finC}, \texttt{finE} & the graph has finitely many edges \\
 seed keys & seed unknowns differ from all other global unknowns \\
 \bottomrule
 \end{tabular}
-\caption{Hypotheses of \cref{thm:routed}: the assumptions of the locales
-\isaname{routed_context} and \isaname{dg_context_activation}. The theorem adds
-that the program entry is solved in $c_0$ and that the initial state describes
-the initial stores.}
+\caption{Hypotheses of \cref{thm:routed}, stated over a set $W$ of local
+unknowns: all assumptions of the locales \isaname{routed_context} and
+\isaname{dg_context_activation}. The theorem adds three premises: the program
+entry is in $W$ in context $c_0$, the initial state describes the initial
+stores under initial global values $\rho_0$, and $\rho_0 \leq \rho$.}
 \label{tab:hypotheses}
 \end{table}
 
 \begin{theorem}[Routed collecting soundness, \isaname{activation_collect_dg_sound}]
 \label{thm:routed}
-Under the hypotheses of \cref{tab:hypotheses}, if the program entry is solved
-in context $c_0$, the initial state describes the initial stores under the
-initial values of the global unknowns, and those values lie below the solved
-ones $\rho$, then
-$\ActColl(v, c) \subseteq \cover(v, c)$ for all $v$ and $c$, where
-$\cover(v, c) = \conc(\sol(v, c), \rho)$ on solved unknowns and $\emptyset$
-elsewhere.
+Under the hypotheses of \cref{tab:hypotheses}, if $(\mathit{entry}_g, c_0) \in W$,
+the initial state describes the initial stores under initial global values
+$\rho_0$, and $\rho_0 \leq \rho$, then $\ActColl(v, c) \subseteq \cover(v, c)$
+for all $v$ and $c$, where $\cover(v, c) = \conc(\sol(v, c), \rho)$ on $W$
+and $\emptyset$ elsewhere.
 \end{theorem}
 
 The proof checks the five obligations of \cref{thm:contract} for this cover.
-The initial state gives \oblig{Init}. The edge transfers and \texttt{fwd} give
-\oblig{Intra}. Adequacy with entry coverage gives \oblig{Call}, adequacy with
-combine soundness gives \oblig{Return}, and totality gives \oblig{Total}.
+The initial state and $\rho_0 \leq \rho$ give \oblig{Init}. The edge
+transfers and \texttt{fwd} give \oblig{Intra}. Adequacy with entry coverage
+gives \oblig{Call}, adequacy with combine soundness gives \oblig{Return}, and
+totality gives \oblig{Total}. Both bounds of \texttt{pp} are used: a value
+reaches its target unknown either as an answer or as a published side effect,
+such as an entry state published to a seed.
 \oblig{Return} is quantified over every admitted call edge from the call site
 (\cref{sec:traces}), and \texttt{calls\_unique} reduces it to the edge being
 returned through.
 
 \subsection{The solver enters through one certificate}
 
-\Cref{thm:routed} needs a post-solution on a set of unknowns that contains the
-program entry and is closed under execution steps. The verified top-down
+\Cref{thm:routed} needs a set $W$ of unknowns that contains the program entry,
+is closed under execution steps, and on which $\sol$ is bounded. The verified top-down
 solver~\cite{tilscher26} provides a different certificate,
 \isaname{part_post_solution}, for the query $x$ it started on, its solved set
-$V$, and its result $\sol$:
-\snippet{part_post_solution}
-\noindent Here $\sigma(\mathit{Inl}\;u)$ is the value of a local unknown $u$;
-global unknowns are the $\mathit{Inr}$ side of the sum. That is, the query is
-solved, $V$ is closed under the reads of right-hand sides, and $\sol$ bounds
+$V$, and its result $\sol$: the query is in $V$, $V$ is closed under the reads of right-hand sides, and $\sol$ bounds
 both the right-hand side and every side effect of each solved unknown. The two certificates point in different
 directions. The solver works backward from its query, the result of
 \texttt{main}, while \cref{thm:routed} follows executions forward from the
-entry. The bridge restricts $V$ to its \emph{live} part: the unknowns
-$(u, c)$ such that $u$ belongs to a procedure $q$ whose result
-$(\ctor{FunctionResult}\;q, c)$ is solved (\isaname{live_unknowns}). The
+entry. The bridge takes $W$ to be the \emph{live} part of $V$: the unknowns $(u, c)$
+such that $u$ belongs to a procedure $q$ whose result
+$(\ctor{FunctionResult}\;q, c)$ is in $V$ (\isaname{live_unknowns}). The
 compiler ends every body with a return edge, so every node of a procedure
 reaches the procedure's result through intraprocedural edges and
-call-to-continuation steps. Closure under reads then puts all nodes of a
-procedure into $V$ once its result is solved in that context.
-\isaname{live_unknowns_cover} proves, from a well-formed program and a
-returned solve, that the live set contains the program entry and is closed
-forward. This is structural reachability in the graph. It does not claim
-that an execution reaches the result. Three sets are involved: the solver's
-solved set $V$, its live subset, on which \cref{thm:routed} is applied, and the
-states the report publishes, which are taken from $V$. Publishing more
+call-to-continuation steps. The result's right-hand side reads its
+predecessors, so closure under reads puts all nodes of a procedure into $V$
+once its result is in $V$ in that context. Calls carry this into callees. A
+continuation $(k, c)$ in $V$ reads the callee's result
+$(\ctor{FunctionResult}\;p, c')$ whenever the routed entry state is not bottom
+(\isaname{sol_vars_callee_result}), so the callee's nodes are live in $c'$,
+its entry among them. For a bottom entry state, no store enters the callee and
+nothing is needed. \isaname{live_unknowns_cover} proves, from a well-formed
+program and a returned solve, that the live set contains the program entry
+and satisfies the closure hypotheses of \cref{tab:hypotheses}. This is
+structural reachability in the graph. It holds also for an activation that
+never returns, because the argument follows the equations, not executions.
+Three sets are involved: the solver's solved set $V$, its live subset $W$, on
+which \cref{thm:routed} is applied, and the states the report publishes,
+which are taken from $V$. Publishing more
 states than the proof uses is sound, because the report only has to contain
 the cover.
 
