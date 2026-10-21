@@ -12,7 +12,7 @@ analyzer's output. Every change to the theories can therefore make another
 part stale, and keeping them consistent is engineering work outside the proof.
 Isabelle offers comparatively little project-level tooling for this beyond its
 distribution, a gap that users have noted as well @paulson26lean
-@halbgefressen26. The need grew with AI assistance. Agents wrote many proofs
+(#link("https://github.com/lawrencecpaulson/lawrencecpaulson.github.io/issues/62#issuecomment-4333878708")[reader comment]). The need grew with AI assistance. Agents wrote many proofs
 and much of the surrounding code (#link(<ai-use>)[statement on the use of
   generative AI]), and a reviewer cannot read every line they produce. A change
 therefore counts as done only when deterministic checks pass, so the checks,

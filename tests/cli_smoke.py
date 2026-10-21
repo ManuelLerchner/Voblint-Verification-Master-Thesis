@@ -530,6 +530,12 @@ CASES = [
         0,
         "Trace complete:",
     ),
+    (
+        "--timing reports the solve's time",
+        ["--analysis", "sign", "--timing", SANITY_FILE],
+        0,
+        "voblint-timing: analysis_ms=",
+    ),
 ]
 
 

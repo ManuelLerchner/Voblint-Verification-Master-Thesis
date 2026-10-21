@@ -6,6 +6,9 @@
 )
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": verdict
+#import "../lib/profiling.typ": (
+  prof-exp, prof-growth, prof-int, prof-list, prof-ms, prof-runs, prof-value, scaling-plot,
+)
 
 
 = Evaluation of Strength and Precision <ch:evaluation>
@@ -755,3 +758,66 @@ Goblint's full contexts prove, and one more. With call strings, each analyzer
 proves checks the other loses, and without contexts Voblint proves more. Goblint's widening
 then loses the lower bound $0$ of `i` in `h` unless it narrows global unknowns
 (#link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]), whereas Voblint keeps it and turns `i != 0` into `i > 0`.
+
+== Running time <sec:eval-runtime>
+
+A sound result is of little use if the analyzer takes too long to produce it. Speed,
+however, was not a goal of this thesis. Apart from the defect fixed in @sec:codegen, the
+generated code runs as Isabelle emits it. The measurements below therefore ask only
+whether this unoptimized code runs in acceptable time on the regression corpus.
+
+The #link(site("profiling.html"))[profiling page] reports the measurements in full. They
+cover the #prof-int("fixtures") regression fixtures under all #prof-int("configurations")
+combinations of domain and context policy, the WebAssembly build, generated programs of
+growing size, and CPU profiles. This section summarizes them.
+
+#if prof-value("solve_median_ms") < 5 [Most programs of the regression corpus are analyzed
+  within a few milliseconds.] else [The median program of the regression corpus is
+  analyzed in #prof-ms("solve_median_ms").]
+#if prof-value("timeouts") > 0 [Of its #prof-int("runs") runs, #prof-int("timeouts") pass
+  the limit of #prof-int("meta.timeout_s")~s.]
+The expensive cases include recursive programs under entry-state contexts, where successive
+calls can create distinct contexts. A procedure `h` that calls itself $n$ times with
+arguments $n, n - 1, dots, 0$ shows the effect. Sign and Parity have only a few abstract
+values, so the number of contexts stays bounded and the solve time is
+#prof-growth("depth_fits.sign.time"). Congruence, Interval and Int tell the successive
+arguments apart and create one context per level. Their solve time grows
+#prof-growth("depth_fits.interval.time"), although the number of solver evaluations grows
+only #prof-growth("depth_fits.interval.evals").
+
+#if prof-value("scaling.broken").len() == 0 [
+  Generated programs that grow other sizes, such as variables or statements, show no such
+  gap, so the growth is tied to contexts.
+] else if prof-value("scaling.flat").len() == 0 [
+  The same gap appears without recursion. The profiling page grows
+  #prof-int("scaling.count") sizes of a program independently, from variables and
+  statements to call chains. In all of them the number of evaluations grows about linearly,
+  while solve time grows as #prof-exp("scaling.time_min") to #prof-exp("scaling.time_max")
+  (@fig:runtime-scaling). Each evaluation therefore gets more expensive as the program
+  grows, along every size measured.
+] else [
+  Generated programs that grow one size at a time show the same gap with
+  #prof-list("scaling.broken"), while time and evaluations grow alike with
+  #prof-list("scaling.flat") (@fig:runtime-scaling).
+]
+The CPU profiles trace this cost to the data structures of the generated code. Its finite
+sets and maps are lists (@sec:codegen), so a membership test scans the list, a union
+inserts element by element, and removing duplicates compares every pair. Balanced trees or
+hash tables would avoid these scans. The Collections Framework @lammich10collections
+refines abstract sets and maps into such structures, and the Light-weight Containers
+@lochbihler13containers can replace the list-based default of code generation altogether.
+Either route needs only targeted replacements in the code setup and no change to the
+soundness proofs.
+
+The generated analyzer therefore handles the regression corpus in acceptable time, while
+its data structures limit how far it scales. These measurements cover small programs on
+one machine and give no performance guarantee beyond them.
+
+#figure(
+  scaling-plot(width: 12.5cm, height: 4.6cm),
+  kind: image,
+  placement: bottom,
+  caption: [Fitted exponents $k$ of $n^k$ for solve time and solver evaluations, each family
+    growing one program size $n$ under Interval. The fits describe the measured ranges and
+    are no complexity bounds.],
+) <fig:runtime-scaling>

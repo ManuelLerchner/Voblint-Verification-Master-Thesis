@@ -98,6 +98,7 @@
   <script src="assets/site-stats.js" defer></script>
   <script src="explainer.js" defer></script>
   <script src="highlight.js" type="module"></script>
+  <script src="profiling-summary.js" type="module"></script>
   <script src="figures/particles.js" defer></script>
   <script src="figures/gamma.js" defer></script>
   <script src="figures/obs.js" defer></script>
@@ -194,6 +195,7 @@
       </a>
       <ul class="site-links">
         <li><a href="index.html" aria-current="page">How it works</a></li>
+        <li><a href="profiling.html">Profiling</a></li>
         <li><a href="formalization.pdf">Formalization</a></li>
         <li><a href="thesis.pdf">Thesis</a></li>
         <li>
@@ -321,6 +323,7 @@
           <li><a href="#theorems" data-target="theorems">The flagship theorems</a></li>
           <li class="doc-toc-part">V · In context</li>
           <li><a href="#goblint" data-target="goblint">Voblint and Goblint, side by side</a></li>
+          <li><a href="#cost" data-target="cost">How fast is it?</a></li>
           <li><a href="#limits" data-target="limits">What Voblint can't do</a></li>
           <li><a href="#further-reading" data-target="further-reading">Further reading</a></li>
           <li><a href="#resources" data-target="resources">Project resources</a></li>
@@ -5410,6 +5413,43 @@ qed</code></pre>
     </section>
 
     <!-- ================================================================== -->
+    <section class="section" id="cost" aria-labelledby="cost-heading">
+      <div class="section-heading">
+        <p class="eyebrow">Cost</p>
+        <h2 id="cost-heading">How fast is it?</h2>
+      </div>
+
+      <p class="setting-copy">
+        Most programs in the regression corpus are quick to analyze: the median one solves in
+        <strong data-profile="median">a few milliseconds</strong> natively. A proof says nothing
+        about speed, though, and some settings are expensive. The numbers here come from the
+        latest measurement, <span data-profile="when">on one machine</span>.
+      </p>
+
+      <p class="setting-copy">
+        Contexts are where the cost goes. With <a href="#settings">entry-state contexts</a> a
+        recursive procedure gets one context for every abstract argument it is entered with.
+        Under the interval domain, which tells every number apart, <code>h(n)</code> counting
+        down from <em>n</em> therefore keeps <em>n</em>&nbsp;+&nbsp;1 copies of <code>h</code>
+        apart. <span data-profile="depth">That copy count drives the run time.</span>
+        A CPU profile of such a run spends much of its own time in the generated code's list
+        lookups, which compare nodes and contexts one at a time.
+      </p>
+
+      <p class="setting-copy">
+        The playground runs the same generated code compiled to WebAssembly.
+        <span data-profile="browser">It is slower than the native command line.</span>
+      </p>
+
+      <p class="setting-copy">
+        The <a href="profiling.html">profiling page</a> has every measurement behind these
+        sentences: each domain under each context policy over the whole corpus, the scaling curve,
+        an interactive CPU profile, and how each number was taken. They are measurements, not
+        theorems. Whether the solver finishes at all is a premise checked per program, as
+        <a href="#limits">the next section</a> explains.
+      </p>
+    </section>
+
     <section class="section" id="limits" aria-labelledby="limits-heading">
       <div class="section-heading">
         <p class="eyebrow">The fine print</p>

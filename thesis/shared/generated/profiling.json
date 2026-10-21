@@ -1,0 +1,695 @@
+{
+  "browser_ratio_median": 3.322095671981777,
+  "browser_ratio_runs": 485,
+  "configurations": 15,
+  "depth": {
+    "congruence": [
+      {
+        "contexts": 3,
+        "evals": 19,
+        "n": 1,
+        "native_ms": 0.318,
+        "rss_mib": 4,
+        "wasm_ms": 10.403
+      },
+      {
+        "contexts": 4,
+        "evals": 26,
+        "n": 2,
+        "native_ms": 0.373,
+        "rss_mib": 4,
+        "wasm_ms": 10.899
+      },
+      {
+        "contexts": 7,
+        "evals": 47,
+        "n": 5,
+        "native_ms": 0.824,
+        "rss_mib": 6,
+        "wasm_ms": 13.142
+      },
+      {
+        "contexts": 12,
+        "evals": 82,
+        "n": 10,
+        "native_ms": 1.385,
+        "rss_mib": 6,
+        "wasm_ms": 17.495
+      },
+      {
+        "contexts": 22,
+        "evals": 152,
+        "n": 20,
+        "native_ms": 3.328,
+        "rss_mib": 7,
+        "wasm_ms": 26.948
+      },
+      {
+        "contexts": 52,
+        "evals": 362,
+        "n": 50,
+        "native_ms": 14.26,
+        "rss_mib": 8,
+        "wasm_ms": 70.767
+      },
+      {
+        "contexts": 102,
+        "evals": 712,
+        "n": 100,
+        "native_ms": 51.418,
+        "rss_mib": 11,
+        "wasm_ms": 193.898
+      },
+      {
+        "contexts": 202,
+        "evals": 1412,
+        "n": 200,
+        "native_ms": 213.634,
+        "rss_mib": 20,
+        "wasm_ms": 662.299
+      },
+      {
+        "contexts": 502,
+        "evals": 3512,
+        "n": 500,
+        "native_ms": 1395.274,
+        "rss_mib": 82,
+        "wasm_ms": 3856.575
+      },
+      {
+        "contexts": 1002,
+        "evals": 7012,
+        "n": 1000,
+        "native_ms": 6284.443,
+        "rss_mib": 350,
+        "wasm_ms": 17501.177
+      },
+      {
+        "contexts": 1502,
+        "evals": 10512,
+        "n": 1500,
+        "native_ms": 16189.478,
+        "rss_mib": 791,
+        "wasm_ms": 48407.927
+      }
+    ],
+    "int": [
+      {
+        "contexts": 3,
+        "evals": 19,
+        "n": 1,
+        "native_ms": 0.392,
+        "rss_mib": 4,
+        "wasm_ms": 11.65
+      },
+      {
+        "contexts": 4,
+        "evals": 26,
+        "n": 2,
+        "native_ms": 0.622,
+        "rss_mib": 6,
+        "wasm_ms": 12.969
+      },
+      {
+        "contexts": 7,
+        "evals": 47,
+        "n": 5,
+        "native_ms": 0.966,
+        "rss_mib": 6,
+        "wasm_ms": 15.431
+      },
+      {
+        "contexts": 12,
+        "evals": 82,
+        "n": 10,
+        "native_ms": 1.487,
+        "rss_mib": 6,
+        "wasm_ms": 20.287
+      },
+      {
+        "contexts": 22,
+        "evals": 152,
+        "n": 20,
+        "native_ms": 3.784,
+        "rss_mib": 7,
+        "wasm_ms": 31.596
+      },
+      {
+        "contexts": 52,
+        "evals": 362,
+        "n": 50,
+        "native_ms": 14.63,
+        "rss_mib": 8,
+        "wasm_ms": 76.949
+      },
+      {
+        "contexts": 102,
+        "evals": 712,
+        "n": 100,
+        "native_ms": 52.607,
+        "rss_mib": 11,
+        "wasm_ms": 204.65
+      },
+      {
+        "contexts": 202,
+        "evals": 1412,
+        "n": 200,
+        "native_ms": 207.063,
+        "rss_mib": 21,
+        "wasm_ms": 679.402
+      },
+      {
+        "contexts": 502,
+        "evals": 3512,
+        "n": 500,
+        "native_ms": 1338.886,
+        "rss_mib": 79,
+        "wasm_ms": 3894.947
+      },
+      {
+        "contexts": 1002,
+        "evals": 7012,
+        "n": 1000,
+        "native_ms": 5744.845,
+        "rss_mib": 299,
+        "wasm_ms": 17222.536
+      },
+      {
+        "contexts": 1502,
+        "evals": 10512,
+        "n": 1500,
+        "native_ms": 14058.029,
+        "rss_mib": 745,
+        "wasm_ms": 49037.634
+      },
+      {
+        "contexts": 2002,
+        "evals": 14012,
+        "n": 2000,
+        "native_ms": 27721.556,
+        "rss_mib": 1372,
+        "wasm_ms": null
+      }
+    ],
+    "interval": [
+      {
+        "contexts": 3,
+        "evals": 19,
+        "n": 1,
+        "native_ms": 0.308,
+        "rss_mib": 4,
+        "wasm_ms": 10.08
+      },
+      {
+        "contexts": 4,
+        "evals": 26,
+        "n": 2,
+        "native_ms": 0.382,
+        "rss_mib": 4,
+        "wasm_ms": 10.936
+      },
+      {
+        "contexts": 7,
+        "evals": 47,
+        "n": 5,
+        "native_ms": 0.746,
+        "rss_mib": 6,
+        "wasm_ms": 12.938
+      },
+      {
+        "contexts": 12,
+        "evals": 82,
+        "n": 10,
+        "native_ms": 1.235,
+        "rss_mib": 6,
+        "wasm_ms": 16.653
+      },
+      {
+        "contexts": 22,
+        "evals": 152,
+        "n": 20,
+        "native_ms": 2.854,
+        "rss_mib": 7,
+        "wasm_ms": 25.747
+      },
+      {
+        "contexts": 52,
+        "evals": 362,
+        "n": 50,
+        "native_ms": 11.921,
+        "rss_mib": 8,
+        "wasm_ms": 63.778
+      },
+      {
+        "contexts": 102,
+        "evals": 712,
+        "n": 100,
+        "native_ms": 44.493,
+        "rss_mib": 11,
+        "wasm_ms": 169.982
+      },
+      {
+        "contexts": 202,
+        "evals": 1412,
+        "n": 200,
+        "native_ms": 173.912,
+        "rss_mib": 20,
+        "wasm_ms": 563.999
+      },
+      {
+        "contexts": 502,
+        "evals": 3512,
+        "n": 500,
+        "native_ms": 1144.274,
+        "rss_mib": 77,
+        "wasm_ms": 3280.048
+      },
+      {
+        "contexts": 1002,
+        "evals": 7012,
+        "n": 1000,
+        "native_ms": 4970.572,
+        "rss_mib": 307,
+        "wasm_ms": 13588.737
+      },
+      {
+        "contexts": 1502,
+        "evals": 10512,
+        "n": 1500,
+        "native_ms": 12156.887,
+        "rss_mib": 730,
+        "wasm_ms": 36903.387
+      },
+      {
+        "contexts": 2002,
+        "evals": 14012,
+        "n": 2000,
+        "native_ms": 24321.535,
+        "rss_mib": 1251,
+        "wasm_ms": null
+      }
+    ],
+    "parity": [
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 1,
+        "native_ms": 0.346,
+        "rss_mib": 4,
+        "wasm_ms": 10.593
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 2,
+        "native_ms": 0.329,
+        "rss_mib": 4,
+        "wasm_ms": 10.47
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 5,
+        "native_ms": 0.319,
+        "rss_mib": 4,
+        "wasm_ms": 10.47
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 10,
+        "native_ms": 0.332,
+        "rss_mib": 4,
+        "wasm_ms": 10.618
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 20,
+        "native_ms": 0.323,
+        "rss_mib": 4,
+        "wasm_ms": 10.542
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 50,
+        "native_ms": 0.334,
+        "rss_mib": 4,
+        "wasm_ms": 11.431
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 100,
+        "native_ms": 0.332,
+        "rss_mib": 4,
+        "wasm_ms": 10.745
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 200,
+        "native_ms": 0.342,
+        "rss_mib": 4,
+        "wasm_ms": 10.774
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 500,
+        "native_ms": 0.318,
+        "rss_mib": 4,
+        "wasm_ms": 10.644
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 1000,
+        "native_ms": 0.318,
+        "rss_mib": 4,
+        "wasm_ms": 10.548
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 1500,
+        "native_ms": 0.329,
+        "rss_mib": 4,
+        "wasm_ms": 10.577
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 2000,
+        "native_ms": 0.324,
+        "rss_mib": 4,
+        "wasm_ms": 10.657
+      }
+    ],
+    "sign": [
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 1,
+        "native_ms": 0.321,
+        "rss_mib": 4,
+        "wasm_ms": 11.055
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 2,
+        "native_ms": 0.315,
+        "rss_mib": 4,
+        "wasm_ms": 10.713
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 5,
+        "native_ms": 0.338,
+        "rss_mib": 4,
+        "wasm_ms": 10.49
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 10,
+        "native_ms": 0.33,
+        "rss_mib": 4,
+        "wasm_ms": 11.009
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 20,
+        "native_ms": 0.337,
+        "rss_mib": 4,
+        "wasm_ms": 10.6
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 50,
+        "native_ms": 0.312,
+        "rss_mib": 4,
+        "wasm_ms": 10.7
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 100,
+        "native_ms": 0.329,
+        "rss_mib": 4,
+        "wasm_ms": 10.729
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 200,
+        "native_ms": 0.329,
+        "rss_mib": 4,
+        "wasm_ms": 10.69
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 500,
+        "native_ms": 0.335,
+        "rss_mib": 4,
+        "wasm_ms": 10.577
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 1000,
+        "native_ms": 0.316,
+        "rss_mib": 4,
+        "wasm_ms": 10.685
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 1500,
+        "native_ms": 0.322,
+        "rss_mib": 4,
+        "wasm_ms": 10.713
+      },
+      {
+        "contexts": 3,
+        "evals": 23,
+        "n": 2000,
+        "native_ms": 0.353,
+        "rss_mib": 4,
+        "wasm_ms": 10.57
+      }
+    ]
+  },
+  "depth_fits": {
+    "congruence": {
+      "contexts_at_max": 1502,
+      "evals": 0.9943976124781436,
+      "max_n": 1500,
+      "time": 2.1137536811795243
+    },
+    "int": {
+      "contexts_at_max": 2002,
+      "evals": 0.9949629886485484,
+      "max_n": 2000,
+      "time": 2.0844496151033507
+    },
+    "interval": {
+      "contexts_at_max": 2002,
+      "evals": 0.9949629886485484,
+      "max_n": 2000,
+      "time": 2.0970974042054626
+    },
+    "parity": {
+      "contexts_at_max": 3,
+      "evals": 0.0,
+      "max_n": 2000,
+      "time": -0.01306805296080391
+    },
+    "sign": {
+      "contexts_at_max": 3,
+      "evals": 0.0,
+      "max_n": 2000,
+      "time": 0.006190889819951776
+    }
+  },
+  "fixtures": 369,
+  "flame": {
+    "lookup_self_share": 0.6093687971417229,
+    "membership_share": 0.36601826121476777,
+    "profiler": "samply 0.13.1",
+    "report_share": 0.4219928543072648,
+    "samples": 5038,
+    "solver_share": 0.44204049225883285
+  },
+  "meta": {
+    "commit": "17fcb363d",
+    "cpu": "Apple M4 Pro",
+    "date": "2026-10-21",
+    "memory_gib": 24,
+    "os": "macOS-27.0.1",
+    "reps": 3,
+    "timeout_s": 30
+  },
+  "runs": 5535,
+  "scaling": {
+    "broken": [
+      "the number of globals",
+      "the number of call sites with one context each",
+      "the number of loops",
+      "the number of call sites sharing one context",
+      "the number of variables",
+      "the number of statements",
+      "the recursion depth",
+      "the length of a call chain"
+    ],
+    "by_family": {
+      "call-sites-entry": {
+        "evals": 0.8707220497770422,
+        "family": "call-sites-entry",
+        "gap": 1.7420099131301008,
+        "label": "call sites\n(entry)",
+        "time": 2.612731962907143,
+        "what": "the number of call sites sharing one context"
+      },
+      "call-sites-k1": {
+        "evals": 0.9847160307277864,
+        "family": "call-sites-k1",
+        "gap": 1.8764511124233745,
+        "label": "call sites\n(k = 1)",
+        "time": 2.8611671431511607,
+        "what": "the number of call sites with one context each"
+      },
+      "globals": {
+        "evals": 0.8575088439613947,
+        "family": "globals",
+        "gap": 1.907425977739163,
+        "label": "globals",
+        "time": 2.7649348217005576,
+        "what": "the number of globals"
+      },
+      "loops": {
+        "evals": 0.9937247805572782,
+        "family": "loops",
+        "gap": 1.8191473473521063,
+        "label": "loops",
+        "time": 2.8128721279093845,
+        "what": "the number of loops"
+      },
+      "points": {
+        "evals": 0.9583751302440698,
+        "family": "points",
+        "gap": 1.675435774063052,
+        "label": "statements",
+        "time": 2.633810904307122,
+        "what": "the number of statements"
+      },
+      "procedures": {
+        "evals": 0.9911363423106873,
+        "family": "procedures",
+        "gap": 1.0188990614008855,
+        "label": "call\nchain",
+        "time": 2.010035403711573,
+        "what": "the length of a call chain"
+      },
+      "recursion": {
+        "evals": 0.9847988870321581,
+        "family": "recursion",
+        "gap": 1.0982020432274449,
+        "label": "recursion",
+        "time": 2.083000930259603,
+        "what": "the recursion depth"
+      },
+      "variables": {
+        "evals": 0.9525455983930743,
+        "family": "variables",
+        "gap": 1.7151378351139135,
+        "label": "variables",
+        "time": 2.667683433506988,
+        "what": "the number of variables"
+      }
+    },
+    "count": 8,
+    "evals_max": 0.9937247805572782,
+    "evals_min": 0.8575088439613947,
+    "families": [
+      {
+        "evals": 0.9525455983930743,
+        "family": "variables",
+        "gap": 1.7151378351139135,
+        "label": "variables",
+        "time": 2.667683433506988,
+        "what": "the number of variables"
+      },
+      {
+        "evals": 0.9583751302440698,
+        "family": "points",
+        "gap": 1.675435774063052,
+        "label": "statements",
+        "time": 2.633810904307122,
+        "what": "the number of statements"
+      },
+      {
+        "evals": 0.8575088439613947,
+        "family": "globals",
+        "gap": 1.907425977739163,
+        "label": "globals",
+        "time": 2.7649348217005576,
+        "what": "the number of globals"
+      },
+      {
+        "evals": 0.9847160307277864,
+        "family": "call-sites-k1",
+        "gap": 1.8764511124233745,
+        "label": "call sites\n(k = 1)",
+        "time": 2.8611671431511607,
+        "what": "the number of call sites with one context each"
+      },
+      {
+        "evals": 0.8707220497770422,
+        "family": "call-sites-entry",
+        "gap": 1.7420099131301008,
+        "label": "call sites\n(entry)",
+        "time": 2.612731962907143,
+        "what": "the number of call sites sharing one context"
+      },
+      {
+        "evals": 0.9911363423106873,
+        "family": "procedures",
+        "gap": 1.0188990614008855,
+        "label": "call\nchain",
+        "time": 2.010035403711573,
+        "what": "the length of a call chain"
+      },
+      {
+        "evals": 0.9937247805572782,
+        "family": "loops",
+        "gap": 1.8191473473521063,
+        "label": "loops",
+        "time": 2.8128721279093845,
+        "what": "the number of loops"
+      },
+      {
+        "evals": 0.9847988870321581,
+        "family": "recursion",
+        "gap": 1.0982020432274449,
+        "label": "recursion",
+        "time": 2.083000930259603,
+        "what": "the recursion depth"
+      }
+    ],
+    "flat": [],
+    "time_max": 2.8611671431511607,
+    "time_min": 2.010035403711573
+  },
+  "slowest_5pct_share": 0.8865588479026512,
+  "solve_median_ms": 0.235,
+  "solve_p95_ms": 1.48,
+  "source": "pages/data/profiling/2026-10-21-17fcb363d.json",
+  "timeouts": 21
+}

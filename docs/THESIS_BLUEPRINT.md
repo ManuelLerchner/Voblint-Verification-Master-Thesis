@@ -1210,6 +1210,19 @@ that separates reasons for correctness; executable examples and checks beside
 the proofs) and a closing strategy. The build chronology was cut, and the Int
 narrowing restriction stays in chapter 11.
 
+**Running time (2026-10-20, author decision).** U8 is resolved by measuring
+rather than dropping. the evaluation gains a one-page closing section
+"Running time" (`sec:eval-runtime`) after "Comparing precision with Goblint",
+so the chapter first settles what the analyzer proves and then what it costs.
+It picks up `sec:eval-contexts`: the context cost seen as solve time. It states first that the
+thesis did not aim at speed and made no optimization effort, and reports only
+that the analyzer runs in acceptable time on the corpus and where its time goes
+on the `h(n)` recursion. Every number comes from one profiling snapshot pinned
+in `thesis/shared/profiling.toml` and reduced by `thesis/tools/profiling.py`;
+the site's profiling page carries the rest. It replaces the "Runtime behaviour"
+section the 2026-10-08 cut removed for lack of data, and supersedes the
+"Evaluation close" entry below in that the chapter now ends on this section.
+
 **Evaluation close (2026-10-20, author decision).** "Testing the unverified
 components" (`sec:eval-corpus`) moved to the end of the executable chapter,
 beside the trusted components it tests, and was shortened. The evaluation now
@@ -1805,6 +1818,8 @@ speculative: no systematic performance measurement exists in the repository.
 Either build one (the CLI and the fixture corpus make it cheap) or drop the
 section. A verified analyzer's performance is a fair question and an empty
 answer is worse than an acknowledged limitation.
+Resolved 2026-10-20: `pixi run profile` measures the corpus, and
+`sec:eval-runtime` reports it (see "Running time" in the decision log).
 
 **U9 — Whether `int_dom` counts as a "reduced product".** The term has a
 precise meaning (the quotient of the product by the reduction operator). What

@@ -48,7 +48,9 @@ remainder obligation rejects a real Goblint defect (@ch:evaluation). On the
 external benchmarks of @sec:eval-flavors, Voblint proves every check that Goblint
 proves with its plain interval domain or with full calling contexts, and
 #stat("corpus.kinds.precision") fixtures of the regression corpus record the
-precise verdicts it computes on further programs (@sec:eval-corpus).
+precise verdicts it computes on further programs (@sec:eval-corpus). The analyzer runs in
+acceptable time on that corpus, although its list-based sets and maps limit how far it
+scales (@sec:eval-runtime).
 
 == Lessons from the formalization <sec:lessons>
 
@@ -217,11 +219,11 @@ would require extending the trace semantics @sotin11 @schwarz21, and the
 soundness arguments that depend on its current separation of caller and callee
 state would need substantial revision.
 
-Revisions of this scale may become more feasible as AI-assisted tools improve.
-The models behind all tools the author used improved during the project,
-including Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor. For Claude, the main
-model went from Claude Opus 4.6 in late April 2026 through Claude Opus 5 to
-Claude Opus 5.5 in late September, and each new release handled the
-formalization noticeably better than the one before. The other tools showed the
-same trend, which may make even large formalization projects and refactorings
-more accessible over time.
+Revisions of this scale may become more feasible as AI-assisted tools improve. Such tools
+have already made large-scale mathematical formalization practical
+@hales26lean[Sec. "Autoformalization is a practical reality"] and played an important role
+in the formalization presented in this thesis. Over the course of this project, the models
+behind these tools, including Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor,
+handled the formalization consistently better, and the surrounding
+Isabelle tooling improved as well. Continued progress in both areas may make ambitious formalization projects
+and large-scale refactorings increasingly practical.

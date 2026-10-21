@@ -24,7 +24,7 @@ the callee at every call and therefore need no context policy
 cannot handle unbounded recursion, and these tools exclude recursion, unroll it
 to a bounded depth, rely on user-written contracts, or assume that a recursive
 call may change any value @blanchet03[§5.3] @eva-manual[§6.3.9]
-@mopsa-manual[Limitations] @ikos-readme[Analysis Assumptions]. Goblint, in
+@mopsa-manual[Limitations] (#link("https://github.com/NASA-SW-VnV/ikos/blob/ac7f7c1738976cabc58c6a53413df6e458995c38/analyzer/README.md#analysis-assumptions")[IKOS README]). Goblint, in
 contrast, keeps one abstract state per program point and calling context and
 analyzes recursive programs.
 

@@ -1,19 +1,29 @@
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, oblig, site, thy-badge
+#import "../lib/code.typ": (
+  fixture, isaconst, isalocale, isathm, isatype, oblig, site, site-url, thy-badge,
+)
 #import "../lib/figures.typ": verdict
 #import "../lib/claims.typ": claim-ref
 
 = Reading This Thesis <reading-guide>
 
-The thesis is written to be read on screen as well as on paper. It closely follows a
-machine-checked Isabelle/HOL development, and most references to that
-development are links. The HTML rendering of every theory is hosted on GitHub
-Pages, and a single
-#link(site("formalization.pdf"))[PDF export of the whole formalization] is
-available as well. @sec:isabelle explains how to read the Isabelle listings,
-and @app:notation lists the mathematical notation shared by the theories and
-the text. The markers below appear throughout the text.
+The thesis can be read on paper, but it is designed to be read on screen. It closely
+follows a machine-checked Isabelle/HOL development, and most of its definitions and
+theorems link to the #link(site("Voblint/index.html"))[HTML rendering of the theories].
+A single #link(site("formalization.pdf"))[PDF export of the whole formalization] is available as
+well. The project site at #link(site-url)[#site-url.trim("https://", at: start)] also
+hosts an #link(site("index.html"))[explainer] that animates several of the constructions,
+a #link(site("profiling.html"))[profiling page] with the full benchmark data and CPU
+profiles, and the #link(site("playground.html"))[playground], which runs the analyzer in
+the browser on any VIMP program.
+
+The table below lists how the text marks each kind of object. Most markers are also links.
+An Isabelle name opens its definition, a program opens the playground, and a fixture opens
+its file in the repository.
+
+@sec:isabelle explains how to read the Isabelle listings, and @app:notation lists the
+mathematical notation shared by the theories and the text.
 
 #{
   set text(size: 9.5pt)
@@ -50,7 +60,7 @@ the text. The markers below appear throughout the text.
     [A framed code block with a blue Isabelle tag is an Isabelle listing.
       Definitions and theorem statements are lifted verbatim from the theories, and every build checks them against their
       source. The first line names the source file, and the listing links to
-      the declaration. @sec:isabelle explains the syntax.],
+      the declaration.],
     [#box(
       stroke: 0.5pt + vb.keyword,
       inset: (x: 0.4em, y: 0.12em),
@@ -75,12 +85,7 @@ the text. The markers below appear throughout the text.
       linked to its file in the repository.],
     [#signval("+"), $absval(ivl(1, 9))$, #absval(raw("1+2ℤ"))],
     [A light purple background marks an abstract value, as opposed to a
-      concrete integer or set of stores. Written-out abstract values in the text are shown this way.],
+      concrete integer or set of stores.],
     table.hline(),
   )
 }
-
-The interactive #link(site("index.html"))[explainer] on the project site
-animates several of the constructions, and the text links to the relevant
-part where it helps. Figures taken from the playground link to the run they
-show.
