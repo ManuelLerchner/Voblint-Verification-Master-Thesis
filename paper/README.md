@@ -16,12 +16,14 @@ paper/
     stats.tex              \stat{key} from thesis stats.json and profiling.json (not committed)
     contexts.tex           context-policy table from the ctx-mutual-* claims
     scale.tex              per-layer size table from scripts/pages_stats.py
+    costs.tex              per-policy solve cost from the committed profiling snapshot
   tools/
     snippets.py            thesis snippet -> LaTeX (--write / --check)
     bib.py                 cited keys -> references.bib (--write / --check)
     stats.py               stats.json, profiling.json -> \stat macros
     contexts.py            ctx-mutual-* claims -> context-policy table
     scale.py               per-layer statistics -> size table (needs the pixi env)
+    costs.py               profiling snapshot -> per-policy cost table
   lipics/                  lipics-v2021 class (Dagstuhl, LPPL), vendored
   sty/                     isabelle.sty, isabellesym.sty (Isabelle2025-2), vendored
   OUTLINE.md               section plan, page budget, cut list
