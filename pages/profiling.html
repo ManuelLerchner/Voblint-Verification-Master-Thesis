@@ -237,6 +237,16 @@
         </table>
       </div>
       <p class="reading" id="reading-scaling"></p>
+      <p class="reading">
+        Isabelle has libraries for faster sets and maps. The
+        <a href="https://isa-afp.org/entries/Collections.html">Collections Framework</a>
+        (Lammich and Lochbihler) refines abstract sets and maps into verified balanced trees and
+        hash tables, and
+        <a href="https://isa-afp.org/entries/Containers.html">Light-weight Containers</a>
+        (Lochbihler) replaces the list-based default of code generation with such structures.
+        Either needs only targeted replacements in the code setup and no change to the
+        soundness proofs.
+      </p>
       <details class="method">
         <summary>How this was measured</summary>
         <ul>
@@ -249,8 +259,10 @@
             which separates the cost of contexts from the cost of call sites.</li>
           <li>Times are the CLI's own solve timing, the median of
             <span data-meta="reps"></span> runs; evaluations come from a traced run, as in the
-            recursion plot. Exponents are least-squares fits on log–log axes from
-            <em>n</em>&nbsp;=&nbsp;100 up. A gap of about 1 or more means each evaluation gets
+            recursion plot. Exponents are least-squares fits on log–log axes, for time from
+            <em>n</em>&nbsp;=&nbsp;100 up, where start-up no longer dominates, and for
+            evaluations from <em>n</em>&nbsp;=&nbsp;20 up, since they are exact counts and
+            tracing reaches the time limit sooner. A gap of about 1 or more means each evaluation gets
             roughly <em>n</em> times more expensive, the signature of a linear scan inside the
             solver's loop.</li>
           <li>The family with the largest gap also gets a CPU profile, listed with the others in
