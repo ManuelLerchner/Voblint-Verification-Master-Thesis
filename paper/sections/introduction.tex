@@ -1,0 +1,78 @@
+\section{Introduction}
+\label{sec:intro}
+
+A sound static analyzer over-approximates every execution of a program, so a
+property that holds of the over-approximation holds in every run. The
+guarantee is only as good as the analyzer's implementation, and analyzers are
+large programs. Goblint, an abstract interpreter for C, has reported no false
+negative on the SV-COMP benchmark suite since its first participation in
+2021~\cite{seidl26}, yet its issue tracker lists more than a hundred issues
+labeled as unsound in the same period. In one of them, the congruence domain
+claimed \texttt{c \% 2 == 1} for $c \in \{-5, -7\}$, although C's truncating
+remainder gives $-1$ for both values~\cite{goblint1161}. The defect (issue 1156) was reported only after Goblint had claimed the
+false result.
+
+A machine-checked proof rules out such defects for every input, but only if a
+theorem connects the proved parts to the tool the user runs. For Goblint's
+architecture, one part has been verified. Goblint translates a program into a
+\emph{side-effecting constraint system}~\cite{seidl03,apinis12}, whose
+right-hand sides may contribute to unknowns other than their own, and solves it
+with a generic top-down solver. Stade et al.\ proved that solver partially
+correct in Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extended the proof
+to side effects~\cite{tilscher26}. When it terminates, the solver returns a post-solution on the unknowns it
+solved, a set closed under the reads of right-hand sides. Whether those equations describe
+the program lies outside the theorem.
+
+Calling contexts make that missing link hard. A context-sensitive analysis
+keeps one unknown per program point and calling context. Suppose
+\texttt{main} calls \texttt{bump(5)} and \texttt{bump(4)}, and \texttt{bump}
+returns its argument plus one. An analysis whose contexts record the argument
+claims the result~6 in one context and~5 in the other. The collecting
+semantics, the set of stores that executions bring to each program point,
+holds both results at the return of \texttt{bump} but forgets which call
+produced which store. A per-context claim therefore has nothing to be checked
+against. Among mechanized analyzers, Dabrowski and Pichardie instrument a
+concrete semantics with contexts, but their analysis is specified by
+constraints that no solver computes~\cite{dabrowski09}. The other works we compare have no procedures, distinguish no contexts, or
+reanalyze a function at each call site
+(\cref{sec:related}).
+
+We give calling contexts a concrete meaning and use it to verify a
+Goblint-style analyzer end to end. The development, called Voblint, is written
+in Isabelle/HOL and contains no \texttt{sorry}. Its contributions are:
+\begin{itemize}
+  \item \emph{A concrete semantics of calling contexts.} An \emph{activation
+    trace} records one procedure activation together with the activation that
+    created it, and a context policy relates each trace to the contexts it may
+    carry. The relation may admit several contexts for one call. Under a
+    totality condition, splitting the collecting semantics by context loses no
+    store (\cref{sec:traces}).
+  \item \emph{A soundness contract of five local obligations.} Any assignment
+    of store sets to nodes and contexts that meets the obligations bounds every
+    valid trace in every admitted context. The contract mentions no domain,
+    equation, or solver (\cref{sec:traces}).
+  \item \emph{A modular discharge of the contract.} Every post-solution of the
+    generated, context-routed equations meets the contract. Domains, context
+    policies, and the solver each prove their own obligations, and the solver
+    enters only through its certificate (\cref{sec:equations}).
+  \item \emph{An end-to-end theorem about the shipped analyzer.} Whenever the
+    analyzer function returns a report, every store that a finite source execution from an initial store with zeroed
+globals reaches is covered by the report and satisfies its definite verdicts, for
+    every configuration the function offers. The function is the one exported
+    to OCaml (\cref{sec:theorem}). Further theorems show that the result is
+    not vacuous and that a domain obligation rejects the Goblint defect above
+    (\cref{sec:evaluation}).
+\end{itemize}
+The solver, side-effecting constraint systems, the local traces that
+activation traces adapt~\cite{schwarz21}, and the architecture of separating
+analyses from solvers~\cite{vojdani16,seidl26} are prior work. Our
+contribution is their connection: to our knowledge, no prior mechanization
+leads from a source semantics through a context-indexed collecting semantics to
+a side-effecting constraint system and its verified solver.
+
+The guarantee has a precise scope. The source language, VIMP, has integer
+variables, global variables, and recursive procedures with parameters and
+return values, but no pointers, arrays, or heap. The result is partial
+correctness: the analyzer answers only when its solver run terminates, and
+termination is not proved for every program. The parser, Isabelle's code
+generator, and the OCaml toolchain are trusted.

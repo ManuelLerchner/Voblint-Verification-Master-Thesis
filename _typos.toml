@@ -9,6 +9,9 @@ extend-exclude = [
   "thesis/shared/generated/",
   "thesis/lib/isabelle-symbols.typ",
   "vendor/",
+  "paper/lipics/",
+  "paper/sty/",
+  "paper/reviews/*/submission.txt",
 ]
 
 [default]
@@ -28,3 +31,5 @@ eles = "eles"
 gam = "gam"
 # First-name fragment of Ondřej Lhoták, written Ond{\v{r}}ej in BibTeX.
 Ond = "Ond"
+# BibTeX's free-text annotation field, read by paper/tools/bib.py.
+annote = "annote"

@@ -1,0 +1,25 @@
+\subparagraph*{Data availability.}
+The Isabelle/HOL development, the vendored solver theories, the regression
+corpus, and the scripts that regenerate every analyzer output quoted in this
+paper are archived on Zenodo~\cite{voblint} and developed publicly on
+GitHub. The vendored solver theories come from a repository that is not yet
+public, so the development cannot yet be built from public sources alone. It
+builds with Isabelle2025-2 and the Archive of Formal Proofs.
+
+\subparagraph*{Declaration about GenAI/LLM use.}
+Generative AI tools (Anthropic's Claude, OpenAI's ChatGPT and Codex, and
+Cursor) were used substantially in this work and contributed a large share of
+the implementation-level material under the author's supervision. In the
+Isabelle development, they generated many proofs once definitions and
+interfaces had stabilized, carried out refactorings across theories, and turned
+tactic-style proofs into structured Isar. They also assisted with design: they
+helped adapt the local traces of Schwarz et al.\ to procedure activations, and
+the requirements on activation traces were refined in collaboration with them.
+Agents wrote much of the surrounding tooling, including the command-line
+interface, the regression corpus, and the consistency checks. The author chose
+the research direction, selected and revised the designs, and approved the
+definitions and theorem statements; Isabelle checked every proof. Agent output
+was treated as a proposal until Isabelle, a test, or the author's review
+confirmed it. The tools also assisted with literature search and with drafting
+and revising this text and its figures, which the author reviewed. Grammarly
+was used for spelling and grammar.

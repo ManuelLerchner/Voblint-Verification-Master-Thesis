@@ -1,0 +1,18 @@
+\begin{abstract}
+Goblint-style abstract interpreters translate a program into a side-effecting
+system of equations over abstract states, one unknown per program point and
+calling context, and solve it with a generic solver. The partial correctness of
+Goblint's top-down solver has been verified, but that theorem does not say
+whether the equations describe the program. Closing this gap requires a
+concrete meaning for calling contexts, which the ordinary collecting semantics
+lacks because it merges the stores of all calls to a procedure. We introduce
+activation traces, which follow one procedure activation together with the
+activation that created it, and let a context policy relate each trace to the
+contexts it may belong to. Soundness then reduces to five local obligations
+over an arbitrary control-flow graph, and every post-solution of the generated
+equations meets them. In Isabelle/HOL, we prove an end-to-end theorem from a
+small-step semantics of a small imperative language with recursive procedures
+to the verdicts of the analyzer function, for every analysis configuration it
+offers. The function is exported to OCaml and runs as a command-line tool. The
+result is partial correctness: the solver's termination is not proved.
+\end{abstract}

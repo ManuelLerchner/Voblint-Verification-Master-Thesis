@@ -1,0 +1,58 @@
+\section{Related Work}
+\label{sec:related}
+
+\subparagraph*{Verified analyzers.}
+Verasco is a Coq-verified analyzer for most of C99, excluding recursion and
+dynamic allocation~\cite{jourdan15}. Its interpreter iterates over the
+structure of C\#minor, reanalyzes a function at every call site, and raises an
+alarm at a possible recursive call. It covers a far larger language than
+Voblint, so the comparison concerns design: Voblint turns calls into equations
+over unknowns indexed by node and context and computes them with a generic
+solver. The value analysis of Blazy et al.\ checks the candidate of an
+untrusted iterator with a verified checker~\cite{blazy13}; Voblint instead runs
+a solver whose partial correctness is proved. Nipkow and Klein develop
+abstract interpretation for IMP in Isabelle/HOL~\cite{nipkow12,nipkow14}, and
+Voblint's non-relational domains follow their generic interpreter. Their
+language has no procedures. Franceschino et al.\ verify an IMP analyzer in F*
+that runs in a browser~\cite{franceschino21}, and Cachera and Pichardie extract
+a certified denotational interpreter~\cite{cachera10}; neither has procedures.
+Michelland et al.\ make soundness proofs reusable by sharing one interpreter
+between the concrete and the abstract semantics~\cite{michelland24}. Cachera et al.\ compute a context-insensitive
+dataflow analysis with a verified solver for ordinary
+inequations~\cite{cachera05}.
+
+\subparagraph*{Contexts in mechanized semantics.}
+Dabrowski and Pichardie instrument a concrete semantics with contexts through
+a module type whose call-context function computes a callee's context, and
+prove a context-sensitive points-to analysis sound in Coq~\cite{dabrowski09}.
+This is the closest precedent for Voblint's context-indexed semantics. Their
+analysis is specified by constraints that no solver computes. Voblint's
+contexts are admitted by a relation, the totality condition makes the indexed
+collection exhaustive, and the indexing is connected to an executable verified
+solver. Trace partitioning indexes sets of traces by control
+history~\cite{rival07}; Rival and Mauborgne allow coverings in which one trace
+has several indices and present calling contexts as one such indexing. The
+activation collecting semantics is a covering of this relational kind. Among
+Isabelle developments, interprocedural analyses have been
+verified~\cite{lammich07afp,wasserrab09afp}, but none of these entries claims an extracted analyzer or represents an activation with its caller chain.
+
+\subparagraph*{Verified solvers.}
+Hofmann et al.\ verify a local generic solver in Coq~\cite{hofmann10}, and de
+Vilhena et al.\ verify one that discovers dependencies dynamically in
+Iris~\cite{devilhena20}. Stade et al.\ prove the top-down solver partially
+correct in Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extend it to side
+effects with a generic interface for update rules~\cite{tilscher26}. Voblint
+vendors the latter and connects its certificate to programs. Termination is
+proved for top-down solvers without side effects over a finite type of
+unknowns~\cite{tilscher26jar}; Voblint's unknowns pair nodes, of an infinite type, with contexts, so that
+result does not apply.
+
+\subparagraph*{Goblint and local traces.}
+Side-effecting constraint systems~\cite{seidl03,apinis12} and the split
+between analyses and solvers are Goblint's architecture~\cite{vojdani16,seidl26},
+and Voblint's \isaname{dg_spec} follows its \texttt{Spec} interface. The
+correspondence is architectural; no theorem transfers to Goblint's OCaml
+implementation. Schwarz et al.\ prove Goblint's thread-modular analyses sound
+against local traces on paper~\cite{schwarz21,schwarz23}. Activation traces adapt their construction to procedure activations.
+Activations do not interfere, so no concurrency result of that work
+transfers.

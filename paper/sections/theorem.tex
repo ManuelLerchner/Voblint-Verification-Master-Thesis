@@ -1,0 +1,113 @@
+\section{The End-to-End Theorem}
+\label{sec:theorem}
+
+The previous sections bound the activation collecting semantics of a
+\emph{graph}. Two links remain: from source executions to graph executions,
+and from the solved valuation to the report the user reads.
+
+\subparagraph*{From source to graph.}
+VIMP has a small-step semantics \isaname{pstep} over configurations of a
+residual command, a store, and a frame stack. The compiler translates each
+procedure body by continuations into a procedure-aware CFG, and a forward
+simulation matches every source step by graph steps that reach the same store
+(\isaname{csim_star}). A source configuration does not determine a graph node,
+since its residual command can occur at several places, as in
+\texttt{if (b) \{x = 1;\} else \{x = 1;\}}. The run is therefore lifted to an
+elaborated program whose annotated commands name their nodes, and the relation
+$p, s_0 \vdash \mathit{cfg} \rhd v$ (\isaname{at_node}) observes a
+configuration at the nodes of its lifted runs. It is a relation, and the
+theorem below quantifies over every node at which a configuration is observed.
+Combined with \cref{sec:traces}, every store a finite source execution reaches lies in $\NodeColl$ at a node
+the simulation relates to the run (\isaname{source_reaches_node_collect}),
+and on the elaboration this holds at every node where the run is observed
+(\isaname{csim_point_compile_prog}).
+
+\subparagraph*{From valuation to report.}
+The analyzer function \isaname{run_voblint} takes a configuration (the
+analyses to run, the update rule for global unknowns, the context policy, including the call-string length, and the placement of
+program globals) and a program. It rejects an invalid
+configuration or an ill-formed program, and otherwise runs the executable
+solver and returns $\ctor{Analysed}~\mathit{res}$ when the solve returns a
+result (\isaname{run_voblint}). The report lists, per node, the solved states of every solved context,
+and classifies each check \texttt{\_\_voblint\_check(b)} as \verdict{PROVED},
+\verdict{REFUTED}, \verdict{UNKNOWN}, or \verdict{DEAD}. $\Report_{\mathit{res}}(v)$
+is the set of stores some state at $v$ describes, and
+$\Verd_{\mathit{res}}(v)$ the set of stores in which every \verdict{PROVED}
+check at $v$ holds and every \verdict{REFUTED} check fails.
+
+\begin{theorem}[End-to-end soundness, \isaname{run_voblint_source_sound}]
+\label{thm:headline}
+\end{theorem}
+\vspace{-1.5ex}
+\snippet{run_voblint_source_sound}
+
+The premises are an initial store, in which every global is zero as for C
+objects of static storage duration and locals are unconstrained; a finite
+source execution from the body of \texttt{main} with any stopping point, so
+nonterminating programs are covered through their prefixes; and a returned
+report. The conclusion has two halves: the reached configuration is observed
+at some node, and at every node where it is observed, its store is collected,
+covered by the report, and consistent with every definite verdict there. The
+contexts appear only inside the proof, through
+$\NodeColl(v) = \bigcup_c \ActColl(v, c)$ and \cref{thm:routed}.
+
+Three properties are conclusions or consequences rather than premises. The
+theorem has no termination premise: \isaname{run_voblint} answers only when its
+executable solve returns, and a returned run lies in the solver's domain. It
+has no coverage premise: \isaname{live_unknowns_cover} derives from the
+returned solve that every unknown an execution reaches was solved. It has no
+well-formedness premise: a malformed program does not yield
+\ctor{Analysed}. The statement holds for every analysis configuration the
+function accepts, because the configuration is a quantified argument.
+
+\subparagraph*{What verdicts mean.}
+\verdict{PROVED} states that whenever a covered execution reaches the check,
+the condition holds; \verdict{REFUTED} that it fails
+(\isaname{run_voblint_check_sound}). Neither asserts that the check is
+reachable, and \verdict{REFUTED} is not a verified counterexample.
+\verdict{DEAD} is the reachability claim: nothing is collected at the check's
+node (\isaname{run_voblint_dead_check_unreached}). At a node without an arithmetic diagnostic, no divisor on an edge leaving it
+is zero in any collected store (\isaname{run_voblint_arithmetic_safe}). An
+error means that the divisor is zero wherever a covered execution reaches the
+node (\isaname{run_voblint_arithmetic_refuted}); a warning means only that the
+analysis could not exclude zero.
+
+\subparagraph*{What is trusted.}
+\Cref{fig:trust} separates what is proved from what is trusted. The theorem is
+about the constant that Isabelle's code generator~\cite{haftmann10} exports to
+OCaml and that the command-line tool calls. The lexer and parser, which
+construct the program, and the handwritten OCaml that prints the report lie
+outside the proof. The Isabelle kernel, the code generator, the OCaml
+toolchain, and the arbitrary-precision integer library are trusted. That \isaname{pstep} models
+the intended language is argued, not proved: VIMP integers are unbounded,
+division by zero is defined, and a callee's locals start at zero, so a verdict
+need not hold for a C program with the same text.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  part/.style={draw, rounded corners=1pt, align=center, inner sep=3pt},
+  zone/.style={draw, rounded corners=3pt, inner sep=4pt},
+  arr/.style={-{Stealth[length=1.6mm]}}]
+  \node[part, dashed] (src) {source text};
+  \node[part, dashed, below=3mm of src] (par) {lexer, parser};
+  \node[part, right=8mm of par] (cmp) {compiler};
+  \node[part, right=3mm of cmp] (eqs) {equations};
+  \node[part, right=3mm of eqs] (slv) {solver};
+  \node[part, right=3mm of slv] (rep) {report, verdicts};
+  \node[part, dashed, right=8mm of rep] (out) {printing};
+  \draw[arr] (src) -- (par); \draw[arr] (par) -- (cmp); \draw[arr] (cmp) -- (eqs);
+  \draw[arr] (eqs) -- (slv); \draw[arr] (slv) -- (rep); \draw[arr] (rep) -- (out);
+  \begin{scope}[on background layer]
+    \node[zone, fill=green!8, fit=(cmp)(rep), label={[font=\scriptsize]above:proved in Isabelle/HOL}] (pz) {};
+    \node[zone, dashed, fit=(src)(par), label={[font=\scriptsize]above:unverified}] {};
+    \node[zone, dashed, fit=(out), label={[font=\scriptsize]above:unverified}] {};
+  \end{scope}
+  \node[zone, fill=black!5, below=4mm of pz, minimum width=125mm, align=center]
+    {trusted: Isabelle kernel $\cdot$ code generator $\cdot$ OCaml toolchain $\cdot$ Zarith};
+\end{tikzpicture}
+\caption{The trust boundary of the delivered analyzer, for programs whose
+solve terminates.}
+\label{fig:trust}
+\end{figure}

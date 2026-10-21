@@ -56,3 +56,6 @@ codegen/generated/.source-hash
 # Thesis data every build regenerates (pixi run thesis-local-data)
 thesis/shared/generated/stats.json
 thesis/shared/generated/goblint-alignment.json
+
+# Paper: rebuilt from the uncommitted thesis stats.json on every build
+paper/generated/stats.tex

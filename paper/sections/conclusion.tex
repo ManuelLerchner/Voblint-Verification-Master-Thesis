@@ -1,0 +1,24 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+Activation traces give calling contexts a concrete counterpart, and with it
+the soundness of a Goblint-style analyzer reduces to five local obligations
+that a solved, context-routed equation system meets. The resulting theorem
+covers the analyzer function that is exported and run, for every configuration
+it offers.
+
+The result has limits we have stated where they apply and collect here. It is
+partial correctness, since the solver's termination is a per-program fact
+established by running it. VIMP is scalar: it has no pointers, arrays, heap, or
+threads, and the adequacy of its semantics is argued, not proved. No precision
+or completeness property is proved.
+
+Several results do not depend on the details of VIMP: the solver certificate
+is stated over unknowns and right-hand sides, and the coverage contract
+refers to the language only through a few step functions. Features that change
+only these step functions, such as machine integers, leave the contract and
+its composition intact. The trace semantics, however, assumes that a callee
+cannot modify its caller's locals, so a return can resume the caller with the
+locals it had before the call. Pointers into the caller's frame, a shared heap,
+or threads break this assumption and would require extending the trace
+semantics itself.
