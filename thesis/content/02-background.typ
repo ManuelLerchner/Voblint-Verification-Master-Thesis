@@ -563,7 +563,13 @@ separates the _activations_ of a procedure, each execution from its call to
 its return, by a _calling context_, an abstraction of how the activation was
 reached @aho06[§7.2.1]. Sharir and Pnueli distinguish call strings, which
 record recent call sites, from the functional approach, which relates abstract
-entry and exit states @sharir81. Context-sensitive constraint systems use
+entry and exit states @sharir81. Seidl and Fecht describe call strings as
+abstracting a pushdown configuration to its topmost stack elements, and they
+realize the functional approach with one unknown $y_(f,d)$ for each transformer
+$f$ and argument $d$, which a local solver computes only partially
+@seidl00[§6]. Their forward accumulation uses unknowns $⟨v, d⟩$
+for a program point $v$ and the entry value $d$ of its procedure
+@seidl00[§7.1]. Context-sensitive constraint systems use
 unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3]. With
 contexts that record the argument at entry, `bump` gets one copy of its
 unknowns for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the results $6$ and $5$.

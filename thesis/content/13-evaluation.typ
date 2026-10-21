@@ -779,7 +779,8 @@ leaves out the fixtures that test divergence. Of these, #prof-int("fixtures_ill_
 are programs that the parser or the well-formedness check rejects, so
 #prof-int("fixtures") fixtures remain. Each of them runs under all
 #prof-int("configurations") combinations of domain and context policy, and each such
-pair of a fixture and a configuration is one case.
+pair of a fixture and a configuration is one case. Every case uses the
+command-line tool's default update rule, warrow.
 
 #if prof-value("timeouts") > 0 [Of the #prof-int("cases") cases, #prof-int("timeouts") pass
   the limit of #prof-int("meta.timeout_s")~s, all of them under

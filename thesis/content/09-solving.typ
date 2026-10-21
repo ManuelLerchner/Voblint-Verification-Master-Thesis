@@ -166,7 +166,12 @@ The solver merges each new contribution into the value it holds, and this
 merge, the _update rule_, decides both precision and termination. Stemmler et
 al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
 generic interface for them and prove five rules sound against it
-@tilscher26.
+@tilscher26. Voblint runs four of them, all except bounded narrowing, through
+a wrapper, #isaconst("lift_basic_rule"), that reports no change whenever the
+merged value equals the old one (#isaconst("changed")). Without it, a warrowing
+rule hands the solver a new value whenever one origin's contribution changes,
+even if the merge stays the same, and the solver destabilizes every reader of
+the global.
 
 The rules differ in what they keep per _origin_, the right-hand side that
 published a contribution (@sec:td), and in whether they widen. Of the two
@@ -279,7 +284,19 @@ reads makes all its nodes solved in that context. Executions from the entry of
 `main` stay among these nodes, which
 #isathm("dg_analysis.live_unknowns_cover", thy: "DG_Live_Unknowns", display: "live_unknowns_cover")
 proves from a well-formed program and a returned solve alone. The final theorem
-therefore needs no premise about which unknowns the solve visited.
+therefore needs no premise about which unknowns the solve visited. The argument
+is that of Seidl and Fecht, who read reachability off the variable dependences
+of an effect analysis with forward accumulation @seidl00[§9.1]. Their proviso
+(R) requires that every program point reaches a return point of its procedure.
+Under it, the variables on which the query for `main` depends account for every
+reachable state @seidl00[Thm. 7(2)]. The same bound holds for functional
+analyses and any solution, not only the least one, which is the form Voblint
+needs @seidl00[Thm. 9(2)]. A local solver that includes a procedure's effect variable
+also includes the variables of all its program points under (R)
+@seidl00[p. 139]. Without (R), the dependences can miss reachable calls
+@seidl00[Ex. 8]. Voblint mechanizes this argument and extends it to side
+effects and seed unknowns, to dependences that the solver discovers while it
+solves, and to context policies given as relations.
 
 The solver is not proved to terminate. HOL admits only terminating recursion,
 so Isabelle defines the solver with a domain predicate

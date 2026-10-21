@@ -1,5 +1,6 @@
 #import "../lib/code.typ": *
 #import "../lib/theme.typ": vb
+#import "../lib/math.typ": ctor
 #import "../lib/alignment.typ": alignment, alignment-count
 
 
@@ -272,7 +273,14 @@ callee's exit state (@sec:calls), the shape of the return function of
 #cite(<knoop92>, form: "prose", supplement: [§4.1]). Reps et al. solve such
 problems precisely when the facts are finite and the transfer functions
 distributive @reps95, whereas Voblint requires neither and proves no precision
-result.
+result. Seidl and Fecht model the small-step semantics of procedures as a
+pushdown automaton whose stack holds the activation records of called but not
+completed procedures, with a push at each call and a pop at each return
+@seidl00[§4]. Voblint's activation traces keep the same structure per
+activation: a #ctor("Call", thy: "Activation_Trace_Def") starts the callee's trace and a #ctor("Resume")
+continues the caller's (@ch:traces). The entry-state policy's unknowns, a node
+paired with the abstract entry state of its procedure, resemble the unknowns
+$⟨v, d⟩$ of their forward accumulation @seidl00[§7.1].
 
 Trace partitioning abstracts a set of traces by indexing it with control
 history before abstracting states @rival07. Rival and Mauborgne define both

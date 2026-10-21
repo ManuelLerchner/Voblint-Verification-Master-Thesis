@@ -247,9 +247,13 @@ the hook meets its obligations.
 
 The generated #isaconst("run_voblint") works on a syntax tree and returns a
 typed answer, whereas a user writes source text and reads a report.
-Unverified handwritten OCaml bridges both ends. On the input side, an
-`ocamllex` lexer and a Menhir parser turn the source text into an
-#isatype("imp_prog") and record each check's source position in its label. On
+Unverified OCaml bridges both ends. On the input side, an `ocamllex` lexer
+and a Menhir parser turn the source text into an
+#isatype("imp_prog") and record each check's source position in its label.
+Both are generated from the grammar manifest
+#link(repo-blob + "manifests/vimp-grammar.yaml")[`vimp-grammar.yaml`] by
+#link(repo-blob + "scripts/gen_vimp_menhir.py")[`gen_vimp_menhir.py`] and then
+compiled by `ocamllex` and Menhir. On
 the output side, the generated #isaconst("render_report") turns the report's
 states into text, and handwritten OCaml either prints the command-line report,
 placing each check at the position its label carries, or serializes the answer
