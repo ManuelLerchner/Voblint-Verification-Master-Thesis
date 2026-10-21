@@ -1,6 +1,8 @@
 {
   "browser_ratio_median": 3.322095671981777,
   "browser_ratio_runs": 485,
+  "cases": 5535,
+  "cases_solved": 5514,
   "configurations": 15,
   "depth": {
     "congruence": [
@@ -519,6 +521,8 @@
     }
   },
   "fixtures": 369,
+  "fixtures_ill_formed": 11,
+  "fixtures_selected": 380,
   "flame": {
     "lookup_self_share": 0.6093687971417229,
     "membership_share": 0.36601826121476777,
@@ -536,7 +540,6 @@
     "reps": 3,
     "timeout_s": 30
   },
-  "runs": 5535,
   "scaling": {
     "broken": [
       "the number of globals",
@@ -691,5 +694,8 @@
   "solve_median_ms": 0.235,
   "solve_p95_ms": 1.48,
   "source": "pages/data/profiling/2026-10-21-17fcb363d.json",
+  "timeout_contexts": [
+    "entry-state"
+  ],
   "timeouts": 21
 }

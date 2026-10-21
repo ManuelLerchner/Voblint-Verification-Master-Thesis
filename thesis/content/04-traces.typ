@@ -493,12 +493,22 @@ continuation $k$, it requires
       #h(1.5em)$==> #isaconst("call_enter") (s) in "cover"(ctor("FunctionEntry") p, c')$],
 
     oblig("RETURN"),
-    [$s in "cover"(u, c), thin c' "admitted from" s, thin t in "cover"(ctor("FunctionResult") p, c')$ \
+    [$s in "cover"(u, c), thin c' "admitted at" u "from" s "for" (p', e), thin t in "cover"(ctor("FunctionResult") p, c')$ \
       #h(1.5em)$==> #isaconst("combine_collect") (s, t) in "cover"(k, c)$],
   )
 ]
-Here "$c'$ admitted from $s$" means that the policy admits $c'$ for the call
-from $s$ in context $c$ (#isaconst("admits_call_context")). #oblig("INIT") puts the initial stores into the cover at the entry. Each
+In #oblig("CALL"), "$c'$ admitted from $s$" means that the policy admits $c'$
+for this call edge from $s$ in context $c$. #oblig("RETURN") quantifies more
+widely. Its $c'$ may be admitted for any call edge that leaves $u$, into any
+procedure $p'$ with any entered store $e$ (#isaconst("admits_call_context")).
+The callee carries the contexts admitted for the edge that entered it, and the
+return rule of valid traces only requires some call edge from $u$ into $p$, so
+it does not tie the return edge to that entering edge. On a compiled
+graph, each call site has exactly one call edge
+(#isaconst("calls_source_unique"), #isathm("compile_prog_calls_source_unique")).
+There $p' = p$ and $e = #isaconst("call_enter") (s)$, and #oblig("RETURN")
+reads as the law for the single edge: it combines the callee result in every
+context admitted for this call. #oblig("INIT") puts the initial stores into the cover at the entry. Each
 of the other three follows one kind of step. If the cover contains the
 stores before the step, it must also contain the store after it. In the running
 example under entry-state contexts, #oblig("CALL") requires the cover at the

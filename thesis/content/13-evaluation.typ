@@ -767,15 +767,21 @@ generated code runs as Isabelle emits it. The measurements below therefore ask o
 whether this unoptimized code runs in acceptable time on the regression corpus.
 
 The #link(site("profiling.html"))[profiling page] reports the measurements in full. They
-cover the #prof-int("fixtures") regression fixtures under all #prof-int("configurations")
-combinations of domain and context policy, the WebAssembly build, generated programs of
-growing size, and CPU profiles. This section summarizes them.
+cover the regression fixtures, the WebAssembly build, generated programs of growing size,
+and CPU profiles. This section summarizes them. The profiler selects the
+#prof-int("fixtures_selected") fixtures whose header sets no timeout of its own, which
+leaves out the fixtures that test divergence. Of these, #prof-int("fixtures_ill_formed")
+are programs that the parser or the well-formedness check rejects, so
+#prof-int("fixtures") fixtures remain. Each of them runs under all
+#prof-int("configurations") combinations of domain and context policy, and each such
+pair of a fixture and a configuration is one case.
 
-#if prof-value("solve_median_ms") < 5 [Most programs of the regression corpus are analyzed
-  within a few milliseconds.] else [The median program of the regression corpus is
-  analyzed in #prof-ms("solve_median_ms").]
-#if prof-value("timeouts") > 0 [Of its #prof-int("runs") runs, #prof-int("timeouts") pass
-  the limit of #prof-int("meta.timeout_s")~s.]
+#if prof-value("timeouts") > 0 [Of the #prof-int("cases") cases, #prof-int("timeouts") pass
+  the limit of #prof-int("meta.timeout_s")~s, all of them under
+  #prof-list("timeout_contexts") contexts.]
+The other #prof-int("cases_solved") cases finish, and each is timed as #prof-runs().
+#if prof-value("solve_median_ms") < 5 [Most of them are solved within a few
+  milliseconds.] else [Their median solve time is #prof-ms("solve_median_ms").]
 The expensive cases include recursive programs under entry-state contexts, where successive
 calls can create distinct contexts. A procedure `h` that calls itself $n$ times with
 arguments $n, n - 1, dots, 0$ shows the effect. Sign and Parity have only a few abstract
