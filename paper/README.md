@@ -14,17 +14,20 @@ paper/
     *.tex                  snippets rendered with isabelle.sty
     references.bib         the cited subset of thesis/literature.bib
     stats.tex              \stat{key} from thesis stats.json and profiling.json (not committed)
-    flavors.tex            Voblint/Goblint table from thesis claims and results.tsv
+    contexts.tex           context-policy table from the ctx-mutual-* claims
+    scale.tex              per-layer size table from scripts/pages_stats.py
   tools/
     snippets.py            thesis snippet -> LaTeX (--write / --check)
     bib.py                 cited keys -> references.bib (--write / --check)
     stats.py               stats.json, profiling.json -> \stat macros
-    flavors.py             flavors claims + Goblint results -> table
+    contexts.py            ctx-mutual-* claims -> context-policy table
+    scale.py               per-layer statistics -> size table (needs the pixi env)
   lipics/                  lipics-v2021 class (Dagstuhl, LPPL), vendored
   sty/                     isabelle.sty, isabellesym.sty (Isabelle2025-2), vendored
   OUTLINE.md               section plan, page budget, cut list
   STYLEGUIDE.md            venue format and writing rules
   research/                related-paper survey and venue/writing research
+  reviews/                 simulated journal reviews, meta-review, response
 ```
 
 ## Build

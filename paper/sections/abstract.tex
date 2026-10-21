@@ -1,18 +1,22 @@
 \begin{abstract}
-Goblint-style abstract interpreters translate a program into a side-effecting
-system of equations over abstract states, one unknown per program point and
-calling context, and solve it with a generic solver. The partial correctness of
-Goblint's top-down solver has been verified, but that theorem does not say
-whether the equations describe the program. Closing this gap requires a
-concrete meaning for calling contexts, which the ordinary collecting semantics
-lacks because it merges the stores of all calls to a procedure. We introduce
-activation traces, which follow one procedure activation together with the
-activation that created it, and let a context policy relate each trace to the
-contexts it may belong to. Soundness then reduces to five local obligations
-over an arbitrary control-flow graph, and every post-solution of the generated
-equations meets them. In Isabelle/HOL, we prove an end-to-end theorem from a
-small-step semantics of a small imperative language with recursive procedures
-to the verdicts of the analyzer function, for every analysis configuration it
-offers. The function is exported to OCaml and runs as a command-line tool. The
-result is partial correctness: the solver's termination is not proved.
+Goblint-style abstract interpreters translate a program into side-effecting
+equations, with one unknown per program point and calling context, and solve
+them with a generic solver. The partial correctness of that solver has been
+verified in Isabelle/HOL, but the theorem does not connect the equations to
+the program. We mechanize this connection for a small imperative language with
+recursive procedures.
+We adapt the local traces of Schwarz et al.\ to procedure activations,
+because a return must resume exactly the activation that made the call. A
+context policy relates each activation trace to the calling contexts it may
+belong to. The development provides (i) a coverage contract of five local
+obligations over an arbitrary control-flow graph, which bounds every valid
+trace in every admitted context; (ii) a proof
+that every post-solution of the generated, context-routed equations meets the
+contract, using the verified solver only through its certificate; and (iii) an
+end-to-end theorem from a small-step source semantics to the verdicts of the
+analyzer function that Isabelle exports to OCaml, for every configuration it
+offers. The guarantee is per program point: every reached store is covered by
+the report and satisfies its definite verdicts. It is partial correctness,
+since solver termination is not proved, and the language has no pointers or
+heap.
 \end{abstract}

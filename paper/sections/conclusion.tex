@@ -1,24 +1,33 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-Activation traces give calling contexts a concrete counterpart, and with it
-the soundness of a Goblint-style analyzer reduces to five local obligations
-that a solved, context-routed equation system meets. The resulting theorem
-covers the analyzer function that is exported and run, for every configuration
-it offers.
+We have mechanized the connection between a source semantics and a
+Goblint-style, context-sensitive, side-effecting equation system solved by a
+verified solver, with activation traces as the concrete counterpart of
+contexts. This is a first step, and its coverage is modest. The result is partial
+correctness. VIMP is scalar, and the adequacy of its semantics is argued, not
+proved. No general precision ordering or completeness property is proved. The
+precision results are witnesses for single programs. The guarantee is per
+program point.
 
-The result has limits we have stated where they apply and collect here. It is
-partial correctness, since the solver's termination is a per-program fact
-established by running it. VIMP is scalar: it has no pointers, arrays, heap, or
-threads, and the adequacy of its semantics is argued, not proved. No precision
-or completeness property is proved.
+\subparagraph*{Per-context certification.}
+\Cref{thm:routed} bounds each context's collected stores by the solved state
+of that context, but the report-level theorem keeps only the union over
+contexts. A theorem stating that the report's row for a context covers
+$\ActColl(v, c)$ would make the per-context states a certified output.
 
-Several results do not depend on the details of VIMP: the solver certificate
-is stated over unknowns and right-hand sides, and the coverage contract
-refers to the language only through a few step functions. Features that change
-only these step functions, such as machine integers, leave the contract and
-its composition intact. The trace semantics, however, assumes that a callee
-cannot modify its caller's locals, so a return can resume the caller with the
-locals it had before the call. Pointers into the caller's frame, a shared heap,
-or threads break this assumption and would require extending the trace
-semantics itself.
+\subparagraph*{Memory and the caller-locals assumption.}
+The solver certificate is stated over unknowns and right-hand sides, and the
+coverage contract refers to the language only through a few step functions.
+Features that change only these step functions, such as machine integers,
+leave the contract and its composition intact. The trace semantics, however,
+assumes that a callee cannot modify its caller's locals, so a return can
+resume the caller with the locals it had before the call. Pointers into the
+caller's frame, a shared heap, or threads break this assumption and would
+require extending the trace semantics itself.
+
+\subparagraph*{Termination.}
+Solver termination is a per-program fact, established by running the solver.
+Known termination results for top-down solvers assume finitely many
+unknowns~\cite{tilscher26jar}. Entry-state contexts need not be finite, so a
+general result would need a bound on the contexts a solve creates.

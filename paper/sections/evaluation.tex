@@ -5,91 +5,89 @@ A machine-checked theorem can hold for uninteresting reasons. Its premises may
 never hold together, its obligations may exclude no error a real analyzer
 makes, and an analyzer that answers \verdict{UNKNOWN} everywhere satisfies it
 as well (\isaname{unknown_everywhere_sound}). We therefore check that the
-premises can hold and that the obligations have force, and then measure
-precision on concrete programs. Facts about one fixed program are proved by
-\texttt{eval}, which runs generated code and therefore also trusts the code
-generator.
+premises can hold and that the obligations have force, and then measure what
+contexts and domains buy on concrete programs. Each item states its kind of
+evidence. Facts about one fixed program are proved by \texttt{eval}, which runs
+generated code and therefore also trusts the code generator. Analyzer outputs
+are registered claims that \texttt{pixi run thesis-claims} re-checks against
+the analyzer, and the paper's tables are generated from them.
 
-\subparagraph*{The theorem is not vacuous (machine-checked).}
+\subparagraph*{The theorem is not vacuous (machine-checked, one program each).}
 For the program of \cref{fig:running}, analyzed with Interval, entry-state
 contexts, and the warrowing update rule, a theory builds a source execution
-that returns from both calls, evaluation shows that the analyzer answers with
+that returns from both calls. Evaluation shows that the analyzer answers with
 both checks \verdict{PROVED}, and \isaname{nv_source_certified} instantiates
 \cref{thm:headline} with every premise discharged. Companion instances do the
-same for single checks (\isaname{nv_check_proved_sound}) and for a
-\verdict{DEAD} check (\isaname{nv_dead_unreached}).
+same for a single check (\isaname{nv_check_proved_sound}) and for a
+\verdict{DEAD} check (\isaname{nv_dead_unreached}). These show that the
+premises are satisfiable. They do not measure how often the analyzer answers.
 
-\subparagraph*{The obligations reject a real defect (machine-checked).}
-In the Goblint defect of \cref{sec:intro}, the congruence domain returned the
-constant~$1$ for $(1 + 2\mathbb{Z}) \bmod 2$~\cite{goblint1161}. In Voblint,
-every congruence remainder must satisfy \isaname{congruence_mod_sound}, which
-requires the truncating remainder of any two concrete values to lie in the
-concretization of the abstract result. The pre-fix answer violates this at
-$-5$, and \isaname{prefix_congruence_mod_unsound} proves that every abstract
-remainder returning the constant does. The defective operator could not have
-been registered as a domain. \oblig{Total} has force as well:
-\isaname{total_dropped_unsound} exhibits a cover that meets the other four
-obligations and misses a reached store.
+\subparagraph*{The obligations have force (machine-checked).}
+\oblig{Total} is needed: \isaname{total_dropped_unsound} exhibits a cover that
+meets the other four obligations and misses a reached store. At the domain
+level, Goblint once claimed \texttt{c \% 2 == 1} for $c \in \{-5, -7\}$,
+although C's truncating remainder gives $-1$ (issue 1156, fixed
+in~\cite{goblint1161}). This defect involves no contexts. It violates a domain
+law. In Voblint, the congruence domain's remainder must satisfy
+\isaname{congruence_mod_sound}, an assumption of the locale through which the
+domain is registered. The law requires the truncating remainder of any two
+concrete values to lie in the concretization of the abstract result.
+\isaname{prefix_congruence_mod_unsound} proves that every abstract remainder
+returning the constant~$1$ for $(1 + 2\mathbb{Z}) \bmod 2$ violates it at
+$-5$. The defective operator therefore cannot discharge the obligation.
 
-\subparagraph*{Contexts buy precision (machine-checked for one program).}
-When \texttt{f} passes its argument to \texttt{g} and \texttt{main} calls
-\texttt{f} with a positive and a negative value, call strings of length one
-merge both activations of \texttt{g} and Sign loses both signs, while length
-two keeps them apart and proves both checks. The theories prove the separation
-at the entry of \texttt{g}
-(\isaname{sign_k2_strictly_more_precise_than_k1_at_g}). This is a witness for
-one program, not a theorem that longer call strings dominate.
-
-\subparagraph*{Comparison with Goblint (empirical).}
-Programs chosen to show a mechanism succeeding favor Voblint, so we also use
-programs selected by someone else. Monniaux's tutorial on the flavors of
-abstract interpretation gives small programs on which standard analyses gain
-or lose precision~\cite{monniaux24}. Every program VIMP can express was
-transliterated into a regression fixture, and every check holds in every
-execution, so each missing proof is lost precision. \Cref{tab:flavors}
-compares Voblint's verdicts, which the build re-checks against the analyzer,
-with Goblint at revision \texttt{6127869c} on C versions of the same programs,
-each analyzer under the settings that give it its best chance.
+\subparagraph*{Contexts decide checks on recursive programs (executable).}
+\Cref{tab:contexts} runs one regression program under every context policy.
+Mutually recursive procedures \texttt{f} and \texttt{g} return $2$ and $1$ at
+the bottom of the recursion. \texttt{main} calls \texttt{f(2)} and
+\texttt{g(2)} inside a loop of 200 iterations and checks both results. Each
+call chain is three call sites deep. With one context per procedure, or with
+call strings of length 1, the activations of different depths share a state
+and both results widen to $[1,12]$. With call strings of length 2 or with
+entry-state contexts, the depths stay apart and both checks are proved. The
+loop adds no contexts, because the callee contexts do not depend on the loop
+counter. For a related program, the theories prove that the solution of the
+routed equation system at call-string length 2 is strictly more precise at the
+entry of a callee than at length 1
+(\isaname{sign_k2_strictly_more_precise_than_k1_at_g}). That theorem compares
+two solutions computed by \texttt{eval}. It concerns neither
+\isaname{run_voblint} nor call strings in general.
 
 \begin{table}[t]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{3.2pt}
-\input{generated/flavors}
-\caption{Checks proved (\checkmark) on the flavors programs~\cite{monniaux24}.
-Voblint runs its domains, the reduced product Int, and Int with the order
-analysis. Goblint's rows add a widening delay, widening thresholds, Interval
-refined by congruences, and Apron octagons, the last also partitioned by the
-branches taken. Each check holds in every execution.}
-\label{tab:flavors}
+\small
+\input{generated/contexts}
+\caption{Verdicts and computed values for the two checks of
+\texttt{17-call-string/precision/09-depth2\_mutual\_recursion\_in\_loop.vimp}
+under Interval, per context policy. Concretely, \texttt{res1} is always $2$ and
+\texttt{res2} always $1$. Generated from registered claims.}
+\label{tab:contexts}
 \end{table}
 
-Three results stand out. Int proves the non-inductive check \texttt{i > 0},
-which neither Sign nor Interval proves alone: widening drops Interval's lower
-bound, but Sign keeps $i \geq 0$, and the reduction recovers an even value in
-$[2, 4]$. Goblint proves it only when Interval is refined by congruences, with
-a widening delay of~3 or with thresholds at the constants of comparisons. The absolute
-value example needs the two branches kept apart, which only Goblint's
-partitioned octagons do; Voblint has no partitioning, which would need its own
-soundness proof. The two variants on which narrowing is foiled (skipped
-increment, reset at equality) need a widening delay or thresholds, which
-Voblint's solver does not offer. Voblint's Interval proves \texttt{i >= 0} on
-the reset example where Goblint's does not, because Goblint's widening stops at
-the largest \texttt{int} and its default overflow handling then gives
-\texttt{i + 1} the whole range; VIMP's integers are unbounded.
+\subparagraph*{Programs we did not choose (executable).}
+Monniaux's tutorial on the flavors of abstract interpretation gives small
+programs on which standard analyses gain or lose precision~\cite{monniaux24}.
+On the eight checks of the programs VIMP can express, all of which hold in
+every execution, Voblint's best setting (Int) proves five. The other three
+need path partitioning, or a widening delay or thresholds, which Voblint lacks.
+The thesis~\cite{voblint} compares these verdicts with Goblint's under several
+settings.
 
 \subparagraph*{Running time (empirical).}
-Speed was not a goal: the generated code runs as Isabelle emits it, with one
-proved code equation added to remove a recompilation of the program at every
-equation evaluation. Over the \stat{prof.fixtures} regression fixtures under
-\stat{prof.configurations} combinations of domain and context policy, three
-repetitions each on an Apple M4 Pro, the median solve takes
+Speed was not a goal: the generated code runs as Isabelle emits it, plus one
+proved code equation. We ran the \stat{prof.fixtures} regression fixtures
+that set no timeout of their own under \stat{prof.configurations} combinations
+of domain and context policy, three repetitions each on an Apple M4 Pro, at repository revision
+\texttt{17fcb363d}. Over
+these \stat{prof.runs} fixture/configuration cases, the median solve takes
 \stat{prof.solve_median_ms}\,ms and the 95th percentile
-\stat{prof.solve_p95_ms}\,ms; \stat{prof.timeouts} of \stat{prof.runs} runs
-exceed the 30\,s limit. The expensive cases include recursive programs under entry-state contexts,
-where domains such as Interval create one context per recursion level.
-On generated programs that grow one size at a time, the number of solver
-evaluations grows about linearly, while solve time grows with exponents between
-\stat{prof.scaling.time_min} and \stat{prof.scaling.time_max}, because the
-generated code represents finite sets and maps as lists. These measurements
-cover small programs on one machine and imply no performance bound.
+\stat{prof.solve_p95_ms}\,ms. \stat{prof.timeouts} cases exceed the 30\,s
+limit. The expensive cases include recursive programs under entry-state
+contexts, where domains such as Interval create one context per recursion
+level. On generated programs that grow one size at a time, the number of
+solver evaluations grows about linearly. Solve time grows with fitted
+exponents between \stat{prof.scaling.time_min} and
+\stat{prof.scaling.time_max} over the measured ranges, which CPU profiles
+attribute to list-based sets and maps in the generated code
+(\cref{sec:mechanization}). These measurements cover small programs on one
+machine and imply no performance bound.

@@ -1,0 +1,10 @@
+tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------
+27:5      pp22   res1 == 2  PROVED   interval: res1=[2,2]
+28:5      pp23   res2 == 1  PROVED   interval: res2=[1,1]

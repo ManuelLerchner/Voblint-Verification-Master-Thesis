@@ -77,35 +77,46 @@ the warrowing update rule; the intermediate node of \texttt{bump}'s body and the
 \label{fig:running}
 \end{figure}
 
-We follow the program of \cref{fig:running} through the analyzer under the
-interval domain with entry-state contexts. The source program is compiled to a
-procedure-aware control-flow graph (CFG) in which each procedure has an entry
-node \ctor{FunctionEntry}~$p$ and a result node \ctor{FunctionResult}~$p$, and
-each call is an edge from its call site to the callee's entry, labeled with its
-continuation in the caller. A proved forward simulation relates every source
-execution to an execution of this graph with the same store
-(\cref{sec:theorem}).
+We follow the program of \cref{fig:running} through the analyzer, with
+intervals and entry-state contexts. The source program is compiled to a
+procedure-aware control-flow graph (CFG). Each procedure $p$ has an entry node
+$\ctor{FunctionEntry}\;p$ and a result node $\ctor{FunctionResult}\;p$. The
+graph $g$ has two kinds of edges. An \emph{intraprocedural} edge
+$(u, a, v) \in \mathit{intra}\;g$ carries an action $a$, such as an
+assignment or a guard. A \emph{call} edge
+$(u, e, \ctor{FunctionEntry}\;p, k) \in \mathit{calls}\;g$ leads from the call
+site $u$ into $p$ and names the continuation $k$ at which the caller resumes.
+A predicate $\Glob$ tells which variables are global. A proved forward
+simulation relates every source execution to a graph execution with the same
+store (\cref{sec:theorem}).
 
-From the graph, the analyzer generates equations over \emph{local unknowns}
-$(v, c)$ for a node $v$ and a context $c$, and \emph{global unknowns} without a
-program point. At the call \texttt{a = bump(5)}, the right-hand side of the
-continuation reads the caller's state, applies the analysis's \emph{enter}
-operation, which binds \texttt{n} to $[5,5]$, and routes the resulting entry
-state to the callee context $c_1 = [5,5]$. Which contexts a callee is entered
-in becomes known only while the equations are solved, so the callee's entry
-equation cannot list its callers. The call instead publishes its entry state as
-a side effect to a global \emph{seed} unknown for $(\texttt{bump}, c_1)$, which
-the entry equation of \texttt{bump} in $c_1$ reads. The continuation then reads
-the callee's exit state in $c_1$ and \emph{combines} it with the caller's
-state. The second call routes to $c_2 = [4,4]$, so the two activations use
-separate copies of \texttt{bump}, and the analysis proves both checks.
+From the graph, the analyzer generates inequations over \emph{local unknowns}
+$(v, c)$ for a node $v$ and a context $c$, and over \emph{global unknowns}
+without a program point. At the call \texttt{a = bump(5)}, the right-hand side
+of the continuation reads the caller's state and applies the analysis's
+\emph{enter} operation. Enter returns an \emph{entry pair} of a resume state,
+which describes the caller, and an entry state, which binds \texttt{n} to
+$[5,5]$. The entry state is \emph{routed} to the callee context $c_1 = [5,5]$.
+Which contexts a callee is entered in becomes known only while the equations
+are solved, so the callee's entry equation cannot list its callers. The call
+instead publishes its entry state as a side effect to a global \emph{seed}
+unknown for $(\texttt{bump}, c_1)$, which the entry equation of \texttt{bump}
+in $c_1$ reads. The continuation then reads the callee's exit state in $c_1$
+and \emph{combines} it with the resume state. The second call routes to
+$c_2 = [4,4]$, so both checks are proved.
 
-For these per-context claims to be sound, the concrete semantics has to say
-which stores belong to $c_1$. Activation traces (\cref{sec:traces}) supply
+For these per-context states to mean something, the concrete semantics has to
+say which stores belong to $c_1$. Activation traces (\cref{sec:traces}) supply
 this. The trace of the activation \texttt{bump(5)} records its caller, the
-policy admits it in $c_1$, and the activation collecting semantics at the
-result of \texttt{bump} in $c_1$ contains only the store with result~6. The
-soundness argument is then a chain of inclusions at every node~$v$:
+context policy admits it in $c_1$, and the \emph{activation collecting
+semantics} $\ActColl(v, c)$ collects the final stores of the traces that end
+at $v$ and carry $c$. The \emph{node collecting semantics} $\NodeColl(v)$
+collects them regardless of context. A report $\mathit{res}$ of the analyzer
+defines two sets at each node $v$. The report set $\Report_{\mathit{res}}(v)$
+contains the stores that some state of the report at $v$ describes, in any
+context. The verdict set $\Verd_{\mathit{res}}(v)$ contains the stores in which
+every definite verdict at $v$ holds. The soundness argument is a chain of
+inclusions at every node:
 \begin{equation}
 \label{eq:chain}
 \text{reached stores}
@@ -114,11 +125,8 @@ soundness argument is then a chain of inclusions at every node~$v$:
 \;\subseteq\; \Report_{\mathit{res}}(v)
 \;\subseteq\; \Verd_{\mathit{res}}(v).
 \end{equation}
-$\NodeColl(v)$ collects the final stores of the valid traces ending at $v$, and
-$\ActColl(v, c)$ those of the traces that also carry context $c$. The report
-set $\Report_{\mathit{res}}(v)$ contains the stores that some state of the
-report at $v$ describes, and the verdict set $\Verd_{\mathit{res}}(v)$ the stores
-in which every definite verdict at $v$ holds. Each inclusion may add stores
-that no execution reaches, which costs precision. None may lose a reached
-store. The end-to-end theorem (\cref{sec:theorem}) states the chain for every
-report the analyzer returns.
+Each inclusion may add stores that no execution reaches, which costs
+precision. None may lose a reached store. The contexts appear in the middle of
+the chain and disappear at its ends. The end-to-end theorem
+(\cref{sec:theorem}) states the outer inclusions for every report the
+analyzer returns.

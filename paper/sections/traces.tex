@@ -1,89 +1,103 @@
 \section{Activation Traces and the Coverage Contract}
 \label{sec:traces}
 
+This section has three ingredients. Valid activation traces are adapted from
+the local traces of Schwarz et al.~\cite{schwarz21}. Context policies
+generalize the call-string and functional choices of Sharir and
+Pnueli~\cite{sharir81} to a relation. The coverage contract and its
+soundness theorem are ours. Nothing here mentions an abstract domain, an
+equation, or a solver.
+
 A context-sensitive analysis claims, for each node $v$ and context $c$, a set
-of stores. To check such a claim, we need the set of stores that executions
-bring to $v$ \emph{in context $c$}. Neither a graph execution nor its flat list
-of visited node--store pairs provides it. A frame of the runtime stack holds
-only what is needed to resume the caller and disappears at the return, and the
-flat list interleaves the steps of all activations. Grouping a run by
-activation makes the missing structure explicit: each call starts a new
-activation attached to its caller, and each return composes the finished
-callee back into that caller.
+of stores. Checking such a claim needs the stores that executions bring to $v$
+\emph{in context $c$}. A graph execution with a frame stack does not provide
+them. A frame holds only what is needed to resume the caller and disappears at
+the return, and the list of visited node--store pairs interleaves the steps of
+all activations. Grouping a run by activation makes the missing structure
+explicit: each call starts an activation attached to its caller, and each
+return composes the finished callee back into that caller.
 
 \subsection{Activation traces}
 
-An \emph{activation path} is a list of node--store pairs visited by one
+An \emph{activation path} is the list of node--store pairs visited by one
 activation. An activation trace has one constructor for each way an activation
 begins or continues (\isaname{activation_trace}):
 \snippet{activation_trace}
-\noindent $\ctor{Root}~\pi$ is the activation of \texttt{main}.
-$\ctor{Call}~t'~\pi$ is a callee created by the caller trace $t'$, frozen at
-the call site. $\ctor{Resume}~t'~t''~\pi$ continues $t'$ past the call that
-produced the finished callee $t''$. Observers return the last node
-$\mathit{sink\_node}\;t$, its store $\mathit{sink\_store}\;t$, and the caller
-$\mathit{caller\_of}\;t$, which a $\ctor{Root}$ lacks.
+\noindent That is, $\ctor{Root}~\pi$ is the activation of \texttt{main},
+$\ctor{Call}~t'~\pi$ is a callee whose creator $t'$ is frozen at the call
+site, and $\ctor{Resume}~t'~t''~\pi$ continues $t'$ past the call that produced
+the finished callee $t''$. The observers $\mathit{sink\_node}\;t$ and
+$\mathit{sink\_store}\;t$ return the last node and store of the path, and
+$\mathit{caller\_of}\;t$ the creating caller, which a $\ctor{Root}$ lacks.
 
-The datatype admits terms that no execution produces, for instance a
-$\ctor{Resume}$ pairing a caller with a callee that another activation
-created. The set $\Traces_{\Glob,g,S}$ of \emph{valid} traces of a graph $g$
-with initial stores $S$ is therefore defined inductively, by four rules that
-mirror the rules of graph execution (\isaname{valid_activation_trace}):
+The datatype admits terms that no execution produces. The set
+$\Traces_{\Glob,g,S}$ of \emph{valid} traces of a graph $g$ with initial stores
+$S$ is defined by four rules that mirror the rules of graph execution
+(\isaname{valid_activation_trace}):
 \begin{gather*}
 \frac{s \in S}{\ctor{Root}\,[(\mathit{entry}_g, s)] \in \Traces}
 \\[1ex]
 \frac{t \in \Traces \quad (\mathit{sink\_node}\;t, a, v) \in \mathit{intra}\;g \quad s' \in \mathit{step}_a(\mathit{sink\_store}\;t)}{\mathit{extend}\;t\;(v, s') \in \Traces}
 \\[1ex]
-\frac{t \in \Traces \quad \mathit{sink\_node}\;t \xrightarrow{\;e\;} \ctor{FunctionEntry}\;p}{\ctor{Call}\;t\;[(\ctor{FunctionEntry}\;p,\; \mathit{enter}_e(\mathit{sink\_store}\;t))] \in \Traces}
+\frac{t \in \Traces \quad (\mathit{sink\_node}\;t, e, \ctor{FunctionEntry}\;p, k) \in \mathit{calls}\;g}{\ctor{Call}\;t\;[(\ctor{FunctionEntry}\;p,\; \mathit{enter}_e(\mathit{sink\_store}\;t))] \in \Traces}
 \\[1ex]
-\frac{t'' \in \Traces \quad \mathit{caller\_of}\;t'' = t' \quad \mathit{sink\_node}\;t'' = \ctor{FunctionResult}\;p}{\ctor{Resume}\;t'\;t''\;\bigl(\mathit{path\_of}\;t' \mathbin{@} [(k,\; \mathit{combine}(\mathit{sink\_store}\;t',\, \mathit{sink\_store}\;t''))]\bigr) \in \Traces}
+\frac{\begin{array}{c}t'' \in \Traces \quad \mathit{caller\_of}\;t'' = t' \quad \mathit{sink\_node}\;t'' = \ctor{FunctionResult}\;p\\ (\mathit{sink\_node}\;t', e, \ctor{FunctionEntry}\;p, k) \in \mathit{calls}\;g\end{array}}{\ctor{Resume}\;t'\;t''\;\bigl(\mathit{path\_of}\;t' \mathbin{@} [(k, \mathit{combine}_e(\mathit{sink\_store}\;t', \mathit{sink\_store}\;t''))]\bigr) \in \Traces}
 \end{gather*}
-In the call rule, $e$ is a call edge into $p$, and $\mathit{enter}_e$ binds the
-formals to the arguments. In the return rule, $k$ is the continuation that the
-call edge from $t'$'s call site names, and $\mathit{combine}$ takes the
-caller's locals and the callee's globals and assigns the return value to the
-call's destination (\isaname{combine_collect}). Because a callee
-stores its creator exactly, a return resumes exactly the activation that made
-the call, without searching for a compatible frame.
+Here $\mathit{step}_a$ is the concrete meaning of an action, $\mathit{enter}_e$
+binds the callee's formals to the call's arguments and resets its locals, and
+$\mathit{combine}_e$ keeps the caller's locals, takes the callee's globals, and
+assigns the return value to the call's destination (\isaname{combine_collect}).
+A return resumes exactly the activation that created the callee, found through
+$\mathit{caller\_of}$, without searching for a compatible frame. The return
+rule takes \emph{some} call edge from the caller's call site into $p$. It does
+not require the edge through which the callee was entered. On compiled graphs
+every call site has exactly one call edge (\isaname{calls_source_unique}), so
+the two coincide.
 
 Every finite source execution of a well-formed program yields a valid trace
-that ends at the corresponding node with the same store and whose chain of
+that ends at the corresponding node with the same store, and whose chain of
 callers represents the runtime frame stack
-(\isaname{source_run_has_activation_trace}). Collecting the final stores of
-valid traces per node gives the \emph{node collecting semantics}
+(\isaname{source_run_has_activation_trace}). The final stores of valid traces,
+collected per node, form the node collecting semantics
 $\NodeColl_{\Glob,g,S}(v)$ (\isaname{node_collect}).
 
-This design adapts the local traces of Schwarz et al.~\cite{schwarz21}, which
-give one thread's view of a concurrent execution. $\ctor{Root}$ corresponds to
-an initial trace, $\ctor{Call}$ to thread creation, and $\ctor{Resume}$ to the
-binary rule for acquiring a lock, which incorporates a second trace. The
-objects differ: a local trace is an acyclic graph of events of several
-threads, whereas an activation trace holds the path of one activation, refers
-to at most two other traces, and its $\ctor{Resume}$ accepts only the callee
-that the activation itself created.
+In the local traces of Schwarz et al.~\cite{schwarz21}, $\ctor{Root}$
+corresponds to an initial trace, $\ctor{Call}$ to thread creation, and
+$\ctor{Resume}$ to the binary rule for acquiring a lock, which incorporates a
+second trace (\cref{sec:related}).
 
 \subsection{Calling contexts as a relation}
 
-An analysis chooses a callee's context at the call. With call strings of
-length one, it is the call site; with entry-state contexts, the abstract values
-of the formals at entry. A \emph{context policy} fixes this choice for every
-concrete call. It maps a call site $u$, a caller context $c$, a description of
-the call, the caller's store, and the entered store to the \emph{set} of callee
-contexts it admits (\isaname{context_policy}):
-\snippet{context_policy}
-\noindent A set, because Goblint's \emph{enter} may return several
+An analysis chooses a callee's context at the call: with call strings of
+length $k$, the last $k$ call sites; with entry-state contexts, the abstract
+values of the formals at entry. A \emph{context policy} fixes this choice for
+every concrete call. It maps a call site $u$, a caller context $c$, a
+description of the call, the caller's store, and the entered store to the
+\emph{set} of admitted callee contexts (\isaname{context_policy}). The result
+is a set because Goblint's enter may return several
 alternatives for one call, each routed separately. When the alternatives
-overlap, one concrete call belongs to several contexts
-(\isaname{ov_two_contexts_admitted}). A set may also be empty, for instance at
-a call the analysis considers unreachable.
+overlap, one concrete call is admitted in several contexts
+(\isaname{ov_two_contexts_admitted}). The set may be empty, for instance at a
+call the analysis considers unreachable.
 
-The contexts of a trace follow by applying the policy along the calls that
-created it (\isaname{activation_context_rel}). The root carries the initial
-context $c_0$, a callee carries every $c'$ that the policy admits for its call
-from some context of its caller, and local steps and resumptions keep the
-caller's contexts. The traces themselves store no context, so the policy is a
-parameter of every theorem. The \emph{activation collecting semantics}
-collects the final stores of valid traces that end at $v$ and carry $c$
+For a call edge $e$ into $p$, we write $\adm_{u,c}(e, s, s')$ for the set the
+policy returns for the call described by $e$ and $p$, caller store $s$ and
+entered store $s'$. We write $c' \in \adm^{\exists}_{u,c}(p, s, s')$ when some call edge from $u$
+into $p$ has entered store $s'$ from $s$ and the policy admits $c'$ for it
+(\isaname{admits_call_context}). The contexts a trace carries are then defined
+inductively (\isaname{activation_context_rel}):
+\begin{gather*}
+\frac{}{\ctor{Root}\;\pi \text{ carries } c_0}
+\qquad
+\frac{t' \text{ carries } c}{\ctor{Resume}\;t'\;t''\;\pi \text{ carries } c}
+\\[1ex]
+\frac{t \text{ carries } c \quad c' \in \adm^{\exists}_{\mathit{sink\_node}\,t,\,c}(p, \mathit{sink\_store}\;t, s')}{\ctor{Call}\;t\;((\ctor{FunctionEntry}\;p, s') \mathbin{\#} \pi) \text{ carries } c'}
+\end{gather*}
+That is, a callee carries every context admitted for its call from some
+context of its caller, and a resumed activation keeps the contexts it had
+before the call. Traces store no context, so the policy is a parameter of
+every theorem below. The activation collecting semantics collects the final
+stores of the valid traces that end at $v$ and carry $c$
 (\isaname{activation_collect}):
 \[
 \ActColl_{\Glob,\adm,c_0,g,S}(v, c) \;=\; \{\, \mathit{sink\_store}\;t \mid t \in \Traces_{\Glob,g,S},\; \mathit{sink\_node}\;t = v,\; t \text{ carries } c \,\}.
@@ -95,50 +109,55 @@ whereas $\NodeColl$ at that node contains both.
 
 \subsection{The coverage contract}
 
-An analysis result is sound if, at every node and context, it accounts for
-the activation collecting semantics. We state this over a \emph{cover}, a
-function assigning a set of stores to each node and context. Since valid
-traces grow by four rules, it suffices to check the cover against each rule
-once. For a call edge from $u$ into $p$ with continuation $k$, the contract
-\isaname{activation_coverage} requires:
+A \emph{cover} assigns a set of stores to each node and context. Valid traces
+grow by four rules, so it suffices to check a cover against each rule once.
+The contract \isaname{activation_coverage} has one obligation per rule plus a
+totality condition. For every call edge $(u, e, \ctor{FunctionEntry}\;p, k)$:
 \begin{align*}
   &\oblig{Init} && s \in S \implies s \in \cover(\mathit{entry}_g, c_0)\\
   &\oblig{Intra} && (u, a, v) \in \mathit{intra}\;g,\; s \in \cover(u, c),\; s' \in \mathit{step}_a(s) \implies s' \in \cover(v, c)\\
-  &\oblig{Call} && s \in \cover(u, c),\; c' \text{ admitted from } s\\
-  &&&\qquad\implies \mathit{enter}(s) \in \cover(\ctor{FunctionEntry}\;p, c')\\
-  &\oblig{Return} && s \in \cover(u, c),\; c' \text{ admitted from } s,\; t \in \cover(\ctor{FunctionResult}\;p, c')\\
-  &&&\qquad\implies \mathit{combine}(s, t) \in \cover(k, c)\\
-  &\oblig{Total} && s \in \cover(u, c) \implies \text{some } c' \text{ is admitted from } s
+  &\oblig{Call} && s \in \cover(u, c),\; c' \in \adm_{u,c}(e, s, \mathit{enter}_e(s))\\
+  &&&\quad \implies \mathit{enter}_e(s) \in \cover(\ctor{FunctionEntry}\;p, c')\\
+  &\oblig{Return} && s \in \cover(u, c),\; c' \in \adm^{\exists}_{u,c}(p', s, s'),\\
+  &&&\quad t \in \cover(\ctor{FunctionResult}\;p, c') \implies \mathit{combine}_e(s, t) \in \cover(k, c)\\
+  &\oblig{Total} && s \in \cover(u, c) \implies \adm_{u,c}(e, s, \mathit{enter}_e(s)) \neq \emptyset
 \end{align*}
-Here ``$c'$ admitted from $s$'' means that the policy admits $c'$ for the call
-from $s$ in context $c$. \oblig{Total} closes a gap the other four leave. If a
-call from a covered store is admitted in no context, \oblig{Call} and
-\oblig{Return} hold vacuously, nothing places the store after the return at
-the continuation, and yet the resumed caller still carries its contexts there.
-Without \oblig{Total}, the contract admits a cover that misses a store the
-program reaches (\isaname{total_dropped_unsound}). \oblig{Total} asks only
-about covered stores, because an entry-state policy admits no context for
-stores the analysis has excluded. Call strings and the unit policy meet it for
-every cover (\isaname{call_context_total_on_of_fun}).
+\oblig{Return} is quantified over every procedure $p'$ and entered store $s'$
+admitted at the call site, not only over the edge $e$ it returns through. This
+matches the return rule, which does not tie the returning edge to the entering
+one. On a graph with one call edge per call site, $p' = p$ and the obligation
+reads as the familiar single-edge law. \oblig{Total} closes a gap that the
+other four leave. If a call from a covered store is admitted in no context,
+\oblig{Call} and \oblig{Return} hold vacuously and nothing places the store
+after the return at the continuation, although the resumed caller still
+carries its contexts there. Without \oblig{Total}, a cover that meets the
+other four obligations can miss a reached store
+(\isaname{total_dropped_unsound}). \oblig{Total} asks only about covered
+stores, because an entry-state policy admits no context for stores the
+analysis has excluded. Call strings and the unit policy, which admits one
+context for every activation, meet it for every cover
+(\isaname{call_context_total_on_of_fun}).
 
 \begin{theorem}[Context-indexed soundness, \isaname{activation_collect_sound}]
 \label{thm:contract}
-If a cover meets the five obligations, then
+If a cover meets the five obligations of \isaname{activation_coverage}, then
 $\ActColl(v, c) \subseteq \cover(v, c)$ for every node $v$ and context $c$.
 \end{theorem}
-\snippet{activation_collect_sound}
 
-The proof is an induction over the four rules of valid traces, one obligation
-per rule, with the invariant that every valid trace carries some context and
-that its final store is covered in every context it carries
-(\isaname{valid_activation_trace_covered}). The return case is the one that needs the
-structure of traces: the caller's context must be the one in which the call
-was made, and $\mathit{caller\_of}$ supplies exactly that caller. Within the
-contract, \oblig{Total} also gives every valid trace a context, so splitting by
-context loses nothing (\isaname{node_collect_eq_Union_activation_collect}):
+\subparagraph*{Proof idea.}
+The proof is an induction over valid traces with the invariant that a trace
+carries some context and that its final store is covered in every context it
+carries. A single-trace invariant does not suffice for the return rule, which
+needs the invariant for the caller recovered through $\mathit{caller\_of}$.
+The induction therefore carries the invariant along the whole chain of
+callers (\isaname{caller_chain_closure}). \oblig{Total} is used twice. In the
+call case, it gives a new callee some context. In the return case, for each
+context $c$ of the resumed caller, it re-admits the callee at some $c'$ from
+$c$ along the callee's own entry edge, so that the callee's exit store is
+covered at $c'$ and \oblig{Return} composes the two at $c$. Within the
+contract, \oblig{Total} also gives every valid trace a context, so splitting
+by context loses nothing (\isaname{node_collect_eq_Union_activation_collect}):
 \[
 \NodeColl(v) \;=\; \textstyle\bigcup_c \ActColl(v, c).
 \]
-This completes the concrete half of the argument. An analysis never reasons
-about whole runs. It only has to produce store sets that each kind of step
-preserves, and \cref{sec:equations} shows that a solved equation system does.
+\Cref{sec:equations} shows that a solved equation system meets the contract.

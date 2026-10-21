@@ -3,7 +3,10 @@
 
 The previous sections bound the activation collecting semantics of a
 \emph{graph}. Two links remain: from source executions to graph executions,
-and from the solved valuation to the report the user reads.
+and from the solved valuation to the report the user reads. The forward
+simulation follows the CompCert methodology~\cite{leroy09}. The elaboration
+that locates a source configuration at graph nodes, and the composition, are
+ours.
 
 \subparagraph*{From source to graph.}
 VIMP has a small-step semantics \isaname{pstep} over configurations of a
@@ -30,10 +33,17 @@ configuration or an ill-formed program, and otherwise runs the executable
 solver and returns $\ctor{Analysed}~\mathit{res}$ when the solve returns a
 result (\isaname{run_voblint}). The report lists, per node, the solved states of every solved context,
 and classifies each check \texttt{\_\_voblint\_check(b)} as \verdict{PROVED},
-\verdict{REFUTED}, \verdict{UNKNOWN}, or \verdict{DEAD}. $\Report_{\mathit{res}}(v)$
-is the set of stores some state at $v$ describes, and
-$\Verd_{\mathit{res}}(v)$ the set of stores in which every \verdict{PROVED}
-check at $v$ holds and every \verdict{REFUTED} check fails.
+\verdict{REFUTED}, \verdict{UNKNOWN}, or \verdict{DEAD}. As in
+\cref{sec:overview}, $\Report_{\mathit{res}}(v)$ is the set of stores that
+some state at $v$ describes, in any context, and $\Verd_{\mathit{res}}(v)$ the
+set of stores in which every \verdict{PROVED} check at $v$ holds and every
+\verdict{REFUTED} check fails.
+
+In the statement below, $\Pi$ is the procedure table of $p$, and
+$\Glob, \Pi \vdash (c, s, \mathit{frs}) \rightarrow_p^* (c', s', \mathit{frs}')$
+is a finite execution of \isaname{pstep} from residual command $c$, store $s$
+and frame stack $\mathit{frs}$. $\NodeColl_{\Glob,g,S}\,v$ is the node
+collecting semantics of the compiled graph $g$ from the initial stores $S$.
 
 \begin{theorem}[End-to-end soundness, \isaname{run_voblint_source_sound}]
 \label{thm:headline}
@@ -49,7 +59,14 @@ report. The conclusion has two halves: the reached configuration is observed
 at some node, and at every node where it is observed, its store is collected,
 covered by the report, and consistent with every definite verdict there. The
 contexts appear only inside the proof, through
-$\NodeColl(v) = \bigcup_c \ActColl(v, c)$ and \cref{thm:routed}.
+$\NodeColl(v) = \bigcup_c \ActColl(v, c)$ and \cref{thm:routed}. The
+guarantee is therefore per program point. The report-level fact that the
+proof establishes about contexts (\isaname{context_sound}) bounds each
+$\ActColl(v, c)$ by $\Report_{\mathit{res}}(v)$, the union over all contexts
+at $v$. No theorem about \isaname{run_voblint} certifies the row of an
+individual context. \Cref{thm:routed} bounds $\ActColl(v, c)$ by the solved
+state for $c$, but the report is not proved to list that state as the row
+for $c$. Closing this gap is future work (\cref{sec:conclusion}).
 
 Three properties are conclusions or consequences rather than premises. The
 theorem has no termination premise: \isaname{run_voblint} answers only when its
@@ -78,10 +95,22 @@ about the constant that Isabelle's code generator~\cite{haftmann10} exports to
 OCaml and that the command-line tool calls. The lexer and parser, which
 construct the program, and the handwritten OCaml that prints the report lie
 outside the proof. The Isabelle kernel, the code generator, the OCaml
-toolchain, and the arbitrary-precision integer library are trusted. That \isaname{pstep} models
-the intended language is argued, not proved: VIMP integers are unbounded,
-division by zero is defined, and a callee's locals start at zero, so a verdict
-need not hold for a C program with the same text.
+toolchain, and the arbitrary-precision integer library are trusted. So is one
+handwritten OCaml function inside the solve. For tracing, the exported code
+maps the logical constant \isaname{trace_event}, which is the unit, to a
+handwritten hook (\texttt{Solver\_trace\_hook.emit}). The proofs treat the
+call as the unit, and the trusted base assumes that the hook does not change
+the results.
+
+That \isaname{pstep} models the intended language is argued, not proved. Some
+of VIMP's choices differ from C. Integers are unbounded. Division by zero
+yields $0$ and the remainder by zero yields the dividend. Both operands of
+\texttt{\&\&} and \texttt{||} are evaluated. A failed check does not stop
+the execution, so a verdict for one check does not depend on an earlier one.
+The locals of \texttt{main} start unconstrained, while a callee's locals start
+at $0$. \texttt{min}, \texttt{max}, and the nondeterministic input are
+built-in calls. A verdict therefore need not hold for a C program with the
+same text.
 
 \begin{figure}[t]
 \centering
@@ -104,10 +133,13 @@ need not hold for a C program with the same text.
     \node[zone, dashed, fit=(src)(par), label={[font=\scriptsize]above:unverified}] {};
     \node[zone, dashed, fit=(out), label={[font=\scriptsize]above:unverified}] {};
   \end{scope}
+  \node[part, dashed, above=4mm of slv, font=\scriptsize] (hook) {trace hook};
+  \draw[dashed] (hook) -- (slv);
   \node[zone, fill=black!5, below=4mm of pz, minimum width=125mm, align=center]
-    {trusted: Isabelle kernel $\cdot$ code generator $\cdot$ OCaml toolchain $\cdot$ Zarith};
+    {trusted: Isabelle kernel $\cdot$ code generator $\cdot$ OCaml toolchain $\cdot$ Zarith $\cdot$ trace hook};
 \end{tikzpicture}
 \caption{The trust boundary of the delivered analyzer, for programs whose
-solve terminates.}
+solve terminates. Dashed boxes are handwritten code outside the proof. The
+trace hook runs inside the solve and is assumed not to change its result.}
 \label{fig:trust}
 \end{figure}

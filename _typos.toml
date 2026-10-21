@@ -33,3 +33,5 @@ gam = "gam"
 Ond = "Ond"
 # BibTeX's free-text annotation field, read by paper/tools/bib.py.
 annote = "annote"
+# amsmath's multline environment, used by the paper.
+multline = "multline"

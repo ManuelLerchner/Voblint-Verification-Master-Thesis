@@ -1,72 +1,74 @@
 \section{Mechanization}
 \label{sec:mechanization}
 
-The development~\cite{voblint} comprises \stat{isabelle.theories} Isabelle/HOL theories with
-\stat{isabelle.lines} lines, of which \stat{isabelle.code} are formal text, and
-\stat{isabelle.proofs} proved statements. It reuses \stat{solver.used.theories}
-theories (\stat{solver.used.lines} lines) of the verified solver
-development~\cite{tilscher26}, vendored with four changes proposed upstream (a
-build fix, renames, a removed assumption, and added facts) that leave its
-algorithm unchanged. Neither Voblint nor the reused solver theories contain
-\texttt{sorry} or \texttt{oops}. Code generation emits
-\stat{generated_ocaml} lines of OCaml, and \stat{handwritten_ocaml} lines of
-handwritten OCaml parse programs and print reports. A full build of the
-development takes several minutes on an Apple M4 Pro laptop.
+\Cref{tab:scale} lists the size of the development~\cite{voblint} by layer. It
+counts the theories that the sessions list, and lemmas, theorems and
+corollaries as proved statements. The development reuses part of the verified
+solver of Tilscher et al.~\cite{tilscher26}. The solver is vendored with four
+changes made for this work and proposed upstream: a build fix, renames, a
+removed assumption, and added facts. They leave its algorithm unchanged.
+Neither Voblint nor the imported solver theories contain \texttt{sorry} or
+\texttt{oops}. Code generation emits \stat{generated_ocaml} lines of OCaml, and
+\stat{handwritten_ocaml} lines of handwritten OCaml parse programs, print
+reports, and implement the trace hook. A full build takes several minutes on
+an Apple M4 Pro laptop.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\input{generated/scale}
+\caption{Size of the development by layer: lines of Isabelle/HOL including
+comments, and proved statements, which are \texttt{lemma}, \texttt{theorem}
+and \texttt{corollary} commands. The counts exclude one theory generated from
+the grammar manifest (\texttt{VIMP\_Grammar\_Generated}).}
+\label{tab:scale}
+\end{table}
 
 \subparagraph*{Design choices and their alternatives.}
-Four choices shaped the proof; the first replaced a prototype.
+Four choices shaped the proof. Only for the first was an alternative
+implemented and abandoned.
 \begin{itemize}
   \item \emph{Activation traces as the soundness target.} A first prototype
     used whole-program executions with calls inlined. To account for one call,
     the proof built a separate execution from the callee's entry and spliced it
     into the caller's run. This handled single calls but did not reflect the
-    call stack and was hard to extend to recursion. Activation traces replaced
-    it: a return resumes exactly the suspended caller, so per-context return
-    flow follows from the trace structure.
+    call stack and was hard to extend to recursion. The obvious alternative,
+    which we did not implement, is the graph semantics itself, with a frame
+    stack whose frames carry a ghost context. Its soundness proof would carry an invariant over
+    the whole stack. Activation traces turn it into a fact about the caller
+    chain, recovered through $\mathit{caller\_of}$, and keep contexts out of
+    the concrete semantics, so the policy can be a parameter.
   \item \emph{Contexts as a relation.} The unit and call-string policies are
     functions and discharge \oblig{Total} once for every cover. The relational
     form is needed for an enter that returns overlapping alternatives and for
-    the entry-state policy, which admits no context for stores the analysis
-    excludes and proves \oblig{Total} from the solution.
+    the entry-state policy. That policy admits no context for stores the
+    analysis excludes, and it proves \oblig{Total} from the solution.
   \item \emph{The solver as a parameter.} The analysis locale assumes four
-    facts about a solver rather than reasoning about the top-down solver's
-    run. The vendored solver discharges them under all five update rules, and
-    the semantic proofs never unfold its definition.
-  \item \emph{Two-default executable states.} Soundness is stated over
-    pointwise states, total functions on infinitely many variable names. The
-    solver runs on a quotient type~\cite{huffman13} of a default and a finite
-    override list, as in Concrete Semantics~\cite[§13.6]{nipkow14}, but with
-    two defaults: $\top$ for locals and $0^\sharp$ for globals, because VIMP
-    zero-initializes globals. Each operation carries a theorem relating it to
-    its pointwise counterpart (\isaname{exec_local_spec_sound}).
+    facts about a solver instead of reasoning about the top-down solver's run.
+    The vendored solver discharges them under all five update rules, and the
+    semantic proofs never unfold its definition.
+  \item \emph{Two-default executable states.} Soundness is stated over total
+    functions on variable names. The solver runs on a quotient
+    type~\cite{huffman13} of defaults and a finite override list, as in
+    Concrete Semantics~\cite[§13.6]{nipkow14}, with separate defaults for
+    locals ($\top$) and zero-initialized globals ($0^\sharp$)
+    (\isaname{exec_local_spec_sound}).
 \end{itemize}
 
-\subparagraph*{Isabelle mechanisms.}
-Locales~\cite{ballarin14} carry the reusable obligations: the coverage
-contract, the analysis contract, the routing conditions, and the certified
-solver are each a locale, and the generic theorems are proved in their
-contexts. Type classes carry the lattice structure of abstract values. Each domain registers with one locale interpretation per context policy.
+The coverage contract, the analysis contract, the routing conditions, and
+the certified solver are each a locale~\cite{ballarin14}, and a domain is
+registered with one locale interpretation per context policy.
 
 \subparagraph*{Feedback on the proof assistant.}
-Three points cost effort that the tooling could reduce. First, HOL admits only
-terminating recursion, so the solver is defined with a domain predicate and an
-executable variant that returns only when the recursion finishes; a returned
-run must then be transported to the logical definition, which a lemma added to the vendored solver proves once
-(\isaname{solve_dom_of_solve_c}). Second, code
-generation turns finite sets and maps into lists that every lookup scans. One
-definition recompiled the whole program at every equation evaluation until a
-proved code equation replaced it, without changing any theorem; the remaining
-list-based structures dominate the running time (\cref{sec:evaluation}), and
-the Collections Framework or the Containers library could replace them in the
-code setup alone. Third, the kernel checks that a proof is valid, not that it
-is readable or reusable. Unused, duplicated, and subsumed lemmas accumulated,
-so we built a separate linter for Isar theories whose checks complete in
-seconds, against several minutes for a full build; agents that edit theories
-can run it after individual changes, and the full build establishes correctness.
-
-\subparagraph*{Use of generative AI.}
-Once the definitions and interfaces had stabilized, generative AI tools
-produced many of the proofs. Isabelle checks their validity relative to the
-definitions; human review concentrated on the definitions, the assumptions, and
-the meaning of the theorems, which no kernel checks. The declaration at the
-end of the paper states the extent of this use.
+Two points cost effort that the tooling could reduce. First, HOL admits only
+terminating recursion. The solver is therefore defined with a domain predicate
+and an executable variant that returns only when the recursion finishes, and a
+returned run must be transported to the logical definition. A lemma added to
+the vendored solver proves this transport once (\isaname{solve_dom_of_solve_c}).
+Second, code generation turns finite sets and maps into lists that every
+lookup scans. One definition recompiled the whole program at every equation
+evaluation until a proved code equation replaced it, without changing any
+theorem. CPU profiles attribute most of the remaining solve time to list
+membership and lookup. The Collections Framework or the Containers library
+could replace these structures in the code setup alone, without touching the
+soundness proofs. We leave this to future work.

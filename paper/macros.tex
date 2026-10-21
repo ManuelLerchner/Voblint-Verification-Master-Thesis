@@ -2,7 +2,11 @@
 % thesis has a symbol; the paper adds none the theories lack.
 
 % Isabelle entities in prose: typewriter, never plain text.
-\newcommand{\isaname}[1]{\texttt{\detokenize{#1}}}
+% Breaks after underscores, so long names do not overrun the margin.
+\makeatletter
+\DeclareRobustCommand{\isaname}[1]{\texttt{\isa@split#1_\isa@end}}
+\def\isa@split#1_#2\isa@end{#1\ifx\relax#2\relax\else\_\allowbreak\isa@split#2\isa@end\fi}
+\makeatother
 % A named obligation of the coverage contract.
 \newcommand{\oblig}[1]{\textsc{#1}}
 % Analyzer verdicts.
