@@ -22,10 +22,11 @@ text \<open>
   untraced run never builds an event. The Eval target keeps the equation, so
   proofs by evaluation run the same code without any hook.
 
-  The equations are alternative code equations for the vendored solver's
-  executable functions. They leave the vendored definitions and proofs
-  untouched and replace only the equations code export uses, in theories that
-  import this one.
+  The traced solver is a copy of the vendored solver's executable functions
+  under new constants, each defined as the function it copies and given the
+  traced equation as its code equation. The vendored functions keep their own
+  code equations, so a caller that names them runs no hook; only a caller that
+  names the traced constants reports events.
 \<close>
 
 definition trace_event :: "String.literal \<Rightarrow> (unit \<Rightarrow> 'e) \<Rightarrow> unit" where
@@ -74,9 +75,7 @@ text \<open>
   stable set and continues through each one not currently being solved.
 \<close>
 
-declare destab_iter_opt.simps [code del] destab_opt.simps [code del]
-
-lemma destab_iter_opt_traced [code]:
+lemma destab_iter_opt_traced:
   fixes i :: "('x + 'g, 'x list) fmap"
   shows
     "destab_iter_opt [] i s c = (i, s)"
@@ -87,7 +86,7 @@ lemma destab_iter_opt_traced [code]:
        destab_iter_opt ys i s c)"
   by (simp_all only: destab_iter_opt.simps trace_event_def Let_def)
 
-lemma destab_opt_traced [code]:
+lemma destab_opt_traced:
   fixes x :: "'x + 'g"
   shows
     "destab_opt x i s c =
@@ -95,6 +94,18 @@ lemma destab_opt_traced [code]:
                  (\<lambda>_. (Ev_Destabilize x :: ('x, 'g, unit) solver_event)) in
        destab_iter_opt (fmlookup_default i [] x) (fmdrop x i) s c)"
   by (simp only: destab_opt.simps trace_event_def Let_def)
+
+definition traced_destab_iter_opt ::
+    "'x list \<Rightarrow> ('x + 'g, 'x list) fmap \<Rightarrow> 'x set \<Rightarrow> 'x set \<Rightarrow> ('x + 'g, 'x list) fmap \<times> 'x set"
+  where [code del]: "traced_destab_iter_opt ys i s c = destab_iter_opt ys i s c"
+
+definition traced_destab_opt ::
+    "'x + 'g \<Rightarrow> ('x + 'g, 'x list) fmap \<Rightarrow> 'x set \<Rightarrow> 'x set \<Rightarrow> ('x + 'g, 'x list) fmap \<times> 'x set"
+  where [code del]: "traced_destab_opt x i s c = destab_opt x i s c"
+
+lemmas traced_destab_code [code] =
+  destab_iter_opt_traced[folded traced_destab_iter_opt_def traced_destab_opt_def]
+  destab_opt_traced[folded traced_destab_iter_opt_def traced_destab_opt_def]
 
 text \<open>
   The solver. The equation below is the vendored \<open>solve_rec_c\<close> equation with
@@ -104,9 +115,7 @@ text \<open>
 
 unbundle lattice_syntax
 
-declare TD_side_rule_Interp.solve_rec_c.simps [code del]
-
-lemma solve_rec_c_traced [code]:
+lemma solve_rec_c_traced:
   fixes T :: "('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT"
   shows "TD_side_rule_Interp_solve_rec_c r T s = (case s of
     TD_side_upd_rule.func_state.Q (y, x, state, ug_state) \<Rightarrow>
@@ -197,25 +206,23 @@ lemma solve_rec_c_traced [code]:
   by (rule trans[OF TD_side_rule_Interp.solve_rec_c.simps])
      (simp only: trace_event_def Let_def)
 
-text \<open>One solve, from its root unknown to its result, between a start and a stop event.\<close>
+definition traced_solve_rec_c
+  where [code del]: "traced_solve_rec_c r T s = TD_side_rule_Interp_solve_rec_c r T s"
 
-declare TD_side_rule_Interp.solve_code_equation [code del]
+lemmas traced_solve_rec_c_code [code] =
+  solve_rec_c_traced[folded traced_solve_rec_c_def traced_destab_opt_def]
 
-lemma solve_traced [code]:
-  fixes T :: "('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT"
-  shows "TD_side_rule_Interp_solve r T x =
-    (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Start x :: ('x, 'g, 'd) solver_event)) in
-     let res = TD_side_rule_Interp_solve_c r T x in
-     let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Stop :: ('x, 'g, 'd) solver_event)) in
-     case res of Some v \<Rightarrow> v
-     | None \<Rightarrow> Code.abort (STR ''Input not in domain'') (\<lambda>_. TD_side_rule_Interp_solve r T x))"
-  by (rule trans[OF TD_side_rule_Interp.solve_code_equation])
-     (simp only: trace_event_def Let_def)
+definition traced_solve_c ::
+    "globals_rule \<Rightarrow> ('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT \<Rightarrow> 'x
+       \<Rightarrow> ('x set \<times> ('x + 'g \<Rightarrow> 'd)) option"
+  where [code del]: "traced_solve_c r T x = TD_side_rule_Interp_solve_c r T x"
+
+lemmas traced_solve_c_code [code] =
+  TD_side_rule_Interp.solve_c_def[folded traced_solve_c_def traced_solve_rec_c_def]
 
 text \<open>
-  The same events around the executable solver, for a caller that reads its answer
-  directly. It is \<open>solve_c\<close> in the logic; a traced code equation of that caller
-  names it in place of \<open>solve_c\<close>.
+  One solve, from its root unknown to its result, between a start and a stop event.
+  It is \<open>solve_c\<close> in the logic; a traced caller names it in place of \<open>solve_c\<close>.
 \<close>
 
 definition solve_c_traced ::
@@ -229,5 +236,14 @@ definition solve_c_traced ::
 
 lemma solve_c_traced_eq: "solve_c_traced r T x = TD_side_rule_Interp_solve_c r T x"
   by (simp add: solve_c_traced_def trace_event_def)
+
+lemma solve_c_traced_code [code]:
+  fixes T :: "('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT"
+  shows "solve_c_traced r T x =
+    (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Start x :: ('x, 'g, 'd) solver_event)) in
+     let res = traced_solve_c r T x in
+     let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Stop :: ('x, 'g, 'd) solver_event)) in
+     res)"
+  by (simp only: solve_c_traced_def traced_solve_c_def)
 
 end

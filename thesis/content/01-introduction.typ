@@ -430,8 +430,9 @@ Not every part of the delivered analyzer is covered by the proof
 (@fig:intro-trust). _End-to-end_ means that the proof reaches from source
 executions under #isaconst("pstep") to the result of the analysis function,
 while the parser, the handwritten OCaml for printing, and the trusted foundation lie outside
-it. The trusted foundation includes one piece of handwritten OCaml that runs inside
-the solve, the hook that records solver trace events (@sec:tracing). Nor does the proof cover Goblint itself, only the parts of its architecture
+it. A traced run, which records the solver's steps, additionally trusts one piece
+of handwritten OCaml that runs inside the solve, the trace hook (@sec:tracing).
+The untraced run reaches no handwritten code inside the analysis. Nor does the proof cover Goblint itself, only the parts of its architecture
 that Voblint isolates, over a small language with recursive procedures.
 
 #figure(
@@ -487,7 +488,7 @@ that Voblint isolates, over a small language with recursive procedures.
       ]),
       grid.cell(colspan: 5, zone(vb.trusted, [trusted foundation])[
         Isabelle kernel · code generator and target mappings · solver trace hook
-        (handwritten OCaml) · OCaml and WebAssembly toolchains · Zarith · browser
+        (traced runs only, handwritten OCaml) · OCaml and WebAssembly toolchains · Zarith · browser
       ]),
     )
   },

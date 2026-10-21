@@ -59,9 +59,12 @@ text \<open>
   signature unchanged: the root list still decides what the facade can expose, and the
   facade is the one place a later, narrower surface would be stated.
 
-  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks the
+  Analysis entry goes through \<^const>\<open>run_voblint\<close>, which checks the
   activation list and well-formedness and runs the requested analyses, update rule and
   context policy. Every combination is answered, so the CLI never decides legality.
+  \<^const>\<open>run_voblint_traced\<close> is the same function in the logic
+  (@{thm [source] run_voblint_traced_eq}); only its code reports solver steps through the trace
+  hook, and the CLI calls it only when a trace is requested.
 
   The last group of roots is there for signature visibility rather than for dispatch.
   A constant the serializer does not consider public is emitted but left out of the
@@ -102,8 +105,9 @@ text \<open>
   The list below is grouped by what each name is \<^emph>\<open>for\<close>, because the groups answer
   different questions and only one of them is an operation.
 
-  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
-    to do goes through it.
+  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, and its traced twin
+    \<^const>\<open>run_voblint_traced\<close>. Everything a caller can ask the analyser to do goes
+    through one of them; the untraced one reaches no hand-written target code.
 
   \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s cases, which a caller must tell apart, the
     projection \<^const>\<open>render_report\<close> that turns an analysed report into displayable
@@ -135,7 +139,7 @@ text \<open>
 export_code
 
   \<comment> \<open>Run\<close>
-  run_voblint
+  run_voblint run_voblint_traced
 
   \<comment> \<open>Result: answers, the report's rendering, contexts, states, routes, checks, globals,
      diagnostics, the analysis graph\<close>

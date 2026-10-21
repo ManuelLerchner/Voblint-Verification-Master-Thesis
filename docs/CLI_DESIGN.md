@@ -138,24 +138,31 @@ voblint --analysis interval --context entry-state --trace docs/readme-figures/co
 
 ### Where the events come from
 
-Tracing is part of the exported code. `Voblint_Solver.Solver_Trace` defines
-`trace_event :: String.literal => (unit => 'e) => unit` as `()` and gives the
-exported solver alternative code equations with `trace_event` calls at its steps:
-`solve` (start and stop of one solve), `solve_rec_c` (query, iterate, one
-evaluation of the right-hand side, each strategy-tree instruction) and
-`destab_opt`/`destab_iter_opt` (destabilization). `Voblint_CLI.Trace_Run` does
-the same for the three context policies and for `solved_table`, which hands
-the trace the run's readers for contexts, global unknowns and values before the
-solve. Each equation is proved equal to the vendored or original equation it
-replaces by unfolding `trace_event`, and the originals are removed from code
-export with `[code del]`; the vendored definitions and proofs are untouched. The
-code the CLI and the browser run is therefore the code of proved equations.
+Tracing is part of the exported code, but only of a second entry point.
+`Voblint_Solver.Solver_Trace` defines
+`trace_event :: String.literal => (unit => 'e) => unit` as `()` and states the
+vendored solver's equations with `trace_event` calls at its steps:
+`solve_rec_c` (query, iterate, one evaluation of the right-hand side, each
+strategy-tree instruction), `destab_opt`/`destab_iter_opt` (destabilization)
+and `solve_c_traced` (start and stop of one solve). Each is proved equal to the
+vendored equation by unfolding `trace_event`, and becomes the code equation of
+a new constant defined as the function it copies (`traced_solve_rec_c`,
+`traced_destab_opt`, ...). The vendored functions keep their own code
+equations. `Voblint_CLI.Trace_Run` wraps the routes of the three context
+policies in `traced_route`, adds the run event that hands the trace the run's
+readers, and assembles `analysis_report_traced` and `run_voblint_traced`,
+proved equal to `run_voblint` (`run_voblint_traced_eq`).
+
+Both entry points are exported. The CLI calls `run_voblint_traced` only under
+`--trace` and the browser only when a trace mode is requested; every other run
+calls `run_voblint`, whose code reaches no `trace_event`
+(`scripts/check_generated_api.py` checks the generated call graph).
 
 `Trace_Run` maps `trace_event` to `Solver_trace_hook.emit` with `code_printing`.
-That mapping is the one trusted addition, of the same kind as the other
-target-language mappings. It forces the suspended event only when tracing is on,
-so an untraced run builds no event. There is no mapping for the Eval target, so
-proofs by evaluation run the logical equation.
+That mapping is the one trusted addition of a traced run, of the same kind as
+the other target-language mappings. It forces the suspended event only when
+tracing is on. There is no mapping for the Eval target, so proofs by
+evaluation run the logical equation.
 
 Three layers, with different standing:
 

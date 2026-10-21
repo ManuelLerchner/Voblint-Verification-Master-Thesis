@@ -109,8 +109,9 @@ away from the theories (@sec:voblint-repo).
 #link(site("playground.html"))[playground] were also important for understanding the analyzer's behavior. The
 solver trace of the command-line tool and the playground's rendered graph and
 trace replay (@sec:tracing) show where an analysis loses precision or where the
-solver does needless work. The trace hook lies outside the proof, and the trusted base
-assumes that it leaves the analysis results unchanged (@sec:tracing). Because the analyzer is exported to OCaml, standard profiling and
+solver does needless work. The trace hook lies outside the proof. Only traced runs execute it, and
+for them the trusted base assumes that it leaves the analysis results unchanged
+(@sec:tracing). Because the analyzer is exported to OCaml, standard profiling and
 debugging tools also remain available. The author used them to profile the
 generated code and to attach a debugger to solves that did not terminate. The trace of
 #link("https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/issues/251")[issue 251],

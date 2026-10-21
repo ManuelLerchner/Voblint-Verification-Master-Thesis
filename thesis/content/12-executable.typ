@@ -214,24 +214,32 @@ the vendored TD solver @tilscher26 untouched. Voblint therefore adds tracing onl
 that code generation translates. Every traced equation reports each step
 through one constant, #isaconst("trace_event"), which is defined as the unit
 value $()$ and so does nothing in the logic. Each traced equation is thus
-provably equal to the one it replaces (for example,
+provably equal to the vendored one it copies (for example,
 #isathm("solve_rec_c_traced")). Isabelle's code generator takes the
 equations it translates from a set of _code equations_, which a theory may
-change. The theory removes the vendored TD solver's equations from this set
-(`[code del]`) and declares the traced ones instead (`[code]`), so the
-vendored definitions and proofs stay untouched, and one generated analyzer
-serves traced and untraced runs alike. A #isacmd("code_printing") declaration then tells the code generator to emit,
-in place of #isaconst("trace_event"), a call to the handwritten OCaml function
+change. Replacing the vendored solver's code equations would make every run
+traced, however, including the one the soundness theorems are about. The theory
+therefore gives each traced equation to a new constant that is defined as the
+function it copies, such as #isaconst("traced_solve_rec_c"). The vendored
+definitions, their proofs and their code equations stay untouched. The traced
+copies make up a second entry point, #isaconst("run_voblint_traced"), which
+equals #isaconst("run_voblint") in the logic
+(#isathm("run_voblint_traced_eq")). Code generation exports both. A
+#isacmd("code_printing") declaration then tells the code generator to emit, in
+place of #isaconst("trace_event"), a call to the handwritten OCaml function
 `Solver_trace_hook.emit`. The hook receives a suspended event and builds it
-only when tracing is on, so an untraced run records nothing. The hook joins the trusted base and must return, raise nothing, and leave the
-solver's values alone.
+only when tracing is on. Only the traced entry point reaches it, as a check of the
+generated call graph tests, so an untraced run executes no
+handwritten code inside the analysis. For a traced run, the hook joins the trusted base and must
+return, raise nothing, and leave the solver's values alone.
 
 The command-line tool prints the events with `--trace`, and the playground
 replays them step by step on the solved graph (@fig:replay-still). The replay
 shows the order of the solve, which the solved values alone hide, such as when
-a call creates a new callee context. The solver trace itself is unverified, but it
-never feeds back into a result, so a report computed with tracing on is the
-same report as without it.
+a call creates a new callee context. The solver trace itself is unverified. It never feeds back into a result,
+and the traced entry point computes the same function as the untraced one, so
+a report computed with tracing on is the same report as without it, provided
+the hook meets its obligations.
 
 
 #pagebreak(weak: true)
