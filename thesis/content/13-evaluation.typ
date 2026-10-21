@@ -164,7 +164,12 @@ its call site in `f`, so both activations of `g` share one context. Sign joins
 #signval("+") and #signval("-") there to $absval(top)$, and neither check is
 proved. Call strings of length 2 also record the call in `main`, keep the two
 activations apart, and prove both checks. The price is a second copy of `g`.
-The theories prove the same separation at the entry of `g`
+Evaluating #isaconst("run_voblint") on this program in Isabelle gives the same
+verdicts, so the comparison is a theorem about the analyzer itself
+(#isathm("run_voblint_call_string_2_decides")). With the soundness theorem, the
+two length-2 verdicts then hold for every store that reaches the checks
+(#isathm("cs_nest_checks_hold")). A second theorem shows the separation at the
+entry of `g` on hand-built equation systems
 (#isathm("sign_k2_strictly_more_precise_than_k1_at_g")).
 
 #figure(

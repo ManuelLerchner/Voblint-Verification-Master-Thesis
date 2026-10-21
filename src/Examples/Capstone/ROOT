@@ -17,4 +17,5 @@ session Voblint_Examples in "." = "Voblint_Examples_CLI" +
   theories
     Example_End_To_End_Certificate
     Example_Non_Vacuity
+    Example_Call_String_Precision
     Voblint
