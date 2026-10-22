@@ -8,8 +8,16 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../.."
 
-if ! command -v typst2vast > /dev/null; then
-  cargo install --locked --version 0.1.0 --root "$CONDA_PREFIX" typst2vast
+# Pinned to a fork commit that keeps table cells, captions and display math
+# out of the surrounding sentence (jdkato/typst2vast#2); return to a release
+# once it is merged.
+TYPST2VAST_REV=16086c6d04bffaaf73399f0eba825b1fbe7c036c
+stamp="$CONDA_PREFIX/share/typst2vast.rev"
+if [ "$(cat "$stamp" 2> /dev/null)" != "$TYPST2VAST_REV" ]; then
+  cargo install --locked --force --root "$CONDA_PREFIX" \
+    --git https://github.com/ManuelLerchner/typst2vast --rev "$TYPST2VAST_REV" typst2vast
+  mkdir -p "$(dirname "$stamp")"
+  printf '%s\n' "$TYPST2VAST_REV" > "$stamp"
 fi
 
 # Fetches the packages named in .vale.ini; cheap once they are present.
