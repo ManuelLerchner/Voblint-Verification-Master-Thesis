@@ -164,12 +164,9 @@ its call site in `f`, so both activations of `g` share one context. Sign joins
 #signval("+") and #signval("-") there to $absval(top)$, and neither check is
 proved. Call strings of length 2 also record the call in `main`, keep the two
 activations apart, and prove both checks. The price is a second copy of `g`.
-Evaluating #isaconst("run_voblint") on this program in Isabelle gives the same
-verdicts, so the comparison is a theorem about the analyzer itself
-(#isathm("run_voblint_call_string_2_decides")). With the soundness theorem, the
-two length-2 verdicts then hold for every store that reaches the checks
-(#isathm("cs_nest_checks_hold")). A second theorem shows the separation at the
-entry of `g` on hand-built equation systems
+The theories prove the same separation for #isaconst("run_voblint") itself
+(#isathm("run_voblint_call_string_2_decides"), #isathm("cs_nest_checks_hold"))
+and at the entry of `g` on hand-built equation systems
 (#isathm("sign_k2_strictly_more_precise_than_k1_at_g")).
 
 #figure(
@@ -771,25 +768,18 @@ however, was not a goal of this thesis. Apart from the defect fixed in @sec:code
 generated code runs as Isabelle emits it. The measurements below therefore ask only
 whether this unoptimized code runs in acceptable time on the regression corpus.
 
-The #link(site("profiling.html"))[profiling page] reports the measurements in full. They
-cover the regression fixtures, the WebAssembly build, generated programs of growing size,
-and CPU profiles. This section summarizes them. The profiler selects the
-#prof-int("fixtures_selected") fixtures whose header sets no timeout of its own, which
-leaves out the fixtures that test divergence. Of these, #prof-int("fixtures_ill_formed")
-are programs that the parser or the well-formedness check rejects, so
-#prof-int("fixtures") fixtures remain. Each of them runs under all
-#prof-int("configurations") combinations of domain and context policy, and each such
-pair of a fixture and a configuration is one case. Every case uses the
-command-line tool's default update rule, warrow.
+The #link(site("profiling.html"))[profiling page] reports the measurements in full. The
+profiler runs the #prof-int("fixtures") well-formed regression fixtures that set no timeout of their
+own under all #prof-int("configurations") combinations of domain and context policy, with
+the default update rule warrow. Each pair of a fixture and a configuration is one case.
 
 #if prof-value("timeouts") > 0 [Of the #prof-int("cases") cases, #prof-int("timeouts") pass
   the limit of #prof-int("meta.timeout_s")~s, all of them under
   #prof-list("timeout_contexts") contexts.]
 The other #prof-int("cases_solved") cases finish, and each is timed as #prof-runs().
 #if prof-value("solve_median_ms") < 5 [Most of them are solved within a few
-  milliseconds.] else [Their median solve time is #prof-ms("solve_median_ms").]
-The expensive cases include recursive programs under entry-state contexts, where successive
-calls can create distinct contexts. A procedure `h` that calls itself $n$ times with
+  milliseconds,] else [Their median solve time is #prof-ms("solve_median_ms"),] except for recursive programs
+under entry-state contexts, where successive calls can create distinct contexts. A procedure `h` that calls itself $n$ times with
 arguments $n, n - 1, dots, 0$ shows the effect. Sign and Parity have only a few abstract
 values, so the number of contexts stays bounded and the solve time is
 #prof-growth("depth_fits.sign.time"). Congruence, Interval and Int tell the successive
@@ -826,7 +816,7 @@ its data structures limit how far it scales. These measurements cover small prog
 one machine and give no performance guarantee beyond them.
 
 #figure(
-  scaling-plot(width: 12.5cm, height: 4.6cm),
+  scaling-plot(width: 12.5cm, height: 3.6cm),
   kind: image,
   placement: bottom,
   caption: [Fitted exponents $k$ of $n^k$ for solve time and solver evaluations, each family

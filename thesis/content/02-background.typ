@@ -561,27 +561,37 @@ over intervals, its result is at best $absval(ivl(5, 6))$, and the analysis cann
 that the first call returns $6$. A context-sensitive analysis instead
 separates the _activations_ of a procedure, each execution from its call to
 its return, by a _calling context_, an abstraction of how the activation was
-reached @aho06[§7.2.1]. Sharir and Pnueli distinguish call strings, which
-record recent call sites, from the functional approach, which relates abstract
-entry and exit states @sharir81. Seidl and Fecht describe call strings as
-abstracting a pushdown configuration to its topmost stack elements, and they
-realize the functional approach with one unknown $y_(f,d)$ for each transformer
-$f$ and argument $d$, which a local solver computes only partially
-@seidl00[§6]. Their forward accumulation uses unknowns $⟨v, d⟩$
-for a program point $v$ and the entry value $d$ of its procedure
-@seidl00[§7.1]. Context-sensitive constraint systems use
-unknowns $[v, c]$ for program point $v$ and context $c$ @apinis12[§3]. With
-contexts that record the argument at entry, `bump` gets one copy of its
-unknowns for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the results $6$ and $5$.
+reached @aho06[§7.2.1]. Its unknowns become pairs $[v, c]$ of a program point
+$v$ and a context $c$ @apinis12[§3], so every context of a procedure gets its
+own copy of the procedure's unknowns.
 
-At a call, such an analysis computes the abstract state in which the callee is
-entered, which also determines the callee's context. At the return, it
-combines the callee's exit state with the caller's state before the call, as
-Goblint's
+Sharir and Pnueli describe two classical choices of what a context records
+@sharir81. The call-string approach uses the
+most recent call sites as the context. Since `bump(5)` and `bump(4)` are
+called from different sites, each gets its own copy. The functional approach
+instead summarizes a procedure by its effect on each entry state, computed
+only for the entry states that occur. With the entry state as context, `bump`
+gets one copy for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the
+results $6$ and $5$. Neither choice subsumes the other. Only entry states
+separate two calls from one site with different arguments, and only call
+strings separate calls from two sites with the same argument. Apinis et al.
+also distinguish calls by only part of the entry state @apinis12[§4], for
+instance by the argument of `bump` alone, ignoring global variables it never
+reads. The
+context is therefore a choice of abstraction, and the trivial choice, a single
+context, gives back the analysis with one unknown per program point.
+
+A context-sensitive analysis handles a call with two abstract operations @apinis12[§3]. The first,
+$"enter"^sharp$, maps the caller's state before the call to the callee's entry
+state. The callee's context is chosen at the same point, for example as the
+extended call string or as this entry state itself. The second, $"comb"^sharp$,
+computes the caller's state after the call. It needs the callee's exit state,
+which holds the return value, and the caller's state before the call, which
+holds the caller's local variables that the callee does not see. Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",
 )[constraint generator]
-does with its operations `enter` and `combine` (@sec:calls).
+implements them as `enter` and `combine` (@sec:calls).
 
 == Side-effecting constraint systems <sec:side-effects>
 

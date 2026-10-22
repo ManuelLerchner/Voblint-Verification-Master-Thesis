@@ -198,10 +198,10 @@ integers, pointers, or threads, would require extensive changes to Voblint. Mach
 developed separately from the version this thesis describes, introduces
 machine-integer kinds from `i8` to `u64` and a typed core language elaborated
 from VIMP. Integrating it requires revisiting several layers and their
-soundness proofs, which is left as future work. Once machine integers are in place, Goblint's bitfield domain, which
-tracks each bit of an integer separately and which the author co-developed
+soundness proofs, which is left as future work. With machine integers, Goblint's bitfield domain, which tracks each
+bit separately and which the author co-developed
 (#link("https://github.com/goblint/analyzer/pull/1623")[Goblint pull request 1623]),
-becomes a natural next analysis.
+is a natural next analysis.
 
 Whether a further C feature needs such a rewrite depends on how deeply it
 reaches into the formalization. Several central results are independent of the details of VIMP. The solver certificate is stated over unknowns and right-hand sides, and

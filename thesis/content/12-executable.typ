@@ -215,31 +215,22 @@ that code generation translates. Every traced equation reports each step
 through one constant, #isaconst("trace_event"), which is defined as the unit
 value $()$ and so does nothing in the logic. Each traced equation is thus
 provably equal to the vendored one it copies (for example,
-#isathm("solve_rec_c_traced")). Isabelle's code generator takes the
-equations it translates from a set of _code equations_, which a theory may
-change. Replacing the vendored solver's code equations would make every run
-traced, however, including the one the soundness theorems are about. The theory
-therefore gives each traced equation to a new constant that is defined as the
-function it copies, such as #isaconst("traced_solve_rec_c"). The vendored
-definitions, their proofs and their code equations stay untouched. The traced
-copies make up a second entry point, #isaconst("run_voblint_traced"), which
+#isathm("solve_rec_c_traced")). The traced copies make up a second entry point, #isaconst("run_voblint_traced"), which
 equals #isaconst("run_voblint") in the logic
 (#isathm("run_voblint_traced_eq")). Code generation exports both. A
 #isacmd("code_printing") declaration then tells the code generator to emit, in
 place of #isaconst("trace_event"), a call to the handwritten OCaml function
 `Solver_trace_hook.emit`. The hook receives a suspended event and builds it
-only when tracing is on. Only the traced entry point reaches it, as a check of the
-generated call graph tests, so an untraced run executes no
-handwritten code inside the analysis. For a traced run, the hook joins the trusted base and must
+only when tracing is on. Only the traced entry point calls the hook, so an
+untraced run executes no handwritten code inside the analysis. For a traced run, the hook joins the trusted base and must
 return, raise nothing, and leave the solver's values alone.
 
 The command-line tool prints the events with `--trace`, and the playground
 replays them step by step on the solved graph (@fig:replay-still). The replay
 shows the order of the solve, which the solved values alone hide, such as when
-a call creates a new callee context. The solver trace itself is unverified. It never feeds back into a result,
-and the traced entry point computes the same function as the untraced one, so
-a report computed with tracing on is the same report as without it, provided
-the hook meets its obligations.
+a call creates a new callee context. The solver trace itself is unverified, but
+a traced run returns the same report as an untraced one, provided the hook
+meets its obligations.
 
 
 #pagebreak(weak: true)
@@ -252,17 +243,13 @@ and a Menhir parser turn the source text into an
 #isatype("imp_prog") and record each check's source position in its label.
 Both are generated from the grammar manifest
 #link(repo-blob + "manifests/vimp-grammar.yaml")[`vimp-grammar.yaml`] by
-#link(repo-blob + "scripts/gen_vimp_menhir.py")[`gen_vimp_menhir.py`] and then
-compiled by `ocamllex` and Menhir. On
+#link(repo-blob + "scripts/gen_vimp_menhir.py")[`gen_vimp_menhir.py`]. On
 the output side, the generated #isaconst("render_report") turns the report's
 states into text, and handwritten OCaml either prints the command-line report,
 placing each check at the position its label carries, or serializes the answer
 as JSON, from which the playground draws the graph and marks the verdicts and
-diagnostics in the editor. The command-line tool and the playground share the
-parser, the generated module, and the code that turns a request into an
-analysis configuration. They differ only in their surroundings, since the
-command-line tool manages processes and files, and the playground's worker
-exchanges JSON with the page. The code generator maps HOL's integers to
+diagnostics in the editor. The command-line tool and the playground share all
+of this code and differ only in how they receive a request. The code generator maps HOL's integers to
 arbitrary-precision Zarith integers, as VIMP requires (@sec:vimp-vs-c).
 
 @fig:shell shows, for the program below, the call that #isaconst("run_voblint")
@@ -308,7 +295,7 @@ configuration it can select (#isathm("run_voblint_source_sound")).
 #subfigures(
   playground-figure(
     "while-loop",
-    width: 68%,
+    width: 64%,
     [one run in three views: the check's verdict in the editor, the state
       inspector at the check, and the solved graph. Settings
       #playground-settings("while-loop")],
@@ -316,7 +303,7 @@ configuration it can select (#isathm("run_voblint_source_sound")).
   <fig:pg-overview>,
   playground-figure(
     "solve-replay-still",
-    width: 66%,
+    width: 62%,
     [one step of the solver replay for the calls of `bump`: the
       graph shows each unknown's value at this step, and the solver trace beside it
       marks the step's line. Settings #playground-settings("solve-replay-still")],
