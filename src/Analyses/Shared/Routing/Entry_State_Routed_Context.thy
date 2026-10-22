@@ -117,7 +117,7 @@ next
   fix u ctx dst pars args p cont s ctx'
   assume covV: "(u, ctx) \<in> vars"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
-    and sin: "s \<in> gamma_at u ctx"
+    and "s \<in> gamma_at u ctx"
     and Rc: "ctx' \<in> entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
                (call_enter \<G> (CallEdge dst pars args) s)"
   let ?ci = "call_info_of (CallEdge dst pars args) p"

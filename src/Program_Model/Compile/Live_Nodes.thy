@@ -183,7 +183,7 @@ next
   have e1: "\<not> is_SKIP c1 \<Longrightarrow> local_reaches g (Statement (Suc n)) k
              \<or> local_reaches g (Statement (Suc n)) (FunctionResult p)"
     using compile_reaches[OF c1 subE1 subK(1)] by blast
-  have e2: "\<not> is_SKIP c2 \<Longrightarrow> local_reaches g (Statement (Suc n + csize c1)) k
+  have "\<not> is_SKIP c2 \<Longrightarrow> local_reaches g (Statement (Suc n + csize c1)) k
              \<or> local_reaches g (Statement (Suc n + csize c1)) (FunctionResult p)"
     using compile_reaches[OF c2 subE2 subK(2)] by blast
   have head: "local_reaches g (Statement n) k \<or> local_reaches g (Statement n) (FunctionResult p)"

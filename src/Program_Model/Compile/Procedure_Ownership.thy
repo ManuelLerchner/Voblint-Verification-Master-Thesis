@@ -606,7 +606,7 @@ proof -
          (use e in \<open>auto dest: compile_prog_entry_declared[OF wf]\<close>)
   next
     fix caller dst pars args p cont
-    assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
+    assume "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     show "frag_ok \<Pi> ps (Call caller
             [(FunctionEntry p, call_enter \<G> (CallEdge dst pars args) (sink_store caller))])"
     proof (cases "\<Pi> p")
@@ -625,7 +625,7 @@ proof -
     fix callee caller p dst pars args cont
     assume cvcallee: "callee \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
       and ch: "\<forall>u \<in> callers callee. frag_ok \<Pi> ps u"
-      and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
+      and cof: "caller_of callee = Some caller" and "sink_node callee = FunctionResult p"
       and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
     have cv: "caller \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using valid_activation_trace_caller_valid[OF cvcallee cof] .
