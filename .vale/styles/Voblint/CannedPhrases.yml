@@ -1,0 +1,25 @@
+# AGENTS.md "Academic prose style", thesis/CLAUDE.md "Review patterns",
+# docs/SITE_VOICE.md: canned significance language and document narration.
+extends: existence
+message: "Canned phrase '%s': state the technical consequence or cut it."
+level: warning
+ignorecase: true
+tokens:
+  - it is worth noting
+  - it should be noted
+  - it is important to note
+  - this highlights
+  - this underscores
+  - a key insight
+  - the key insight
+  - it turns out
+  - here's the thing
+  - having established
+  - we now turn to
+  - in what follows
+  - as we will see
+  - the rest of this chapter
+  - this chapter presents
+  - in this chapter,? we
+  - in short
+  - needless to say

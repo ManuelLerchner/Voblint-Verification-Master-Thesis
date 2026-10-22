@@ -1,0 +1,11 @@
+# Earlier .claude/claude.md: no project-history framing. Mathematics that
+# changes state ("no longer the constant array") is fine.
+extends: existence
+message: "'%s' narrates project history; describe the current state."
+level: suggestion
+ignorecase: true
+tokens:
+  - previously
+  - formerly
+  - used to
+  - no longer

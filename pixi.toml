@@ -138,6 +138,14 @@ theory-anchors-check = { cmd = "isar check --group links . pages/*.html && pytho
 pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
 pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }
 
+# Vale reads Typst through typst2vast, which conda-forge does not package
+# yet; rust builds it into this environment on first use.
+[feature.prose.dependencies]
+vale = ">=3.24"
+rust = ">=1.85"
+[feature.prose.tasks]
+prose-lint = { cmd = "bash scripts/mk/prose-lint.sh", description = "Lint thesis prose, or the given files, with Vale and the project's writing rules." }
+
 [feature.thesis.dependencies]
 typst = ">=0.15"
 # pdftotext and pdftoppm for the page statistics and the whitespace check.
@@ -290,6 +298,7 @@ report = ["report"]
 bench = ["bench"]
 thesis = ["thesis"]
 pages = ["pages"]
+prose = ["prose"]
 
 # Tasks needing no feature package: python3, bash and git, plus Isabelle and
 # OCaml on PATH. Shell logic lives in scripts/mk/. ISABELLE, AFP and SESSION

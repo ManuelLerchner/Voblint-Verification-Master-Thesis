@@ -1,0 +1,9 @@
+# AGENTS.md "Contributions", paper/STYLEGUIDE.md "Contributions": a novelty
+# claim needs evidence and the "to our knowledge" qualifier.
+extends: existence
+message: "Novelty claim '%s': qualify it and cite the search behind it."
+level: suggestion
+ignorecase: true
+tokens:
+  - (?:is|are|was|were) the first
+  - for the first time
