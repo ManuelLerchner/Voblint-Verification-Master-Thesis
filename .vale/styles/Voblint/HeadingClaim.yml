@@ -1,0 +1,18 @@
+# Supervisor feedback: a title that states a claim reads like a sentence; name
+# the topic and leave the claim to the text.
+extends: existence
+message: "Title states a claim with '%s': name the topic instead."
+level: warning
+scope: heading
+tokens:
+  - preserves
+  - satisfy
+  - satisfies
+  - rejects?
+  - are
+  - is
+  - follows?
+  - yields
+  - agrees
+  - needs?
+  - leave
