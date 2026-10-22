@@ -126,7 +126,13 @@
   logo: "../assets/tumlogo.svg",
   body,
 ) = {
-  set document(title: title, author: author)
+  // The commit a build came from, in the PDF metadata only, so feedback on an
+  // old copy can be traced back to its sources.
+  set document(
+    title: title,
+    author: author,
+    keywords: if "revision" in sys.inputs { ("revision " + sys.inputs.revision,) } else { () },
+  )
 
   set page(
     paper: "a4",
