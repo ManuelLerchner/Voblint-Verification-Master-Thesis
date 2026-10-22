@@ -937,9 +937,6 @@ proof -
             by (rule intersect_ivl_mono[OF point_le assms(2)])
         next
           case False
-          have "0 < m2"
-            by (rule normalized_congruence_rep_nonzero(3)
-                  [OF normalized2' False])
           show ?thesis
           proof (cases "c1 \<in> gamma_ivl i1")
             case False
