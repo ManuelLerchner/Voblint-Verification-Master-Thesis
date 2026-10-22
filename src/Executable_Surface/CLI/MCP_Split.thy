@@ -159,6 +159,7 @@ qed
 
 end
 
+
 text \<open>
   An unreachable point stays unreachable whatever global it is recombined with, and
   a reachable point recombined with a global nothing has published yet reads the
@@ -223,6 +224,37 @@ end
 lemma split_cmb_Bot [simp]:
   "split_cmb (Bot :: 'a::{ownership_split, semilattice_sup} lifted) g = Bot"
   by (simp add: split_cmb_lifted_def)
+
+instantiation mcp_st :: ownership_split
+begin
+
+definition split_cmb_mcp_st :: "mcp_st \<Rightarrow> mcp_st \<Rightarrow> mcp_st" where
+  "split_cmb_mcp_st d g = MCP_St (split_cmb (mcp_fields d) (mcp_fields g))"
+
+definition split_rl_mcp_st :: "mcp_st \<Rightarrow> mcp_st" where
+  "split_rl_mcp_st d = MCP_St (split_rl (mcp_fields d))"
+
+definition split_rg_mcp_st :: "mcp_st \<Rightarrow> mcp_st" where
+  "split_rg_mcp_st d = MCP_St (split_rg (mcp_fields d))"
+
+definition split_global_at_mcp_st :: "vname \<Rightarrow> mcp_st \<Rightarrow> mcp_st" where
+  "split_global_at_mcp_st x d = MCP_St (split_global_at x (mcp_fields d))"
+
+definition split_free_mcp_st :: "vname list \<Rightarrow> mcp_st" where
+  "split_free_mcp_st R = MCP_St (split_free R)"
+
+instance
+  by standard
+    (simp_all add: split_cmb_mcp_st_def split_rl_mcp_st_def split_rg_mcp_st_def
+      split_global_at_mcp_st_def split_free_mcp_st_def less_eq_mcp_st_def bot_mcp_st_def
+      split_cmb_mono split_cmb_rl split_rl_cmb split_global_at_mono split_free_ge
+      split_global_at_bot,
+     metis split_cmb_rl split_recombine mcp_st.collapse)
+
+end
+
+lemmas split_mcp_st_defs = split_cmb_mcp_st_def split_rl_mcp_st_def split_rg_mcp_st_def
+  split_global_at_mcp_st_def split_free_mcp_st_def
 
 subsection \<open>Reading a keyed recombination back\<close>
 
@@ -429,32 +461,42 @@ lemma split_hom_pright: "split_hom (pright :: ('a::{ownership_split, bounded_sem
 lemma split_hom_comp: "split_hom f \<Longrightarrow> split_hom g \<Longrightarrow> split_hom (f \<circ> g)"
   unfolding split_hom_def by simp
 
+lemma split_hom_mcp_fields: "split_hom mcp_fields"
+  by unfold_locales (simp_all add: split_mcp_st_defs sup_mcp_st_def bot_mcp_st_def)
+
 lemma split_hom_slots:
-  "split_hom slot1" "split_hom slot2" "split_hom slot3" "split_hom slot4" "split_hom slot5"
-  "split_hom slot6" "split_hom slot7"
+  "split_hom (st_get slot1)" "split_hom (st_get slot2)" "split_hom (st_get slot3)"
+  "split_hom (st_get slot4)" "split_hom (st_get slot5)" "split_hom (st_get slot6)"
+  "split_hom (st_get slot7)"
 proof -
-  note h = split_hom_comp split_hom_pleft split_hom_pright
-  have eqs: "slot1 = pleft" "slot2 = pleft \<circ> pright" "slot3 = pleft \<circ> pright \<circ> pright"
-    "slot4 = pleft \<circ> pright \<circ> pright \<circ> pright"
-    "slot5 = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright"
-    "slot6 = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> pright"
-    "slot7 = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> pright"
+  note h = split_hom_comp split_hom_pleft split_hom_pright split_hom_mcp_fields
+  have eqs: "st_get slot1 = pleft \<circ> mcp_fields"
+    "st_get slot2 = pleft \<circ> pright \<circ> mcp_fields"
+    "st_get slot3 = pleft \<circ> pright \<circ> pright \<circ> mcp_fields"
+    "st_get slot4 = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> mcp_fields"
+    "st_get slot5 = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> mcp_fields"
+    "st_get slot6 = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> mcp_fields"
+    "st_get slot7 =
+       pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> pright \<circ> mcp_fields"
     by (simp_all add: fun_eq_iff)
-  show "split_hom slot1" "split_hom slot2" "split_hom slot3" "split_hom slot4" "split_hom slot5"
-    "split_hom slot6" "split_hom slot7"
+  show "split_hom (st_get slot1)" "split_hom (st_get slot2)" "split_hom (st_get slot3)"
+    "split_hom (st_get slot4)" "split_hom (st_get slot5)" "split_hom (st_get slot6)"
+    "split_hom (st_get slot7)"
     unfolding eqs by (intro h)+
 qed
 
 text \<open>The relational field keeps its whole state locally, so recombining leaves it alone.\<close>
 
 lemma slot8_keyed:
-  "lift_get slot8 (split_cmb (split_rl r) g) = lift_get slot8 (r :: mcp_st lifted)"
-  by (cases r) (simp_all add: split_cmb_Lifted split_rl_lifted_def split_cmb_analysis_product_def
-      split_rl_analysis_product_def split_cmb_relc_def split_rl_relc_def)
+  "lift_get (st_get slot8) (split_cmb (split_rl r) g) = lift_get (st_get slot8) r"
+  by (cases r) (simp_all add: split_cmb_Lifted split_rl_lifted_def split_mcp_st_defs
+      split_cmb_analysis_product_def split_rl_analysis_product_def split_cmb_relc_def
+      split_rl_relc_def)
 
 lemma slot8_keyed_init:
-  "lift_get slot8 (split_cmb (Lifted i) g) = slot8 (i :: mcp_st)"
-  by (simp add: split_cmb_Lifted split_cmb_analysis_product_def split_cmb_relc_def)
+  "lift_get (st_get slot8) (split_cmb (Lifted i) g) = st_get slot8 i"
+  by (simp add: split_cmb_Lifted split_mcp_st_defs split_cmb_analysis_product_def
+      split_cmb_relc_def)
 
 lemma part_gamma_keyed_mix:
   assumes G: "\<And>y. \<G> y \<longleftrightarrow> y \<in> set xs"
