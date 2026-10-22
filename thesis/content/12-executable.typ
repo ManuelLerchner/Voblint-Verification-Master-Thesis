@@ -68,7 +68,7 @@ computable. Most of the development already is, since its datatypes and
 recursive functions translate directly into a functional program, but the
 concretizations and the pointwise states do not. The concretization $conc$ maps an abstract value to a possibly infinite set of integers, and in general
 no program can compute such a set. The analyzer does not need to, because
-$conc$ only states what a value means. This is why the domain interface
+$conc$ only states what a value means. The domain interface therefore
 separates #isalocale("executable_domain") from the classes and locales
 below it in @fig:domain-carrier, which add $conc$ and its laws. Code
 generation exports the executable part together with each domain's operation

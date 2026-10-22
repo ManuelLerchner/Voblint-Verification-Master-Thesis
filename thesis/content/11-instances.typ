@@ -282,7 +282,7 @@ same stores but are different values. The join can also forget an implied
 relation. The join of $absval({x <= y, y <= z})$ and $absval({x <= y, x <= z})$ keeps only
 their common pair and is $absval({x <= y})$, although both operands imply $x <= z$. The
 order analysis is therefore not as precise as a closed relational domain could
-be. It serves as a small demonstration that the framework supports relational
+be. It demonstrates that the framework supports relational
 states.
 
 Pairs enter only at guards, and an assignment to $x$ removes every pair that
@@ -406,7 +406,7 @@ answers #verdict("order-alone-interval", "20:3").
 
 The base domains record different properties, Int lets them share these
 facts, and the order analysis proves relations that no non-relational
-domain can express. In practice, a user need not choose between them. The
+domain can express. A user does not have to choose between them. The
 product state and the channel of @ch:cooperation let Int and the order
 analysis run together. They exchange facts
 through queries, and every check is decided by the meet of their answers. Selecting both gets the most out of the analyses Voblint currently

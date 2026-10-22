@@ -27,8 +27,8 @@ proof. If soundness held only for the graph, the compiler would stay outside
 the theorem, and a verdict would say nothing about the source program. This
 chapter closes the gap with the first link of the soundness chain. Every
 source execution of a well-formed program is matched by a graph execution that holds the
-same store (@sec:csim). The program of @fig:program-to-equations, in which
-`main` calls `bump(5)` and `bump(4)`, serves as the running example.
+same store (@sec:csim). The running example is the program of
+@fig:program-to-equations, in which `main` calls `bump(5)` and `bump(4)`.
 
 // Node names and edge labels come from registered `--dot` output
 // (lib/cfg-graphs.typ).
@@ -418,7 +418,7 @@ value $0$.
 
 The root activation is modeled without a #ctor("Restore"), since `main` has no
 caller to return to, and a bare #ctor("Unwind") has no step
-(#isathm("pstep_Unwind_stuck")). This is why the source contract rejects
+(#isathm("pstep_Unwind_stuck")). The source contract therefore rejects
 #keyw("return") in `main` (#isaconst("no_return")). A source execution starts from
 the configuration $(#isaconst("main_body") thin Pi, s_0, [])$, with an initial
 store $s_0$ in #isaconst("cinit_stores") (@sec:vimp-vs-c).
@@ -788,7 +788,7 @@ at different places. In `if (b) { x = 1; } else { x = 1; }`, the residual
 `x = 1` is related to both branch nodes. The node must come from
 the run.
 
-This is why every command carries an annotation (@sec:vimp). A parsed program
+Every command therefore carries an annotation (@sec:vimp). A parsed program
 leaves it empty, and the proof fills it in. The program's _elaboration_
 (#isaconst("elab_pt")) annotates each statement with the nodes the compiler
 emits for it. The elaboration compiles to the same graph

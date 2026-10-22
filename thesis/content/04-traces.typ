@@ -431,7 +431,7 @@ most recent call sites, and entry-state contexts
 @sharir81 @seidl12compiler[§§2.6, 2.9]. Entry-state contexts follow Goblint's
 partial tabulation, which tabulates procedure summaries only for the calling
 contexts the analysis meets @saan26phd[§3.3] @schwarz25phd[§5, p. 110]. Unlike
-bounded call strings, they need not form a finite set, so the analysis may not
+bounded call strings, they can form an infinite set, so the analysis may not
 terminate (@sec:certificate). The traces themselves store no context, since
 the concrete semantics should not change with the analysis. The policy is
 instead a parameter of the theorems, which therefore hold for every policy. It
@@ -554,11 +554,10 @@ obligations at one call, together with a fifth, #oblig("TOTAL").
     #oblig("RETURN") reads.],
 ) <fig:contract>
 
-#oblig("TOTAL") closes a gap that the other four obligations leave.
-#oblig("CALL") and #oblig("RETURN") only speak about the contexts that the
-policy admits. If a call from a store in the cover gets no context at all, both
-hold vacuously, and nothing puts the store after the return into the cover at
-the continuation. The resumed caller, however, still carries its contexts there
+#oblig("CALL") and #oblig("RETURN") constrain only the contexts that the policy
+admits. If a call from a store in the cover gets no context at all, both
+hold vacuously, and no obligation requires the cover at the call's
+continuation to contain the store the call returns with. The resumed caller, however, still carries its contexts there
 (#isathm("resume_keeps_context")), so the cover can miss a store that the
 program reaches (#isathm("total_dropped_unsound")). #oblig("TOTAL") therefore requires the
 policy to admit at least one callee context for every call from a store

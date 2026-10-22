@@ -58,8 +58,8 @@ Voblint's input language VIMP. Every later representation, from the
 control-flow graph to the solver's result, is connected to source executions by
 proof. Of the semantics, only #isaconst("pstep") therefore needs an adequacy
 argument instead of a proof. That argument states which fragment of C it models, where it departs
-from C11 (@sec:vimp-vs-c), and why no existing verified semantics serves as the
-anchor.
+from C11 (@sec:vimp-vs-c), and why no existing verified semantics can be used
+instead.
 
 == Sound static analysis and its verdicts <sec:intro-static>
 
@@ -222,8 +222,8 @@ analysis then pretends that some possible behaviors of these features cannot
 happen, for instance, that `eval` does nothing, so its result can miss
 executions. The authors call such analyses _soundy_. They treat this as an
 engineering choice for precision and scalability, and they ask the authors of
-such analyses to clearly
-state the nature and extent of the unsoundness @livshits15[p. 45]. Goblint,
+such analyses to state explicitly
+the nature and extent of the unsoundness @livshits15[p. 45]. Goblint,
 for instance, documents such assumptions. It assumes that pointer arithmetic
 does not overflow and, by default, that array reads stay in bounds, and it notes
 that this list is likely incomplete @goblint-assumptions.
