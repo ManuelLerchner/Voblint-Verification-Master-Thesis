@@ -172,7 +172,7 @@ pointers, a heap, threads, machine integers, and most of Goblint's analyses, so 
 immediate applicability to Goblint development is limited, although it already
 provides a reference for selected components and proof obligations
 (@sec:outlook-extending). Among the limitations identified in @sec:intro-scope, the gap between VIMP and
-C is the most significant. VIMP has no pointers, heap, or threads and
+C is the largest. VIMP has no pointers, heap, or threads and
 computes with unbounded integers, so a verdict about a VIMP program does not
 carry over to a C program with the same text (@sec:vimp-vs-c), and the
 adequacy of #isaconst("pstep") itself is argued rather than proved. As far as the author is aware, no commonly

@@ -56,7 +56,7 @@ responsibly and correctly in a formal development of this size. Agent output was
 treated as a proposal until Isabelle, a test or the author's review confirmed it. This
 caution was necessary, since the assistants' output was not reliable on its own. Agents proposed incorrect
 lemmas and, in one case, introduced a premise into the end-to-end soundness theorem that
-no program satisfied, making the theorem vacuous until the solver run was
+no program satisfied, so the theorem was vacuous until the solver run was
 redesigned. Audits of theorem statements and full batch builds exposed these
 errors. The non-vacuity instances of @sec:nonvacuity now demonstrate that the
 premises of the end-to-end soundness theorem and its companions can be satisfied.

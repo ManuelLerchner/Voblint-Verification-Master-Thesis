@@ -13,7 +13,7 @@
 
 The preceding chapters stated what a domain, an analysis, and a combination of
 analyses must prove, and @ch:results showed that every report is sound,
-whichever analyses produced it. This chapter introduces and describes the analyses that Voblint currently
+whichever analyses produced it. This chapter introduces and describes the analyses that Voblint
 implements. A user selects among the
 non-relational domains Sign, Interval, Parity, and Congruence, their reduced product
 Int, and a relational order analysis. The chapter compares the four base
@@ -409,6 +409,6 @@ facts, and the order analysis proves relations that no non-relational
 domain can express. A user does not have to choose between them. The
 product state and the channel of @ch:cooperation let Int and the order
 analysis run together. They exchange facts
-through queries, and every check is decided by the meet of their answers. Selecting both gets the most out of the analyses Voblint currently
+through queries, and every check is decided by the meet of their answers. Selecting both gets the most out of the analyses Voblint
 ships, although no theorem guarantees that a combination is more precise than
 its parts (@sec:coop-mcp).

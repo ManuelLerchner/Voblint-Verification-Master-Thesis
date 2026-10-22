@@ -540,7 +540,7 @@ the lower bracket law $b lle a narrow b$. With them, each
 warrowing update lies above the candidate
 (#isathm("warrowing_properties", thy: "Warrowing")), so an unknown whose value
 no longer changes satisfies its inequality. The solver's correctness theorem
-uses only this and holds whether or not the right-hand sides are monotone
+uses only this and holds whether the right-hand sides are monotone
 (@sec:td). Monotonicity is needed for the classical theory of least fixpoints,
 but not to certify that a returned valuation is a post-solution. Termination
 needs more. A classical widening is chosen so that repeated widening stabilizes

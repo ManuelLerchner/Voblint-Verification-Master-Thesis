@@ -27,7 +27,7 @@ solver's correctness theorem.
 == Encoding the equations for the solver <sec:eq-encoding>
 
 The solver accepts a right-hand side only as a strategy tree, uses one value
-type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, along the lines of Apinis et al.
+type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, as in Apinis et al.
 and Goblint, needs four things this interface does not offer
 (@tab:eq-adapters). @ch:equations already stated the equations in the adapted
 form, and this section explains why each adaptation is needed. Buffering is the

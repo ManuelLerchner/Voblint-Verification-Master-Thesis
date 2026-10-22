@@ -238,7 +238,7 @@ threads, ordered by program order and by the creation and locking orders, and
 a lock may incorporate a trace of whichever thread last released the mutex. An
 activation trace holds the path of a single activation and refers to at most
 two other traces, and a $ctor("Resume")$ accepts only the callee that this
-very activation created. Activations do not run concurrently, so nothing
+activation itself created. Activations do not run concurrently, so nothing
 corresponds to reading globals written by another thread.
 
 === Valid traces follow graph steps #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:valid>

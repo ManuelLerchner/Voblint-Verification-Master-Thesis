@@ -49,7 +49,7 @@ and there are plans to publish the solver in the Archive of Formal Proofs.
 #let _cf-ready = _cf.values().filter(p => p.available).len()
 #let _pr(n) = "https://github.com/conda-forge/staged-recipes/pull/" + str(n)
 
-The repository currently relies on several package managers.
+The repository relies on several package managers.
 #link("https://pixi.sh")[Pixi] installs Python and the conda-forge packages
 and runs every task, opam installs the OCaml toolchain for the exported
 analyzer and its browser build, and Isabelle is installed separately. The goal

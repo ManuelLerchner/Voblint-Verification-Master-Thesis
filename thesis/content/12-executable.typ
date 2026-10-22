@@ -164,7 +164,7 @@ and the browser are trusted (@sec:ocaml-boundary).
     are measured on the repository at build time.],
 ) <tab:sizes>
 
-The proofs say nothing about running time, and the generated code can be very
+The proofs say nothing about running time, and the generated code can be
 inefficient. In one case, a sampling profile of 256 chained assignments attributed
 most of the CPU time to a single function. The generated
 code of #isaconst("init_publications") recompiled the whole program at every

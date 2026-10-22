@@ -568,7 +568,7 @@ $x <= y$ between variables uses a relational state, whose concretization maps
 a whole state to a set of stores instead of each variable to a set of
 integers. The interface of this chapter admits such a state, because the
 solver and the framework ask only for order, join, and a monotone
-concretization, never for a map from variables to abstract values. The
+concretization. Neither requires the state to map variables to abstract values. The
 relational state of the order analysis instantiates the solver's classes and
 #isalocale("executable_domain") without being a numeric domain. The
 remaining sections of this chapter develop the non-relational case, and

@@ -655,7 +655,7 @@ procedure except `main` exactly once.
 
 The compiler produces a static object. To say that it preserves the behavior
 of a program, the graph needs an execution of its own, which @sec:csim then
-compares with #isaconst("pstep"). Within one procedure, an execution simply follows
+compares with #isaconst("pstep"). Within one procedure, an execution follows
 edges, so a node and a store would describe its state. Calls break this
 picture. A call edge leads to the callee's entry, but the callee ends at its
 result node, which all callers share and which no edge leaves (@sec:cfg). The
