@@ -59,7 +59,11 @@ build writes; run `pixi run thesis-draft` first on a fresh checkout.
 
 ## Before submission
 
-- ITP review is lightweight double-blind: add `anonymous` to the class
-  options, drop `\relatedversiondetails`, `\supplementdetails` and the
-  acknowledgements, and upload a scrubbed archive as supplementary material.
+- ITP review is lightweight double-blind. Add `anonymous` to the class
+  options; it hides the author block, PDF metadata, related version,
+  supplement and acknowledgements, but not the body or the bibliography.
+  Reword the GitHub and vendored-solver references in
+  `sections/statements.tex`, handle every `\cite{voblint}` (its entry names
+  the author; also used in `mechanization.tex` and `evaluation.tex`), and
+  upload a scrubbed archive as supplementary material.
 - Decide co-authorship (the thesis supervisors are only acknowledged).
