@@ -18,11 +18,15 @@ fi
 
 # Explicit paths, as the pre-commit hook passes its staged files. ocamlformat
 # honours .ocamlformat-ignore for them; dune files go through dune's formatter.
+# Any other path is skipped: the hook's glob can match Isabelle/ML sources
+# (*.ML) on a case-insensitive file system, and format-dune-file would read them
+# as S-expressions. dune-project is left to the check, since format-dune-file
+# separates its stanzas with blank lines that @fmt does not ask for.
 if [ "$#" -gt 0 ]; then
   for path in "$@"; do
     case "$path" in
       *.ml | *.mli) ocamlformat -i "$path" ;;
-      *)
+      dune | */dune)
         formatted="$(dune format-dune-file "$path")"
         printf '%s\n' "$formatted" >"$path"
         ;;
