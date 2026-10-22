@@ -1,5 +1,6 @@
-# Earlier .claude/claude.md: no project-history framing. Mathematics that
-# changes state ("no longer the constant array") is fine.
+# Earlier .claude/claude.md: no project-history framing. "No longer" and
+# "used to" stay out: the thesis uses them for mathematics ("values no longer
+# change") and for "was used to check".
 extends: existence
 message: "'%s' narrates project history; describe the current state."
 level: suggestion
@@ -7,5 +8,3 @@ ignorecase: true
 tokens:
   - previously
   - formerly
-  - used to
-  - no longer
