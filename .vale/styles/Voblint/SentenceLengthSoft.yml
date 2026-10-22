@@ -1,0 +1,7 @@
+# The lower threshold of SentenceLength, for review only.
+extends: occurrence
+message: "Sentence over 30 words: check that it reads easily."
+level: suggestion
+scope: sentence
+max: 30
+token: \b(\w+)\b

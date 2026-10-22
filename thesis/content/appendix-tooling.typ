@@ -11,7 +11,7 @@ their names and statements, and both the site and the thesis quote the
 analyzer's output. Every change to the theories can therefore make another
 part stale, and keeping them consistent is engineering work outside the proof.
 Isabelle offers comparatively little project-level tooling for this beyond its
-distribution, a gap that users have noted as well @paulson26lean
+distribution. Users have pointed this out as well @paulson26lean
 (#link("https://github.com/lawrencecpaulson/lawrencecpaulson.github.io/issues/62#issuecomment-4333878708")[reader comment]). The need grew with AI assistance. Agents wrote many proofs
 and much of the surrounding code (#link(<ai-use>)[statement on the use of
   generative AI]), and a reviewer cannot read every line they produce. A change
@@ -49,14 +49,14 @@ and there are plans to publish the solver in the Archive of Formal Proofs.
 #let _cf-ready = _cf.values().filter(p => p.available).len()
 #let _pr(n) = "https://github.com/conda-forge/staged-recipes/pull/" + str(n)
 
-The repository currently relies on several package managers.
+The repository relies on several package managers.
 #link("https://pixi.sh")[Pixi] installs Python and the conda-forge packages
 and runs every task, opam installs the OCaml toolchain for the exported
 analyzer and its browser build, and Isabelle is installed separately. The goal
 is a single Pixi file from which one `pixi install` sets up everything. For the
 OCaml side, this requires every package the analyzer builds with on
 conda-forge for all supported platforms. Until recently, however, conda-forge
-carried the OCaml compiler and only a handful of tools, such as Dune and
+carried the OCaml compiler and only a few tools, such as Dune and
 Menhir, and almost none of the libraries below them.
 
 Alongside this thesis, considerable effort went into changing this, together
@@ -68,9 +68,7 @@ are under review. `isar-tools` itself #link(_pr(34960))[installs from conda-forg
 the #_cf.len() packages in the
 #link(repo-blob + "manifests/conda-forge-ocaml.toml")[toolchain manifest],
 #_cf-ready are now available on conda-forge, and the others, among them
-`js_of_ocaml` and `ocamlformat`, still come from opam. As far as the author is
-aware, this is the first larger effort to bring OCaml libraries to
-conda-forge.
+`js_of_ocaml` and `ocamlformat`, still come from opam.
 
 == Derived files and checks
 
@@ -176,8 +174,8 @@ so a stale analyzer is noticed before it reaches the continuous integration.
   kind: image,
   placement: auto,
   caption: [The sources of the repository (blue) and the files derived from
-    them; each box links to its file. Each derived file is generated during the build or committed with a
-    check that regenerates it; the link map is also checked against the
+    them. Each box links to its file. Each derived file is generated during the build or committed with a
+    check that regenerates it. The link map is also checked against the
     published site.],
 ) <fig:pipeline>
 
@@ -206,7 +204,7 @@ accumulate.
 written for this thesis and published separately, addresses them.
 The command-line tool reads theory and `ROOT` files the way Isabelle's build
 finds them and never runs Isabelle itself, so it answers in seconds, fits a
-pre-commit hook, and also works on theories that do not yet build. Related
+pre-commit hook, and works on theories that do not yet build. Related
 tools cover parts of this ground. The
 #link("https://github.com/isabelle-prover/isabelle-linter")[Isabelle Linter]
 checks proof style inside Isabelle, and

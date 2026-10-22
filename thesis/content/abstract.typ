@@ -26,7 +26,7 @@ point holds for that store. This is partial correctness, since termination of
 the solver is not proved. A check reported #verdict("DEAD") is also proved
 unreachable. At a point without an arithmetic warning or error, no divisor is
 zero, and a divisor reported as an error is zero wherever its point is reached.
-To the author's knowledge, Voblint is the first mechanized analyzer whose soundness proof
+To the author's knowledge, no prior mechanized analyzer has a soundness proof that
 connects a source semantics, through a context-indexed collecting semantics, to
 a side-effecting constraint system and its verified solver.
 

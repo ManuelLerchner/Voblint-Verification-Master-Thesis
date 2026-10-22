@@ -1,0 +1,8 @@
+# AGENTS.md "Academic prose style": short, structurally simple sentences. A
+# heuristic: some technical statements need the length.
+extends: occurrence
+message: "Sentence over 35 words: split it if it carries more than one claim."
+level: warning
+scope: sentence
+max: 35
+token: \b(\w+)\b

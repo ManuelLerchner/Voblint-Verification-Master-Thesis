@@ -1,0 +1,7 @@
+# Supervisor feedback: "its guarantee", "the guarantee" with no antecedent.
+extends: existence
+message: "'%s': say which guarantee."
+level: warning
+nonword: true
+tokens:
+  - '\b(?:[Ii]ts|[Tt]he) guarantee\b(?! that)'

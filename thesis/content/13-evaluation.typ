@@ -216,7 +216,7 @@ Widening there loses the lower bound of `n`, and the check is
 and #claim-ref("cost-down-k100")). Nearly the whole cost is thus paid before
 any precision is gained.
 
-With entry-state contexts, the number of contexts need not even be finite.
+With entry-state contexts, the number of contexts can even be infinite.
 Under the unit context policy and bounded call strings, a compiled program has
 finitely many unknowns (#isathm("compiled_unit_vars_finite"),
 #isathm("compiled_call_strings_finite")). Entry-state contexts under Interval

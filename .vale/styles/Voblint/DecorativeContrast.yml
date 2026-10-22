@@ -1,0 +1,10 @@
+# AGENTS.md, docs/SITE_VOICE.md, ~/.claude/CLAUDE.md: avoid decorative
+# "not X, but Y" contrasts. Keep the ones the technical distinction needs.
+extends: existence
+message: "Decorative contrast '%s': state the claim directly if the contrast adds nothing."
+level: suggestion
+ignorecase: true
+nonword: true
+tokens:
+  - '\bnot (?:merely|just|only|simply) [^.;:]{1,60}?, but\b'
+  - '\bmore than (?:just|merely)\b'

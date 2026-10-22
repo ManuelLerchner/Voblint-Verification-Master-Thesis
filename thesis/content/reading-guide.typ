@@ -18,7 +18,7 @@ a #link(site("profiling.html"))[profiling page] with the full benchmark data and
 profiles, and the #link(site("playground.html"))[playground], which runs the analyzer in
 the browser on any VIMP program.
 
-The table below lists how the text marks each kind of object. Most markers are also links.
+Each kind of object the text refers to has its own marker, and most markers are also links.
 An Isabelle name opens its definition, a program opens the playground, and a fixture opens
 its file in the repository.
 

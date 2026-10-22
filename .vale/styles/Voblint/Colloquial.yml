@@ -1,0 +1,8 @@
+# thesis/CLAUDE.md "Review patterns": use the field's vocabulary.
+extends: substitution
+message: "Colloquial '%s': prefer '%s'."
+level: warning
+ignorecase: true
+swap:
+  says more: is more precise
+  superset of states: over-approximation

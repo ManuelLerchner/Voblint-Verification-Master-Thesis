@@ -1,0 +1,8 @@
+# thesis/CLAUDE.md "Wording": state research questions and contributions in
+# prose, not as RQ1 or K1 labels.
+extends: existence
+message: "Label '%s': name the question or contribution by its topic."
+level: warning
+tokens:
+  - '\bRQ\d+\b'
+  - '\bK\d+\b'
