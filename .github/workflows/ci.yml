@@ -618,6 +618,9 @@ jobs:
       - name: Spelling
         run: pixi run spelling-check
 
+      - name: Paper LaTeX lint
+        run: pixi run paper-lint
+
       - name: TOML formatting
         run: pixi run toml-format-check
 

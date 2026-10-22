@@ -24,6 +24,8 @@ paper/
     contexts.py            ctx-mutual-* claims -> context-policy table
     scale.py               per-layer statistics -> size table (needs the pixi env)
     costs.py               profiling snapshot -> per-policy cost table
+    pages.py               fails when the body runs past page 16
+  chktexrc                 chktex settings for `pixi run paper-lint`
   lipics/                  lipics-v2021 class (Dagstuhl, LPPL), vendored
   sty/                     isabelle.sty, isabellesym.sty (Isabelle2025-2), vendored
   OUTLINE.md               section plan, page budget, cut list
@@ -36,7 +38,8 @@ paper/
 
 ```sh
 pixi run paper-generated   # after adding a snippet or citation
-pixi run paper             # checks drift, then builds paper/_build/main.pdf
+pixi run paper             # checks drift, builds paper/_build/main.pdf, checks the page limit
+pixi run paper-lint        # chktex over the handwritten sources
 ```
 
 LaTeX comes from the system TeX Live (`latexmk`, `pdflatex`), not from pixi.

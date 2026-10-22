@@ -200,6 +200,22 @@ pre-commit:
             glob: "_typos.toml"
             run: pixi run spelling-check
 
+          # The vendored class, Isabelle styles and generated snippets are not
+          # ours to fix.
+          - name: paper-lint
+            glob: "paper/**/*.tex"
+            exclude:
+              - "paper/lipics/**"
+              - "paper/sty/**"
+              - "paper/generated/**"
+            run: pixi run paper-lint -- {staged_files}
+
+          - name: paper-lint-config
+            glob:
+              - "paper/chktexrc"
+              - "scripts/mk/paper-lint.sh"
+            run: pixi run paper-lint
+
           - name: pages-lint
             glob:
               - "pages/**/*.js"
@@ -406,6 +422,19 @@ pre-commit:
               - "scripts/check_thesis_links.py"
               - "pixi.toml"
             run: pixi run thesis-links
+
+          # The paper's snippets and bibliography are copied from the thesis
+          # sources, so a change on either side can leave them stale. The PDF
+          # build and page-limit check need TeX Live and run in CI only.
+          - name: paper-drift
+            glob:
+              - "paper/**/*.tex"
+              - "paper/snippets.txt"
+              - "paper/tools/snippets.py"
+              - "paper/tools/bib.py"
+              - "thesis/literature.bib"
+              - "thesis/shared/generated/snippets/*.thy"
+            run: pixi run paper-check
 
           # VIMP code must reach the thesis through the linked listing helper,
           # and the claim programs its links open must be current.
