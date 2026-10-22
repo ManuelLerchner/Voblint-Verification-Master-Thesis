@@ -28,3 +28,5 @@ eles = "eles"
 gam = "gam"
 # First-name fragment of Ondřej Lhoták, written Ond{\v{r}}ej in BibTeX.
 Ond = "Ond"
+# amsmath's multline environment, named in the Vale TeX ignores.
+multline = "multline"

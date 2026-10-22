@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Lint thesis prose with Vale: the paths given, or every chapter. Vale reads
+# Lint prose with Vale: the paths given, as the pre-commit hook passes its
+# staged files, or the thesis chapters and paper sections. Vale reads
 # .typ files through typst2vast, which is built into the pixi environment
 # until conda-forge packages it (conda-forge/staged-recipes#35317).
 set -euo pipefail
@@ -18,4 +19,6 @@ if [ "$#" -gt 0 ]; then
   exec vale "$@"
 fi
 
-exec vale thesis/content
+targets=(thesis/content)
+[ -d paper/sections ] && targets+=(paper/sections)
+exec vale "${targets[@]}"

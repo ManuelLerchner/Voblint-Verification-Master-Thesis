@@ -707,6 +707,11 @@ jobs:
       - name: Thesis domain trees list every implementation (no build needed)
         run: pixi run thesis-domain-tree
 
+      # Fails on error-level rules only; warnings and suggestions are printed
+      # for review. Builds typst2vast with cargo until conda-forge ships it.
+      - name: Thesis prose follows the project's writing rules (no build needed)
+        run: pixi run prose-lint
+
       # Figures lifted from the explainer and the README playground, the solver
       # sketch the background chapter prints, and the stored link targets of every
       # citation. Text checks only; the anchors themselves are checked against the

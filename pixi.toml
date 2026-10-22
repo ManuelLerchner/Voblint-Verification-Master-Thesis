@@ -144,7 +144,7 @@ pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", descri
 vale = ">=3.24"
 rust = ">=1.85"
 [feature.prose.tasks]
-prose-lint = { cmd = "bash scripts/mk/prose-lint.sh", description = "Lint thesis prose, or the given files, with Vale and the project's writing rules." }
+prose-lint = { cmd = "bash scripts/mk/prose-lint.sh", description = "Lint thesis and paper prose, or the given files, with Vale; fails on error-level rules only." }
 
 [feature.thesis.dependencies]
 typst = ">=0.15"
@@ -263,6 +263,7 @@ thesis-check = { depends-on = [
   "thesis-facts",
   "thesis-typst",
   "thesis-whitespace",
+  { task = "prose-lint", environment = "prose" },
 ], description = "Run all thesis drift and theorem checks." }
 
 thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", depends-on = [
