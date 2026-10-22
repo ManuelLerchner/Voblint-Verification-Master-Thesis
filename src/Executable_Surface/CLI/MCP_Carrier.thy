@@ -165,11 +165,87 @@ lemmas slot_defs [simp] = slot1_def slot2_def slot3_def slot4_def slot5_def slot
   slot7_def slot8_def set_slot1_def set_slot2_def set_slot3_def set_slot4_def
   set_slot5_def set_slot6_def set_slot7_def set_slot8_def
 
-type_synonym mcp_st =
+type_synonym mcp_fields =
   "(sign default_st lifted, (ivl default_st lifted, (parity default_st lifted, (int_dom
     default_st lifted, (int_dom default_st lifted, (int_dom default_st lifted, (congruence
     default_st lifted, relc) analysis_product) analysis_product) analysis_product)
     analysis_product) analysis_product) analysis_product) analysis_product"
+
+text \<open>
+  The combined state wraps its fields in a type of its own. Exported code then
+  names each class instance of the state once; over a bare nested product it would
+  rebuild the product's instance in full at every use.
+\<close>
+
+datatype mcp_st = MCP_St (mcp_fields: mcp_fields)
+
+instantiation mcp_st :: ord
+begin
+
+definition less_eq_mcp_st :: "mcp_st \<Rightarrow> mcp_st \<Rightarrow> bool" where
+  "less_eq_mcp_st r q \<longleftrightarrow> mcp_fields r \<le> mcp_fields q"
+
+definition less_mcp_st :: "mcp_st \<Rightarrow> mcp_st \<Rightarrow> bool" where
+  "less_mcp_st r q \<longleftrightarrow> mcp_fields r < mcp_fields q"
+
+instance ..
+
+end
+
+instance mcp_st :: order
+  by standard
+    (auto simp: less_eq_mcp_st_def less_mcp_st_def less_le_not_le mcp_st.expand
+      intro: order_trans antisym)
+
+instantiation mcp_st :: semilattice_sup
+begin
+
+definition sup_mcp_st :: "mcp_st \<Rightarrow> mcp_st \<Rightarrow> mcp_st" where
+  "sup_mcp_st r q = MCP_St (mcp_fields r \<squnion> mcp_fields q)"
+
+instance
+  by standard (simp_all add: less_eq_mcp_st_def sup_mcp_st_def)
+
+end
+
+instantiation mcp_st :: order_bot
+begin
+
+definition bot_mcp_st :: mcp_st where
+  "bot_mcp_st = MCP_St \<bottom>"
+
+instance
+  by standard (simp add: less_eq_mcp_st_def bot_mcp_st_def)
+
+end
+
+instance mcp_st :: bounded_semilattice_sup_bot ..
+
+instantiation mcp_st :: warrowing
+begin
+
+definition widen_mcp_st :: "mcp_st \<Rightarrow> mcp_st \<Rightarrow> mcp_st" where
+  "widen_mcp_st r q = MCP_St (mcp_fields r \<nabla> mcp_fields q)"
+
+definition narrow_mcp_st :: "mcp_st \<Rightarrow> mcp_st \<Rightarrow> mcp_st" where
+  "narrow_mcp_st r q = MCP_St (mcp_fields r \<Delta> mcp_fields q)"
+
+instance
+  by standard
+    (simp_all add: less_eq_mcp_st_def widen_mcp_st_def narrow_mcp_st_def
+      narrowing_class.narrow_ge narrowing_class.narrow_le
+      widening_class.widen_ge1 widening_class.widen_ge2)
+
+end
+
+lemma MCP_St_le_MCP_St [simp]: "MCP_St a \<le> MCP_St b \<longleftrightarrow> a \<le> b"
+  by (simp add: less_eq_mcp_st_def)
+
+lemma mcp_fields_bot [simp]: "mcp_fields \<bottom> = \<bottom>"
+  by (simp add: bot_mcp_st_def)
+
+lemma mcp_fields_sup [simp]: "mcp_fields (r \<squnion> q) = mcp_fields r \<squnion> mcp_fields q"
+  by (simp add: sup_mcp_st_def)
 
 type_synonym mcp_val =
   "(sign abs_state lifted, (ivl abs_state lifted, (parity abs_state lifted, (int_dom
@@ -201,97 +277,107 @@ record analysis_registration =
   value_display :: "mcp_val \<Rightarrow> vname list \<Rightarrow> abstract_value field_state"
   context_values :: "mcp_ctx \<Rightarrow> abstract_value list"
 
+text \<open>A field of the state is a field of its product, read and written through the wrapper.\<close>
+
+definition st_get :: "(mcp_fields \<Rightarrow> 'c) \<Rightarrow> mcp_st \<Rightarrow> 'c" where
+  "st_get f r = f (mcp_fields r)"
+
+definition st_put :: "(mcp_fields \<Rightarrow> 'c \<Rightarrow> mcp_fields) \<Rightarrow> mcp_st \<Rightarrow> 'c \<Rightarrow> mcp_st" where
+  "st_put u r v = MCP_St (u (mcp_fields r) v)"
+
+lemmas st_lens_defs [simp] = st_get_def st_put_def
+
 fun registration_of :: "analysis_domain \<Rightarrow> analysis_registration" where
   "registration_of Sign_Analysis =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign
-       (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot1)) (lift_put (st_put set_slot1))
+       (ask_assign (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
        (generic_tf_st_for sign_ops \<G>) (generic_enter_st_for sign_ops \<G>)))), field_live =
-       (\<lambda>r. slot1 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case slot1 r of Bot \<Rightarrow> True | Lifted st
-       \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case slot1 v of Bot \<Rightarrow> \<top> |
-       Lifted st \<Rightarrow> sign_eval_answer st q)), value_display = (\<lambda>v vars. Field_Store (map
-       (\<lambda>x. (x, SignValue (case slot1 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)),
+       (\<lambda>r. st_get slot1 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case st_get slot1 r of Bot \<Rightarrow> True
+       | Lifted st \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case slot1 v of
+       Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> sign_eval_answer st q)), value_display = (\<lambda>v vars. Field_Store
+       (map (\<lambda>x. (x, SignValue (case slot1 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)),
        context_values = (\<lambda>ctx. map SignValue (slot1 ctx)) \<rparr>"
 | "registration_of Interval_Analysis =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign
-       (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot2)) (lift_put (st_put set_slot2))
+       (ask_assign (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
        (generic_tf_st_for ivl_ops \<G>) (generic_enter_st_for ivl_ops \<G>)))), field_live =
-       (\<lambda>r. slot2 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case slot2 r of Bot \<Rightarrow> True | Lifted st
-       \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case slot2 v of Bot \<Rightarrow> \<top> |
-       Lifted st \<Rightarrow> interval_eval_answer st q)), value_display = (\<lambda>v vars. Field_Store (map
-       (\<lambda>x. (x, IntervalValue (case slot2 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)),
-       context_values = (\<lambda>ctx. map IntervalValue (slot2 ctx)) \<rparr>"
+       (\<lambda>r. st_get slot2 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case st_get slot2 r of Bot \<Rightarrow> True
+       | Lifted st \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case slot2 v of
+       Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> interval_eval_answer st q)), value_display = (\<lambda>v vars.
+       Field_Store (map (\<lambda>x. (x, IntervalValue (case slot2 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow>
+       st x))) vars)), context_values = (\<lambda>ctx. map IntervalValue (slot2 ctx)) \<rparr>"
 | "registration_of Parity_Analysis =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign
-       (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot3)) (lift_put (st_put set_slot3))
+       (ask_assign (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
        (generic_tf_st_for parity_ops \<G>) (generic_enter_st_for parity_ops \<G>)))), field_live
-       = (\<lambda>r. slot3 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case slot3 r of Bot \<Rightarrow> True | Lifted
-       st \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case slot3 v of Bot \<Rightarrow>
-       \<top> | Lifted st \<Rightarrow> parity_eval_answer st q)), value_display = (\<lambda>v vars. Field_Store
-       (map (\<lambda>x. (x, ParityValue (case slot3 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)),
-       context_values = (\<lambda>ctx. map ParityValue (slot3 ctx)) \<rparr>"
+       = (\<lambda>r. st_get slot3 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case st_get slot3 r of Bot \<Rightarrow>
+       True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case
+       slot3 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> parity_eval_answer st q)), value_display = (\<lambda>v
+       vars. Field_Store (map (\<lambda>x. (x, ParityValue (case slot3 v of Bot \<Rightarrow> \<bottom> | Lifted st
+       \<Rightarrow> st x))) vars)), context_values = (\<lambda>ctx. map ParityValue (slot3 ctx)) \<rparr>"
 | "registration_of (Int_Analysis Refine_Fixpoint) =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign
-       (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot4)) (lift_put (st_put set_slot4))
+       (ask_assign (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
        (generic_tf_st_for (int_dom_ops Refine_Fixpoint) \<G>) (generic_enter_st_for
-       (int_dom_ops Refine_Fixpoint) \<G>)))), field_live = (\<lambda>r. slot4 r \<noteq> \<bottom>), field_empty =
-       (\<lambda>gs r. (case slot4 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)),
-       value_answer = (\<lambda>v q. (case slot4 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer
-       Refine_Fixpoint st q)), value_display = (\<lambda>v vars. Field_Store (map (\<lambda>x. (x,
-       IntDomValue (case slot4 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)), context_values
-       = (\<lambda>ctx. map IntDomValue (slot4 ctx)) \<rparr>"
+       (int_dom_ops Refine_Fixpoint) \<G>)))), field_live = (\<lambda>r. st_get slot4 r \<noteq> \<bottom>),
+       field_empty = (\<lambda>gs r. (case st_get slot4 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow>
+       default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case slot4 v of Bot \<Rightarrow> \<top> |
+       Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st q)), value_display = (\<lambda>v vars.
+       Field_Store (map (\<lambda>x. (x, IntDomValue (case slot4 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow>
+       st x))) vars)), context_values = (\<lambda>ctx. map IntDomValue (slot4 ctx)) \<rparr>"
 | "registration_of (Int_Analysis Refine_Once) =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign
-       (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot5)) (lift_put (st_put set_slot5))
+       (ask_assign (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
        (generic_tf_st_for (int_dom_ops Refine_Once) \<G>) (generic_enter_st_for (int_dom_ops
-       Refine_Once) \<G>)))), field_live = (\<lambda>r. slot5 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case
-       slot5 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)), value_answer =
-       (\<lambda>v q. (case slot5 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Once st q)),
-       value_display = (\<lambda>v vars. Field_Store (map (\<lambda>x. (x, IntDomOnceValue (case slot5 v
-       of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)), context_values = (\<lambda>ctx. map
-       IntDomOnceValue (slot5 ctx)) \<rparr>"
+       Refine_Once) \<G>)))), field_live = (\<lambda>r. st_get slot5 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r.
+       (case st_get slot5 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)),
+       value_answer = (\<lambda>v q. (case slot5 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer
+       Refine_Once st q)), value_display = (\<lambda>v vars. Field_Store (map (\<lambda>x. (x,
+       IntDomOnceValue (case slot5 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)),
+       context_values = (\<lambda>ctx. map IntDomOnceValue (slot5 ctx)) \<rparr>"
 | "registration_of (Int_Analysis Refine_Never) =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot6) (lift_put set_slot6) (ask_assign
-       (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot6)) (lift_put (st_put set_slot6))
+       (ask_assign (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
        (generic_tf_st_for (int_dom_ops Refine_Never) \<G>) (generic_enter_st_for (int_dom_ops
-       Refine_Never) \<G>)))), field_live = (\<lambda>r. slot6 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case
-       slot6 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)), value_answer =
-       (\<lambda>v q. (case slot6 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Never st
-       q)), value_display = (\<lambda>v vars. Field_Store (map (\<lambda>x. (x, IntDomNeverValue (case
-       slot6 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)), context_values = (\<lambda>ctx. map
-       IntDomNeverValue (slot6 ctx)) \<rparr>"
+       Refine_Never) \<G>)))), field_live = (\<lambda>r. st_get slot6 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r.
+       (case st_get slot6 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)),
+       value_answer = (\<lambda>v q. (case slot6 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer
+       Refine_Never st q)), value_display = (\<lambda>v vars. Field_Store (map (\<lambda>x. (x,
+       IntDomNeverValue (case slot6 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x))) vars)),
+       context_values = (\<lambda>ctx. map IntDomNeverValue (slot6 ctx)) \<rparr>"
 | "registration_of Congruence_Analysis =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot7) (lift_put set_slot7) (ask_assign
-       (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot7)) (lift_put (st_put set_slot7))
+       (ask_assign (exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
        (generic_tf_st_for congruence_ops \<G>) (generic_enter_st_for congruence_ops \<G>)))),
-       field_live = (\<lambda>r. slot7 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case slot7 r of Bot \<Rightarrow> True
-       | Lifted st \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q. (case slot7 v
-       of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> congruence_eval_answer st q)), value_display = (\<lambda>v vars.
-       Field_Store (map (\<lambda>x. (x, CongruenceValue (case slot7 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow>
-       st x))) vars)), context_values = (\<lambda>ctx. map CongruenceValue (slot7 ctx)) \<rparr>"
+       field_live = (\<lambda>r. st_get slot7 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. (case st_get slot7 r
+       of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)), value_answer = (\<lambda>v q.
+       (case slot7 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> congruence_eval_answer st q)), value_display
+       = (\<lambda>v vars. Field_Store (map (\<lambda>x. (x, CongruenceValue (case slot7 v of Bot \<Rightarrow> \<bottom> |
+       Lifted st \<Rightarrow> st x))) vars)), context_values = (\<lambda>ctx. map CongruenceValue (slot7 ctx)) \<rparr>"
 | "registration_of Order_Analysis =
-     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get slot8) (lift_put set_slot8) (order_spec
-       (program_vars p))), field_live = (\<lambda>r. slot8 r \<noteq> \<bottom>), field_empty = (\<lambda>gs r. ((slot8
-       r) = RelBot)), value_answer = (\<lambda>v q. relc_qry (slot8 v) q), value_display = (\<lambda>v
-       vars. Field_Whole (OrderValue (order_pairs (slot8 v)))), context_values = (\<lambda>ctx.
-       []) \<rparr>"
+     \<lparr> field_spec = (\<lambda>\<G> p. lens_of (lift_get (st_get slot8)) (lift_put (st_put set_slot8))
+       (order_spec (program_vars p))), field_live = (\<lambda>r. st_get slot8 r \<noteq> \<bottom>), field_empty =
+       (\<lambda>gs r. st_get slot8 r = RelBot), value_answer = (\<lambda>v q. relc_qry (slot8 v) q),
+       value_display = (\<lambda>v vars. Field_Whole (OrderValue (order_pairs (slot8 v)))),
+       context_values = (\<lambda>ctx. []) \<rparr>"
 
 fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> store set" where
   "part_gamma \<G> Sign_Analysis =
-     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot1 x))"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get (st_get slot1) x))"
 | "part_gamma \<G> Interval_Analysis =
-     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot2 x))"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get (st_get slot2) x))"
 | "part_gamma \<G> Parity_Analysis =
-     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot3 x))"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get (st_get slot3) x))"
 | "part_gamma \<G> (Int_Analysis Refine_Fixpoint) =
-     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot4 x))"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get (st_get slot4) x))"
 | "part_gamma \<G> (Int_Analysis Refine_Once) =
-     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot5 x))"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get (st_get slot5) x))"
 | "part_gamma \<G> (Int_Analysis Refine_Never) =
-     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot6 x))"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get (st_get slot6) x))"
 | "part_gamma \<G> Congruence_Analysis =
-     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot7 x))"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get (st_get slot7) x))"
 | "part_gamma \<G> Order_Analysis =
-     (\<lambda>x. \<gamma> (lift_get slot8 x))"
+     (\<lambda>x. \<gamma> (lift_get (st_get slot8) x))"
 
 fun val_empty :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> bool" where
   "val_empty Sign_Analysis v =
@@ -337,11 +423,12 @@ text \<open>
 \<close>
 
 definition mcp_rd :: "(vname \<Rightarrow> bool) \<Rightarrow> mcp_st \<Rightarrow> mcp_val" where
-  "mcp_rd \<G> r = Product (map_lift (default_st_to_fun \<G>) (slot1 r)) (Product (map_lift
-    (default_st_to_fun \<G>) (slot2 r)) (Product (map_lift (default_st_to_fun \<G>) (slot3 r))
-    (Product (map_lift (default_st_to_fun \<G>) (slot4 r)) (Product (map_lift
-    (default_st_to_fun \<G>) (slot5 r)) (Product (map_lift (default_st_to_fun \<G>) (slot6 r))
-    (Product (map_lift (default_st_to_fun \<G>) (slot7 r)) (slot8 r)))))))"
+  "mcp_rd \<G> r = Product (map_lift (default_st_to_fun \<G>) (st_get slot1 r)) (Product
+    (map_lift (default_st_to_fun \<G>) (st_get slot2 r)) (Product (map_lift (default_st_to_fun
+    \<G>) (st_get slot3 r)) (Product (map_lift (default_st_to_fun \<G>) (st_get slot4 r))
+    (Product (map_lift (default_st_to_fun \<G>) (st_get slot5 r)) (Product (map_lift
+    (default_st_to_fun \<G>) (st_get slot6 r)) (Product (map_lift (default_st_to_fun \<G>)
+    (st_get slot7 r)) (st_get slot8 r)))))))"
 
 definition mcp_gamma_v :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> store set" where
   "mcp_gamma_v as v = (\<Inter>a \<in> set as. val_gamma a v)"
@@ -357,29 +444,29 @@ text \<open>
 \<close>
 
 definition mcp_init :: "analysis_domain list \<Rightarrow> mcp_st" where
-  "mcp_init as = Product (if Sign_Analysis \<in> set as then Lifted cinit_sign_st else \<bottom>)
-    (Product (if Interval_Analysis \<in> set as then Lifted cinit_ivl_st else \<bottom>) (Product
-    (if Parity_Analysis \<in> set as then Lifted cinit_parity_st else \<bottom>) (Product (if
-    (Int_Analysis Refine_Fixpoint) \<in> set as then Lifted cinit_int_dom_st else \<bottom>)
+  "mcp_init as = MCP_St (Product (if Sign_Analysis \<in> set as then Lifted cinit_sign_st
+    else \<bottom>) (Product (if Interval_Analysis \<in> set as then Lifted cinit_ivl_st else \<bottom>)
+    (Product (if Parity_Analysis \<in> set as then Lifted cinit_parity_st else \<bottom>) (Product
+    (if (Int_Analysis Refine_Fixpoint) \<in> set as then Lifted cinit_int_dom_st else \<bottom>)
     (Product (if (Int_Analysis Refine_Once) \<in> set as then Lifted cinit_int_dom_st else
     \<bottom>) (Product (if (Int_Analysis Refine_Never) \<in> set as then Lifted cinit_int_dom_st
     else \<bottom>) (Product (if Congruence_Analysis \<in> set as then Lifted cinit_congruence_st
-    else \<bottom>) (if Order_Analysis \<in> set as then (\<top> :: relc) else \<bottom>)))))))"
+    else \<bottom>) (if Order_Analysis \<in> set as then (\<top> :: relc) else \<bottom>))))))))"
 
 definition mcp_formals_route ::
   "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> mcp_ctx \<Rightarrow> mcp_st lifted
      \<Rightarrow> call_action \<Rightarrow> mcp_ctx" where
   "mcp_formals_route as \<G> u ctx d ca = Product (if Sign_Analysis \<in> set as then
-    exec_formals_route \<G> u [] (lift_get slot1 d) ca else []) (Product (if
-    Interval_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get slot2 d) ca else
-    []) (Product (if Parity_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get
-    slot3 d) ca else []) (Product (if (Int_Analysis Refine_Fixpoint) \<in> set as then
-    exec_formals_route \<G> u [] (lift_get slot4 d) ca else []) (Product (if (Int_Analysis
-    Refine_Once) \<in> set as then exec_formals_route \<G> u [] (lift_get slot5 d) ca else [])
-    (Product (if (Int_Analysis Refine_Never) \<in> set as then exec_formals_route \<G> u []
-    (lift_get slot6 d) ca else []) (Product (if Congruence_Analysis \<in> set as then
-    exec_formals_route \<G> u [] (lift_get slot7 d) ca else []) (if Order_Analysis \<in> set as
-    then [] else [])))))))"
+    exec_formals_route \<G> u [] (lift_get (st_get slot1) d) ca else []) (Product (if
+    Interval_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get (st_get slot2) d) ca
+    else []) (Product (if Parity_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get
+    (st_get slot3) d) ca else []) (Product (if (Int_Analysis Refine_Fixpoint) \<in> set as then
+    exec_formals_route \<G> u [] (lift_get (st_get slot4) d) ca else []) (Product (if
+    (Int_Analysis Refine_Once) \<in> set as then exec_formals_route \<G> u [] (lift_get (st_get
+    slot5) d) ca else []) (Product (if (Int_Analysis Refine_Never) \<in> set as then
+    exec_formals_route \<G> u [] (lift_get (st_get slot6) d) ca else []) (Product (if
+    Congruence_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get (st_get slot7) d)
+    ca else []) (if Order_Analysis \<in> set as then [] else [])))))))"
 
 definition mcp_root_ctx :: mcp_ctx where
   "mcp_root_ctx = Product [] (Product [] (Product [] (Product [] (Product [] (Product []
@@ -423,7 +510,7 @@ lemma field_spec_sound:
         field_component_sound[OF ask_assign_sound[OF int_never_rule.exec_comp_sound]]
         field_component_sound[OF ask_assign_sound[OF congruence_rule.exec_comp_sound]]
         field_component_sound[OF order_spec_sound];
-      auto simp: less_eq_analysis_product_def)
+      auto simp: less_eq_mcp_st_def less_eq_analysis_product_def)
 
 lemma single_entry_field_spec: "single_entry (field_spec (registration_of a) \<G> p)"
   by (cases a rule: analysis_domain_cases) (auto intro!: single_entry_lens_of lift_put_get

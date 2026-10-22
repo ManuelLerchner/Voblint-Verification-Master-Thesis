@@ -167,8 +167,9 @@ subsystems, `--format jsonl` emits JSON Lines and `--output FILE` writes to a
 file; standard output stays the same. The playground's **run_voblint: call and answer** panel
 shows the full (`--verbose`) trace under the call and its answer, colored by step and folded
 by query, with downloads of the whole text and of its JSON Lines form. Three layers: the solver
-result is the exported computation of proved equations, and the trace calls
-inside it come from code equations proved equal to the untraced ones; the trace
+result is the exported computation of proved equations, and a traced run calls
+`run_voblint_traced`, whose trace calls come from code equations proved equal to
+the untraced ones (an untraced run reaches no hook); the trace
 is an unverified observation of that computation, through a `code_printing`
 mapping of `trace_event` to an OCaml hook that returns unit, swallows
 exceptions and never touches solver state, so it cannot feed back; the replay

@@ -97,7 +97,7 @@ proof -
     obtain u where solution_eq:
       "x - ?q * ?s = ?mp * u"
       using solution unfolding dvd_def by blast
-    have coprime_offset: "?s * ?kp - 1 = ?mp * (- ?t)"
+    have "?s * ?kp - 1 = ?mp * (- ?t)"
       using unit by (simp add: algebra_simps)
     have q_unit:
       "?q * (?s * ?kp + ?t * ?mp) = ?q"
@@ -172,7 +172,7 @@ next
   note r_some = Some
   obtain c m where cm: "cm = (c, m)"
     by (cases cm)
-  have normalized:
+  have
     "normalized_congruence_rep (Some (c, m))"
     using assms r_some cm by simp
   show ?thesis

@@ -52,7 +52,7 @@ part that really does see all five.
 | `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string tables, `mcp_es_rule_table`, `mcp_cs_rule_table` |
 | `Analysis_Report.thy` | the report semantics `ℛ⇘res⇙ v`, `verdict_stores`, the CAPS queries and their theorems; `analysis_report_of_sound`, the one proof that splits on the context policy |
 | `Analysis_Certified.thy` | the source-level theorems over every configuration `run_voblint` answers, with no termination premise |
-| `Trace_Run.thy` | the solver trace in the exported code: traced code equations for routing and `analysis_report_of`, the readers a run hands the tracer, and the OCaml mapping of `trace_event` |
+| `Trace_Run.thy` | the traced entry point `run_voblint_traced`, equal to `run_voblint`: traced routes and report, the readers a run hands the tracer, and the OCaml mapping of `trace_event` |
 
 The soundness statements here are the ones that belong nowhere else: a theorem about
 `run_voblint` cannot live above the theory that defines it, and `run_voblint` is the

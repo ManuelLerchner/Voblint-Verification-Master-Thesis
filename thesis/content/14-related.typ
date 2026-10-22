@@ -1,5 +1,6 @@
 #import "../lib/code.typ": *
 #import "../lib/theme.typ": vb
+#import "../lib/math.typ": ctor
 #import "../lib/alignment.typ": alignment, alignment-count
 
 
@@ -260,19 +261,19 @@ Voblint uses only partial correctness and claims no optimality
 
 == Calling contexts and trace partitioning
 
-An interprocedural analysis must decide how information about a call reaches
-the callee and returns to the caller. Sharir and Pnueli distinguish two
-classical answers @sharir81. The functional approach computes input-output
-relations for procedures, and the call-string approach tags information with
-the history of calls that led to it. Voblint's call-string policy follows the
-second approach, and its entry-state policy, which indexes a callee's exit states
-by its entry state, resembles a functional approach tabulated per input. At
-the return, Voblint combines the caller's state before the call with the
+Of the two classical approaches of Sharir and Pnueli (@sec:interproc), Voblint's
+call-string policy follows the call-string approach, and its entry-state policy
+resembles the functional approach tabulated per input @sharir81. At the return, Voblint combines the caller's state before the call with the
 callee's exit state (@sec:calls), the shape of the return function of
 #cite(<knoop92>, form: "prose", supplement: [§4.1]). Reps et al. solve such
 problems precisely when the facts are finite and the transfer functions
 distributive @reps95, whereas Voblint requires neither and proves no precision
-result.
+result. Seidl and Fecht model procedures by a pushdown automaton that pushes an
+activation record at each call and pops it at each return @seidl00[§4], and
+Voblint's activation traces keep this structure per activation (@ch:traces).
+The entry-state policy's unknowns, a node
+paired with the abstract entry state of its procedure, resemble the unknowns
+$⟨v, d⟩$ of their forward accumulation @seidl00[§7.1].
 
 Trace partitioning abstracts a set of traces by indexing it with control
 history before abstracting states @rival07. Rival and Mauborgne define both
@@ -292,8 +293,8 @@ no such bound, which is one reason the termination of the solve is not proved
 
 == Goblint and its local-trace semantics <sec:rel-goblint>
 
-Voblint follows Goblint's architecture and adapts the local-trace semantics of
-Schwarz et al. to procedure activations.
+Voblint follows Goblint's architecture and adapts the local traces of Schwarz
+et al. to activations.
 
 === Correspondence with Goblint's architecture
 
@@ -302,8 +303,7 @@ and publish contributions to global unknowns @seidl03 @apinis12. Seidl et al.
 @seidl26 describe how Goblint uses them to decouple a mixed flow-sensitive
 analysis from the solver, with digests on the analysis side and update rules on
 the solver side, recovering precision. Voblint adopts the split. An analysis
-supplies local and global transfer behavior, and the generator and solver
-organize their interaction.
+supplies the transfer behavior, and the solver organizes the interaction.
 
 The correspondence with Goblint's implementation is architectural. Voblint was compared
 with the framework interface of Goblint's
@@ -352,10 +352,8 @@ Voblint's answers describe the predecessor state only, as Goblint's do.
 Local traces give each thread of a concurrent program a semantics against which
 thread-modular analyses are proved sound and compared @schwarz21, and they
 were later extended to relational analyses @schwarz23 @schwarz25phd[Ch. 6].
-@sec:activation-trace described how Voblint adapts them to procedure
-activations. Activations do not interfere, so no concurrency result of that
-work transfers. #cite(<sotin11>, form: "prose") also replace a stack semantics
-by a local one, motivated by pointers into the stack, which VIMP lacks.
+Voblint adapts them to procedure activations (@sec:activation-trace), which do
+not interfere, so no concurrency result of that work transfers.
 
 Schwarz refines the local-trace semantics through _digests_
 @schwarz25phd[§2.3]. A digest is a total function on local traces, and the
@@ -369,8 +367,7 @@ First, a digest is a function, so each trace has exactly one digest value and
 the traces split into disjoint groups @schwarz25phd[§2.3, Def. 4, Thm. 4]. The
 context relation, in contrast, may admit one activation in several contexts,
 so Voblint's groups may overlap. Second, a digest is updated at every step of a
-trace, whereas an activation's contexts are fixed when it is called, so
-Voblint distinguishes activations only by how they were entered.
+trace, whereas an activation's contexts are fixed when it is called.
 
 == Closest precedents and inherited parts <sec:rel-summary>
 
@@ -382,9 +379,9 @@ flow-insensitive heap is sound. They instrument the concrete semantics with
 contexts through a Coq functor over a module type of contexts, whose
 call-context function computes the context of a callee from the call site, the
 caller's context, and the receiver. Their specification is not executable, however, since the analyses are given
-only as constraints that no solver computes @dabrowski09[§7]. This concrete
-semantics, which carries contexts and is parameterized by a context policy, is
-the closest precedent for Voblint's. Voblint's differs in three respects. Its
+only as constraints that no solver computes @dabrowski09[§7]. Their concrete
+semantics, parameterized by a context policy, is the closest precedent for
+Voblint's, which differs in three respects. Its
 contexts are admitted by a relation, the totality condition
 #isaconst("call_context_total_on") makes the activation collecting semantics
 exhaustive (#isathm("node_collect_eq_Union_activation_collect")), and the

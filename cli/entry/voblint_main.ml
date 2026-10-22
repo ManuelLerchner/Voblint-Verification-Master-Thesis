@@ -716,8 +716,8 @@ let () =
   let solve () =
     let started = Unix.gettimeofday () in
     let answer =
-      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
-        ~program_globals:placement prog
+      Analysis_request.analyse ~traced:!trace ~analyses:domains
+        ~globals:!globals ~context ~program_globals:placement prog
     in
     if !timing then
       Printf.eprintf "voblint-timing: analysis_ms=%.3f\n%!"

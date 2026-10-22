@@ -493,14 +493,21 @@ continuation $k$, it requires
       #h(1.5em)$==> #isaconst("call_enter") (s) in "cover"(ctor("FunctionEntry") p, c')$],
 
     oblig("RETURN"),
-    [$s in "cover"(u, c), thin c' "admitted from" s, thin t in "cover"(ctor("FunctionResult") p, c')$ \
+    [$s in "cover"(u, c), thin c' "admitted at" u "from" s "for" (p', e), thin t in "cover"(ctor("FunctionResult") p, c')$ \
       #h(1.5em)$==> #isaconst("combine_collect") (s, t) in "cover"(k, c)$],
   )
 ]
-Here "$c'$ admitted from $s$" means that the policy admits $c'$ for the call
-from $s$ in context $c$ (#isaconst("admits_call_context")). #oblig("INIT") puts the initial stores into the cover at the entry. Each
-of the other three follows one kind of step. If the cover contains the
-stores before the step, it must also contain the store after it. In the running
+In #oblig("CALL"), "$c'$ admitted from $s$" means that the policy admits $c'$
+for this call edge from $s$ in context $c$. #oblig("RETURN") must hold for
+every admitted $c'$, since one call may admit several contexts and the
+returning activation may carry any of them. Because $c'$ ranges only over
+admitted contexts, the return of `bump(5)` combines only callee results of
+contexts entered from this call. In "$c'$ admitted at $u$ from $s$ for
+$(p', e)$", the admitting call edge may be any edge leaving $u$, into $p'$ with
+entered store $e$ (#isaconst("admits_call_context")). A compiled graph has one call edge per
+call site (#isaconst("calls_source_unique"),
+#isathm("compile_prog_calls_source_unique")), so on such a graph the admitting
+edge is always the call edge of the return. In the running
 example under entry-state contexts, #oblig("CALL") requires the cover at the
 entry of `bump` in context $[[5, 5]]$ to contain the entered store with
 $n = 5$, and #oblig("RETURN") requires the cover at the continuation in `main`
@@ -600,9 +607,8 @@ This completes the concrete half of the soundness argument. Every store that a
 finite source execution reaches appears in a graph execution (@ch:program-model),
 as the final store of a valid trace (@sec:source-bridge), in the activation
 collecting semantics of the trace's contexts (@sec:contexts), and hence in
-every cover that meets the coverage contract. An analysis therefore never has
-to reason about whole runs. It only has to
-produce sets of stores that each kind of step preserves. The following
-chapters build such analyses from abstract domains (@ch:domains), transfer
-functions with local soundness laws (@ch:analysis-interface), and a solved
+every cover that meets the coverage contract. An analysis therefore never
+reasons about whole runs, only about sets of stores that each kind of step
+preserves. The following chapters build such analyses from abstract domains
+(@ch:domains), transfer functions (@ch:analysis-interface), and a solved
 equation system (@ch:equations, @ch:solving).

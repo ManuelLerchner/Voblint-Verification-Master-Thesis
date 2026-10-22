@@ -8,6 +8,10 @@
         // The site's figures override the base theme per component on purpose.
         "noImportantStyles": "off"
       },
+      "correctness": {
+        // Biome 2.6.2 rejects valid templates such as "x y" "x y".
+        "noInvalidGridAreas": "off"
+      },
       "style": {
         // Stylesheets are ordered by component, not by selector specificity.
         "noDescendingSpecificity": "off"

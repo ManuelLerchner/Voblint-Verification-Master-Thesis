@@ -233,9 +233,15 @@ def summarize(snapshot, source):
             "timeout_s": meta["timeout_s"],
         },
         "fixtures": len({r["fixture"] for r in runs}),
+        "fixtures_selected": meta["fixtures"],
+        "fixtures_ill_formed": meta["fixtures"] - len({r["fixture"] for r in runs}),
         "configurations": len({(r["domain"], r["context"]) for r in runs}),
-        "runs": len(runs),
+        "cases": len(runs),
+        "cases_solved": len(ok),
         "timeouts": sum(r["status"] == "timeout" for r in runs),
+        "timeout_contexts": sorted(
+            {r["context"] for r in runs if r["status"] == "timeout"}
+        ),
         "solve_median_ms": statistics.median(solves),
         "solve_p95_ms": solves[min(len(solves) - 1, math.ceil(0.95 * len(solves)) - 1)],
         "slowest_5pct_share": top_share,

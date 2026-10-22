@@ -174,7 +174,7 @@ code {
  * Code blocks and controls that embed code set their own look.
  */
 :where(p, li, dd, dt, td, th, figcaption, h3, h4, em, strong, span, a, label, button, summary)
-> code {
+  > code {
   padding: 0.1em 0.38em;
   color: #1d5563;
   background: #e8f0f1;

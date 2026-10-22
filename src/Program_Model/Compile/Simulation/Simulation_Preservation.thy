@@ -73,7 +73,7 @@ proof -
       and ex: "(k, EA_Ret None p, FunctionResult p) \<in> intra g"
       and kk: "k = Statement (n + csize (body decl))"
       and src: "source_com (body decl)"
-      and sp: "special_table p = None"
+      and "special_table p = None"
     by (rule procs_embedded_proc[OF pc decl])
   have entry': "(FunctionEntry p, EA_Body p, Statement n) \<in> intra g"
     using entry compile_entry[OF cb] by simp
@@ -362,7 +362,7 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
   case (Base p body_p kk n cc vv ss)
   obtain c' s' frs' where sc: "src' = (c', s', frs')" by (cases src')
   from Base.prems(2) sc have istep: "intra_step \<Pi> (cc, ss, []) (c', s', frs')" by simp
-  from Base.hyps(2) obtain decl where pdecl: "\<Pi> p = Some decl" "body_p = body decl"
+  from Base.hyps(2) obtain decl where "\<Pi> p = Some decl" "body_p = body decl"
     by (rule compiled_at_decl)
   have srcbody: "source_com body_p"
     using procs_embedded_source_com[OF Base.prems(1) \<open>\<Pi> p = Some decl\<close>] \<open>body_p = body decl\<close>
@@ -474,7 +474,7 @@ next
         and ctrl: "control_at \<Pi> q c0in kin nin inner v0"
         and cacc: "compiled_at \<Pi> g q c0in kin nin"
       using baseInner by blast
-    from cacc obtain decl where pdecl: "\<Pi> q = Some decl" "c0in = body decl"
+    from cacc obtain decl where "\<Pi> q = Some decl" "c0in = body decl"
       by (rule compiled_at_decl)
     have srcc0: "source_com c0in"
       using procs_embedded_source_com[OF Nested.prems(1) \<open>\<Pi> q = Some decl\<close>]
@@ -644,7 +644,7 @@ proof (rule ccontr)
   obtain p body_p kk n where
     ctrl: "control_at \<Pi> p body_p kk n c v" and cacc: "compiled_at \<Pi> g p body_p kk n"
     using base by blast
-  from cacc obtain decl where pdecl: "\<Pi> p = Some decl" "body_p = body decl"
+  from cacc obtain decl where "\<Pi> p = Some decl" "body_p = body decl"
     by (rule compiled_at_decl)
   have "source_com body_p"
     using procs_embedded_source_com[OF PC \<open>\<Pi> p = Some decl\<close>] \<open>body_p = body decl\<close> by simp

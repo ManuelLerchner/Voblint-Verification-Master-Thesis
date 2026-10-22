@@ -74,9 +74,13 @@ $
 where #isai("\<gamma>\<^bsub>res\<^esub>") is the concretization of the
 configured analyses. The union drops the contexts, since a source execution
 carries no context to compare with, and a user asks what holds at a program
-point, whichever call led there. Inside the proof, each per-context state
-still bounds the activation collecting semantics of its context
-(@sec:certificate).
+point, whichever call led there. The proof, however, needs the contexts, since
+the coverage contract bounds the stores of each context separately
+(@sec:contract). The report therefore keeps them, and each state names its
+context. The states at $v$ in context $c$ describe the set
+#isai("report_context_sem res v c") (#isaconst("report_context_sem")), a subset
+of #isai("\<R>\<^bsub>res\<^esub> v"). @sec:chain shows that this set contains every
+store that an activation in context $c$ reaches at $v$.
 
 == Computing check verdicts from the report <sec:verdicts>
 
@@ -205,9 +209,13 @@ meets it through #oblig("TOTAL") on the solution (@sec:contract). The third
 inclusion is the analyzer's soundness result. Its proof combines the second
 step with the per-context bound of @ch:equations, which places the activation
 collecting semantics of each context inside the state solved for it
-(#isathm("activation_collect_dg_sound")). The theorem itself states only the
-outer sets, #isai("\<C>") and #isai("\<R>\<^bsub>res\<^esub>"), so it does not
-say which state covers a given store, and the contexts stay inside its proof.
+(#isathm("activation_collect_dg_sound")). The same bound holds for the report
+itself, context by context. For the policy #isai("adm") and root context
+#isai("c\<^sub>0") of the run, every node $v$ and every context $c$ satisfy
+$
+  #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") subset.eq #isai("report_context_sem res v c")
+$
+(#isathm("run_voblint_context_covers")).
 The fourth inclusion is that of @sec:verdicts and depends only on the
 report and its consistency.
 
@@ -340,8 +348,8 @@ quantifies over an arbitrary analysis configuration and program, the arguments
 of #isaconst("run_voblint") (@sec:report). Whenever the analyzer returns a
 report, every store that a finite source execution reaches is covered by that
 report and satisfies its definite verdicts. Of the sets in the chain, its conclusion keeps the node collecting semantics,
-#isai("\<R>\<^bsub>res\<^esub> v"), and the verdict set. The contexts appear only inside its
-proof.
+#isai("\<R>\<^bsub>res\<^esub> v"), and the verdict set. Its per-context
+counterpart is #isathm("run_voblint_context_covers") (@sec:chain).
 
 The theorem is about #isaconst("run_voblint") itself, the constant that code
 generation exports. It therefore concerns the analyzer that the command-line
@@ -390,11 +398,6 @@ observed
     holds in $s$, and every #verdict("REFUTED") check is false in $s$.
 ]
 
-Whenever the analyzer returns a report, every store that a source execution
-reaches is thus collected, covered by the report, and consistent with its
-verdicts at every node where the run is observed. This is the chain of
-@sec:chain read at one store.
-
 == What verdicts and diagnostics guarantee #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
 By the theorem of @sec:headline, the four verdicts make the following
@@ -423,13 +426,15 @@ remainder, the analyzer asks, through the queries of
 @sec:coop-queries, whether the divisor can be zero. It reports an error if the analyses
 show that it is zero, a warning if they cannot exclude zero, and nothing
 otherwise. An error means that the divisor is zero whenever a covered execution reaches
-its node (#isathm("run_voblint_arithmetic_refuted")). A warning means only that the
-analysis could not exclude a zero divisor. At a node $v$ without a diagnostic,
+its node (#isathm("run_voblint_arithmetic_refuted")). At a node $v$ without a diagnostic,
 every divisor in an expression on an intraprocedural edge leaving $v$ is
 nonzero in every store collected at $v$
 (#isathm("run_voblint_arithmetic_safe") adds call arguments):
 
-#proved("run_voblint_arithmetic_intra_safe")
+#[
+  #show raw.where(block: true): set text(size: 6.5pt)
+  #proved("run_voblint_arithmetic_intra_safe")
+]
 
 These theorems complete the chain of @fig:intro-nest. Each verdict holds for
 every covered execution that reaches its check, in every analysis configuration.

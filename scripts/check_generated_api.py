@@ -14,7 +14,7 @@ module removed every boundary, so the root list is now the only thing putting
 a name in the signature -- and a missing root breaks an OCaml consumer, not
 the Isabelle build.
 
-Two checks, against the checked-in export:
+Checks against the checked-in export:
 
 * qualified uses (``Voblint.foo`` through the facade ``cli/voblint.ml``, which
   includes the export unchanged, ``Voblint_Generated.Generated.foo``, or through
@@ -25,7 +25,11 @@ Two checks, against the checked-in export:
   it only reports names the export actually has and hides, and it skips
   anything the file binds itself.
 
-Neither replaces compiling the consumers, which is the exact check and which
+A third check reads the implementation's call graph: the untraced
+``run_voblint`` must not reach the handwritten trace hook, and
+``run_voblint_traced`` must.
+
+None of them replaces compiling the consumers, which is the exact check and which
 ``cli-build``, ``codegen-regression`` and ``property-test`` already run. This
 runs in a second, needs no OCaml toolchain, and names the missing export root.
 """
@@ -158,12 +162,73 @@ def locally_bound(text: str) -> set[str]:
     return bound
 
 
+HOOK = "Solver_trace_hook"
+UNTRACED_ROOT = "run_voblint"
+TRACED_ROOT = "run_voblint_traced"
+
+
+def definitions(impl: str) -> dict[str, str]:
+    """Each top-level definition of the implementation, by name, with its body."""
+    heads = list(re.finditer(rf"^(?:let(?: rec)?|and) ({IDENT})", impl, re.M))
+    return {
+        m.group(1): impl[m.end() : heads[i + 1].start() if i + 1 < len(heads) else None]
+        for i, m in enumerate(heads)
+    }
+
+
+def reaches_hook(defs: dict[str, str], root: str) -> list[str]:
+    """A chain of definitions from [root] to one that calls the trace hook, if any."""
+    parent: dict[str, str | None] = {root: None}
+    queue = [root]
+    while queue:
+        name = queue.pop(0)
+        body = defs[name]
+        if HOOK in body:
+            chain = [name]
+            while (prev := parent[chain[-1]]) is not None:
+                chain.append(prev)
+            return chain[::-1]
+        for used in re.findall(rf"(?<![\w.']){IDENT}(?![\w'])", body):
+            if used in defs and used not in parent:
+                parent[used] = name
+                queue.append(used)
+    return []
+
+
+def hook_boundary(impl: str) -> list[str]:
+    """Problems with where the trace hook is reachable from.
+
+    The untraced entry point must run no handwritten target code inside the
+    analysis, and the traced one must still reach the hook, or a trace would be
+    silently empty.
+    """
+    defs = definitions(impl)
+    problems = []
+    for root in (UNTRACED_ROOT, TRACED_ROOT):
+        if root not in defs:
+            problems.append(f"{root} is not defined by the export")
+    if problems:
+        return problems
+    chain = reaches_hook(defs, UNTRACED_ROOT)
+    if chain:
+        problems.append(f"{UNTRACED_ROOT} reaches {HOOK} through " + " -> ".join(chain))
+    if not reaches_hook(defs, TRACED_ROOT):
+        problems.append(f"{TRACED_ROOT} does not reach {HOOK}")
+    return problems
+
+
 def main() -> int:
     if not GENERATED.exists():
         print(f"check_generated_api: {GENERATED} not found; run `pixi run codegen`")
         return 1
 
     sig, impl = split_module(GENERATED.read_text(errors="ignore"))
+    boundary = hook_boundary(impl)
+    if boundary:
+        print("check_generated_api: the trace hook boundary moved:")
+        for problem in boundary:
+            print(f"  {problem}")
+        return 1
     exposed = signature_names(sig)
     hidden = implementation_names(impl) - exposed
 

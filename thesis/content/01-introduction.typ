@@ -397,13 +397,13 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
   justify #verdict("DEAD") and the absence of arithmetic warnings
   (@ch:results).
 - _A concrete semantics of calling contexts._ Activation traces give the
-  per-context states of an analysis their concrete counterpart. Each trace
-  follows one procedure activation and records which activation called it, so
-  the contexts of a call can be read off the concrete execution. Splitting the
-  concrete stores by context then loses no execution (@sec:contract). The
-  semantics may admit several contexts for one call, so that an analysis can
-  split a call into cases, for instance, one per path-sensitive state. The
-  shipped analyses use at most one context per caller context (@sec:contexts).
+  per-context states of an analysis a concrete counterpart. Each trace follows
+  one procedure activation and records the activation that called it, so the
+  contexts of a call can be read off the execution. Splitting the concrete
+  stores by context loses no execution (@sec:contract), and every report covers
+  each context separately (#isathm("run_voblint_context_covers")). One call may have several contexts,
+  which lets an analysis split it into cases, for instance one per
+  path-sensitive state.
 - _Separately verified components._ Each component discharges local soundness
   obligations, and generic theorems compose them into the end-to-end guarantee
   for every configuration. Domains prove their primitive operations sound,

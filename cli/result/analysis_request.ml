@@ -169,9 +169,11 @@ let resolve (r : request) : (resolved, request_error) result =
   Ok { domains; rule; mode; placement }
 
 (* The analysis and its rendering, in sequence: the report run_voblint returns is
-   semantic, and the adapters read its rendering. *)
-let analyse ~analyses ~globals ~context ~program_globals program =
+   semantic, and the adapters read its rendering. [traced] runs
+   run_voblint_traced instead, the same function in the logic, whose code alone
+   reports the solver's steps to Solver_trace_hook. *)
+let analyse ?(traced = false) ~analyses ~globals ~context ~program_globals
+    program =
+  let run = if traced then C.run_voblint_traced else C.run_voblint in
   Value_symbols.render_answer
-    (C.run_voblint
-       (config ~analyses ~globals ~context ~program_globals)
-       program)
+    (run (config ~analyses ~globals ~context ~program_globals) program)

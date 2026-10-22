@@ -163,10 +163,8 @@ unknown.
 
 A global unknown, such as a seed, receives contributions from several places.
 The solver merges each new contribution into the value it holds, and this
-merge, the _update rule_, decides both precision and termination. Stemmler et
-al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
-generic interface for them and prove five rules sound against it
-@tilscher26.
+merge, the _update rule_, decides both precision and termination. Tilscher et al. prove five update rules sound against a generic interface
+@tilscher26, and Voblint lets the user select any of them.
 
 The rules differ in what they keep per _origin_, the right-hand side that
 published a contribution (@sec:td), and in whether they widen. Of the two
@@ -274,12 +272,18 @@ closed under the reads of right-hand sides, starting from the result of
 follows executions forward from the entry. The two directions meet because
 every node of a procedure reaches the procedure's result, even code after a
 `return`, since the compiler ends every body with a return edge
-(@sec:compile). Once a procedure's result is solved in a context, closure under
-reads makes all its nodes solved in that context. Executions from the entry of
-`main` stay among these nodes, which
+(@sec:compile). Seidl and Fecht call this property (R) and show that under it,
+the unknowns on which the query for `main` depends account for every reachable
+state, for any solution and not only the least one
+@seidl00[§9.1, Thm. 7(2), Thm. 9(2)]. Once a procedure's result is solved in a
+context, closure under reads makes all its nodes solved in that context.
+Executions from the entry of `main` stay among these nodes, which
 #isathm("dg_analysis.live_unknowns_cover", thy: "DG_Live_Unknowns", display: "live_unknowns_cover")
-proves from a well-formed program and a returned solve alone. The final theorem
-therefore needs no premise about which unknowns the solve visited.
+proves from a well-formed program and a returned solve alone. It mechanizes
+Seidl and Fecht's argument and extends it to side effects and seed unknowns, to
+dependences that the solver discovers while it solves, and to context policies
+given as relations. The final theorem therefore needs no premise about which
+unknowns the solve visited.
 
 The solver is not proved to terminate. HOL admits only terminating recursion,
 so Isabelle defines the solver with a domain predicate
@@ -298,21 +302,18 @@ goes, and whether it returns depends on how many unknowns it reaches. Under
 entry-state contexts, a recursion can demand unboundedly many
 (@sec:eval-precision). The existing termination theorems do
 not apply to Voblint (@sec:rel-solvers), so the end-to-end soundness theorem
-(@sec:headline) is a partial-correctness result about every report the
-analyzer returns.
+(@sec:headline) is a partial-correctness result about every returned report.
 
 The rest of the soundness proof never looks inside the solver. It needs the
 returned valuation to be a post-solution on the solved set, which is the
 certificate below, and the solved set to be finite, so that
 @ch:results can join the finitely many contexts solved at a node into one
-verdict. Two further facts connect the analyzer's run with the solver of the
-proof. The certificate holds only on the solver's domain, so every run that
-returns must lie in it, and the executable code must compute the same result
-as the solver defined in the logic. Voblint therefore keeps the
-solver as a parameter of the analysis. The analysis locale
-#isalocale("dg_analysis") extends #isalocale("certified_solver"), which states
-the four facts, and #isathm("td_certified_solver") proves them for the verified TD
-solver under every update rule.
+verdict. Voblint therefore keeps the solver as a parameter of the analysis.
+The locale #isalocale("certified_solver") states what the proof needs from a
+solver: these two requirements, and that the executable code computes the same
+result as the solver defined in the logic. The analysis locale
+#isalocale("dg_analysis") extends it, and #isathm("td_certified_solver")
+proves it for the verified TD solver under every update rule.
 
 The verified TD solver states its guarantee as the certificate
 #isaconst("part_post_solution", thy: "Basics_side") of @sec:side-effects, over
@@ -337,16 +338,14 @@ $
 $
 (C1) puts the query into the solved set, and (C2) closes the solved set under
 reading. (C3) is the post-solution bound for local unknowns, and (C4) bounds
-every published contribution at once, since it compares two valuations
-pointwise. These are all the solver guarantees about #sol.
+every published contribution.
 
 The certificate supplies what @sec:eq-discharge assumes about the solve. (C3)
 and (C4) make #sol a post-solution for the local and the global unknowns. (C1)
-and (C2), through the closure argument above, give a solved set that contains
-the program entry and is closed under execution steps. The remaining premises
-of the theorem there concern the analysis and the routing, which earlier
-chapters discharge. For every solve that returns, the solved states therefore
-cover the activation collecting semantics
+and (C2), by the closure argument above, give a solved set that contains the
+program entry and is closed under execution steps. Earlier chapters discharge
+the remaining premises. The states of every returned solve therefore cover the
+activation collecting semantics
 (#isathm("entry_state_activation_collect_sound_of_terminates")), and the five
 obligations of @ch:traces hold as @tab:eq-obligations shows. @ch:results turns
 these states into verdicts.

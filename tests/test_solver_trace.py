@@ -282,14 +282,21 @@ def test_compact_names_the_story():
     assert "Trace complete:" in text
 
 
+def _definition(text, head):
+    body = text[text.index(head) :]
+    return body[: body.index(";;")]
+
+
 def test_generated_module_carries_trace_calls():
-    """The trace calls come from the exported code equations: the solver's
-    recursion, the solve, destabilization, routing and the run itself."""
+    """The trace calls come from the traced copy's code equations: the solver's
+    recursion, the solve, destabilization, routing and the run itself. The
+    vendored solver, which the untraced run_voblint calls, emits none."""
     text = GENERATED.read_text()
     assert "Solver_trace_hook.emit" in text
-    solver = text[text.index("let rec tD_side_rule_Interp_solve_rec_c") :]
-    solver = solver[: solver.index(";;")]
-    assert solver.count('Solver_trace_hook.emit "solver"') >= 15
+    traced = _definition(text, "let rec traced_solve_rec_c")
+    assert traced.count('Solver_trace_hook.emit "solver"') >= 15
+    vendored = _definition(text, "let rec tD_side_rule_Interp_solve_rec_c")
+    assert "Solver_trace_hook" not in vendored
     for channel in ('"solver"', '"route"', '"run"'):
         assert f"Solver_trace_hook.emit {channel}" in text
 

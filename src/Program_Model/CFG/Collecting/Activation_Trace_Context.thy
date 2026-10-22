@@ -365,7 +365,7 @@ proof (intro ballI allI impI)
   have tc_u: "activation_context_rel \<G> (context_policy_of_fun enterc) initial_ctx g u
                 (activation_context_of enterc initial_ctx u)"
     by (simp only: activation_context_rel_of_fun_iff[OF uv])
-  obtain p ctx where hd: "hd (path_of u) = (FunctionEntry p, entry_store u)"
+  obtain p ctx where "hd (path_of u) = (FunctionEntry p, entry_store u)"
     and tc_c: "activation_context_rel \<G> (context_policy_of_fun enterc) initial_ctx g c ctx"
     and adm: "admits_call_context \<G> g (context_policy_of_fun enterc) (sink_node c) ctx p
                 (sink_store c) (entry_store u) (activation_context_of enterc initial_ctx u)"

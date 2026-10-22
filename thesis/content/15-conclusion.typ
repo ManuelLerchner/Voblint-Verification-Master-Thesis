@@ -109,8 +109,9 @@ away from the theories (@sec:voblint-repo).
 #link(site("playground.html"))[playground] were also important for understanding the analyzer's behavior. The
 solver trace of the command-line tool and the playground's rendered graph and
 trace replay (@sec:tracing) show where an analysis loses precision or where the
-solver does needless work. The trace hook lies outside the proof, and the trusted base
-assumes that it leaves the analysis results unchanged (@sec:tracing). Because the analyzer is exported to OCaml, standard profiling and
+solver does needless work. The trace hook lies outside the proof. Only traced runs execute it, and
+for them the trusted base assumes that it leaves the analysis results unchanged
+(@sec:tracing). Because the analyzer is exported to OCaml, standard profiling and
 debugging tools also remain available. The author used them to profile the
 generated code and to attach a debugger to solves that did not terminate. The trace of
 #link("https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/issues/251")[issue 251],
@@ -197,10 +198,10 @@ integers, pointers, or threads, would require extensive changes to Voblint. Mach
 developed separately from the version this thesis describes, introduces
 machine-integer kinds from `i8` to `u64` and a typed core language elaborated
 from VIMP. Integrating it requires revisiting several layers and their
-soundness proofs, which is left as future work. Once machine integers are in place, Goblint's bitfield domain, which
-tracks each bit of an integer separately and which the author co-developed
+soundness proofs, which is left as future work. With machine integers, Goblint's bitfield domain, which tracks each
+bit separately and which the author co-developed
 (#link("https://github.com/goblint/analyzer/pull/1623")[Goblint pull request 1623]),
-becomes a natural next analysis.
+is a natural next analysis.
 
 Whether a further C feature needs such a rewrite depends on how deeply it
 reaches into the formalization. Several central results are independent of the details of VIMP. The solver certificate is stated over unknowns and right-hand sides, and

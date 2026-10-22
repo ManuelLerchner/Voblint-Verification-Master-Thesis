@@ -65,6 +65,30 @@ proof -
   then show ?thesis by (cases dl) (auto intro: that)
 qed
 
+text \<open>
+  The states a report holds at a point under one of its contexts: the rows at the point
+  whose context index names that context.
+\<close>
+
+definition report_states_in :: "analysis_report \<Rightarrow> pp \<Rightarrow> report_context \<Rightarrow> mcp_val lifted set"
+where
+  "report_states_in res v rc =
+     state_value ` {st \<in> set (report_states res). state_point st = v
+                      \<and> state_context st < length (report_contexts res)
+                      \<and> report_contexts res ! state_context st = rc}"
+
+text \<open>The stores a report describes at a point under one context.\<close>
+
+definition report_context_sem :: "analysis_report \<Rightarrow> pp \<Rightarrow> report_context \<Rightarrow> store set"
+where
+  "report_context_sem res v rc = (\<Union>d \<in> report_states_in res v rc. \<gamma>\<^bsub>res\<^esub> d)"
+
+lemma report_states_in_subset: "report_states_in res v rc \<subseteq> report_states_at res v"
+  unfolding report_states_in_def report_states_at_def by blast
+
+lemma report_context_sem_subset: "report_context_sem res v rc \<subseteq> \<R>\<^bsub>res\<^esub> v"
+  unfolding report_context_sem_def report_sem_def using report_states_in_subset by blast
+
 subsection \<open>One state per point\<close>
 
 text \<open>
@@ -420,6 +444,43 @@ proof -
   qed
 qed
 
+text \<open>
+  Each entry of the table is a row of the report under its own context: the context's
+  index into the report's context list names it.
+\<close>
+
+lemma report_states_in_report_of:
+  assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
+    and cov: "ctx \<in> table_contexts (run_table sr) v"
+  shows "lookup_table (run_table sr) v ctx
+           \<in> report_states_in (report_of config ctx_key ctx_tag classify sr p) v (ctx_tag ctx)"
+proof -
+  define r where "r = run_table sr"
+  define ctxs where "ctxs = ordered_by_key ctx_key (snd ` covered_keys r)"
+  define nodes where "nodes = cfg_node_list (prog_cfg p)
+    @ sorted_list_of_set (fst ` covered_keys r - set (cfg_node_list (prog_cfg p)))"
+  have ctxs: "set ctxs = snd ` covered_keys r"
+    unfolding ctxs_def r_def
+    by (rule ordered_by_key_set) (use fin inj in \<open>auto intro: inj_on_subset\<close>)
+  from cov have covk: "(v, ctx) \<in> covered_keys r" by (simp add: r_def)
+  have w: "v \<in> set nodes"
+  proof (cases "v \<in> set (cfg_node_list (prog_cfg p))")
+    case False
+    with covk fin show ?thesis unfolding nodes_def r_def by (force intro: rev_image_eqI)
+  qed (simp add: nodes_def)
+  from covk ctxs have "ctx \<in> set ctxs" by force
+  then obtain i where "i < length ctxs" and nth: "ctxs ! i = ctx"
+    by (auto simp: in_set_conv_nth)
+  then have i: "(i, ctx) \<in> set (enumerate 0 ctxs)" and len: "i < length ctxs"
+    by (auto simp: in_set_enumerate_eq)
+  show ?thesis
+    unfolding report_states_in_def report_of_def Let_def r_def[symmetric] ctxs_def[symmetric]
+      nodes_def[symmetric]
+    apply (simp only: analysis_report.select_convs)
+    apply (rule image_eqI[rotated], rule CollectI, rule conjI, rule row_in_rows[OF i w])
+    using covk len nth by (simp_all add: report_row_def Let_def r_def)
+qed
+
 lemma report_of_simps [simp]:
   "report_config (report_of config ctx_key ctx_tag classify sr p) = config"
   "report_cfg (report_of config ctx_key ctx_tag classify sr p) = prog_cfg p"
@@ -511,7 +572,8 @@ qed
 text \<open>
   What a report guarantees per context, for a policy over report contexts: every
   valid activation trace carries one of the policy's contexts, and each context's
-  activation bucket lies in the report's semantics at the point.
+  activation bucket lies in the stores the report's states for that context describe.
+  A context the report holds no state for at a point has an empty bucket there.
 \<close>
 
 definition context_sound ::
@@ -521,7 +583,13 @@ where
      (\<forall>t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>.
         \<exists>c. activation_context_rel (declared_global p) adm rc (prog_cfg p) t c)
    \<and> (\<forall>v c. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,cinit_stores (declared_global p)\<^esub> v c
-          \<subseteq> \<R>\<^bsub>res\<^esub> v)"
+          \<subseteq> report_context_sem res v c)"
+
+lemma context_sound_point:
+  "context_sound p res adm rc
+   \<Longrightarrow> \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,cinit_stores (declared_global p)\<^esub> v c
+         \<subseteq> \<R>\<^bsub>res\<^esub> v"
+  unfolding context_sound_def using report_context_sem_subset by blast
 
 text \<open>
   The context policy a configuration runs with, under its report contexts, and the
@@ -624,8 +692,8 @@ proof -
       and rel: "activation_context_rel (declared_global p) (map_context_policy ctx_tag adm)
                   (ctx_tag rc) (prog_cfg p) t d"
       unfolding activation_collect_def by blast
-    from rel obtain c
-      where "activation_context_rel (declared_global p) adm rc (prog_cfg p) t c"
+    from rel obtain c where d: "d = ctx_tag c"
+      and "activation_context_rel (declared_global p) adm rc (prog_cfg p) t c"
       by (auto simp: activation_context_rel_map_policy [OF tag])
     with t have "s \<in> \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,cinit_stores (declared_global p)\<^esub> v c"
       unfolding activation_collect_def by blast
@@ -633,9 +701,11 @@ proof -
     have "s \<in> gamma_lift gm (lookup_table (run_table sr) v c)" by blast
     then obtain st where look: "lookup_table (run_table sr) v c = Lifted st" and s: "s \<in> gm st"
       by (cases "lookup_table (run_table sr) v c") auto
-    then have "Lifted st \<in> report_states_at ?res v"
-      unfolding rows by (metis image_eqI lookup_table_LiftedD)
-    with s show "s \<in> \<R>\<^bsub>?res\<^esub> v" by (auto simp: report_gamma_def gm)
+    then have "Lifted st \<in> report_states_in ?res v d"
+      unfolding d using report_states_in_report_of[OF fin inj lookup_table_LiftedD[OF look]]
+      by simp
+    with s show "s \<in> report_context_sem ?res v d"
+      unfolding report_context_sem_def by (auto simp: report_gamma_def gm intro!: bexI)
   qed
   show ?thesis using sr ctx by blast
 qed

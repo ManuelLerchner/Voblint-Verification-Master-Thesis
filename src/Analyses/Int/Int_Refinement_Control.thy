@@ -99,7 +99,7 @@ proof -
        (\<lambda>x. canonical_refine_step x \<noteq> x)
        canonical_refine_step d = Some r"
     using result unfolding refine_fix_option_def .
-  have invariant:
+  have
     "\<And>x.
        gamma_int_dom x = gamma_int_dom d \<Longrightarrow>
        canonical_refine_step x \<noteq> x \<Longrightarrow>

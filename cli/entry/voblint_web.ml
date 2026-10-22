@@ -264,8 +264,9 @@ let run analysis_js globals_js context_js context_depth refinement_js
           let analysis_start = now_ms () in
           let answer =
             Fun.protect ~finally:stop_live (fun () ->
-                Analysis_request.analyse ~analyses:domains ~globals ~context
-                  ~program_globals:placement program)
+                Analysis_request.analyse ~traced:(trace <> None)
+                  ~analyses:domains ~globals ~context ~program_globals:placement
+                  program)
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =
