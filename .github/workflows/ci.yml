@@ -995,13 +995,18 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
-      # The paper builds with the system TeX Live, not pixi. fonts-extra carries
-      # fontawesome5 and science carries stmaryrd, both of which LIPIcs needs.
+      # The paper builds with the system TeX Live, not pixi: conda-forge's
+      # texlive-core lacks the LIPIcs packages and its tlmgr does not run, and
+      # tectonic (XeTeX) breaks pages differently from the pdfLaTeX Dagstuhl
+      # uses. LIPIcs needs fontawesome5 (fonts-extra), stmaryrd (science), soul
+      # (plain-generic), Type 1 Latin Modern for microtype (lmodern) and
+      # plainurl.bst (bibtex-extra); the last three are only recommends.
       - name: Install TeX Live
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends latexmk texlive-latex-extra \
-            texlive-fonts-recommended texlive-fonts-extra texlive-science
+            texlive-fonts-recommended texlive-fonts-extra texlive-science \
+            texlive-plain-generic texlive-bibtex-extra lmodern
 
       # \stat{...} reads stats.json, which is measured rather than committed.
       - name: Build the paper
