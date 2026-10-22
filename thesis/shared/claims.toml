@@ -1480,3 +1480,99 @@ argv = [
   "tests/regression/21-context-sensitivity/precision/02-two_formal_countdown.vimp",
 ]
 why = "Evaluation, procedure table: Int on countdown with --context entry-state."
+
+# Paper, evaluation of contexts: one recursive program under every context policy.
+
+[claims.ctx-mutual-none]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: mutual recursion f/g called from a loop, Interval, context policy none."
+
+[claims.ctx-mutual-k1]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: mutual recursion f/g called from a loop, Interval, context policy k1."
+
+[claims.ctx-mutual-k2]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "2",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: mutual recursion f/g called from a loop, Interval, context policy k2."
+
+[claims.ctx-mutual-entry]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "entry-state",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: mutual recursion f/g called from a loop, Interval, context policy entry."
+
+# Paper, evaluation of contexts: the solved graph of the same program, to count callee contexts.
+
+[claims.ctx-mutual-none-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--dot",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: callee contexts of f and g under context policy none."
+
+[claims.ctx-mutual-k1-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "--dot",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: callee contexts of f and g under context policy k1."
+
+[claims.ctx-mutual-k2-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "2",
+  "--dot",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: callee contexts of f and g under context policy k2."
+
+[claims.ctx-mutual-entry-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "entry-state",
+  "--dot",
+  "tests/regression/17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp",
+]
+why = "Paper, evaluation of contexts: callee contexts of f and g under context policy entry."

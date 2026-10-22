@@ -1,0 +1,10 @@
+# Read by `pixi run paper-lint` via `chktex -l paper/chktexrc`.
+#
+# Disabled warnings, each a false positive on this paper's conventions:
+#   1  \cmd at a line end, e.g. \nolinenumbers
+#   8  en dashes in pairs (node--store, input--output) and hyphens in
+#      version names (Isabelle2025-2)
+#  12  a sentence ending in `).` or before a macro such as \oblig{...}
+#  24  space before \label, which never reaches the output
+#  36  space before `(` in math and TikZ coordinates
+CmdLine { -n1 -n8 -n12 -n24 -n36 }

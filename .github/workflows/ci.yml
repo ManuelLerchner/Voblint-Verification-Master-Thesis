@@ -618,6 +618,9 @@ jobs:
       - name: Spelling
         run: pixi run spelling-check
 
+      - name: Paper LaTeX lint
+        run: pixi run paper-lint
+
       - name: TOML formatting
         run: pixi run toml-format-check
 
@@ -967,11 +970,62 @@ jobs:
           path: thesis/Lerchner_Master_Thesis.pdf
           if-no-files-found: error
 
+  paper-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      # The paper's size table counts the vendored solver's theories.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+
+      # The paper builds with the system TeX Live, not pixi: conda-forge's
+      # texlive-core lacks the LIPIcs packages and its tlmgr does not run, and
+      # tectonic (XeTeX) breaks pages differently from the pdfLaTeX Dagstuhl
+      # uses. LIPIcs needs fontawesome5 (fonts-extra), stmaryrd (science), soul
+      # (plain-generic), Type 1 Latin Modern for microtype (lmodern) and
+      # plainurl.bst (bibtex-extra); the last three are only recommends.
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends latexmk texlive-latex-extra \
+            texlive-fonts-recommended texlive-fonts-extra texlive-science \
+            texlive-plain-generic texlive-bibtex-extra lmodern
+
+      # \stat{...} reads stats.json, which is measured rather than committed.
+      - name: Build the paper
+        run: |
+          pixi run thesis-stats-write
+          pixi run paper
+
+      - name: Upload the PDF
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: paper-pdf
+          path: paper/_build/main.pdf
+          if-no-files-found: error
+
   # Builds the site on every push to main, every pull request and every manual
   # run, so a branch can exercise the whole pipeline without publishing anything.
   pages-site:
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
-    needs: [isabelle-html, isabelle-pdf, thesis-pdf]
+    needs: [isabelle-html, isabelle-pdf, thesis-pdf, paper-pdf]
     runs-on: ubuntu-latest
     steps:
       # Full history: the site's commit heatmap counts every commit, and
@@ -1023,11 +1077,18 @@ jobs:
           name: thesis-pdf
           path: build/artifacts/thesis-pdf
 
+      - name: Download paper PDF
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: paper-pdf
+          path: build/artifacts/paper-pdf
+
       - name: Assemble GitHub Pages site
         env:
           HTML_SRC: build/isabelle-html
           FORMALIZATION_PDF: build/artifacts/isabelle-pdf/document.pdf
           THESIS_PDF: build/artifacts/thesis-pdf/Lerchner_Master_Thesis.pdf
+          PAPER_PDF: build/artifacts/paper-pdf/main.pdf
         run: pixi run pages-site-build
 
       - name: Check the assembled site's internal links and theory anchors

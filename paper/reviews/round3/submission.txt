@@ -1,0 +1,1016 @@
+End-to-End Soundness of a Context-Sensitive
+Goblint-Style Analyzer in Isabelle/HOL
+Manuel Lerchner #
+Technical University of Munich, Germany
+
+      Abstract
+Goblint-style abstract interpreters translate a program into side-effecting equations, with one
+unknown per program point and calling context, and solve them with a generic solver. The partial
+correctness of that solver has been verified in Isabelle/HOL, but the theorem does not connect the
+equations to the program. We mechanize this connection for a small imperative language with
+recursive procedures. We adapt the local traces of Schwarz et al. to procedure activations, because
+a return must resume exactly the activation that made the call. A context policy relates each
+activation trace to the calling contexts it may belong to. The development provides (i) a coverage
+contract of five local obligations over an arbitrary control-flow graph, which bounds every valid trace
+in every admitted context; (ii) a proof that every post-solution of the generated, context-routed
+equations meets the contract, using the verified solver only through its certificate; and (iii) an
+end-to-end theorem from a small-step source semantics to the verdicts of the analyzer function that
+Isabelle exports to OCaml, for every configuration it offers. The guarantee is per program point:
+every reached store is covered by the report and satisfies its definite verdicts. It is partial correctness,
+since solver termination is not proved, and the language has no pointers or heap.
+
+2012 ACM Subject Classification Theory of computation → Program analysis; Theory of computa-
+tion → Logic and verification; Software and its engineering → Formal software verification
+
+Keywords and phrases abstract interpretation, interprocedural analysis, calling contexts, side-
+effecting constraint systems, verified static analysis, Isabelle/HOL
+
+Digital Object Identifier 10.4230/LIPIcs.ITP.2027.1
+
+Related Version Master’s thesis and full formalization: https://github.com/ManuelLerchner/
+Voblint-Verification-Master-Thesis
+
+Supplementary Material Software (Isabelle/HOL formalization and analyzer): https://doi.org/
+10.5281/zenodo.23260696 [17]
+
+Acknowledgements The author thanks Alexandra Graß and Helmut Seidl, who supervised the
+master’s thesis this paper is based on.
+
+
+ 1      Introduction
+A context-sensitive static analyzer keeps a separate abstract state for each program point
+and calling context. In the program of Figure 1, main calls bump(5) and bump(4), and bump
+returns its argument plus one. An interval analysis with one state per program point must
+describe both calls at the return of bump. It therefore cannot prove either check. With
+contexts that record the argument, it analyzes bump once per argument and proves both.
+Goblint, an abstract interpreter for C [35, 30], gains this precision by translating a program
+into a side-effecting constraint system [29, 1]. This is a system of inequations over unknowns
+indexed by program point and context, whose right-hand sides may also contribute to other
+unknowns. A generic top-down solver then solves the system.
+    That solver has been verified. Stade et al. proved it partially correct in Isabelle/HOL [32],
+and Tilscher et al. extended the proof to side effects [33]. When the solver terminates, it
+returns a post-solution on the unknowns it solved, a set closed under the reads of right-hand
+             © Manuel Lerchner;
+             licensed under Creative Commons License CC-BY 4.0
+Interactive Theorem Proving (ITP 2027).
+Editors: John Q. Open and Joan R. Access; Article No. 1; pp. 1:1–1:19
+                    Leibniz International Proceedings in Informatics
+                    Schloss Dagstuhl – Leibniz-Zentrum für Informatik, Dagstuhl Publishing, Germany
+1:2   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+      sides. Whether the equations describe the program lies outside that theorem. Closing the
+      gap needs a concrete semantics in which a per-context state has something to cover. Such
+      semantics are classical on paper. Sharir and Pnueli distinguish the call-string and functional
+      approaches [31]. Jeannet and Serwe derive interprocedural analyses by abstracting a stack
+      semantics [13], and Van Horn and Might derive sound analyses from abstract machines
+      by bounding their stores [11]. What has not been mechanized, to our knowledge, is the
+      connection from a source semantics through such a context-indexed semantics to a side-
+      effecting constraint system and its verified solver.
+          We mechanize this connection. The development, Voblint, is written in Isabelle/HOL
+      and contains no sorry. Its parts are the following.
+          We adapt the local traces of Schwarz et al. [27] to procedure activations. An activation
+          trace records one activation and the activation that created it. A context policy, which
+          may admit several contexts for one call, relates traces to contexts. We prove that five
+          local obligations on a cover bound every valid trace in every admitted context, over an
+          arbitrary control-flow graph (Section 3).
+          We prove that every post-solution of the generated, context-routed equations meets these
+          obligations, provided the context policy agrees with the routing of the equations. The
+          verified solver enters only through its certificate (Section 4).
+          We prove an end-to-end theorem about the analyzer function that Isabelle exports to
+          OCaml. Whenever it returns a report, every store that a finite source execution from
+          an initial store reaches is covered by the report at the corresponding program point and
+          satisfies every definite verdict there. This holds for every configuration the function offers
+          (Section 5).
+          We show that the theorem is not vacuous, that a domain obligation rejects a real Goblint
+          defect, and how calling contexts change verdicts on recursive programs (Section 7).
+      The solver, side-effecting constraint systems, local traces, and Goblint’s split between analyses
+      and solvers are prior work. The context-indexed semantics is the structure of our proof. The
+      shipped guarantee is per program point. It is not a separate certificate for each context’s
+      row of the report (Section 5).
+          The scope is limited. The source language, VIMP, has integer variables, global variables,
+      and recursive procedures with parameters and return values, but no pointers, arrays, or heap.
+      The result is partial correctness: the analyzer answers only when its solver run terminates,
+      and termination is not proved for every program. The parser, Isabelle’s code generator, the
+      OCaml toolchain, and a solver-tracing hook are trusted.
+
+
+       2     Overview: One Call Through the Pipeline
+      We follow the program of Figure 1 through the analyzer, with intervals and entry-state
+      contexts. The source program is compiled to a procedure-aware control-flow graph (CFG).
+      Each procedure p has an entry node FunctionEntry p and a result node FunctionResult p. The
+      graph g has two kinds of edges. An intraprocedural edge (u, a, v) ∈ intra g carries an action
+      a, such as an assignment or a guard. A call edge (u, e, FunctionEntry p, k) ∈ calls g leads
+      from the call site u into p and names the continuation k at which the caller resumes. A
+      predicate G tells which variables are global. A proved forward simulation relates every source
+      execution to a graph execution with the same store (Section 5).
+          From the graph, the analyzer generates inequations over local unknowns (v, c) for a node
+      v and a context c, and over global unknowns without a program point. At the call a =
+      bump(5), the right-hand side of the continuation reads the caller’s state and applies the
+M. Lerchner                                                                                                     1:3
+
+
+                                      main, context c0
+
+
+                                      entry_main                           bump, context c1 = [5, 5]
+
+
+                                                              enter       entry_bump       n ∈ [5, 5]
+fun bump(n) {
+                                     pp2      a, b ∈ ⊤
+                                                                                        return n + 1
+  return n + 1;
+}                              continuation
+                                                                          exit_bump       n ∈ [5, 5]
+fun main() {
+                                                             combine
+  a = bump(5);                       pp3    a ∈ [6, 6]                     bump, context c2 = [4, 4]
+  b = bump(4);                                                enter
+  __voblint_check(a == 6);
+  __voblint_check(b == 5);     continuation                               entry_bump       n ∈ [4, 4]
+}
+                                                                                        return n + 1
+                              pp4     a == 6: PROVED
+                                                              combine
+                                                                          exit_bump       n ∈ [4, 4]
+
+                              pp5     b == 5: PROVED
+
+
+    Figure 1 The running example. Left: the VIMP program. Right: its graph as the analyzer
+solves it with intervals and entry-state contexts. Each frame is one procedure in one context; bump
+gets one copy per entry state. Solid violet arrows are calls (enter), dashed blue arrows are returns
+(combine), and dashed gray arrows link a call site to its continuation. Both checks are PROVED.
+Without contexts, the single copy of bump joins both calls and both checks are UNKNOWN. States
+are analyzer output with the warrowing update rule; the intermediate node of bump’s body and the
+unreachable node after return are omitted.
+
+
+
+analysis’s enter operation. Enter returns an entry pair of a resume state, which describes
+the caller, and an entry state, which binds n to [5, 5]. The entry state is routed to the callee
+context c1 = [5, 5]. Which contexts a callee is entered in becomes known only while the
+equations are solved, so the callee’s entry equation cannot list its callers. The call instead
+publishes its entry state as a side effect to a global seed unknown for (bump, c1 ), which the
+entry equation of bump in c1 reads. The continuation then reads the callee’s exit state in c1
+and combines it with the resume state. The second call routes to c2 = [4, 4], so both checks
+are proved.
+    For these per-context states to mean something, the concrete semantics has to say which
+stores belong to c1 . Activation traces (Section 3) supply this. The trace of the activation
+bump(5) records its caller, the context policy admits it in c1 , and the activation collecting
+semantics A(v, c) collects the final stores of the traces that end at v and carry c. The node
+collecting semantics C(v) collects them regardless of context. A report res of the analyzer
+defines two sets at each node v. The report set Rres (v) contains the stores that some state
+of the report at v describes, in any context. The verdict set Vres (v) contains the stores in
+which every definite verdict at v holds. The soundness argument is a chain of inclusions at
+every node:
+
+                                 S
+    reached stores ⊆ C(v) =          c A(v, c)   ⊆ Rres (v) ⊆ Vres (v).                                (1)
+
+
+Each inclusion may add stores that no execution reaches, which costs precision. None may
+lose a reached store. The contexts appear in the middle of the chain and disappear at its
+ends. The end-to-end theorem (Section 5) states the outer inclusions for every report the
+analyzer returns.
+
+
+
+                                                                                                             ITP 2027
+1:4   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+       3      Activation Traces and the Coverage Contract
+      This section has three ingredients. Valid activation traces are adapted from the local traces
+      of Schwarz et al. [27]. Context policies generalize the call-string and functional choices of
+      Sharir and Pnueli [31] to a relation. The coverage contract and its soundness theorem are
+      ours. Nothing here mentions an abstract domain, an equation, or a solver.
+          A context-sensitive analysis claims, for each node v and context c, a set of stores. Checking
+      such a claim needs the stores that executions bring to v in context c. A graph execution
+      with a frame stack does not provide them. A frame holds only what is needed to resume the
+      caller and disappears at the return, and the list of visited node–store pairs interleaves the
+      steps of all activations. Grouping a run by activation makes the missing structure explicit:
+      each call starts an activation attached to its caller, and each return composes the finished
+      callee back into that caller.
+
+      3.1     Activation traces
+      An activation path is the list of node–store pairs visited by one activation. An activation trace
+      has one constructor for each way an activation begins or continues (activation_trace):
+      datatype activation_trace =
+         Root activation_path
+       | Call (activation_trace_caller: activation_trace) activation_path
+       | Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace)
+         activation_path
+
+      That is, Root π is the activation of main, Call t′ π is a callee whose creator t′ is frozen at the
+      call site, and Resume t′ t′′ π continues t′ past the call that produced the finished callee t′′ .
+      The observers sink_node t and sink_store t return the last node and store of the path, and
+      caller_of t the creating caller, which a Root lacks.
+          The datatype admits terms that no execution produces. The set TG,g,S of valid traces of a
+      graph g with initial stores S is defined by four rules that mirror the rules of graph execution
+      (valid_activation_trace):
+
+                   s∈S
+           Root [(entry g , s)] ∈ T
+           t∈T      (sink_node t, a, v) ∈ intra g s′ ∈ stepa (sink_store t)
+                                 extend t (v, s′ ) ∈ T
+           t ∈ T (sink_node t, e, FunctionEntry p, k) ∈ calls g
+           Call t [(FunctionEntry p, enter e (sink_store t))] ∈ T
+                    t′′ ∈ T    caller_of t′′ = t′ sink_node t′′ = FunctionResult p
+                              (sink_node t′ , e, FunctionEntry p, k) ∈ calls g
+                                                                                        
+           Resume t′ t′′ path_of t′ @ [(k, combine e (sink_store t′ , sink_store t′′ ))] ∈ T
+
+      Here stepa is the concrete meaning of an action, enter e binds the callee’s formals to the
+      call’s arguments and resets its locals, and combine e keeps the caller’s locals, takes the callee’s
+      globals, and assigns the return value to the call’s destination (combine_collect). A return
+      resumes exactly the activation that created the callee, found through caller_of , without
+      searching for a compatible frame. The return rule takes some call edge from the caller’s call
+      site into p. It does not require the edge through which the callee was entered. On compiled
+      graphs every call site has exactly one call edge (calls_source_unique), so the two coincide.
+M. Lerchner                                                                                              1:5
+
+
+    Every finite source execution of a well-formed program yields a valid trace that ends
+at the corresponding node with the same store, and whose chain of callers represents the
+runtime frame stack (source_run_has_activation_trace). The final stores of valid traces,
+collected per node, form the node collecting semantics CG,g,S (v) (node_collect).
+   In the local traces of Schwarz et al. [27], Root corresponds to an initial trace, Call to
+thread creation, and Resume to the binary rule for acquiring a lock, which incorporates a
+second trace (Section 8).
+
+
+
+3.2    Calling contexts as a relation
+
+An analysis chooses a callee’s context at the call: with call strings of length k, the last k
+call sites; with entry-state contexts, the abstract values of the formals at entry. A context
+policy fixes this choice for every concrete call. It maps a call site u, a caller context c, a
+description of the call, the caller’s store, and the entered store to the set of admitted callee
+contexts (context_policy). The result is a set because Goblint’s enter may return several
+alternatives for one call, each routed separately. When the alternatives overlap, one concrete
+call is admitted in several contexts (ov_two_contexts_admitted). The set may be empty,
+for instance at a call the analysis considers unreachable.
+    For a call edge e into p, we write adm u,c (e, s, s′ ) for the set the policy returns for the
+call described by e and p, caller store s and entered store s′ . We write c′ ∈ adm ∃u,c (p, s, s′ )
+when some call edge from u into p has entered store s′ from s and the policy admits c′
+for it (admits_call_context). The contexts a trace carries are then defined inductively
+(activation_context_rel):
+
+                                  t′ carries c
+    Root π carries c0        Resume t′ t′′ π carries c
+    t carries c c′ ∈ adm ∃sink_node t, c (p, sink_store t, s′ )
+         Call t ((FunctionEntry p, s′ ) # π) carries c′
+
+That is, a callee carries every context admitted for its call from some context of its caller,
+and a resumed activation keeps the contexts it had before the call. Traces store no context,
+so the policy is a parameter of every theorem below. The activation collecting semantics
+collects the final stores of the valid traces that end at v and carry c (activation_collect):
+
+
+   AG,adm,c0 ,g,S (v, c) = { sink_store t | t ∈ TG,g,S , sink_node t = v, t carries c }.
+
+
+In the running example, the final store of bump(5) lies in A(FunctionResult bump, [5, 5]) and
+that of bump(4) in A(FunctionResult bump, [4, 4]), whereas C at that node contains both.
+
+
+
+3.3    The coverage contract
+
+A cover assigns a set of stores to each node and context. Valid traces grow by four rules, so
+it suffices to check a cover against each rule once. The contract activation_coverage has
+
+
+
+                                                                                                      ITP 2027
+1:6   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+      one obligation per rule plus a totality condition. For every call edge (u, e, FunctionEntry p, k):
+
+           Init             s ∈ S =⇒ s ∈ cover(entry g , c0 )
+           Intra            (u, a, v) ∈ intra g, s ∈ cover(u, c), s′ ∈ stepa (s) =⇒ s′ ∈ cover(v, c)
+           Call             s ∈ cover(u, c), c′ ∈ adm u,c (e, s, enter e (s))
+                                =⇒ enter e (s) ∈ cover(FunctionEntry p, c′ )
+           Return           s ∈ cover(u, c), c′ ∈ adm ∃u,c (p′ , s, s′ ),
+                              t ∈ cover(FunctionResult p, c′ ) =⇒ combine e (s, t) ∈ cover(k, c)
+           Total            s ∈ cover(u, c) =⇒ adm u,c (e, s, enter e (s)) ̸= ∅
+
+      Return is quantified over every procedure p′ and entered store s′ admitted at the call site,
+      not only over the edge e it returns through. This matches the return rule, which does not tie
+      the returning edge to the entering one. On a graph with one call edge per call site, p′ = p
+      and the obligation reads as the familiar single-edge law. Total closes a gap that the other
+      four leave. If a call from a covered store is admitted in no context, Call and Return
+      hold vacuously and nothing places the store after the return at the continuation, although
+      the resumed caller still carries its contexts there. Without Total, a cover that meets the
+      other four obligations can miss a reached store (total_dropped_unsound). Total asks only
+      about covered stores, because an entry-state policy admits no context for stores the analysis
+      has excluded. Call strings and the unit policy, which admits one context for every activation,
+      meet it for every cover (call_context_total_on_of_fun).
+
+      ▶ Theorem 1 (Context-indexed soundness, activation_collect_sound). If a cover meets
+      the five obligations of activation_coverage, then A(v, c) ⊆ cover(v, c) for every node v
+      and context c.
+
+      Proof idea. The proof is an induction over valid traces with the invariant that a trace carries
+      some context and that its final store is covered in every context it carries. A single-trace
+      invariant does not suffice for the return rule, which needs the invariant for the caller recovered
+      through caller_of . The induction therefore carries the invariant along the whole chain of
+      callers (caller_chain_closure). Total is used twice. In the call case, it gives a new callee
+      some context. In the return case, for each context c of the resumed caller, it re-admits the
+      callee at some c′ from c along the callee’s own entry edge, so that the callee’s exit store is
+      covered at c′ and Return composes the two at c. Within the contract, Total also gives
+      every valid trace a context, so splitting by context loses nothing (node_collect_eq_Union_
+      activation_collect):
+                    S
+           C(v) =       c A(v, c).
+
+      Section 4 shows that a solved equation system meets the contract.
+
+
+       4      From Equations to a Cover
+      The contract of Section 3 asks for a cover. This section constructs one from a solved equation
+      system. The ingredients have different origins. The analysis interface mirrors Goblint’s
+      Spec [35, 30]. Side-effecting equations come from Seidl et al. and Apinis et al. [29, 1]. The
+      solver and its certificate are those of Tilscher et al. [33]. The routing conditions, which
+      connect the equations to the context policy, and their discharge for each policy are ours.
+M. Lerchner                                                                                              1:7
+
+
+4.1    What an analysis supplies
+An analysis describes the stores at a node by an abstract state d. Its meaning γ(d, ρ) also
+depends on ρ, the solved values of the analysis’s global unknowns. We suppress ρ when it
+plays no role. The analysis supplies the record dg_spec, the counterpart of Goblint’s Spec:
+one transfer per kind of edge action, an enter operation, and two combine operations. A
+call needs two states. After the return, the caller’s locals come from before the call, while
+the globals and the result come from the callee. Enter therefore returns a list of entry pairs
+(q, e): a resume state q that describes the caller’s store, and an entry state e that describes
+the store in which the callee starts. Combine builds the state after the call from q and the
+callee’s exit state.
+     The local soundness laws form the locale analysis_contract. The concretization is
+monotone, every transfer loses no successor store, and combine covers combine e (s, t) whenever
+q covers s and the exit state covers t. In addition, enter must return a pair that covers the
+caller’s store and the entered store (entry_pairs_cover). A numeric domain proves only
+its abstract operations sound. The framework derives the transfers once for all domains,
+following Nipkow and Klein’s generic interpreter [23, Sect. 13.5]. The shipped domains are
+Sign, Interval, Parity, Congruence, and their reduced product.
+
+4.2    Context-indexed equations and routing
+For every node v and context c there is a local unknown (v, c). Its right-hand side joins four
+sources (routed_node_rhs_parts):
+    the initial state at the program entry;
+    the transfer along each intraprocedural edge into v, in the same context c;
+    the combined result of each call returning to v;
+    at a procedure entry, the entry states published to it.
+At a call, a routing function chooses the callee context from the call site, the caller context,
+and the entry state. Each call publishes its entry state as a side effect to a global seed
+unknown for the callee and the chosen context, which the callee’s entry equation reads. A
+recursive call needs no special treatment: its equation reads an exit state that depends on
+the caller’s own unknowns, and the solver handles the cycle as it handles a loop.
+    The equations choose a callee context from an abstract state, while the concrete semantics
+chooses one from the concrete call through the policy adm. Two conditions make the choices
+agree. Both are assumptions of the locale routed_context.
+Adequacy (routing_adequate). If adm admits c′ for a call from a store that the caller’s
+    solved state describes, then enter produces a pair (q, e) that is routed to c′ , whose resume
+    state covers the caller’s store and whose entry state covers the entered store. The callee’s
+    entry unknown in c′ is solved.
+Totality (routing_total). adm admits at least one context for every call from a store that
+    the caller’s solved state describes.
+For the unit policy and for call strings, adm admits exactly the context the routing function
+computes from the call site and the caller context. Totality is then immediate, and adequacy
+reduces to entry coverage and the routed entry unknown being solved.
+    For entry-state contexts, the policy routed_entry_context_rel is defined from the
+solved valuation σ:
+
+   adm u,c (e, s, s′ ) = { route(u, c, e′ ) |
+                                                (q, e′ ) ∈ enter(σ(u, c)), s ∈ γ(q), s′ ∈ γ(e′ ) }.
+
+
+
+
+                                                                                                      ITP 2027
+1:8   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+      Hypothesis                            Reading
+      analysis_contract                     transfers, enter and combine are sound
+      pp (post_bounded)                     σ bounds every right-hand side on the solved set V
+      fwd                                   an intraprocedural edge from a solved unknown with a non-
+                                            empty state leads to a solved unknown
+      comb_fwd                              a call’s continuation is solved in the caller’s context
+      routing_adequate, routing_total       the policy agrees with the routing
+      resolve_sound                         callee resolution lists every procedure a covered store can
+                                            call
+      calls_unique                          each call site has one call edge (calls_source_unique)
+      is_bot_sound                          a state classified as bottom describes no store, so skipping
+                                            its call is sound
+      finC, finE                            the graph has finitely many edges
+      seed keys                             seed unknowns differ from all other global unknowns
+          Table 1 Hypotheses of Theorem 2: the assumptions of the locales routed_context and dg_
+      context_activation. The theorem adds that the program entry is solved in c0 and that the initial
+      state describes the initial stores.
+
+
+
+      That is, a context is admitted when an entry pair of the solved caller state covers both
+      concrete stores and is routed there. The definition is not circular. σ is fixed before the policy
+      is applied, and the final guarantee concerns C, which no policy changes. The policy only
+      decides how C is split among contexts inside the proof. The construction resembles the a
+      posteriori soundness of Might and Manolios, whose abstraction maps can only be built after
+      the analysis has run [20]. In our case the abstraction is fixed in advance, and the solution
+      fixes the relation between traces and contexts. A consequence matters for reading the result:
+      under entry-state contexts, A(v, c) is relative to the analysis that produced σ.
+
+      ▶ Theorem 2 (Routed collecting soundness, activation_collect_dg_sound). Under the
+      hypotheses of Table 1, if the program entry is solved in context c0 , the initial state describes
+      the initial stores under the initial values of the global unknowns, and those values lie below
+      the solved ones ρ, then A(v, c) ⊆ cover(v, c) for all v and c, where cover(v, c) = γ(σ(v, c), ρ)
+      on solved unknowns and ∅ elsewhere.
+
+         The proof checks the five obligations of Theorem 1 for this cover. The initial state gives
+      Init. The edge transfers and fwd give Intra. Adequacy with entry coverage gives Call,
+      adequacy with combine soundness gives Return, and totality gives Total. Return is
+      quantified over every admitted call edge from the call site (Section 3), and calls_unique
+      reduces it to the edge being returned through.
+
+      4.3    The solver enters through one certificate
+      Theorem 2 needs a post-solution on a set of unknowns that contains the program entry and is
+      closed under execution steps. The verified top-down solver [33] provides a different certificate,
+      part_post_solution, for the query x it started on, its solved set V , and its result σ:
+      abbreviation part_post_solution ::
+        ( ′x, ′g, ′d::bounded_semilattice_sup_bot) eqsT ⇒ ′x ⇒ ( ′x + ′g ⇒ ′d) ⇒ ′x set ⇒ bool where
+       part_post_solution T x sigma vars ≡
+        x ∈ vars ∧ (∀ u ∈ vars.
+        depL T sigma u ⊆ vars ∧
+        eq T u sigma ≤ sigma (Inl u) ∧
+M. Lerchner                                                                                              1:9
+
+
+     sides_of_rhs (T u) sigma ≤ sigma)
+
+Here σ(Inl u) is the value of a local unknown u; global unknowns are the Inr side of the
+sum. That is, the query is solved, V is closed under the reads of right-hand sides, and σ
+bounds both the right-hand side and every side effect of each solved unknown. The two
+certificates point in different directions. The solver works backward from its query, the result
+of main, while Theorem 2 follows executions forward from the entry. The bridge restricts
+V to its live part: the unknowns (u, c) such that u belongs to a procedure q whose result
+(FunctionResult q, c) is solved (live_unknowns). The compiler ends every body with a return
+edge, so every node of a procedure reaches the procedure’s result through intraprocedural
+edges and call-to-continuation steps. Closure under reads then puts all nodes of a procedure
+into V once its result is solved in that context. live_unknowns_cover proves, from a
+well-formed program and a returned solve, that the live set contains the program entry and
+is closed forward. This is structural reachability in the graph. It does not claim that an
+execution reaches the result. Three sets are involved: the solver’s solved set V , its live subset,
+on which Theorem 2 is applied, and the states the report publishes, which are taken from V .
+Publishing more states than the proof uses is sound, because the report only has to contain
+the cover.
+    The rest of the proof never inspects the solver. The analysis locale takes the solver as a
+parameter and assumes four facts about it (certified_solver): a run in its domain yields
+part_post_solution and a finite solved set, and a run of its executable form that returns
+lies in the domain and agrees with the logical solver. These facts are proved for the vendored
+solver under each of its five update rules for global unknowns (td_certified_solver). An
+update rule decides how contributions to a global unknown accumulate: by join, by join per
+contributing right-hand side, or by warrowing, which combines widening and narrowing [33].
+Replacing the solver would not touch the semantic layer.
+
+ 5      The End-to-End Theorem
+The previous sections bound the activation collecting semantics of a graph. Two links remain:
+from source executions to graph executions, and from the solved valuation to the report the
+user reads. The forward simulation follows the CompCert methodology [18]. The elaboration
+that locates a source configuration at graph nodes, and the composition, are ours.
+
+From source to graph. VIMP has a small-step semantics pstep over configurations of
+a residual command, a store, and a frame stack. The compiler translates each procedure
+body by continuations into a procedure-aware CFG, and a forward simulation matches every
+source step by graph steps that reach the same store (csim_star). A source configuration
+does not determine a graph node, since its residual command can occur at several places, as
+in if (b) {x = 1;} else {x = 1;}. The run is therefore lifted to an elaborated program
+whose annotated commands name their nodes, and the relation p, s0 ⊢ cfg ▷ v (at_node)
+observes a configuration at the nodes of its lifted runs. It is a relation, and the theorem below
+quantifies over every node at which a configuration is observed. Combined with Section 3,
+every store a finite source execution reaches lies in C at a node the simulation relates to
+the run (source_reaches_node_collect), and on the elaboration this holds at every node
+where the run is observed (csim_point_compile_prog).
+
+From valuation to report. The analyzer function run_voblint takes a configuration (the
+analyses to run, the update rule for global unknowns, the context policy, including the
+
+
+
+                                                                                                      ITP 2027
+1:10   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+       call-string length, and the placement of program globals) and a program. It rejects an invalid
+       configuration or an ill-formed program, and otherwise runs the executable solver and returns
+       Analysed res when the solve returns a result (run_voblint). The report lists, per node,
+       the solved states of every solved context, and classifies each check __voblint_check(b)
+       as PROVED, REFUTED, UNKNOWN, or DEAD. As in Section 2, Rres (v) is the set of stores
+       that some state at v describes, in any context, and Vres (v) the set of stores in which every
+       PROVED check at v holds and every REFUTED check fails.
+           In the statement below, Π is the procedure table of p, and G, Π ⊢ (c, s, frs) →∗p (c′ , s′ , frs ′ )
+       is a finite execution of pstep from residual command c, store s and frame stack frs. CG,g,S v
+       is the node collecting semantics of the compiled graph g from the initial stores S.
+
+       ▶ Theorem 3 (End-to-end soundness, run_voblint_source_sound).
+
+       theorem run_voblint_source_sound:
+        fixes p :: imp_prog and s0 s :: store
+        defines G_def : G ≡ declared_global p
+           and Pi_def : Π ≡ prog_table p
+           and g_def : g ≡ prog_cfg p
+        assumes s0 : s0 ∈ cinit_stores G
+           and run: G, Π ⊢ (main_body Π, s0 , []) →p ∗ (residual, s, frs)
+           and ans: run_voblint config p = Analysed res
+        shows (∃ v. p, s0 ⊢ (residual, s, frs) ▷ v)
+            ∧ (∀ v. p, s0 ⊢ (residual, s, frs) ▷ v −→
+                    s ∈ C G,g,cinit_stores G v
+                   ∧ s ∈ Rres v
+                   ∧ s ∈ V res v)
+
+           The premises are an initial store, in which every global is zero as for C objects of static
+       storage duration and locals are unconstrained; a finite source execution from the body of
+       main with any stopping point, so nonterminating programs are covered through their prefixes;
+       and a returned report. The conclusion has two halves: the reached configuration is observed
+       at some node, and at every node where it is observed, its store is collected, covered by the
+       report, and consistent with every definite verdict there. The contexts appear only inside the
+                                S
+       proof, through C(v) = c A(v, c) and Theorem 2. The guarantee is therefore per program
+       point. The report-level fact that the proof establishes about contexts (context_sound)
+       bounds each A(v, c) by Rres (v), the union over all contexts at v. No theorem about run_
+       voblint certifies the row of an individual context. Theorem 2 bounds A(v, c) by the solved
+       state for c, but the report is not proved to list that state as the row for c. Closing this gap is
+       future work (Section 9).
+           Three properties are conclusions or consequences rather than premises. The theorem has
+       no termination premise: run_voblint answers only when its executable solve returns, and a
+       returned run lies in the solver’s domain. It has no coverage premise: live_unknowns_cover
+       derives from the returned solve that every unknown an execution reaches was solved. It has
+       no well-formedness premise: a malformed program does not yield Analysed. The statement
+       holds for every analysis configuration the function accepts, because the configuration is a
+       quantified argument.
+
+       What verdicts mean. PROVED states that whenever a covered execution reaches the check,
+       the condition holds; REFUTED that it fails (run_voblint_check_sound). Neither asserts
+       that the check is reachable, and REFUTED is not a verified counterexample. DEAD is the
+       reachability claim: nothing is collected at the check’s node (run_voblint_dead_check_
+M. Lerchner                                                                                           1:11
+
+
+        unverified
+
+       source text                                trace hook
+                                        proved in Isabelle/HOL                      unverified
+
+      lexer, parser      compiler     equations    solver    report, verdicts       printing
+
+
+           trusted: Isabelle kernel · code generator · OCaml toolchain · Zarith · trace hook
+
+   Figure 2 The trust boundary of the delivered analyzer, for programs whose solve terminates.
+Dashed boxes are handwritten code outside the proof. The trace hook runs inside the solve and is
+assumed not to change its result.
+
+
+unreached). At a node without an arithmetic diagnostic, no divisor on an edge leaving it
+is zero in any collected store (run_voblint_arithmetic_safe). An error means that the
+divisor is zero wherever a covered execution reaches the node (run_voblint_arithmetic_
+refuted); a warning means only that the analysis could not exclude zero.
+
+What is trusted. Figure 2 separates what is proved from what is trusted. The theorem is
+about the constant that Isabelle’s code generator [9] exports to OCaml and that the command-
+line tool calls. The lexer and parser, which construct the program, and the handwritten
+OCaml that prints the report lie outside the proof. The Isabelle kernel, the code generator,
+the OCaml toolchain, and the arbitrary-precision integer library are trusted. So is one
+handwritten OCaml function inside the solve. For tracing, the exported code maps the logical
+constant trace_event, which is the unit, to a handwritten hook (Solver_trace_hook.emit).
+The proofs treat the call as the unit, and the trusted base assumes that the hook does not
+change the results.
+    That pstep models the intended language is argued, not proved. Some of VIMP’s choices
+differ from C. Integers are unbounded. Division by zero yields 0 and the remainder by zero
+yields the dividend. Both operands of && and || are evaluated. A failed check does not stop
+the execution, so a verdict for one check does not depend on an earlier one. The locals of main
+start unconstrained, while a callee’s locals start at 0. min, max, and the nondeterministic
+input are built-in calls. A verdict therefore need not hold for a C program with the same
+text.
+
+
+ 6     Mechanization
+Table 2 lists the size of the development [17] by layer. It counts the theories that the sessions
+list, and lemmas, theorems and corollaries as proved statements. The development reuses
+part of the verified solver of Tilscher et al. [33]. The solver is vendored with four changes
+made for this work and proposed upstream: a build fix, renames, a removed assumption, and
+added facts. They leave its algorithm unchanged. Neither Voblint nor the imported solver
+theories contain sorry or oops. Code generation emits 14,095 lines of OCaml, and 4,919
+lines of handwritten OCaml parse programs, print reports, and implement the trace hook. A
+full build takes several minutes on an Apple M4 Pro laptop.
+
+Design choices and their alternatives. Four choices shaped the proof. Only for the first
+was an alternative implemented and abandoned.
+   Activation traces as the soundness target. A first prototype used whole-program executions
+   with calls inlined. To account for one call, the proof built a separate execution from the
+
+
+
+                                                                                                    ITP 2027
+1:12   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+       Layer                     Contents                                    Theories    Lines   Proved
+       Program_Model             source semantics, CFG, compiler, traces,         27     9,999      466
+                                 contract
+       Abstract_Interpreter      domain interfaces, D/G framework, rout-          67    21,212    1,033
+                                 ing, solver bridge
+       Analyses                  Sign, Interval, Parity, Congruence, Int,         70    15,815      619
+                                 relational witness
+       Executable_Surface        analyzer function, report, end-to-end            15     4,956      172
+                                 theorems, export
+       Examples                  non-vacuity, precision witnesses, regres-        33     7,125      393
+                                 sions
+       Voblint total                                                             212    59,107    2,683
+       Solver (imported)         Tilscher et al. [33]                              7     9,533      168
+           Table 2 Size of the development by layer: lines of Isabelle/HOL including comments, and proved
+       statements, which are lemma, theorem and corollary commands. The counts exclude one theory
+       generated from the grammar manifest (VIMP_Grammar_Generated).
+
+
+
+          callee’s entry and spliced it into the caller’s run. This handled single calls but did not
+          reflect the call stack and was hard to extend to recursion. The obvious alternative, which
+          we did not implement, is the graph semantics itself, with a frame stack whose frames
+          carry a ghost context. Its soundness proof would carry an invariant over the whole stack.
+          Activation traces turn it into a fact about the caller chain, recovered through caller_of ,
+          and keep contexts out of the concrete semantics, so the policy can be a parameter.
+          Contexts as a relation. The unit and call-string policies are functions and discharge
+          Total once for every cover. The relational form is needed for an enter that returns
+          overlapping alternatives and for the entry-state policy. That policy admits no context for
+          stores the analysis excludes, and it proves Total from the solution.
+          The solver as a parameter. The analysis locale assumes four facts about a solver instead
+          of reasoning about the top-down solver’s run. The vendored solver discharges them under
+          all five update rules, and the semantic proofs never unfold its definition.
+          Two-default executable states. Soundness is stated over total functions on variable names.
+          The solver runs on a quotient type [12] of defaults and a finite override list, as in Concrete
+          Semantics [23, §13.6], with separate defaults for locals (⊤) and zero-initialized globals
+          (0♯ ) (exec_local_spec_sound).
+
+           The coverage contract, the analysis contract, the routing conditions, and the certified
+       solver are each a locale [2], and a domain is registered with one locale interpretation per
+       context policy.
+
+       Feedback on the proof assistant. Two points cost effort that the tooling could reduce.
+       First, HOL admits only terminating recursion. The solver is therefore defined with a domain
+       predicate and an executable variant that returns only when the recursion finishes, and a
+       returned run must be transported to the logical definition. A lemma added to the vendored
+       solver proves this transport once (solve_dom_of_solve_c). Second, code generation turns
+       finite sets and maps into lists that every lookup scans. One definition recompiled the whole
+       program at every equation evaluation until a proved code equation replaced it, without
+       changing any theorem. CPU profiles attribute most of the remaining solve time to list
+       membership and lookup. The Collections Framework or the Containers library could replace
+       these structures in the code setup alone, without touching the soundness proofs. We leave
+       this to future work.
+M. Lerchner                                                                                          1:13
+
+
+ 7     Evaluation
+A machine-checked theorem can hold for uninteresting reasons. Its premises may never
+hold together, its obligations may exclude no error a real analyzer makes, and an analyzer
+that answers UNKNOWN everywhere satisfies it as well (unknown_everywhere_sound). We
+therefore check that the premises can hold and that the obligations have force, and then
+measure what contexts and domains buy on concrete programs. Each item states its kind of
+evidence. Facts about one fixed program are proved by eval, which runs generated code and
+therefore also trusts the code generator. Analyzer outputs are registered claims that pixi
+run thesis-claims re-checks against the analyzer, and the paper’s tables are generated
+from them.
+
+The theorem is not vacuous (machine-checked, one program each). For the program
+of Figure 1, analyzed with Interval, entry-state contexts, and the warrowing update rule,
+a theory builds a source execution that returns from both calls. Evaluation shows that
+the analyzer answers with both checks PROVED, and nv_source_certified instantiates
+Theorem 3 with every premise discharged. Companion instances do the same for a single
+check (nv_check_proved_sound) and for a DEAD check (nv_dead_unreached). These show
+that the premises are satisfiable. They do not measure how often the analyzer answers.
+
+The obligations have force (machine-checked). Total is needed: total_dropped_
+unsound exhibits a cover that meets the other four obligations and misses a reached store. At
+the domain level, Goblint once claimed c % 2 == 1 for c ∈ {−5, −7}, although C’s truncating
+remainder gives −1 (issue 1156, fixed in [26]). This defect involves no contexts. It violates a
+domain law. In Voblint, the congruence domain’s remainder must satisfy congruence_mod_
+sound, an assumption of the locale through which the domain is registered. The law requires
+the truncating remainder of any two concrete values to lie in the concretization of the abstract
+result. prefix_congruence_mod_unsound proves that every abstract remainder returning
+the constant 1 for (1 + 2Z) mod 2 violates it at −5. The defective operator therefore cannot
+discharge the obligation.
+
+Contexts decide checks on recursive programs (executable). Table 3 runs one regression
+program under every context policy. Mutually recursive procedures f and g return 2 and
+1 at the bottom of the recursion. main calls f(2) and g(2) inside a loop of 200 iterations
+and checks both results. Each call chain is three call sites deep. With one context per
+procedure, or with call strings of length 1, the activations of different depths share a state
+and both results widen to [1, 12]. With call strings of length 2 or with entry-state contexts,
+the depths stay apart and both checks are proved. The loop adds no contexts, because the
+callee contexts do not depend on the loop counter. For a related program, the theories prove
+that the solution of the routed equation system at call-string length 2 is strictly more precise
+at the entry of a callee than at length 1 (sign_k2_strictly_more_precise_than_k1_at_g).
+That theorem compares two solutions computed by eval. It concerns neither run_voblint
+nor call strings in general.
+
+Programs we did not choose (executable). Monniaux’s tutorial on the flavors of abstract
+interpretation gives small programs on which standard analyses gain or lose precision [21].
+On the eight checks of the programs VIMP can express, all of which hold in every execution,
+Voblint’s best setting (Int) proves five. The other three need path partitioning, or a widening
+
+
+
+                                                                                                   ITP 2027
+1:14   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+                   Context policy               res1 == 2                res2 == 1
+                   one context per procedure    UNKNOWN        [1, 12]   UNKNOWN       [1, 12]
+                   call strings, length 1       UNKNOWN        [1, 12]   UNKNOWN       [1, 12]
+                   call strings, length 2       PROVED         [2, 2]    PROVED        [1, 1]
+                   entry states                 PROVED         [2, 2]    PROVED        [1, 1]
+          Table      3    Verdicts     and     computed     values     for  the     two     checks    of
+       17-call-string/precision/09-depth2_mutual_recursion_in_loop.vimp under Interval, per
+       context policy. Concretely, res1 is always 2 and res2 always 1. Generated from registered claims.
+
+
+
+       delay or thresholds, which Voblint lacks. The thesis [17] compares these verdicts with
+       Goblint’s under several settings.
+
+       Running time (empirical). Speed was not a goal: the generated code runs as Isabelle emits
+       it, plus one proved code equation. We ran the 369 regression fixtures that set no timeout of
+       their own under 15 combinations of domain and context policy, three repetitions each on
+       an Apple M4 Pro, at repository revision 17fcb363d. Over these 5,535 fixture/configuration
+       cases, the median solve takes 0.23 ms and the 95th percentile 1.48 ms. 21 cases exceed the
+       30 s limit. The expensive cases include recursive programs under entry-state contexts, where
+       domains such as Interval create one context per recursion level. On generated programs
+       that grow one size at a time, the number of solver evaluations grows about linearly. Solve
+       time grows with fitted exponents between 2.01 and 2.86 over the measured ranges, which
+       CPU profiles attribute to list-based sets and maps in the generated code (Section 6). These
+       measurements cover small programs on one machine and imply no performance bound.
+
+
+        8     Related Work
+       Concrete semantics of calling contexts. How information about a call reaches the callee
+       and returns to the caller is a classical question. Sharir and Pnueli distinguish the functional
+       approach, which computes input–output relations of procedures, from the call-string approach,
+       which tags information with the history of calls [31]. Voblint’s call-string policy follows the
+       second, and its entry-state policy, which indexes a callee’s exit states by its entry state,
+       resembles a functional approach tabulated per input. The return combines the caller’s state
+       before the call with the callee’s exit state, the shape of the return function of Knoop and
+       Steffen [15, §4.1]. Reps et al. solve such problems precisely when facts are finite and transfer
+       functions distributive [24]. Voblint requires neither and proves no precision result. Jeannet
+       and Serwe derive interprocedural analyses by abstract interpretation of a standard stack-
+       based operational semantics and combine the call-string and functional approaches [13]. Van
+       Horn and Might derive sound analyses from abstract machines by bounding their stores [11].
+       These works give contexts a concrete counterpart on paper. Voblint mechanizes one such
+       counterpart and connects it to equations and a verified solver. Might and Manolios introduce
+       a posteriori soundness, whose abstraction maps are constructed after the analysis has run [20].
+       Voblint’s entry-state policy is similar in spirit: the abstraction is fixed in advance, but the
+       relation between traces and contexts is read off the solution (Section 4).
+
+       Verified analyzers. Verasco is a Coq-verified analyzer for most of C99, excluding recursion
+       and dynamic allocation [14]. Its interpreter iterates over the structure of C#minor, reanalyzes
+       a function at every call site, and raises an alarm at a possible recursive call. The value analysis
+M. Lerchner                                                                                            1:15
+
+
+of Blazy et al. checks the candidate of an untrusted iterator with a verified checker [3]; Voblint
+instead runs a solver whose partial correctness is proved. Nipkow and Klein develop abstract
+interpretation for IMP in Isabelle/HOL [22, 23], and Voblint’s non-relational domains follow
+their generic interpreter. Their language has no procedures. Franceschino et al. verify an
+IMP analyzer in F* that runs in a browser [8], and Cachera and Pichardie extract a certified
+denotational interpreter [5]; neither has procedures. Michelland et al. make soundness proofs
+reusable by sharing one interpreter between the concrete and the abstract semantics [19].
+Cachera et al. compute a context-insensitive dataflow analysis with a verified solver for
+ordinary inequations [4].
+
+Contexts in mechanized semantics. Dabrowski and Pichardie instrument a concrete
+semantics with contexts through a module type whose call-context function computes a
+callee’s context, and prove a context-sensitive points-to analysis sound in Coq [6]. This is
+the closest precedent for Voblint’s context-indexed semantics. Their analysis is specified
+by constraints that no solver computes. Voblint’s contexts are admitted by a relation, the
+totality condition makes the indexed collection exhaustive, and the indexing is connected to
+an executable verified solver. Trace partitioning indexes sets of traces by control history [25];
+Rival and Mauborgne allow coverings in which one trace has several indices and present
+calling contexts as one such indexing. The activation collecting semantics is a covering
+of this relational kind. Among Isabelle developments, interprocedural analyses have been
+verified [16, 36], but none of these entries claims an extracted analyzer or represents an
+activation with its caller chain.
+
+Verified solvers. Hofmann et al. verify a local generic solver in Coq [10], and de Vilhena
+et al. verify one that discovers dependencies dynamically in Iris [7]. Stade et al. prove the
+top-down solver partially correct in Isabelle/HOL [32], and Tilscher et al. extend it to side
+effects with a generic interface for update rules [33]. Voblint vendors the latter and connects
+its certificate to programs. Termination is proved for top-down solvers without side effects
+over a finite type of unknowns [34]. Voblint’s unknowns pair nodes with contexts. Each
+program’s graph is finite, but the node type is not, and entry-state contexts need not be
+finitely many, so that result does not apply.
+
+Goblint and local traces. Side-effecting constraint systems [29, 1] and the split between
+analyses and solvers are Goblint’s architecture [35, 30], and Voblint’s dg_spec follows its
+Spec interface. The correspondence is architectural; no theorem transfers to Goblint’s OCaml
+implementation. Schwarz et al. prove Goblint’s thread-modular analyses sound against local
+traces on paper [27, 28]. Activation traces adapt their construction to procedure activations.
+Activations do not interfere, so no concurrency result of that work transfers.
+
+Differences from prior work. Voblint inherits its solver, the side-effecting constraint systems,
+the analysis interface, the shape of its traces, and the distinction between call-string and
+functional contexts. What it adds is their mechanized connection, from a small-step source
+semantics through a context-indexed collecting semantics to a side-effecting equation system
+and its verified solver, ending in a theorem about the exported analyzer. We know of no prior
+mechanization of this connection. The closest, Dabrowski and Pichardie [6], has contexts in
+the semantics but no solver. Verasco [14] has an executable analyzer for a far larger language.
+It reanalyzes a function at each call site, raises an alarm at a possible recursive call, and
+computes its result by structural iteration rather than with a generic solver.
+
+
+
+                                                                                                     ITP 2027
+1:16   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+        9     Conclusion
+
+       We have mechanized the connection between a source semantics and a Goblint-style, context-
+       sensitive, side-effecting equation system solved by a verified solver, with activation traces as
+       the concrete counterpart of contexts. This is a first step, and its coverage is modest. The
+       result is partial correctness. VIMP is scalar, and the adequacy of its semantics is argued,
+       not proved. No general precision ordering or completeness property is proved. The precision
+       results are witnesses for single programs. The guarantee is per program point.
+
+
+       Per-context certification. Theorem 2 bounds each context’s collected stores by the solved
+       state of that context, but the report-level theorem keeps only the union over contexts. A
+       theorem stating that the report’s row for a context covers A(v, c) would make the per-context
+       states a certified output.
+
+
+       Memory and the caller-locals assumption. The solver certificate is stated over unknowns
+       and right-hand sides, and the coverage contract refers to the language only through a few
+       step functions. Features that change only these step functions, such as machine integers,
+       leave the contract and its composition intact. The trace semantics, however, assumes that a
+       callee cannot modify its caller’s locals, so a return can resume the caller with the locals it
+       had before the call. Pointers into the caller’s frame, a shared heap, or threads break this
+       assumption and would require extending the trace semantics itself.
+
+
+       Termination. Solver termination is a per-program fact, established by running the solver.
+       Known termination results for top-down solvers assume finitely many unknowns [34]. Entry-
+       state contexts need not be finite, so a general result would need a bound on the contexts a
+       solve creates.
+
+
+       Data availability. The Isabelle/HOL development, the regression corpus, and the scripts
+       that regenerate every analyzer output in this paper are public on GitHub and archived on
+       Zenodo [17]. The archived version predates the context-policy claims and the profiling data
+       used here, and a new archive will accompany the final version. The vendored solver [33] is
+       not yet public, so the theories cannot yet be built from public sources alone.
+
+
+       Declaration about GenAI/LLM use. Generative AI tools (Anthropic’s Claude, OpenAI’s
+       ChatGPT and Codex, and Cursor) were used substantially in this work and contributed a
+       large share of the implementation-level material under the author’s supervision. In the Isabelle
+       development, they generated many proofs once definitions and interfaces had stabilized,
+       carried out refactorings across theories, and turned tactic-style proofs into structured Isar.
+       They also assisted with design: they helped adapt the local traces of Schwarz et al. to
+       procedure activations, and the requirements on activation traces were refined in collaboration
+       with them. Agents wrote much of the surrounding tooling, including the command-line
+       interface, the regression corpus, and the consistency checks. The author chose the research
+       direction, selected and revised the designs, and approved the definitions and theorem
+       statements; Isabelle checked every proof. The tools also assisted with literature search and
+       with drafting and revising this text and its figures, which the author reviewed. Grammarly
+       was used for spelling and grammar.
+M. Lerchner                                                                                               1:17
+
+
+     References
+ 1   Kalmer Apinis, Helmut Seidl, and Vesal Vojdani. Side-effecting constraint systems: A swiss
+     army knife for program analysis. In Programming Languages and Systems (APLAS 2012),
+     volume 7705 of LNCS, pages 157–172. Springer, 2012. doi:10.1007/978-3-642-35182-2_12.
+ 2   Clemens Ballarin. Locales: A module system for mathematical theories. Journal of Automated
+     Reasoning, 52(2):123–153, 2014. doi:10.1007/s10817-013-9284-7.
+ 3   Sandrine Blazy, Vincent Laporte, André Maroneze, and David Pichardie. Formal verification
+     of a C value analysis based on abstract interpretation. In Static Analysis, pages 324–344, 2013.
+     doi:10.1007/978-3-642-38856-9_18.
+ 4   David Cachera, Thomas Jensen, David Pichardie, and Vlad Rusu. Extracting a data flow
+     analyser in constructive logic. Theoretical Computer Science, 342(1):56–78, 2005. doi:
+     10.1016/j.tcs.2005.06.004.
+ 5   David Cachera and David Pichardie. A certified denotational abstract interpreter. In In-
+     teractive Theorem Proving (ITP 2010), LNCS, pages 9–24. Springer, 2010. doi:10.1007/
+     978-3-642-14052-5_3.
+ 6   Frédéric Dabrowski and David Pichardie. A certified data race analysis for a Java-like language.
+     In Theorem Proving in Higher Order Logics (TPHOLs 2009), LNCS, pages 212–227, 2009.
+     doi:10.1007/978-3-642-03359-9_16.
+ 7   Paulo Emílio de Vilhena, François Pottier, and Jacques-Henri Jourdan. Spy game: Verifying a
+     local generic solver in Iris. Proceedings of the ACM on Programming Languages, 4(POPL):1–28,
+     2020. doi:10.1145/3371101.
+ 8   Lucas Franceschino, David Pichardie, and Jean-Pierre Talpin. Verified functional programming
+     of an abstract interpreter. In Static Analysis (SAS 2021), LNCS, pages 124–143. Springer, 2021.
+     Hosted browser version: https://w95psp.github.io/verified-abstract-interpreter. doi:
+     10.1007/978-3-030-88806-0_6.
+ 9   Florian Haftmann and Tobias Nipkow. Code generation via higher-order rewrite systems. In
+     Functional and Logic Programming (FLOPS 2010), volume 6009 of LNCS, pages 103–117.
+     Springer, 2010. doi:10.1007/978-3-642-12251-4_9.
+10   Martin Hofmann, Aleksandr Karbyshev, and Helmut Seidl. Verifying a local generic solver
+     in Coq. In Static Analysis (SAS 2010), LNCS, pages 340–355. Springer, 2010. doi:10.1007/
+     978-3-642-15769-1_21.
+11   David Van Horn and Matthew Might. Abstracting abstract machines. In Proceedings of the
+     15th ACM SIGPLAN International Conference on Functional Programming (ICFP), pages
+     51–62. ACM, 2010. doi:10.1145/1863543.1863553.
+12   Brian Huffman and Ondřej Kunčar. Lifting and transfer: A modular design for quotients in
+     Isabelle/HOL. In Certified Programs and Proofs (CPP 2013), LNCS, pages 131–146. Springer,
+     2013. doi:10.1007/978-3-319-03545-1_9.
+13   Bertrand Jeannet and Wendelin Serwe. Abstracting call-stacks for interprocedural verification
+     of imperative programs. In Algebraic Methodology and Software Technology (AMAST 2004),
+     volume 3116 of Lecture Notes in Computer Science, pages 258–273. Springer, 2004. doi:
+     10.1007/978-3-540-27815-3_22.
+14   Jacques-Henri Jourdan, Vincent Laporte, Sandrine Blazy, Xavier Leroy, and David Pichardie.
+     A formally-verified C static analyzer. In Proceedings of the 42nd Annual ACM SIGPLAN-
+     SIGACT Symposium on Principles of Programming Languages (POPL), pages 247–259. ACM,
+     2015. doi:10.1145/2676726.2676966.
+15   Jens Knoop and Bernhard Steffen. The interprocedural coincidence theorem. In Compiler
+     Construction (CC ’92), volume 641 of LNCS, pages 125–140. Springer, 1992. doi:10.1007/
+     3-540-55984-1_13.
+16   Peter Lammich and Markus Müller-Olm. Formalization of conflict analysis of programs with
+     procedures, thread creation, and monitors. Archive of Formal Proofs, December 2007. URL:
+     https://isa-afp.org/entries/Program-Conflict-Analysis.html.
+
+
+
+
+                                                                                                        ITP 2027
+1:18   End-to-End Soundness of a Goblint-Style Analyzer
+
+
+       17   Manuel Lerchner. Voblint: A verified Goblint-style static analysis pipeline in Isabelle/HOL,
+            2026. doi:10.5281/zenodo.23260696.
+       18   Xavier Leroy. Formal verification of a realistic compiler. Communications of the ACM,
+            52(7):107–115, 2009. doi:10.1145/1538788.1538814.
+       19   Sébastien Michelland, Yannick Zakowski, and Laure Gonnord. Abstract interpreters: A
+            monadic approach to modular verification. Proceedings of the ACM on Programming Languages,
+            8(ICFP), 2024. doi:10.1145/3674646.
+       20   Matthew Might and Panagiotis Manolios. A posteriori soundness for non-deterministic
+            abstract interpretations. In Verification, Model Checking, and Abstract Interpretation (VMCAI
+            2009), volume 5403 of Lecture Notes in Computer Science, pages 260–274. Springer, 2009.
+            doi:10.1007/978-3-540-93900-9_22.
+       21   David Monniaux. Flavors of abstract interpretation. Invited tutorial, European Joint Confer-
+            ences on Theory and Practice of Software (ETAPS 2024), Luxembourg, April 2024. Lecture
+            slides, HAL hal-04750222. URL: https://hal.science/hal-04750222.
+       22   Tobias Nipkow. Abstract interpretation of annotated commands. In Interactive Theorem Prov-
+            ing (ITP 2012), LNCS, pages 116–132. Springer, 2012. doi:10.1007/978-3-642-32347-8_9.
+       23   Tobias Nipkow and Gerwin Klein. Concrete Semantics with Isabelle/HOL. Springer, 2014.
+            doi:10.1007/978-3-319-10542-0.
+       24   Thomas Reps, Susan Horwitz, and Mooly Sagiv. Precise interprocedural dataflow analysis
+            via graph reachability. In Proceedings of the 22nd ACM SIGPLAN-SIGACT Symposium
+            on Principles of Programming Languages (POPL), pages 49–61. ACM, 1995. doi:10.1145/
+            199448.199462.
+       25   Xavier Rival and Laurent Mauborgne. The trace partitioning abstract domain. ACM Transac-
+            tions on Programming Languages and Systems, 29(5), 2007. doi:10.1145/1275497.1275501.
+       26   Michael Schwarz. Congruences: Make % sound by restricting cases where we return a constant,
+            2023. Pull request 1161. URL: https://github.com/goblint/analyzer/pull/1161.
+       27   Michael Schwarz, Simmo Saan, Helmut Seidl, Kalmer Apinis, Julian Erhard, and Vesal Vojdani.
+            Improving thread-modular abstract interpretation. In Static Analysis, volume 12913 of LNCS,
+            pages 359–383, 2021. doi:10.1007/978-3-030-88806-0_18.
+       28   Michael Schwarz, Simmo Saan, Helmut Seidl, Julian Erhard, and Vesal Vojdani. Clus-
+            tered relational thread-modular abstract interpretation with local traces. In Program-
+            ming Languages and Systems (ESOP 2023), volume 13990 of LNCS, pages 28–58, 2023.
+            doi:10.1007/978-3-031-30044-8_2.
+       29   Helmut Seidl, Varmo Vene, and Markus Müller-Olm. Global invariants for analysing multi-
+            threaded applications. Proceedings of the Estonian Academy of Sciences. Physics. Mathematics,
+            52(4):413–436, 2003. doi:10.3176/phys.math.2003.4.05.
+       30   Helmut Seidl, Vesal Vojdani, Julian Erhard, and Michael Schwarz. Mixed flow-sensitive
+            static analysis: Engineering modularity. In FM 2026: Formal Methods, pages 446–470, 2026.
+            doi:10.1007/978-3-032-26220-2_22.
+       31   Micha Sharir and Amir Pnueli. Two approaches to interprocedural data flow analysis. In
+            Steven S. Muchnick and Neil D. Jones, editors, Program Flow Analysis: Theory and Applica-
+            tions, chapter 7. Prentice-Hall, 1981.
+       32   Yannick Stade, Sarah Tilscher, and Helmut Seidl. The top-down solver verified: Building
+            confidence in static analyzers. In Computer Aided Verification, pages 303–324, 2024. Formal-
+            ization: Archive of Formal Proofs entry Top_Down_Solver, https://isa-afp.org/entries/
+            Top_Down_Solver.html. doi:10.1007/978-3-031-65627-9_15.
+       33   Sarah Tilscher, Alexandra Graß, and Helmut Seidl. Verifying a solver for mixed flow-sensitive
+            analyses. In NASA Formal Methods (NFM 2026), LNCS, pages 48–69. Springer, 2026.
+            doi:10.1007/978-3-032-28079-4_3.
+       34   Sarah Tilscher, Alexandra Graß, Helmut Seidl, and Yannick Stade. Proving total correctness
+            of top-down solvers with widening and narrowing. Journal of Automated Reasoning, 70(2):15,
+            2026. doi:10.1007/s10817-026-09756-x.
+M. Lerchner                                                                                         1:19
+
+
+35   Vesal Vojdani, Kalmer Apinis, Vootele Rõtov, Helmut Seidl, Varmo Vene, and Ralf Vogler.
+     Static race detection for device drivers: The Goblint approach. In Proceedings of the 31st
+     IEEE/ACM International Conference on Automated Software Engineering (ASE), pages
+     391–402. ACM, 2016. doi:10.1145/2970276.2970337.
+36   Daniel Wasserrab. Backing up slicing: Verifying the interprocedural two-phase Horwitz-
+     Reps-Binkley slicer. Archive of Formal Proofs, November 2009. URL: https://isa-afp.org/
+     entries/HRB-Slicing.html.
+
+
+
+
+                                                                                                  ITP 2027
+

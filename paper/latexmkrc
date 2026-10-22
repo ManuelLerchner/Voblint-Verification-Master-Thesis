@@ -1,0 +1,5 @@
+# The vendored LIPIcs class and Isabelle styles live in subdirectories; the
+# class finds its logos with \IfFileExists, which searches TEXINPUTS only.
+ensure_path('TEXINPUTS', './lipics//', './sty//');
+$pdf_mode = 1;
+$out_dir = '_build';

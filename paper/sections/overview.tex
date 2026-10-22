@@ -1,0 +1,124 @@
+\section{Overview: One Call Through the Pipeline}
+\label{sec:overview}
+
+\begin{figure}[t]
+\centering
+\begin{minipage}[c]{0.27\textwidth}
+\scriptsize
+\begin{verbatim}
+fun bump(n) {
+  return n + 1;
+}
+
+fun main() {
+  a = bump(5);
+  b = bump(4);
+  __voblint_check(a == 6);
+  __voblint_check(b == 5);
+}
+\end{verbatim}
+\end{minipage}%
+\hfill
+\begin{minipage}[c]{0.71\textwidth}
+\centering
+% Values: voblint --analysis interval --context entry-state --globals warrow
+%         --dot docs/readme-figures/contexts.vimp
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\scriptsize,
+  pp/.style={draw, rounded corners=1pt, inner sep=2pt, minimum height=3.4ex, minimum width=27mm, align=left},
+  bd/.style={pp, fill=black!6, minimum width=24mm},
+  flow/.style={-{Stealth[length=1.5mm]}},
+  call/.style={-{Stealth[length=1.6mm]}, thick, violet},
+  ret/.style={-{Stealth[length=1.6mm]}, dashed, blue!70!black},
+  lab/.style={font=\tiny, fill=white, inner sep=1pt}]
+  \node[bd] (em) at (0, 0) {entry\_main};
+  \node[pp] (p2) at (0, -0.9) {pp2\quad $a, b \in \top$};
+  \node[pp] (p3) at (0, -2.3) {pp3\quad $a \in [6,6]$};
+  \node[pp] (p4) at (0, -3.7) {pp4\quad \texttt{a == 6}: \verdict{PROVED}};
+  \node[pp] (p5) at (0, -4.6) {pp5\quad \texttt{b == 5}: \verdict{PROVED}};
+  \draw[flow] (em) -- (p2);
+  \draw[flow, gray, dashed] (p2) -- node[lab, left=1mm] {continuation} (p3);
+  \draw[flow, gray, dashed] (p3) -- node[lab, left=1mm] {continuation} (p4);
+  \draw[flow] (p4) -- (p5);
+  \begin{scope}[on background layer]
+    \node[draw=gray!60, rounded corners, fit=(em)(p5), inner sep=4pt,
+      label={[gray, font=\tiny]above:{\texttt{main}, context $c_0$}}] {};
+  \end{scope}
+  \node[bd] (b1e) at (5.2, -0.6) {entry\_bump\quad $n \in [5,5]$};
+  \node[bd] (b1x) at (5.2, -1.7) {exit\_bump\quad $n \in [5,5]$};
+  \draw[flow] (b1e) -- node[lab, right=1mm] {\texttt{return n + 1}} (b1x);
+  \begin{scope}[on background layer]
+    \node[draw=gray!60, rounded corners, fit=(b1e)(b1x), inner sep=4pt,
+      label={[gray, font=\tiny]above:{\texttt{bump}, context $c_1 = [5,5]$}}] {};
+  \end{scope}
+  \node[bd] (b2e) at (5.2, -3.0) {entry\_bump\quad $n \in [4,4]$};
+  \node[bd] (b2x) at (5.2, -4.1) {exit\_bump\quad $n \in [4,4]$};
+  \draw[flow] (b2e) -- node[lab, right=1mm] {\texttt{return n + 1}} (b2x);
+  \begin{scope}[on background layer]
+    \node[draw=gray!60, rounded corners, fit=(b2e)(b2x), inner sep=4pt,
+      label={[gray, font=\tiny]above:{\texttt{bump}, context $c_2 = [4,4]$}}] {};
+  \end{scope}
+  \draw[call] (p2.east) -- node[lab, above, pos=0.45] {enter} (b1e.west);
+  \draw[ret] (b1x.west) -- node[lab, below, pos=0.55] {combine} (p3.east);
+  \draw[call] (p3.east) -- node[lab, above, pos=0.45] {enter} (b2e.west);
+  \draw[ret] (b2x.west) -- node[lab, below, pos=0.55] {combine} (p4.east);
+\end{tikzpicture}} % chktex 31
+\end{minipage}
+\caption{The running example. Left: the VIMP program. Right: its graph as the
+analyzer solves it with intervals and entry-state contexts. Each frame is one
+procedure in one context; \texttt{bump} gets one copy per entry state. Solid
+violet arrows are calls (enter), dashed blue arrows are returns (combine), and
+dashed gray arrows link a call site to its continuation. Both checks are
+\verdict{PROVED}. Without contexts, the single copy of \texttt{bump} joins both
+calls and both checks are \verdict{UNKNOWN}. States are analyzer output with
+the warrowing update rule for global unknowns (\cref{sec:equations}); the intermediate node of \texttt{bump}'s body and the unreachable node after
+\texttt{return} are omitted.}
+\label{fig:running}
+\end{figure}
+
+We follow the program of \cref{fig:running} through the analyzer, with
+intervals and entry-state contexts. The source program is compiled to a
+procedure-aware control-flow graph (CFG). Each procedure $p$ has an entry node
+$\ctor{FunctionEntry}\;p$ and a result node $\ctor{FunctionResult}\;p$. The
+graph $g$ has two kinds of edges. An \emph{intraprocedural} edge
+$(u, a, v) \in \mathit{intra}\;g$ carries an action $a$, such as an
+assignment or a guard. A \emph{call} edge
+$(u, e, \ctor{FunctionEntry}\;p, k) \in \mathit{calls}\;g$ leads from the call
+site $u$ into $p$ and names the continuation $k$ at which the caller resumes.
+A predicate $\Glob$ tells which variables are global. A proved forward
+simulation relates every source execution to a graph execution with the same
+store (\cref{sec:theorem}).
+
+From the graph, the analyzer generates inequations over \emph{local unknowns}
+$(v, c)$ for a node $v$ and a context $c$, and over \emph{global unknowns}
+without a program point. At \texttt{a = bump(5)}, the analysis's \emph{enter}
+operation binds \texttt{n} to $[5,5]$, and this entry state is \emph{routed}
+to the callee context $c_1 = [5,5]$; the second call routes to
+$c_2 = [4,4]$. \Cref{sec:equations} gives the equations of a call. Each
+activation of \texttt{bump} is analyzed in its own copy, and both checks are
+proved.
+
+For these per-context states to mean something, the concrete semantics has to
+say which stores belong to $c_1$. Activation traces (\cref{sec:traces}) supply
+this. The trace of the activation \texttt{bump(5)} records its caller, the
+context policy admits it in $c_1$, and the \emph{activation collecting
+semantics} $\ActColl(v, c)$ collects the final stores of the traces that end
+at $v$ and carry $c$. The \emph{node collecting semantics} $\NodeColl(v)$
+collects them regardless of context. A report $\mathit{res}$ of the analyzer
+defines two sets at each node $v$. The report set $\Report_{\mathit{res}}(v)$
+contains the stores that some state of the report at $v$ describes, in any
+context. The verdict set $\Verd_{\mathit{res}}(v)$ contains the stores in which
+every definite verdict at $v$ holds. The soundness argument is a chain of
+inclusions at every node:
+\begin{equation}
+\label{eq:chain}
+\text{reached stores}
+\;\subseteq\; \NodeColl(v)
+\;=\; \textstyle\bigcup_c \ActColl(v, c)
+\;\subseteq\; \Report_{\mathit{res}}(v)
+\;\subseteq\; \Verd_{\mathit{res}}(v).
+\end{equation}
+Each inclusion may add unreached stores, which costs precision, but none may
+lose a reached store. Contexts appear only in the middle of the chain; the
+end-to-end theorem (\cref{sec:theorem}) states its outer inclusions.

@@ -1,0 +1,28 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have mechanized the connection between a source semantics and a
+Goblint-style, context-sensitive, side-effecting equation system solved by a
+verified solver, with activation traces as the concrete counterpart of
+contexts. This is a first step. The result is partial correctness, VIMP is
+scalar, the guarantee is per program point, and precision is shown only by
+witnesses for single programs.
+
+\subparagraph*{Per-context certification.}
+\Cref{thm:routed} bounds each context by its solved state, but the report-level
+theorem keeps only the union over contexts. Proving that the report's row for
+a context covers $\ActColl(v, c)$ would certify the per-context states.
+
+\subparagraph*{Memory.}
+The contract refers to the language only through a few step functions, so
+features such as machine integers leave it intact. The trace semantics,
+however, assumes that a callee cannot modify its caller's locals. Pointers into
+stack frames and threads break this assumption; a heap without such pointers
+needs only a richer store model.
+
+\subparagraph*{Termination.}
+Known termination results for top-down solvers assume finitely many
+unknowns~\cite{tilscher26jar}. Entry-state contexts need not be finite, and
+all timeouts in \cref{sec:evaluation} come from them. Goblint bounds them with
+optional widening on contexts (\texttt{ana.context.widen}) or a context gas; a
+general result would need such a bound in the routing.

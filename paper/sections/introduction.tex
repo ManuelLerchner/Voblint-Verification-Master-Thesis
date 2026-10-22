@@ -1,0 +1,67 @@
+\section{Introduction}
+\label{sec:intro}
+
+A context-sensitive static analyzer keeps a separate abstract state for each
+program point and calling context. In the program of \cref{fig:running},
+\texttt{main} calls \texttt{bump(5)} and \texttt{bump(4)}, and \texttt{bump}
+returns its argument plus one. An interval analysis with one state per program
+point must describe both calls at the return of \texttt{bump}. It therefore
+cannot prove either check. With contexts that record the argument, it
+analyzes \texttt{bump} once per argument and proves both. Goblint, an abstract
+interpreter for C~\cite{vojdani16,seidl26}, gains this precision by
+translating a program into a \emph{side-effecting constraint
+system}~\cite{seidl03,apinis12}. This is a system of inequations over unknowns
+indexed by program point and context, whose right-hand sides may also
+contribute to other unknowns. A generic top-down solver then solves the
+system. Goblint's soundness rests on tests: its issue tracker lists more than a
+hundred issues labeled as unsound since 2021, and a defect in any of these
+layers can turn a verdict false.
+
+That solver has been verified. Stade et al.\ proved it partially correct in
+Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extended the proof to side
+effects~\cite{tilscher26}. When the solver terminates, it returns a
+\emph{post-solution}, a valuation that satisfies the inequations, on the
+unknowns it solved, a set closed under the reads of
+right-hand sides. Whether the equations describe the program lies outside
+that theorem. Closing the gap needs a concrete semantics in which a
+per-context state has something to cover. Such semantics are classical on
+paper~\cite{sharir81,knoop92,jeannet04,vanhorn10} (\cref{sec:related}). What
+has not been mechanized, to our knowledge, is the connection from a
+source semantics through such a context-indexed semantics to a side-effecting
+constraint system and its verified solver.
+
+We mechanize this connection. The development, Voblint, is written in
+Isabelle/HOL and contains no \texttt{sorry}. Its parts are the following.
+\begin{itemize}
+  \item We adapt the local traces of Schwarz et al.~\cite{schwarz21} to
+    procedure activations. A context policy, which may admit several contexts
+    for one call, relates these activation traces to contexts. We prove that
+    five local obligations on a cover bound every valid trace in every admitted
+    context, over an arbitrary control-flow graph (\cref{sec:traces}).
+  \item We prove that every post-solution of the generated, context-routed
+    equations meets these obligations, provided the context policy agrees with
+    the routing of the equations. The verified solver enters only through its
+    certificate (\cref{sec:equations}).
+  \item We prove an end-to-end theorem about the analyzer function that
+    Isabelle exports to OCaml. Whenever it returns a report, every store a finite
+    source execution reaches is covered by the report at its program point
+    and satisfies the definite verdicts there, for every configuration
+    (\cref{sec:theorem}).
+  \item We show that the theorem is not vacuous, that a domain obligation
+    rejects a real Goblint defect, and how calling contexts change verdicts on
+    recursive programs (\cref{sec:evaluation}).
+\end{itemize}
+The solver, side-effecting constraint systems, local traces, and Goblint's
+split between analyses and solvers are prior work. The context-indexed
+semantics is the structure of our proof. The shipped guarantee is per program
+point. It is not a separate certificate for each context's row of the report
+(\cref{sec:theorem}).
+
+The scope is limited. The source language, VIMP, has integer variables,
+global variables, and recursive procedures with parameters and return values,
+but no pointers, arrays, or heap. The result is partial correctness: the
+analyzer answers only when its solver run terminates, and termination is not
+proved for every program. The parser and the report printer are unverified
+handwritten code. Isabelle's code generator, the OCaml toolchain, and a
+solver-tracing hook are trusted.
+
