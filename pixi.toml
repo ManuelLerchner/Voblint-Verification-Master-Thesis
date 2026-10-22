@@ -150,6 +150,8 @@ prose-lint = { cmd = "bash scripts/mk/prose-lint.sh", description = "Lint thesis
 typst = ">=0.15"
 # pdftotext and pdftoppm for the page statistics and the whitespace check.
 poppler = "*"
+# Marks a chapter's changes in place for the redline build.
+typdiff = "==0.1.4"
 [feature.thesis.tasks]
 # The refs and links checks also read the citations of goblint-alignment.json.
 thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", depends-on = [
@@ -220,6 +222,10 @@ thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", depends-on = [
   "thesis-local-data",
 ], description = "Build the thesis PDF and fail on warnings." }
 thesis-text = { cmd = "python3 thesis/tools/text_export.py", description = "Print a thesis section as plain text with one paragraph per line, e.g. `pixi run thesis-text abstract | pbcopy`." }
+thesis-diff = { cmd = "bash thesis/tools/typst-diff.sh", description = "Render the Typst source changes since origin/main, or the given base, side by side as a PDF." }
+thesis-redline = { cmd = "bash thesis/tools/typst-redline.sh", depends-on = [
+  "thesis-local-data",
+], description = "Build the thesis with its changes since origin/main, or the given base, marked in place." }
 thesis-whitespace = { cmd = "python3 thesis/tools/whitespace.py", description = "Warn about thesis pages with a large blank stretch (reads the built PDF)." }
 thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", depends-on = [
   "thesis-local-data",

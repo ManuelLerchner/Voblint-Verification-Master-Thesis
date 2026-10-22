@@ -35,6 +35,8 @@ CI_ONLY_TASKS = {
     "pages-links-live",
     "pages-site-build",
     "pages-site-links",
+    "thesis-diff",
+    "thesis-redline",
     "thesis-links-live",
     "thesis-links-write",
 }

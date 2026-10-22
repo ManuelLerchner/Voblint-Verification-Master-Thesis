@@ -391,6 +391,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/shellcheck-0.11.0-ha770c72_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/taplo-0.10.0-h2d90d6e_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h1df4ec4_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/typdiff-0.1.4-hf19af3b_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/typos-1.51.1-hf19af3b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/typst-0.15.1-h2d90d6e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/typstyle-0.15.2-hf19af3b_0.conda
@@ -662,6 +663,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/shellcheck-0.11.0-h7dd6a17_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/taplo-0.10.0-hb070ca7_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-ha6c374e_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/typdiff-0.1.4-he704061_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/typos-1.51.1-he704061_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/typst-0.15.1-he704061_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/typstyle-0.15.2-he704061_0.conda
@@ -847,6 +849,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/shellcheck-0.11.0-hecfb573_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/taplo-0.10.0-h29ab045_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hbeba79b_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typdiff-0.1.4-hc2d82ec_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typos-1.51.1-hc2d82ec_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typst-0.15.1-hc2d82ec_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typstyle-0.15.2-hc2d82ec_0.conda
@@ -1816,6 +1819,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pthread-stubs-0.4-h7cc23a3_1004.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/python-3.15.1-h6e52b48_100_cp315.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h1df4ec4_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/typdiff-0.1.4-hf19af3b_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/typst-0.15.1-h2d90d6e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libice-1.1.2-h280c20c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libsm-1.2.6-h0d788c3_1.conda
@@ -1895,6 +1899,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/poppler-26.09.0-hb8a767d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/python-3.15.1-h0abcc05_100_cp315.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-ha6c374e_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/typdiff-0.1.4-he704061_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/typst-0.15.1-he704061_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-hbc1a06c_7.conda
       osx-arm64:
@@ -1952,6 +1957,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/poppler-26.09.0-hb6e6627_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/python-3.15.1-h2e4dbab_100_cp315.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hbeba79b_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typdiff-0.1.4-hc2d82ec_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typst-0.15.1-hc2d82ec_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
 packages:
@@ -4164,6 +4170,19 @@ packages:
     - tk >=8.6.13,<8.7.0a0
   size: 3566806
   timestamp: 1787272857910
+- conda: https://conda.anaconda.org/conda-forge/linux-64/typdiff-0.1.4-hf19af3b_1.conda
+  sha256: ff3d46cd9f4457a0f2df4926eba759ff4af3a87654ee851e49c9ea80141ac6f5
+  md5: 1b0a82ff44a8874d1c032bdfc5f7eeff
+  depends:
+  - libgcc >=15
+  - __glibc >=2.17,<3.0.a0
+  constrains:
+  - __glibc >=2.17
+  license: Apache-2.0
+  license_family: APACHE
+  run_exports: {}
+  size: 608055
+  timestamp: 1792369521217
 - conda: https://conda.anaconda.org/conda-forge/linux-64/typos-1.51.1-hf19af3b_0.conda
   sha256: f2707340c5f26435e597882223d0610e90dd4b2cf9ee333dd3fae679122a3abf
   md5: 9d92047cffb3c98227fd31bf253f4bd5
@@ -7377,6 +7396,18 @@ packages:
     - tk >=8.6.13,<8.7.0a0
   size: 3512384
   timestamp: 1787272935349
+- conda: https://conda.anaconda.org/conda-forge/osx-64/typdiff-0.1.4-he704061_1.conda
+  sha256: 7f02eb99c414deca4aa0a9a97992bf2196b47b99ca1e7d667d2a5c47a604e20b
+  md5: 2a986814c505e2db1a61e156c600ef6a
+  depends:
+  - __osx >=11.0
+  constrains:
+  - __osx >=11.0
+  license: Apache-2.0
+  license_family: APACHE
+  run_exports: {}
+  size: 593679
+  timestamp: 1792369605492
 - conda: https://conda.anaconda.org/conda-forge/osx-64/typos-1.51.1-he704061_0.conda
   sha256: 150fb02bc05143974f7aac61fec27df4e39d4b8c45c7f5e00e7c0dfce41ab27d
   md5: 51ace7c9800a0441a0149a487e74bc8e
@@ -9358,6 +9389,18 @@ packages:
     - tk >=8.6.13,<8.7.0a0
   size: 3342183
   timestamp: 1787272852357
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/typdiff-0.1.4-hc2d82ec_1.conda
+  sha256: c6bedf2c8001a3e1e2699ba9a62f27acd37711a6ac23284a62048b24199363d6
+  md5: 55832f9f579fceb08bb34d685830f40a
+  depends:
+  - __osx >=11.0
+  constrains:
+  - __osx >=11.0
+  license: Apache-2.0
+  license_family: APACHE
+  run_exports: {}
+  size: 557374
+  timestamp: 1792369527839
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typos-1.51.1-hc2d82ec_0.conda
   sha256: 108257e99c75ca73ae34235d97a6bc1b927e993adf7ce47ec09bf47cf80836a4
   md5: 75d935a5f4e5043a7d720d107ce1ee3c
