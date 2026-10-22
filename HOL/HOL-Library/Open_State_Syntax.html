@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Open_State_Syntax</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Open_State_Syntax</h1>
+</div>
+
+<pre class="source"><span class="comment1"><span>(*  Title:      HOL/Library/Open_State_Syntax.thy
+    Author:     Florian Haftmann, TU Muenchen
+*)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Combinator syntax for generic, open state monads (single-threaded monads)›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Open_State_Syntax.html"><span>Open_State_Syntax</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><a href="../HOL/Main.html"><span>Main</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>context</span></span></span><span>
+  </span><span class="keyword2"><span class="keyword"><span>includes</span></span></span><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.state_combinator_syntax|bundle"><span>state_combinator_syntax</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>subsection</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Motivation›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  The logic HOL has no notion of constructor classes, so it is not
+  possible to model monads the Haskell way in full genericity in
+  Isabelle/HOL.
+  
+  However, this theory provides substantial support for a very common
+  class of monads: \emph{state monads} (or \emph{single-threaded
+  monads}, since a state is transformed single-threadedly).
+
+  To enter from the Haskell world,
+  </span><span class="antiquoted"><span class="operator"><span>🌐</span></span><a href="https://www.engr.mun.ca/~theo/Misc/haskell_and_monads.htm"><span>‹https://www.engr.mun.ca/~theo/Misc/haskell_and_monads.htm›</span></a></span><span> makes
+  a good motivating start.  Here we just sketch briefly how those
+  monads enter the game of Isabelle/HOL.
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>subsection</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹State transformations and combinators›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  We classify functions operating on states into two categories:
+
+  \begin{description}
+
+    \item[transformations] with type signature </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>σ ⇒ σ'›</span></span></span><span>,
+      transforming a state.
+
+    \item[``yielding'' transformations] with type signature </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>σ
+      ⇒ α × σ'›</span></span></span><span>, ``yielding'' a side result while transforming a
+      state.
+
+    \item[queries] with type signature </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>σ ⇒ α›</span></span></span><span>, computing a
+      result dependent on a state.
+
+  \end{description}
+
+  By convention we write </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>σ›</span></span></span><span> for types representing states and
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>α›</span></span></span><span>, </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>β›</span></span></span><span>, </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>γ›</span></span></span><span>, </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>…›</span></span></span><span> for types
+  representing side results.  Type changes due to transformations are
+  not excluded in our scenario.
+
+  We aim to assert that values of any state type </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>σ›</span></span></span><span> are used
+  in a single-threaded way: after application of a transformation on a
+  value of type </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>σ›</span></span></span><span>, the former value should not be used
+  again.  To achieve this, we use a set of monad combinators:
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  Given two transformations </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">term</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="free"><span>f</span></span><span>›</span></span></span><span> and </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">term</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="free"><span>g</span></span><span>›</span></span></span><span>, they may be
+  directly composed using the </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">term</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="main"><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp|const"><span>(∘&gt;)</span></a></span><span>›</span></span></span><span> combinator, forming a
+  forward composition: </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">prop</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="main"><span>(</span></span><span class="free"><span>f</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp|const"><span>∘&gt;</span></a></span><span> </span><span class="free"><span>g</span></span><span class="main"><span>)</span></span><span> </span><span class="free"><span>s</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.eq|const"><span>=</span></a></span><span> </span><span class="free"><span>f</span></span><span> </span><span class="main"><span>(</span></span><span class="free"><span>g</span></span><span> </span><span class="free"><span>s</span></span><span class="main"><span>)</span></span><span>›</span></span></span><span>.
+
+  After any yielding transformation, we bind the side result
+  immediately using a lambda abstraction.  This is the purpose of the
+  </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">term</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="main"><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.scomp|const"><span>(∘→)</span></a></span><span>›</span></span></span><span> combinator: </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">prop</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="main"><span>(</span></span><span class="free"><span>f</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.scomp|const"><span>∘→</span></a></span><span> </span><span class="main"><span>(</span></span><span class="main"><span>λ</span></span><span class="bound"><span>x</span></span><span class="main"><span>.</span></span><span> </span><span class="free"><span>g</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span> </span><span class="free"><span>s</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.eq|const"><span>=</span></a></span><span> </span><span class="main"><span>(</span></span><span class="keyword1"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>let</span></a></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.prod.case_prod|const"><span>(</span></a></span><span class="bound"><span>x</span></span><span class="main"><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.prod.case_prod|const"><span>,</span></a></span><span> </span><span class="bound"><span>s'</span></span><span class="main"><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.prod.case_prod|const"><span>)</span></a></span><span>
+  </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>=</span></a></span><span> </span><span class="free"><span>f</span></span><span> </span><span class="free"><span>s</span></span><span> </span><span class="keyword1"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>in</span></a></span><span> </span><span class="free"><span>g</span></span><span> </span><span class="bound"><span>s'</span></span><span class="main"><span>)</span></span><span>›</span></span></span><span>.
+
+  For queries, the existing </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">term</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span class="const"><span>Let</span></span></a><span>›</span></span></span><span> is appropriate.
+
+  Naturally, a computation may yield a side result by pairing it to
+  the state from the left; we introduce the suggestive abbreviation
+  </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">term</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="free"><span>return</span></span><span>›</span></span></span><span> for this purpose.
+
+  The most crucial distinction to Haskell is that we do not need to
+  introduce distinguished type constructors for different kinds of
+  state.  This has two consequences:
+
+  \begin{itemize}
+
+    \item The monad model does not state anything about the kind of
+       state; the model for the state is completely orthogonal and may
+       be specified completely independently.
+
+    \item There is no distinguished type constructor encapsulating
+       away the state transformation, i.e.~transformations may be
+       applied directly without using any lifting or providing and
+       dropping units (``open monad'').
+
+    \item The type of states may change due to a transformation.
+
+  \end{itemize}
+›</span></span></span><span>
+
+
+</span><span class="keyword1"><span class="command"><span>subsection</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Monad laws›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  The common monadic laws hold and may also be used as normalization
+  rules for monadic expressions:
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>lemmas</span></span></span><span> </span><span class="entity_def" id="Open_State_Syntax.monad_simp|fact"><span class="entity_def" id="Open_State_Syntax.monad_simp(8)|thm"><span class="entity_def" id="Open_State_Syntax.monad_simp(7)|thm"><span class="entity_def" id="Open_State_Syntax.monad_simp(6)|thm"><span class="entity_def" id="Open_State_Syntax.monad_simp(5)|thm"><span class="entity_def" id="Open_State_Syntax.monad_simp(4)|thm"><span class="entity_def" id="Open_State_Syntax.monad_simp(3)|thm"><span class="entity_def" id="Open_State_Syntax.monad_simp(2)|thm"><span class="entity_def" id="Open_State_Syntax.monad_simp(1)|thm"><span class="entity_def" id="offset_3265..3275">monad_simp</span></span></span></span></span></span></span></span></span></span><span> </span><span class="main"><span>=</span></span><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.Pair_scomp|fact"><span>Pair_scomp</span></a><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.scomp_Pair|fact"><span>scomp_Pair</span></a><span> </span><a class="entity_ref" href="../HOL/Fun.html#Fun.id_fcomp|fact"><span>id_fcomp</span></a><span> </span><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp_id|fact"><span>fcomp_id</span></a><span>
+  </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.scomp_scomp|fact"><span>scomp_scomp</span></a><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.scomp_fcomp|fact"><span>scomp_fcomp</span></a><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.fcomp_scomp|fact"><span>fcomp_scomp</span></a><span> </span><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp_assoc|fact"><span>fcomp_assoc</span></a><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  Evaluation of monadic expressions by force:
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>lemmas</span></span></span><span> </span><span class="entity_def" id="Open_State_Syntax.monad_collapse|fact"><span class="entity_def" id="Open_State_Syntax.monad_collapse(11)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(10)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(9)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(8)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(7)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(6)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(5)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(4)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(3)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(2)|thm"><span class="entity_def" id="Open_State_Syntax.monad_collapse(1)|thm"><span>monad_collapse</span></span></span></span></span></span></span></span></span></span></span></span></span><span> </span><span class="main"><span>=</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3265..3275"><span>monad_simp</span></a><span> </span><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp_apply|fact"><span>fcomp_apply</span></a><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.scomp_apply|fact"><span>scomp_apply</span></a><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.split_beta|fact"><span>split_beta</span></a><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+
+
+</span><span class="keyword1"><span class="command"><span>subsection</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Do-syntax›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>nonterminal</span></span></span><span> </span><span class="entity_def" id="offset_3538..3547">sdo_binds</span><span> </span><span class="keyword2"><span class="keyword"><span>and</span></span></span><span> </span><span class="entity_def" id="offset_3552..3560">sdo_bind</span><span>
+
+</span><span class="keyword1"><span class="command"><span>syntax</span></span></span><span>
+  </span><span class="quoted"><span>"_sdo_block"</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><a class="entity_ref" href="Open_State_Syntax.html#offset_3538..3547"><span class="tconst"><span>sdo_binds</span></span></a><span> </span><span class="main"><span>⇒</span></span><span> </span><span class="tfree"><span>'a</span></span><span>"</span></span></span><span>
+    </span><span class="main"><span>(</span></span><span class="quoted"><span>‹</span><span class="keyword3"><span>(‹open_block notation=‹mixfix exec block››</span></span><span class="keyword1"><span>exec</span></span><span> </span><span class="keyword1"><span>{</span></span><span class="keyword3"><span>//</span></span><span class="keyword3"><span>(2</span></span><span>  _</span><span class="keyword3"><span>)</span></span><span class="keyword3"><span>//</span></span><span class="keyword1"><span>}</span></span><span class="keyword3"><span>)</span></span><span>›</span></span><span> </span><span class="main"><span>[</span></span><span>12</span><span class="main"><span>]</span></span><span> 62</span><span class="main"><span>)</span></span><span>
+  </span><span class="quoted"><span>"_sdo_bind"</span></span><span>  </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="main"><span>[</span></span><span class="tconst"><span>pttrn</span></span><span class="main"><span>,</span></span><span> </span><span class="tfree"><span>'a</span></span><span class="main"><span>]</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3552..3560"><span class="tconst"><span>sdo_bind</span></span></a><span>"</span></span></span><span>
+    </span><span class="main"><span>(</span></span><span class="quoted"><span>‹</span><span class="keyword3"><span>(‹indent=2 notation=‹infix exec bind››</span></span><span>_ </span><span class="keyword1"><span>←</span></span><span class="keyword3"><span>/ </span></span><span>_</span><span class="keyword3"><span>)</span></span><span>›</span></span><span> 13</span><span class="main"><span>)</span></span><span>
+  </span><span class="quoted"><span>"_sdo_let"</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="main"><span>[</span></span><span class="tconst"><span>pttrn</span></span><span class="main"><span>,</span></span><span> </span><span class="tfree"><span>'a</span></span><span class="main"><span>]</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3552..3560"><span class="tconst"><span>sdo_bind</span></span></a><span>"</span></span></span><span>
+    </span><span class="main"><span>(</span></span><span class="quoted"><span>‹</span><span class="keyword3"><span>(‹indent=2 notation=‹infix exec let››</span></span><span class="keyword1"><span>let</span></span><span> _ </span><span class="keyword1"><span>=</span></span><span class="keyword3"><span>/ </span></span><span>_</span><span class="keyword3"><span>)</span></span><span>›</span></span><span> </span><span class="main"><span>[</span></span><span>1000</span><span class="main"><span>,</span></span><span> 13</span><span class="main"><span>]</span></span><span> 13</span><span class="main"><span>)</span></span><span>
+  </span><span class="quoted"><span>"_sdo_then"</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="tfree"><span>'a</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3552..3560"><span class="tconst"><span>sdo_bind</span></span></a><span>"</span></span></span><span>  </span><span class="main"><span>(</span></span><span class="quoted"><span>‹_›</span></span><span> </span><span class="main"><span>[</span></span><span>14</span><span class="main"><span>]</span></span><span> 13</span><span class="main"><span>)</span></span><span>
+  </span><span class="quoted"><span>"_sdo_final"</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="tfree"><span>'a</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3538..3547"><span class="tconst"><span>sdo_binds</span></span></a><span>"</span></span></span><span>  </span><span class="main"><span>(</span></span><span class="quoted"><span>‹_›</span></span><span class="main"><span>)</span></span><span>
+  </span><span class="quoted"><span>"_sdo_cons"</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="main"><span>[</span></span><a class="entity_ref" href="Open_State_Syntax.html#offset_3552..3560"><span class="tconst"><span>sdo_bind</span></span></a><span class="main"><span>,</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3538..3547"><span class="tconst"><span>sdo_binds</span></span></a><span class="main"><span>]</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3538..3547"><span class="tconst"><span>sdo_binds</span></span></a><span>"</span></span></span><span>
+    </span><span class="main"><span>(</span></span><span class="quoted"><span>‹</span><span class="keyword3"><span>(‹open_block notation=‹infix exec next››</span></span><span>_</span><span class="keyword1"><span>;</span></span><span class="keyword3"><span>//</span></span><span>_</span><span class="keyword3"><span>)</span></span><span>›</span></span><span> </span><span class="main"><span>[</span></span><span>13</span><span class="main"><span>,</span></span><span> 12</span><span class="main"><span>]</span></span><span> 12</span><span class="main"><span>)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>syntax</span></span></span><span> </span><span class="main"><span>(</span></span><span>ASCII</span><span class="main"><span>)</span></span><span>
+  </span><span class="quoted"><span>"_sdo_bind"</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="main"><span>[</span></span><span class="tconst"><span>pttrn</span></span><span class="main"><span>,</span></span><span> </span><span class="tfree"><span>'a</span></span><span class="main"><span>]</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><a class="entity_ref" href="Open_State_Syntax.html#offset_3552..3560"><span class="tconst"><span>sdo_bind</span></span></a><span>"</span></span></span><span>
+    </span><span class="main"><span>(</span></span><span class="quoted"><span>‹</span><span class="keyword3"><span>(‹indent=2 notation=‹infix exec bind››</span></span><span>_ </span><span class="keyword1"><span>&lt;-</span></span><span class="keyword3"><span>/ </span></span><span>_</span><span class="keyword3"><span>)</span></span><span>›</span></span><span> 13</span><span class="main"><span>)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>syntax_consts</span></span></span><span>
+  </span><span class="quoted"><span>"_sdo_let"</span></span><span> </span><span class="main"><span>==</span></span><span> </span><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span class="const"><span>Let</span></span></a><span>
+
+</span><span class="keyword1"><span class="command"><span>translations</span></span></span><span>
+  </span><span class="quoted"><span>"_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="main"><span>(</span></span><span>_sdo_bind </span><span class="free"><span>p</span></span><span> </span><span class="free"><span>t</span></span><span class="main"><span>)</span></span><span> </span><span class="main"><span>(</span></span><span>_sdo_final </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+    </span><span class="main"><span>==</span></span><span> </span><span class="quoted"><span>"</span><span class="keyword1"><span>CONST</span></span><span> </span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.scomp|const"><span class="const"><span>scomp</span></span></a><span> </span><span class="free"><span>t</span></span><span> </span><span class="main"><span>(</span></span><span class="main"><span>λ</span></span><span class="free"><span>p</span></span><span class="main"><span>.</span></span><span> </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+  </span><span class="quoted"><span>"_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="main"><span>(</span></span><span>_sdo_then </span><span class="free"><span>t</span></span><span class="main"><span>)</span></span><span> </span><span class="main"><span>(</span></span><span>_sdo_final </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+    </span><span class="main"><span>=&gt;</span></span><span> </span><span class="quoted"><span>"</span><span class="keyword1"><span>CONST</span></span><span> </span><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp|const"><span class="const"><span>fcomp</span></span></a><span> </span><span class="free"><span>t</span></span><span> </span><span class="free"><span>e</span></span><span>"</span></span><span>
+  </span><span class="quoted"><span>"_sdo_final </span><span class="main"><span>(</span></span><span>_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="main"><span>(</span></span><span>_sdo_then </span><span class="free"><span>t</span></span><span class="main"><span>)</span></span><span> </span><span class="main"><span>(</span></span><span>_sdo_final </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+    </span><span class="main"><span>&lt;=</span></span><span> </span><span class="quoted"><span>"_sdo_final </span><span class="main"><span>(</span></span><span class="keyword1"><span>CONST</span></span><span> </span><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp|const"><span class="const"><span>fcomp</span></span></a><span> </span><span class="free"><span>t</span></span><span> </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+  </span><span class="quoted"><span>"_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="main"><span>(</span></span><span>_sdo_then </span><span class="free"><span>t</span></span><span class="main"><span>)</span></span><span> </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+    </span><span class="main"><span>&lt;=</span></span><span> </span><span class="quoted"><span>"</span><span class="keyword1"><span>CONST</span></span><span> </span><a class="entity_ref" href="../HOL/Fun.html#Fun.fcomp|const"><span class="const"><span>fcomp</span></span></a><span> </span><span class="free"><span>t</span></span><span> </span><span class="main"><span>(</span></span><span>_sdo_block </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+  </span><span class="quoted"><span>"_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="main"><span>(</span></span><span class="const"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>_sdo_let</span></a></span><span> </span><span class="free"><span>p</span></span><span> </span><span class="free"><span>t</span></span><span class="main"><span>)</span></span><span> </span><span class="free"><span>bs</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+    </span><span class="main"><span>==</span></span><span> </span><span class="quoted"><span>"</span><span class="keyword1"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>let</span></a></span><span> </span><span class="free"><span>p</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>=</span></a></span><span> </span><span class="free"><span>t</span></span><span> </span><span class="keyword1"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>in</span></a></span><span> _sdo_block </span><span class="free"><span>bs</span></span><span>"</span></span><span>
+  </span><span class="quoted"><span>"_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="free"><span>b</span></span><span> </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="free"><span>c</span></span><span> </span><span class="free"><span>cs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+    </span><span class="main"><span>==</span></span><span> </span><span class="quoted"><span>"_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="free"><span>b</span></span><span> </span><span class="main"><span>(</span></span><span>_sdo_final </span><span class="main"><span>(</span></span><span>_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_cons </span><span class="free"><span>c</span></span><span> </span><span class="free"><span>cs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+  </span><span class="quoted"><span>"_sdo_cons </span><span class="main"><span>(</span></span><span class="const"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>_sdo_let</span></a></span><span> </span><span class="free"><span>p</span></span><span> </span><span class="free"><span>t</span></span><span class="main"><span>)</span></span><span> </span><span class="main"><span>(</span></span><span>_sdo_final </span><span class="free"><span>s</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+    </span><span class="main"><span>==</span></span><span> </span><span class="quoted"><span>"_sdo_final </span><span class="main"><span>(</span></span><span class="keyword1"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>let</span></a></span><span> </span><span class="free"><span>p</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>=</span></a></span><span> </span><span class="free"><span>t</span></span><span> </span><span class="keyword1"><a class="entity_ref" href="../HOL/HOL.html#HOL.Let|const"><span>in</span></a></span><span> </span><span class="free"><span>s</span></span><span class="main"><span>)</span></span><span>"</span></span><span>
+  </span><span class="quoted"><span>"_sdo_block </span><span class="main"><span>(</span></span><span>_sdo_final </span><span class="free"><span>e</span></span><span class="main"><span>)</span></span><span>"</span></span><span> </span><span class="main"><span>=&gt;</span></span><span> </span><span class="quoted"><span>"</span><span class="free"><span>e</span></span><span>"</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  For an example, see </span><span class="antiquoted"><span class="operator"><span>🗏</span></span><span>‹~~/src/HOL/Proofs/Extraction/Higman_Extraction.thy›</span></span><span>.
+›</span></span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>
