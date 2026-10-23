@@ -66,13 +66,17 @@ generated material, the analyzer, the project site, and this thesis consistent
 repeated manual inspection with conditions that every change had to satisfy, and
 they exposed errors that manual reading had missed.
 
+#let _cc = _ai.claude_code
+#let _cx = _ai.codex
+
 @fig:ai-sessions quantifies the recorded part of this assistance using
 session-log counts, following Bryant et al. @bryant26munkres[Section 5]. The counts
 measure interaction with the tools, not authorship or the proportion of the work
-attributable to them.
+attributable to them. The author sent #_n(_cc.top_level.human_messages)
+messages to Claude Code and #_n(_cx.top_level.human_messages) to Codex.
+Co-author lines in commit messages were not kept consistently and are not used
+as a measure.
 
-#let _cc = _ai.claude_code
-#let _cx = _ai.codex
 #let _row(label, key, codex: true) = (
   label,
   ..(_cc.top_level, _cc.subagents).map(s => _n(s.at(key))),
@@ -102,12 +106,9 @@ attributable to them.
     local session logs (#_cc.top_level.first_day to #_cc.top_level.last_day for
     Claude Code, #_cx.top_level.first_day to #_cx.top_level.last_day for Codex).
     No local logs are available for earlier Claude Code sessions, ChatGPT in
-    the browser, or Cursor, so these are not counted. The author sent
-    #_n(_cc.top_level.human_messages) messages to Claude Code and
-    #_n(_cx.top_level.human_messages) to Codex. Shell edits count as shell calls.
+    the browser, or Cursor, so these are not counted. Shell edits count as shell calls.
     Interactions through the Isabelle server, including theory edits, count as
-    server calls. Co-author lines in commit messages were not kept consistently
-    and are not used as a measure.],
+    server calls.],
 ) <fig:ai-sessions>
 
 Isabelle/HOL accepts every theorem in the development. Proofs by evaluation,

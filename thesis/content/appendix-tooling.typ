@@ -28,17 +28,18 @@ and the project site hosts the playground, the explainer, and the rendered
 theories that every Isabelle name in this thesis links to.
 
 The vendored TD solver of Tilscher et al. @tilscher26 carries four changes made
-for this thesis, each proposed upstream and none changing the algorithm. They
-restore the build under Isabelle2025-2
-(#link("https://github.com/stilscher/td-verification/pull/15")[PR 15]), remove the stabilization
-assumptions from the classes #isalocale("widening") and
+for this thesis, each proposed upstream and none changing the algorithm.
+#link("https://github.com/stilscher/td-verification/pull/15")[PR 15] restores
+the build under Isabelle2025-2.
+#link("https://github.com/stilscher/td-verification/pull/13")[PR 13] removes the
+stabilization assumptions from the classes #isalocale("widening") and
 #isalocale("narrowing"), which only termination proofs use
-(#link("https://github.com/stilscher/td-verification/pull/13")[PR 13], @sec:domain-carrier-laws), rename short field and constructor names that
-clashed with downstream theories
-(#link("https://github.com/stilscher/td-verification/pull/14")[PR 14]), and add facts about the solver's
-definitions, such as #isathm("solve_dom_of_solve_c"), that
-#isathm("td_certified_solver") uses
-(#link("https://github.com/stilscher/td-verification/pull/16")[PR 16], @sec:certificate). At the time of
+(@sec:domain-carrier-laws).
+#link("https://github.com/stilscher/td-verification/pull/14")[PR 14] renames
+short field and constructor names that clashed with downstream theories, and
+#link("https://github.com/stilscher/td-verification/pull/16")[PR 16] adds facts
+about the solver's definitions, such as #isathm("solve_dom_of_solve_c"), that
+#isathm("td_certified_solver") uses (@sec:certificate). At the time of
 writing, all four pull requests await review. The solver's repository is
 private, so the development cannot yet be built from public sources alone,
 and there are plans to publish the solver in the Archive of Formal Proofs.
