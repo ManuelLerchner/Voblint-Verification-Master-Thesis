@@ -221,8 +221,7 @@ Every expression has a value, because VIMP fixes the results of division and
 remainder by zero (#isaconst("c_div"), #isaconst("c_mod"), @sec:vimp-vs-c). It also has no
 effects, so a transfer function may evaluate a guard again, as the backward
 filtering of @ch:domains does. Input enters only through the statement
-`x = __voblint_nondet_int();` and never inside an expression. This keeps
-#isaconst("aval") a function.
+`x = __voblint_nondet_int();` and never inside an expression. Restricting input to this statement keeps #isaconst("aval") a function.
 
 Commands are built from expressions. Besides the structured statements, there
 are calls, which may store a result, and two markers that appear only during
@@ -330,8 +329,7 @@ theorem (@fig:intro-trust).
 ) <fig:vimp-ast>
 
 Not every parsed program can run meaningfully. The theorems therefore
-assume the _source contract_ #isaconst("wf_source_program"), which excludes
-programs whose calls cannot step or whose results are undefined. It requires
+assume the _source contract_ #isaconst("wf_source_program"), which excludes programs in which a call cannot step or a result is undefined. It requires
 that
 
 - every call names either a declared procedure with matching arity or a
@@ -437,9 +435,7 @@ library call has a result (#isathm("special_result_ex")).
 == The procedure-aware control-flow graph <sec:graph>
 
 The source semantics executes a program by rewriting the command that remains
-to run. The analysis instead works on a procedure-aware control-flow graph,
-whose nodes are the program points that carry abstract states and whose local
-edges and call edges carry the transfers.
+to run. The analysis instead works on a procedure-aware control-flow graph. The nodes of this graph are the program points that carry abstract states, and its local edges and call edges carry the transfers.
 
 === Why the analysis needs program points <sec:why-graph>
 
@@ -469,8 +465,7 @@ and is _constraint-based_ @apinis12: it turns the program into a system of
 inequalities over unknowns indexed by the graph's nodes. A generic solver
 that knows nothing about programs then solves this system. The solver
 needs no knowledge of calls, because a call contributes right-hand sides and
-side effects to the same system (@ch:equations). The price is two extra
-proof layers. This chapter must prove by a simulation that the compiler
+side effects to the same system (@ch:equations). The approach requires two extra proof layers. This chapter must prove by a simulation that the compiler
 preserves the program's executions, and @ch:traces must say what the inequalities
 mean for those executions. In return, the argument about programs
 ends at a solver-independent certificate, a post-solution on the solved set
@@ -514,8 +509,7 @@ one of the two relations.
 
 Returns, in contrast, are ordinary local edges. A #keyw("return") in $p$ leads
 to the result node $ctor("FunctionResult") thin p$, which all callers of $p$
-share, so recursion needs no copies of nodes. A shared result node cannot know
-where to continue, and in a compiled graph, no edge leaves it. The call edge
+share, so recursion needs no copies of nodes. A shared result node does not determine where to continue, and in a compiled graph, no edge leaves it. The call edge
 records that place instead, as its continuation $k$. After a return, execution
 resumes at the continuation saved in the frame, and an analysis connects the
 callee's exit state to the correct caller through the call edge. The matching
@@ -699,7 +693,7 @@ definitions. One describes source programs, the other arbitrary graphs, and
 nothing yet says that a compiled graph behaves like its program. The soundness
 theorem is stated over #isaconst("pstep"), but the analysis solves equations
 generated from the graph, so every source execution must be matched by an execution of the
-compiled graph that holds the same store at corresponding points. This is proved with a _forward simulation_, a
+compiled graph that holds the same store at corresponding points. The matching is proved with a _forward simulation_, a
 relation between source and graph configurations that every source step
 preserves.
 
@@ -775,7 +769,7 @@ CompCert's simulation diagrams @leroy09[§4.3].
 The initial source configuration is related to the node after the
 #isaconst("EA_Body") edge of `main` (#isathm("compile_prog_main_base")).
 Every finite source execution of a well-formed program is therefore matched by a
-graph execution from the entry that reaches corresponding nodes with the same store. This gives the first inclusion of the soundness chain of
+graph execution from the entry that reaches corresponding nodes with the same store. This matching gives the first inclusion of the soundness chain of
 @fig:intro-nest.
 
 === Locating source configurations at graph nodes #thy-badge("Voblint_Compile", "Elaborated_Compilation") <sec:at-node>
@@ -796,8 +790,7 @@ emits for it. The elaboration compiles to the same graph
 #isaconst("point", thy: "Elaborated_Compilation") reads the related node off
 the residual's annotation (#isathm("csim_point_compile_prog")). Every source execution of a
 well-formed program is the _erasure_ (#isaconst("erase")) of a run of its
-elaboration (#isathm("psteps_lift")), so the node can be read off the elaborated
-run.
+elaboration (#isathm("psteps_lift")), so the elaborated run determines the node.
 
 #definition(name: [Observed at a node], isa: "at_node", cmd: "fun")[
   A configuration $(r, s, "frs")$ is _observed_ at $v$, written
@@ -812,7 +805,7 @@ run.
 Every source-level guarantee in this thesis is interpreted against the
 executions of #isaconst("pstep"), the source semantics of VIMP, so no
 guarantee can show that #isaconst("pstep") describes the intended language.
-This can only be argued, and this section collects the argument.
+The adequacy of #isaconst("pstep") can only be argued, and this section collects the argument.
 @tab:vimp-vs-c compares VIMP with C11 @iso-c11 (committee draft N1570)
 wherever both languages have a construct but model it differently. The comparison
 is not complete, so C may differ from VIMP in further places.

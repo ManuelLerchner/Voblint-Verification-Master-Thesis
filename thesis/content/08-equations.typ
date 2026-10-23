@@ -14,11 +14,10 @@
 
 = Context-Indexed Equations and Routing <ch:equations>
 
-@ch:traces reduced soundness to a cover, which assigns to every node $v$
-and context $c$ a set of stores #isai("cover v c"), and stated five local
+@ch:traces reduced soundness to a cover, a set of stores #isai("cover v c") for every node $v$ and context $c$, and stated five local
 obligations under which the cover contains every store that an execution
 brings to $v$ in context $c$. @ch:analysis-interface and @ch:cooperation stated what an analysis supplies
-and proves. What is still missing is a way to compute such a cover.
+and proves. A way to compute such a cover is still missing.
 This chapter turns the procedure-aware graph of @ch:program-model into a
 system of equations and shows that every post-solution induces a sound cover.
 
@@ -43,7 +42,7 @@ copies of `bump`, so the first result stays exactly $6$ (@sec:interproc).
 Voblint therefore indexes the unknowns of the equations by contexts. For every
 node $v$ and context $c$, there is a _local_ unknown $(v, c)$, whose value
 $sol(v, c)$ is the abstract state for the activations of context $c$ at $v$.
-These are the indices of the cover. Goblint's local unknowns have the
+The pairs $(v, c)$ are the indices of the cover. Goblint's local unknowns have the
 #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape] @apinis14[§5.2].
 Besides the local unknowns, the equations have _global_ unknowns without a
 program point (@sec:td). They hold the analysis globals of @sec:shared-facts

@@ -39,7 +39,7 @@ point by an abstract state $d$ of its _local domain_ $D_L$ and
 supplies, for each action $a$, a transfer function $asem(a)$. The transfer is
 sound if it loses no successor:
 $ s in conc(d) and s' in #isai("edge_step a s") ==> s' in conc(asem(a) thin d). $
-This is the abstract counterpart of the obligation #oblig("INTRA") of
+This condition is the abstract counterpart of the obligation #oblig("INTRA") of
 @ch:traces for one edge.
 
 A call cannot be handled by one such transfer. After it returns, the caller's
@@ -177,10 +177,7 @@ local domain $D_L$ holds facts per program point and context, and the _global do
 the values of _analysis globals_, which are unknowns without a program point. An assignment to `g`
 publishes its value to the analysis global of `g` as a side effect, and an
 edge that reads `g` depends on that unknown. Goblint's
-#link(
-  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168",
-)[`Spec`]
-accordingly declares a local lattice `D` and a global lattice `G`.
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168")[`Spec`] likewise declares a local lattice `D` and a global lattice `G`.
 
 The word _global_ thus has two meanings. A _program global_ is a variable of the VIMP program. An analysis global is a fact the
 analysis keeps flow-insensitively. The two are independent, and by default, the numeric analyses keep program

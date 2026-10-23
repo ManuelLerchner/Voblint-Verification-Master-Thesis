@@ -198,8 +198,7 @@ of the chain is a theorem:
   isai("\<V>\<^bsub>res\<^esub> v"),
 )))
 The first step places a store that a finite source execution reaches in the node
-collecting semantics, at a node $v$ that the simulation relates to the run. On the
-elaboration, this is every node at which the run is observed
+collecting semantics, at a node $v$ that the simulation relates to the run. On the elaborated program, this is every node at which the run is observed
 (#isathm("csim_point_compile_prog"), @sec:at-node). The second step splits
 #isaconst("node_collect") into #isaconst("activation_collect") over the
 contexts #isai("adm") admits, with `main` in #isai("c\<^sub>0")

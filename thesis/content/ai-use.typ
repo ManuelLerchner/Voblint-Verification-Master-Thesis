@@ -32,10 +32,7 @@ The assistance also extended to design. To formalize calling contexts, the
 concrete semantics is based on traces instead of states, inspired by the local
 traces of Schwarz et al. @schwarz21. Language models helped adapt the
 thread-local setting of that work to procedure activations. The requirements for
-the activation traces of @sec:activation-trace were evaluated and refined in
-collaboration with agents: how traces are generated, that a callee trace begins
-only at a call, that a trace retains its call history, and that calling contexts
-are derived from traces.
+the activation traces of @sec:activation-trace were evaluated and refined in collaboration with agents. They concern the generation of traces, the start of a callee trace at a call, the call history each trace retains, and the derivation of calling contexts from traces.
 
 For the Isabelle development of the analysis framework, agents inspected
 Goblint's OCaml sources to identify interfaces the formalization could approximate, such as local and global
@@ -58,7 +55,7 @@ caution was necessary, since the assistants' output was not reliable on its own.
 lemmas and, in one case, introduced a premise into the end-to-end soundness theorem that
 no program satisfied, so the theorem was vacuous until the solver run was
 redesigned. Audits of theorem statements and full batch builds exposed these
-errors. The non-vacuity instances of @sec:nonvacuity now demonstrate that the
+errors. The non-vacuity instances of @sec:nonvacuity now show that the
 premises of the end-to-end soundness theorem and its companions can be satisfied.
 
 Agents also wrote much of the tooling around the formalization, such as the
@@ -121,8 +118,7 @@ definitions faithfully capture the intended language or analysis. Definitions
 and theorem statements were therefore also checked against example programs, the
 regression corpus, and the documented differences between VIMP and C11, much as a human
 audit checks the statements of AI-generated formal proofs @hales26lean[Sec. "Is Lean reliable?"].
-Related-work claims were checked against the cited sources, often with agent
-assistance and subsequent author review.
+Related-work claims were checked against the cited sources, often with agent assistance, followed by author review.
 
 Responsibility for the final claims, framing, and treatment of related work lies
 with the author alone.

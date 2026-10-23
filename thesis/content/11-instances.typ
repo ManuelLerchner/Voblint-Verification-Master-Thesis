@@ -221,7 +221,7 @@ just the answer to one query. Goblint draws the same line. Its integer
 domains form one value domain inside its base analysis, whereas its MCP
 combines whole analyses.
 
-A reduction round passes information in two steps. It first combines the range
+A reduction round first combines the range
 information of Sign and Interval and uses it to sharpen Sign, Interval, and
 Parity. It then intersects the residue class with the parity and uses the
 result to sharpen Interval, Parity, and Congruence. The user chooses how often
@@ -282,7 +282,7 @@ same stores but are different values. The join can also forget an implied
 relation. The join of $absval({x <= y, y <= z})$ and $absval({x <= y, x <= z})$ keeps only
 their common pair and is $absval({x <= y})$, although both operands imply $x <= z$. The
 order analysis is therefore not as precise as a closed relational domain could
-be. It demonstrates that the framework supports relational
+be. It shows that the framework supports relational
 states.
 
 Pairs enter only at guards, and an assignment to $x$ removes every pair that
@@ -363,8 +363,7 @@ instantiates the solver's classes and #isalocale("executable_domain") of
 == Proving order relations between variables #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
 
 @sec:rel-state introduced the relational state as an abstract domain. This
-section builds the order analysis on top of it and demonstrates it on a
-program. After an
+section builds the order analysis on top of it and runs it on a program. After an
 assignment has forgotten the pairs involving the changed variable, it asks the
 shared channel how the new value relates to each variable, and
 every selected analysis, the order analysis included, may give an answer

@@ -273,8 +273,7 @@ The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
 when $l' <= l$ and $u <= u'$. The join
 $[l, u] ljoin [l', u'] = [min(l, l'), max(u, u')]$ is the smallest interval
 containing both. An interval cannot have holes, so the join may contain values
-that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet
-intersects the bounds. This is the textbook domain. Voblint's representation
+that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet intersects the bounds. These operations form the textbook interval domain. Voblint's representation
 #isatype("ivl") admits every pair of bounds, so $lbot$ is one of several empty
 pairs (@sec:domain-carrier-laws).
 
@@ -585,9 +584,7 @@ A context-sensitive analysis handles a call with two abstract operations @apinis
 $"enter"^sharp$, maps the caller's state before the call to the callee's entry
 state. The callee's context is chosen at the same point, for example as the
 extended call string or as this entry state itself. The second, $"comb"^sharp$,
-computes the caller's state after the call. It needs the callee's exit state,
-which holds the return value, and the caller's state before the call, which
-holds the caller's local variables that the callee does not see. Goblint's
+computes the caller's state after the call. It needs the callee's exit state for the return value and the caller's state before the call for the caller's local variables, which the callee does not see. Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",
 )[constraint generator]
@@ -603,9 +600,7 @@ value for an aspect of the state across the program, for example, one range for
 a global variable, and mixed analyses choose between the two per aspect
 @seidl26.
 
-A flow-insensitive fact needs an unknown of its own that belongs to no program
-point, and every point that changes the fact has to feed its new value into
-that unknown. An ordinary right-hand side for the unknown would have to list
+A flow-insensitive fact needs an unknown of its own, attached to no program point, and every point that changes the fact has to feed its new value into this unknown. An ordinary right-hand side for the unknown would have to list
 all these points in advance, which is not always possible. In a
 context-sensitive analysis, for example, an unknown that writes a global is a
 pair of a program point and a calling context, and the contexts are discovered
@@ -647,9 +642,7 @@ describes what a right-hand side computes. The verified solver represents its
 evaluation by a strategy tree (@sec:td), so that it discovers reads and side
 effects while it solves.
 
-With contexts as indices, a system can have infinitely many unknowns, of which
-only those that influence the _query_, the unknown whose value is asked for,
-matter. A _local_ solver therefore explores the system from the query and
+With contexts as indices, a system can have infinitely many unknowns. Only those that influence the _query_, the unknown whose value is asked for, matter. A _local_ solver therefore explores the system from the query and
 solves only the unknowns that it meets @seidl21. Its result comes with a
 _certificate_, the property #isaconst("part_post_solution", thy: "Basics_side"),
 which requires the bounds above only on a set of unknowns that contains the

@@ -15,7 +15,7 @@
 
 @ch:traces reduced soundness to five obligations on a cover, which assigns
 each node and context a set of stores. The obligations are local conditions,
-and together they guarantee that the cover contains every store that an execution in that context reaches at the node (#isathm("activation_collect_sound")). These sets
+and together they guarantee that the cover contains, for each node and context, every store that an execution in this context reaches at the node (#isathm("activation_collect_sound")). These sets
 are arbitrary and usually infinite. An analyzer, however, computes with finite
 abstract values, and its solver (@sec:td) compares, joins, widens, and narrows them without
 knowing what they mean. Recall from @sec:abs-int that an abstract value $a$
@@ -32,15 +32,11 @@ turns each such inequality into an inclusion (#isathm("gamma_mono"),
 @fig:sign-conc). Second, a value can denote no integer without being the
 lattice's bottom element. The interval pair $absval(ivl(5, 3))$, whose lower bound
 exceeds its upper bound, is such a value. An analyzer that recognizes only the
-bottom element as empty misses it. This is still sound, since the analyzer
-then assumes more stores than exist, but it costs precision. After the next
+bottom element as empty misses it. Missing it is still sound, since the analyzer then assumes more stores than exist, but it loses precision. After the next
 join, the information that a program point is unreachable is gone
 (@sec:nonrel-state).
 
-This chapter derives what a domain must provide. The solver needs operations
-it can compute with, the soundness proof needs laws that turn the solver's
-inequalities into inclusions between sets of stores, and the analyzer needs to
-recognize every value that denotes no integer, so that an unreachable program point
+This chapter derives what a domain must provide. The solver needs operations it can compute with, and the soundness proof needs laws that turn the solver's inequalities into inclusions between sets of stores. The analyzer also has to recognize every value that denotes no integer, so that an unreachable program point
 stays unreachable.
 
 #let _snode(pos, name, body) = node(pos, text(size: 8pt, body), name: name, inset: 3pt)
@@ -644,7 +640,7 @@ misses most cases, because refining a branch condition (@sec:branches) usually
 empties a single variable, as in ${x |-> signval(bot), y |-> signval(top)}$. Treating
 every empty state as unreachable is correct at the moment of the test, but the
 information does not survive the next step. Joining two differently empty
-states can give a nonempty one (@fig:domain-reachability). This is sound,
+states can give a nonempty one (@fig:domain-reachability). The join is sound,
 since it only adds stores, but it loses the information that the point is unreachable
 and is thus imprecise.
 
@@ -680,9 +676,7 @@ and is thus imprecise.
     #claim-ref("dom-disjunct-sign")).],
 ) <fig:domain-reachability>
 
-Voblint therefore makes unreachability a value of its own, as Nipkow and
-Klein do with an option type @nipkow14[§13.7] and as Goblint does. Goblint's
-framework lifts the local state by an outer bottom element for dead code
+Voblint therefore makes unreachability a value of its own. Nipkow and Klein use an option type for this purpose @nipkow14[§13.7], and Goblint's framework lifts the local state by an outer bottom element for dead code
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L120-L135")[`Analyses.Dom`]), and a transfer function that finds its path unreachable
 raises the `Deadcode` exception instead of returning a state. In Voblint, a
 lifted state (#isatype("lifted")) is either #ctor("Bot"), meaning unreachable,

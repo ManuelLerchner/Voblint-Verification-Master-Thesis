@@ -29,6 +29,8 @@ call may change any value @blanchet03[§5.3] @eva-manual[§6.3.9]
 contrast, keeps one abstract state per program point and calling context and
 analyzes recursive programs.
 
+In @tab:production-analyzers, _stance_ is the tool's own soundness claim. Under _calls_, inlining reanalyzes the callee at every call, a summary is computed once per procedure, and _per context_ means one abstract state per program point and context. _Recursion_ says how a recursive call is treated. _Analyzed_ means the tool analyzes recursive calls, and _covered_ means that Voblint's theorem includes them. _Relational_ names the domains that relate variables. Apron is a library of relational numeric domains, and Voblint's order analysis tracks which variable is at most which. _Combination_ names how domains exchange facts. Astrée's domains send each other constraints through reduction channels, Eva's domains communicate through the abstract values of expressions, a product runs domains side by side on one state, and a query lets one analysis ask another for a fact at the current point. _Mechanized_ records what a proof assistant has checked. _End to end_ means from source executions to the verdicts of the exported function, for every answer it returns (partial correctness) and with the trusted components of @fig:intro-trust.
+
 Without proof, these tools are tested against independent evidence, such as
 compiled execution, other analyzers, or the known verdicts of benchmark
 programs. Such testing keeps finding errors. On eight analyzers for C and C++,
@@ -70,23 +72,7 @@ seven of the analyzers had soundness issues, MOPSA among them
   kind: table,
   placement: auto,
   caption: [Unverified analyzers and Voblint, as described by each tool's papers
-    and documentation. _Stance_ is the tool's own soundness claim. Under
-    _calls_, inlining reanalyzes the callee at every call, a summary is
-    computed once per procedure, and _per context_ means one abstract state
-    per program point and context. _Recursion_ says how a recursive call is
-    treated. _Analyzed_ means the tool analyzes recursive calls, and _covered_
-    means that Voblint's theorem includes them. _Relational_ names the domains
-    that relate variables. Apron is a library of relational numeric domains,
-    and Voblint's order analysis tracks which variable is at most which.
-    _Combination_ names how domains exchange facts. Astrée's domains send each
-    other constraints through reduction channels, Eva's domains communicate
-    through the abstract values of expressions, a product runs domains side by
-    side on one state, and a query lets one analysis ask another for a fact
-    at the current point. _Mechanized_ records what a proof assistant has
-    checked. _End to end_ means from source
-    executions to the verdicts of the exported function, for every answer it
-    returns (partial correctness) and with the trusted components of
-    @fig:intro-trust.],
+    and documentation.],
 ) <tab:production-analyzers>
 
 == Verified analyzers in the CompCert line
@@ -141,6 +127,8 @@ the shipped analyses do not use it (@sec:contexts). Only Cachera et al. compute 
 solver, and that solver handles ordinary inequations, not side-effecting ones
 @cachera05.
 
+In @tab:state-of-art, _prover_ is the proof assistant and _Language_ the analyzed language. _Recursion_ says how a recursive call is treated: _alarm_ raises an alarm, _covered_ means the theorem includes recursive programs, _exact_ interprets calls and returns exactly, and _no procedures_ means the language has none. _Contexts_ says how calls are distinguished: _per call site_ reanalyzes a function at every call site, _object-sensitive_ computes contexts by a function, _summaries_ computes one summary per procedure, _set per call_ lets the context policy return several contexts for one call, and _none_ and _intraprocedural_ mean that calls are not distinguished or not analyzed. _Fixpoint_ says how the result is computed: _structural_ iterates over the program's syntax, _iterator_ over the whole annotated program, _checked_ verifies the result of an untrusted iterator, _solver_ and _TD solver_ use a verified solver, and _specified_ only states the constraints. _Executable_ says whether the analyzer runs outside the prover.
+
 #figure(
   {
     set text(size: 9pt)
@@ -178,21 +166,7 @@ solver, and that solver handles ordinary inequations, not side-effecting ones
   kind: table,
   placement: auto,
   caption: [Mechanized abstract interpreters with machine-checked soundness
-    proofs, as described in each work. _Prover_ is the proof assistant and
-    _Language_ the analyzed language. _Recursion_ says how a recursive call is
-    treated: _alarm_ raises an alarm, _covered_ means the theorem includes
-    recursive programs, _exact_ interprets calls and returns exactly, and _no
-    procedures_ means the language has none. _Contexts_ says how calls are
-    distinguished: _per call site_ reanalyzes a function at every call site,
-    _object-sensitive_ computes contexts by a function, _summaries_ computes
-    one summary per procedure, _set per call_ lets the context policy return
-    several contexts for one call, and _none_ and _intraprocedural_ mean that
-    calls are not distinguished or not analyzed. _Fixpoint_ says how the
-    result is computed: _structural_ iterates over the program's syntax,
-    _iterator_ over the whole annotated program, _checked_ verifies the result
-    of an untrusted iterator, _solver_ and _TD solver_ use a verified solver,
-    and _specified_ only states the constraints. _Executable_ says whether the
-    analyzer runs outside the prover.],
+    proofs, as described in each work.],
 ) <tab:state-of-art>
 
 Nipkow and Klein develop abstract interpretation in Isabelle/HOL over annotated

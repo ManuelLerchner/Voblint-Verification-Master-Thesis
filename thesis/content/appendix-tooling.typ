@@ -192,10 +192,7 @@ reaching the reader.
 == Maintaining the formalization: `isar-tools` <sec:isar-tools>
 
 Isabelle checks that every proof goes through, but a successful build says
-little about how well a development is maintained. A lemma that no proof
-cites, an import that another import already brings in, a constant written out
-next to the notation the project gave it, or a locale assumption that no proof
-uses all leave the build green. Documentation that quotes formal statements or
+little about how well a development is maintained. The build stays green with a lemma no proof cites, an import that another import already brings in, a constant written out next to the notation the project gave it, or a locale assumption no proof uses. Documentation that quotes formal statements or
 links to the rendered theories can also fall out of date without affecting the
 build. In a development of #stat("isabelle.theories") theories, such problems
 accumulate.
@@ -211,7 +208,7 @@ checks proof style inside Isabelle, and
 #link("https://github.com/ott2/isabelle-query")[`isabelle-query`] answers
 source-level queries about declarations, dependencies, and unfinished proofs.
 
-The tool has three parts. `isar fmt` changes only layout. `isar check` offers
+The tool consists of `isar fmt`, `isar check`, and `isar project`. `isar fmt` changes only layout. `isar check` offers
 about fifty checks in groups. Checks for unfinished proofs and unreached
 theories run by default, and checks for unused or duplicated lemmas, unused
 locale assumptions, or terms written out next to their notation run when
@@ -254,11 +251,10 @@ approximates Isabelle's inner syntax lexically, so its report is a warning to
 inspect and does not prove an error.
 
 A second kind of finding concerns build time. A session inherits the heaps of
-its parent sessions, but a library theory outside that ancestry is elaborated
-again in every session that imports it. `isar stats build` reads the time each
+its parent sessions, but a library theory outside that ancestry is processed again in every session that imports it. `isar stats build` reads the time each
 theory took from a verbose build log and reports such repetitions, and
 continuous integration enforces a budget per library session. In this
-repository, repeated elaboration once cost 19% of a clean build.
+repository, repeated processing once took 19% of a clean build.
 
 All of these checks work on the sources and complement Isabelle. They point to
 suspicious patterns and structural problems, and they may report false

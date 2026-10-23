@@ -155,9 +155,7 @@ Transfers never see the pair or the seeds. Goblint instead combines the two kind
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/constraint/translators.ml#L30-L32",
 )[lifted sum]
 in which each unknown holds a value of exactly one of the two kinds.
-Voblint uses the product because its componentwise lattice structure keeps
-the Isabelle proofs simple, at the price of an unused #lbot half in every
-unknown.
+Voblint uses the product because its componentwise lattice structure keeps the Isabelle proofs simple, although every unknown then carries an unused #lbot half.
 
 == Update rules for global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
 

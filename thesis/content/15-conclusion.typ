@@ -121,7 +121,7 @@ its seed was published, and
 #link(
   "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/pull/256",
 )[pull request 256]
-reordered the two, as Goblint does.
+reordered the two into Goblint's order.
 
 *Proof correctness and proof quality require different checks.* Isabelle checks
 that the theorems follow from the definitions and assumptions, but not that the
@@ -197,8 +197,7 @@ already admits (@sec:calls). Other features of Goblint, such as machine
 integers, pointers, or threads, would require extensive changes to Voblint. Machine integers illustrate the scale of such an extension.
 #link("https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/pull/357")[Pull request 357],
 developed separately from the version this thesis describes, introduces
-machine-integer kinds from `i8` to `u64` and a typed core language elaborated
-from VIMP. Integrating it requires revisiting several layers and their
+machine-integer kinds from `i8` to `u64` and a typed core language translated from VIMP. Integrating it requires revisiting several layers and their
 soundness proofs, which is left as future work. With machine integers, Goblint's bitfield domain, which tracks each
 bit separately and which the author co-developed
 (#link("https://github.com/goblint/analyzer/pull/1623")[Goblint pull request 1623]),

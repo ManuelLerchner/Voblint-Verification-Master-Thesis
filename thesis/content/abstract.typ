@@ -18,11 +18,7 @@ condition had been verified @stade24 @tilscher26.
 Voblint is an Isabelle/HOL formalization of a context-sensitive
 interprocedural analyzer. Its soundness proof covers all four conditions for
 VIMP, a small C-like language with global and local integer variables and
-recursive procedures with parameters and return values. The end-to-end soundness theorem states
-that every report the analyzer returns covers every store that a
-finite execution of the program reaches from an initial store, and that every
-#verdict("PROVED") or #verdict("REFUTED") verdict at the corresponding program
-point holds for that store. This is partial correctness, since termination of
+recursive procedures with parameters and return values. The end-to-end soundness theorem states that every report the analyzer returns covers every store that a finite execution of the program reaches from an initial store. By the same theorem, every #verdict("PROVED") or #verdict("REFUTED") verdict at the corresponding program point holds for that store. The theorem expresses partial correctness, since termination of
 the solver is not proved. A check reported #verdict("DEAD") is also proved
 unreachable. At a point without an arithmetic warning or error, no divisor is
 zero, and a divisor reported as an error is zero wherever its point is reached.

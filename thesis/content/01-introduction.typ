@@ -63,7 +63,7 @@ instead.
 
 == Sound static analysis and its verdicts <sec:intro-static>
 
-Software is usually checked by testing. A failing test demonstrates a bug, but
+Software is usually checked by testing. A failing test shows a bug, but
 a passing test suite has observed only finitely many executions
 @rival20[§1.4.1]. A static analysis reasons about all
 executions instead. At each program point, it computes an _abstract state_. An
@@ -225,8 +225,7 @@ engineering choice for precision and scalability, and they ask the authors of
 such analyses to state explicitly
 the nature and extent of the unsoundness @livshits15[p. 45]. Goblint,
 for instance, documents such assumptions. It assumes that pointer arithmetic
-does not overflow and, by default, that array reads stay in bounds, and it notes
-that this list is likely incomplete @goblint-assumptions.
+does not overflow and, by default, that array reads stay in bounds, and calls this list likely incomplete @goblint-assumptions.
 
 A documented assumption tells the user where a soundness claim ends. Within
 that boundary, however, the claim still rests on an implementation that no one
@@ -282,8 +281,7 @@ and proved partially correct in Isabelle/HOL @stade24 @tilscher26. When it
 terminates, it returns values that satisfy the inequalities of the queried
 unknown and of every unknown it transitively reads
 (#isaconst("part_post_solution", thy: "Basics_side")). Whether the equation
-system describes the program, and whether the verdicts read off its solution
-hold, lies outside that theorem.
+system describes the program, and whether the verdicts computed from its solution hold, lies outside that theorem.
 
 The solver theorem, however, says nothing about programs. To connect a program
 to its equation system, every abstract state must be compared with the
@@ -398,8 +396,7 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
   (@ch:results).
 - _A concrete semantics of calling contexts._ Activation traces give the
   per-context states of an analysis a concrete counterpart. Each trace follows
-  one procedure activation and records the activation that called it, so the
-  contexts of a call can be read off the execution. Splitting the concrete
+  one procedure activation and records the activation that called it, so the execution determines the contexts of a call. Splitting the concrete
   stores by context loses no execution (@sec:contract), and every report covers
   each context separately (#isathm("run_voblint_context_covers")). One call may have several contexts,
   which lets an analysis split it into cases, for instance one per
@@ -526,7 +523,17 @@ The nested sets of @fig:intro-nest say what the theorem claims. @fig:metro
 shows how the proof establishes it. Each line groups the results of one layer
 of the development, and each interchange is a theorem that uses the results of
 the lines that meet there. The labels name the theorems, and the caption gives
-the chapter that presents each line.
+the chapter that presents each line. The result line leaves the central
+interchange, splits for functional and entry-state context policies, and
+rejoins at one common theorem. From there, the context-free coverage leads
+directly to the terminals for #verdict("DEAD")
+(#isathm("run_voblint_dead_check_unreached")) and for SAFE, which says that a
+division without a #verdict("WARNING") never divides by zero
+(#isathm("run_voblint_arithmetic_safe")). The terminal for #verdict("PROVED")
+(#isathm("run_voblint_check_sound")) goes through the end-to-end soundness
+theorem #isathm("run_voblint_source_sound"), which also uses the compiler line
+to place a source execution at a graph node. A second branch uses the compiler
+line in the same way for the chain that keeps the contexts.
 
 #figure(
   image("/shared/generated/svg/metro.svg", width: 100%),
@@ -537,28 +544,15 @@ the chapter that presents each line.
     )[project site]
     shows it interactively, with every station linked to its theory. Each line
     groups the results of one layer: #metro-line(metro.sem)[Semantics], the
-    source and trace semantics (#partref(<part:over-approx>), @ch:program-model
-    and @ch:traces), #metro-line(metro.comp)[Compiler], the compiler and its
-    simulation (#partref(<part:over-approx>), @ch:program-model),
+    source and trace semantics (@ch:program-model and @ch:traces), #metro-line(metro.comp)[Compiler], the compiler and its
+    simulation (@ch:program-model),
     #metro-line(metro.dom)[Domain], what a domain proves and how the analyses
-    cooperate (#partref(<part:analyses>), @ch:domains to @ch:cooperation, and the
+    cooperate (@ch:domains to @ch:cooperation and the
     order analysis of @ch:instances), #metro-line(metro.fw)[Framework], the
     analysis contract, routing and coverage (@ch:traces, @ch:analysis-interface
     and @ch:equations), #metro-line(metro.sol)[Solver], the verified TD solver
-    (#partref(<part:verdicts>), @ch:solving), and #metro-line(metro.res)[Result],
-    from the solved equations to the verdicts (#partref(<part:verdicts>),
-    @ch:equations and @ch:results). Wide markers are interchanges, where a theorem uses the
-    results of the lines that meet. The result line leaves the central
-    interchange, splits for functional and entry-state context policies, and
-    rejoins at one common theorem. From there the context-free coverage leads
-    directly to the terminals for #verdict("DEAD")
-    (#isathm("run_voblint_dead_check_unreached")) and for SAFE, which says that a division without a
-    #verdict("WARNING") never divides by zero (#isathm("run_voblint_arithmetic_safe")). The terminal
-    for #verdict("PROVED") (#isathm("run_voblint_check_sound")) goes through the
-    end-to-end soundness theorem
-    #isathm("run_voblint_source_sound"), which also uses the compiler line to
-    place a source execution at a graph node. A second branch uses the compiler line
-    in the same way for the chain that keeps the contexts.],
+    (@ch:solving), and #metro-line(metro.res)[Result],
+    from the solved equations to the verdicts (@ch:equations and @ch:results).],
 ) <fig:metro>
 
 The proof map selects the results that connect the semantic layers.
@@ -599,7 +593,7 @@ they exchange.
 end-to-end soundness theorem (@ch:equations to @ch:results). Every post-solution of the
 equations induces a cover that meets the contract (@ch:equations), the verified TD
 solver returns such a post-solution whenever it terminates (@ch:solving), and
-the report read off it is sound for every source execution (@ch:results).
+the report computed from it is sound for every source execution (@ch:results).
 
 #partref(<part:instances>) instantiates the theorem (@ch:instances), follows
 #isaconst("run_voblint") to the delivered tools and their trust boundary

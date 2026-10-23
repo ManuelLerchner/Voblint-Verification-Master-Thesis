@@ -45,8 +45,7 @@ caller, and the frame disappears once the call has returned. The list of
 node-store pairs $(v, s)$ that a run passes through (@fig:flat-nested, top)
 interleaves the steps of all activations. In the program of @fig:cfgmap,
 `sum(2)` calls `dec` and then itself, so one run visits the nodes of `sum` in
-three activations, and the list does not say which call created each of them
-or which return resumes which caller.
+three activations, and the list records neither the call that created each activation nor the caller that each return resumes.
 
 Grouping the same run by activation, in contrast, makes these relationships
 explicit (@fig:flat-nested, bottom). Each call of a procedure starts a new
@@ -216,9 +215,8 @@ A whole run is therefore a family of traces linked by these fields.
 Because a $ctor("Call", thy: "Activation_Trace_Def")$ stores its caller
 exactly, frozen at the call site, a finished callee composes back into the
 activation that created it, and no search for a compatible stack frame is
-needed. This is what makes context-specific return flow sound. A return
-continues exactly the caller that created the callee, in each context that
-caller carries, so the exit state of a callee entered in context $c'$ flows back only to
+needed. Composing a callee back into its creator makes context-specific return flow sound. A return
+continues exactly the caller that created the callee, in each context of this caller, so the exit state of a callee entered in context $c'$ flows back only to
 the callers whose calls admitted $c'$. The abstract state for a context therefore needs to
 describe only the executions in that context.
 
@@ -403,9 +401,7 @@ would lose the callee, which the coverage contract rules out (@sec:contract).
 A policy speaks about a single call. The contexts of a whole trace follow by
 applying it along the calls that created the trace. The root activation
 carries the initial context #isai("c\<^sub>0"). A callee carries every
-context $c'$ that the policy admits for its call from some context $c$ of its
-caller (#isaconst("admits_call_context"), which passes the policy the caller's
-store and the entered store that #isaconst("call_enter") computes from it). A
+context $c'$ that the policy admits for its call from some context $c$ of its caller (#isaconst("admits_call_context")). The policy receives the caller's store and the entered store that #isaconst("call_enter") computes from it. A
 local step keeps the contexts of the trace
 (#isathm("activation_context_rel_extend")), and a resumed caller carries
 the contexts it had before the call
@@ -436,7 +432,7 @@ terminate (@sec:certificate). The traces themselves store no context, since
 the concrete semantics should not change with the analysis. The policy is
 instead a parameter of the theorems, which therefore hold for every policy. It
 may even be defined from the analysis result, as the entry-state policy is
-(@sec:eq-routing). This is not circular, because the final guarantee concerns
+(@sec:eq-routing). Defining the policy from the result is not circular, because the final guarantee concerns
 the stores collected per node, which no policy changes. The policy only
 decides how these stores are split among contexts.
 
@@ -473,7 +469,7 @@ to local checks.
 
 An analysis result is sound if, at every node $v$ and in every context $c$,
 it accounts for the stores of the activation collecting semantics
-#isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). This is stated over a _cover_, a function #isai("cover") that assigns a set of
+#isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). Soundness is stated over a _cover_, a function #isai("cover") that assigns a set of
 stores to each node and context. Since valid
 traces grow by only four rules, it suffices to check the cover against each
 rule once. The _coverage contract_ does this with one local obligation per rule,

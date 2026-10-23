@@ -163,7 +163,7 @@ negative value. With call strings of length 1, a context of `g` records only
 its call site in `f`, so both activations of `g` share one context. Sign joins
 #signval("+") and #signval("-") there to $absval(top)$, and neither check is
 proved. Call strings of length 2 also record the call in `main`, keep the two
-activations apart, and prove both checks. The price is a second copy of `g`.
+activations apart, and prove both checks. The separation requires a second copy of `g`.
 The theories prove the same separation for #isaconst("run_voblint") itself
 (#isathm("run_voblint_call_string_2_decides"), #isathm("cs_nest_checks_hold"))
 and at the entry of `g` on hand-built equation systems
@@ -206,8 +206,7 @@ and at the entry of `g` on hand-built equation systems
 
 More contexts also cost more, since every context of a procedure gets its own
 copy of the procedure's unknowns. The program `down(100)`, which recurses down
-to `down(0)` and checks `n >= 0` at every level, shows that this cost does not
-buy precision gradually. With call strings of length 100, every level gets its
+to `down(0)` and checks `n >= 0` at every level, shows that this cost does not yield precision gradually. With call strings of length 100, every level gets its
 own context, and the check is #verdict(snapshot-verdict(_k100, "n >= 0")) with
 #_k100.clusters.len() procedure copies. With length 99, the analyzer still
 builds #_k99.clusters.len() copies, but the deepest calls share one context.
@@ -470,8 +469,7 @@ execution leaves the range of `int`. It can still change an analysis result,
 because an abstract value may reach the limit of `int` although no execution
 does. Goblint then applies its default setting `assume_top` of
 #link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L1640")[`sem.int.signed_overflow`], which gives a
-signed operation that may overflow the whole range of its type. This happens
-for one check, discussed in @sec:flavors-widening.
+signed operation that may overflow the whole range of its type. Only one check depends on this setting. @sec:flavors-widening discusses it.
 
 The settings of @tab:flavors are chosen such that each analyzer has its best
 chance on each flavor. Voblint runs Sign, Interval, Int, the reduced product of its four
