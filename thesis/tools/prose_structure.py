@@ -10,7 +10,8 @@ these author preferences are checked on the Typst source instead:
 - an Isabelle listing (`thy`, `proved`) is embedded without a figure;
 - a reference to a later chapter asks the reader to trust material they have
   not seen. The front matter and the introduction are exempt, since their job
-  is to point ahead.
+  is to point ahead, and so are references into the appendices, which hold
+  the formal sources and the tooling.
 
 Warnings only: the exit status is 0 unless --strict is given. Under GitHub
 Actions each warning is also printed as an annotation.
@@ -124,7 +125,11 @@ def check(files):
                 continue
             for m in REF.finditer(para):
                 target = label_at.get(m.group(1))
-                if target and target[0] > n:
+                if (
+                    target
+                    and target[0] > n
+                    and not target[1].name.startswith("appendix-")
+                ):
                     yield (
                         f,
                         line_of(text, off + m.start()),
