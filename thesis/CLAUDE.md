@@ -32,6 +32,8 @@ clean. The checks that keep the text honest, and what each one reads:
 | `thesis-stats` | `scripts/pages_stats.py` cannot measure the repository (every build writes the uncommitted `shared/generated/stats.json` from it), or a line of `content/` naming lines, theories, files, sessions, fixtures, cases or lemmas carries a number outside `stat()` and outside the commented `ALLOW` list in `tools/stats.py` |
 | `thesis-alignment` | the `align-list` rows of `pages/index.html`, which the evaluation counts, do not parse (every build and the refs and links checks write the uncommitted `shared/generated/goblint-alignment.json` from them; edit the page) |
 | `thesis-notation` | `shared/generated/notation.json`, the README's Notation block or the explainer's legend no longer matches the declarations in the theories, a declaration changed shape, or a symbol's anchor is missing from the rendered theories (`thesis-notation-write` refreshes all three; edit `shared/notation.toml` or the theories, never the output) |
+| `thesis-prose-structure` | never fails; warns about a prose paragraph with more than three `isa*` citations, a caption over 60 words, a `thy`/`proved` listing inside `#figure`, and an `@ch`/`@sec` reference to a later chapter outside the front matter and introduction |
+| `prose-lint`, `prose-rules-test` | a Vale rule at level error matches (`.vale.ini`; warnings and suggestions are for review), or a project rule's inline `tests:` no longer produce the alerts they list |
 | `thesis-vimp` | a VIMP listing's playground link does not decode to the program it shows, names a setting the playground lacks, is missing from the PDF's link annotations, or runs a claimed or fixture program at other settings; or VIMP code reaches the document outside `listing(lang: "c")` (`thesis-vimp-source` is the no-build part; `thesis-vimp-write` refreshes `shared/generated/vimp-claims.json`) |
 
 Never write an Isabelle name in backticks or plain text. Wrap it, so it is
@@ -215,6 +217,9 @@ Rules the author set while reviewing drafts. They refine the sections above.
 
 - Plain words. No `load-bearing`, no labels such as RQ1 or K1: state the
   research questions and contributions in prose and refer to them by topic.
+  No "elaboration", "read off", "taken together" or "in hindsight"
+  (`Voblint.AvoidTerms`), and prefer "while", "shows", "later" to "whereas",
+  "demonstrates", "subsequent" (`Voblint.PlainWords`).
 - No modal "need" with a bare infinitive ("need not", "need only"). Write
   "does not have to", "can" or "only has to". Vale's `Voblint.NeedNot` enforces
   it.
@@ -292,6 +297,30 @@ handing a section over.
   where this thesis draws it). Open with a sentence that names the link
   ("Fixing one such bug does not rule out the next."), and put the thesis
   statement where the argument has earned it, not inside the motivation.
+- Say what holds. Explain what Voblint has and proves, not what fails or
+  what it lacks, and keep a negation only where the distinction is the point.
+  A paragraph built from "no …", "not …" and "without …" reads as a list of
+  absences.
+- No aphorisms. A short general sentence such as "A fact that is written down
+  twice eventually drifts." or "A kind belongs to a variable, but a name does
+  not determine the variable." claims more than it explains. State the
+  specific fact.
+- Do not give proof objects intentions. "The framework builds one", "the
+  solver sees one value and never looks inside" and "what the split buys" hide
+  the mechanism; say which definition or theorem does what.
+- Let the reader see where a sentence ends. Do not open with a participial
+  phrase followed by a list in subject position ("Following Goblint's
+  architecture, domains, context policies, analyses, and the solver discharge
+  …"), and do not chain clauses with commas where two sentences would do.
+- Use the theories' names for their concepts. Do not invent prose names such
+  as "eval" or "sides" for `eq` and `sides_of_rhs`, and do not introduce a
+  synonym for a concept that already has a name.
+- Leave out deliberately broken variants, earlier versions and the history of
+  a design unless the argument needs the contrast, and do not reuse the
+  introduction's motivating bug as the conclusion's example.
+- Edit only what was flagged. When the author points at one sentence, change
+  that sentence and keep the surrounding text and any manual rewrites; a
+  request to simplify words is not a request to restructure.
 - Cite as support, not as the sentence subject. Write the claim and put the
   citation at its end ("Agents have formalized … with all 806 results proved
   @bryant26munkres."), not "Bryant et al. @bryant26munkres report …". Name

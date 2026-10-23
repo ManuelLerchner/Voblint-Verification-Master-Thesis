@@ -458,6 +458,14 @@ pre-commit:
               - "scripts/mk/prose-lint.sh"
             run: pixi run prose-lint && pixi run prose-rules-test
 
+          # Warnings only: Isabelle-citation density, caption length, listings
+          # in figures, references to later chapters.
+          - name: thesis-prose-structure
+            glob:
+              - "thesis/content/**/*.typ"
+              - "thesis/tools/prose_structure.py"
+            run: pixi run thesis-prose-structure
+
           # VIMP code must reach the thesis through the linked listing helper,
           # and the claim programs its links open must be current.
           - name: thesis-vimp-source
