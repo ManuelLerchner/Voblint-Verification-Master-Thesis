@@ -25,7 +25,7 @@ and where it ends. Several facts below concern one
 fixed program and are proved by `eval`, which runs generated code and therefore
 also trusts the code generator (@fig:intro-trust).
 
-== The soundness theorems are not vacuous #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
+== Non-vacuity of the soundness theorems #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
 
 A theorem whose premises can never hold together is true but says nothing. The
 end-to-end soundness theorem has three premises: an initial store, a source execution from it,
@@ -55,7 +55,7 @@ proved by rule application, while `eval` computes the compiled graphs and the
 analyzer's answers. The end-to-end soundness theorem and its companions therefore do not hold vacuously, since
 each applies to at least one program on which the solve actually terminates.
 
-== The obligations reject a real Goblint bug <sec:eval-1161>
+== A Goblint soundness bug <sec:eval-1161>
 
 Non-vacuity does not show that the obligations are strong enough to reject a
 wrong analysis. One way to test them is to check them against a real error. @ch:intro opened
@@ -136,7 +136,7 @@ check and proves the second.
     both executions.],
 ) <fig:goblint-1161>
 
-== Measuring precision on concrete programs <sec:eval-precision>
+== Precision on concrete programs <sec:eval-precision>
 
 The theorem says nothing about precision, so the examples below measure it on
 single programs whose concrete behavior is known.
@@ -229,7 +229,7 @@ diverge. Goblint's configuration for the SV-COMP competition avoids this
 explosion by omitting intervals from the contexts of recursive functions
 @saan26phd[§3.4.3].
 
-=== Comparing the update rules for global unknowns <sec:eval-rules>
+=== Precision of the update rules <sec:eval-rules>
 
 #let _verdict(key, rule, cond) = {
   let name = "rules-" + key + "-" + rule
@@ -331,7 +331,7 @@ programs.
     the run. "No answer in 5 s": stopped by `--timeout 5`.],
 ) <fig:rules-programs>
 
-== Comparing precision with Goblint <sec:eval-flavors>
+== Precision compared with Goblint <sec:eval-flavors>
 
 #let _gob = {
   let rows = (:)
@@ -759,7 +759,7 @@ proves checks the other loses, and without contexts Voblint proves more. Goblint
 then loses the lower bound $0$ of `i` in `h` unless it narrows global unknowns
 (#link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]), whereas Voblint keeps it and turns `i != 0` into `i > 0`.
 
-== Running time <sec:eval-runtime>
+== Running-time benchmarks <sec:eval-runtime>
 
 A sound result is of little use if the analyzer takes too long to produce it. Speed,
 however, was not a goal of this thesis. Apart from the defect fixed in @sec:codegen, the

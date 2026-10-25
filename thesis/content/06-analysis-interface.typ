@@ -170,7 +170,7 @@ more general form of these laws, which @sec:analysis-globals states.
 Not every fact belongs to one program point. An analysis may, for example,
 keep one range for a global variable `g` that holds throughout the execution.
 
-=== Reading and publishing analysis globals #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:analysis-globals>
+=== Analysis globals #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:analysis-globals>
 
 Seidl et al. describe a Goblint analysis with two domains @seidl26[§6]. The
 local domain $D_L$ holds facts per program point and context, and the _global domain_ $D_G$ holds
@@ -218,7 +218,7 @@ transfer returns and what it publishes, and #isaconst("combine_out") and
 #isaconst("combine_pub") are the same for combine. An analysis without
 analysis globals ignores $eta$ and meets the three laws of @sec:sound-core.
 
-=== Where program globals are stored #thy-badge("Voblint_Framework", "DG_Keyed_Split_Spec") <sec:mixed-flow>
+=== Placement of program globals #thy-badge("Voblint_Framework", "DG_Keyed_Split_Spec") <sec:mixed-flow>
 
 The contract leaves open where program globals are kept. By default, program globals are part of the local state,
 as in Goblint's default base analysis for single-threaded programs

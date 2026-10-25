@@ -82,7 +82,7 @@ context. The states at $v$ in context $c$ describe the set
 of #isai("\<R>\<^bsub>res\<^esub> v"). @sec:chain shows that this set contains every
 store that an activation in context $c$ reaches at $v$.
 
-== Computing check verdicts from the report <sec:verdicts>
+== Check verdicts from the report <sec:verdicts>
 
 The command-line tool prints the report through its checks: each check at $v$
 receives one of four verdicts, #verdict("PROVED"), #verdict("REFUTED"),
@@ -397,7 +397,7 @@ observed
     holds in $s$, and every #verdict("REFUTED") check is false in $s$.
 ]
 
-== What verdicts and diagnostics guarantee #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
+== Meaning of verdicts and diagnostics #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
 By the theorem of @sec:headline, the four verdicts make the following
 statements about _covered executions_, the finite source executions from an

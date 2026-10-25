@@ -9,7 +9,7 @@
 
 #let _b = $italic("bump")$
 
-= Solving the Equations <ch:solving>
+= Post-Solutions from the Verified Solver <ch:solving>
 
 @ch:equations showed that a post-solution of the generated equations is
 sound. At every node and context, its abstract state describes every store that
@@ -24,7 +24,7 @@ partially correct. To use it, Voblint first brings the equations into the form t
 solver accepts and then derives the premises about the solved set from the
 solver's correctness theorem.
 
-== Encoding the equations for the solver <sec:eq-encoding>
+== Solver encoding of the equations <sec:eq-encoding>
 
 The solver accepts a right-hand side only as a strategy tree, uses one value
 type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, as in Apinis et al.
@@ -91,7 +91,7 @@ of the caller once the call has returned. #isaconst("routed_call_program") imple
 this tree and additionally handles bottom entry states and several callees or
 entry pairs.
 
-=== Publishing entry states to global seeds <sec:eq-seed-global>
+=== Entry states as global seeds <sec:eq-seed-global>
 
 In $t_"call"$, the caller pushes the entry state to the callee with a
 #ctor("Side") step. Otherwise, the equation of the callee's entry would have

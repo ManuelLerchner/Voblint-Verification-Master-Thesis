@@ -208,7 +208,7 @@ nothing. Only #verdict("DEAD") makes a claim about reachability, and
     #fixture("24-site-figures/precision/48-clamp_every_answer.vimp")).],
 ) <fig:intro-answers>
 
-== What existing analyzers and proofs leave open <sec:state-of-art>
+== Soundness of existing analyzers <sec:state-of-art>
 
 Most abstract interpreters in practical use have no machine-checked soundness
 proof and rely on testing instead. Livshits et al. know of no realistic
@@ -421,7 +421,7 @@ its verified solver (@sec:rel-summary). Within this design, the formalization ma
   (@sec:eval-1161). Concrete programs show what each mechanism gains
   (@sec:eval-precision).
 
-== Scope and limits of the guarantee <sec:intro-scope>
+== Scope of the soundness theorem <sec:intro-scope>
 
 Not every part of the delivered analyzer is covered by the proof
 (@fig:intro-trust). _End-to-end_ means that the proof reaches from source
@@ -517,13 +517,13 @@ The theorem has the following limits.
   regression corpus is small and was written or adapted for this work
   (@sec:eval-corpus).
 
-== Thesis outline along the proof chain <sec:roadmap>
+== Structure of the proof <sec:roadmap>
 
-The nested sets of @fig:intro-nest say what the theorem claims. @fig:metro
-shows how the proof establishes it. Each line groups the results of one layer
-of the development, and each interchange is a theorem that uses the results of
-the lines that meet there. The labels name the theorems, and the caption gives
-the chapter that presents each line. The result line leaves the central
+@fig:intro-nest states what the end-to-end soundness theorem claims, and
+@fig:metro draws its proof as a metro map. A line collects the results of one
+layer of the development, for example the compiler and its simulation proof.
+Where several lines meet, a theorem combines their results, and the label at
+the interchange names that theorem. The result line leaves the central
 interchange, splits for functional and entry-state context policies, and
 rejoins at one common theorem. From there, the context-free coverage leads
 directly to the terminals for #verdict("DEAD")

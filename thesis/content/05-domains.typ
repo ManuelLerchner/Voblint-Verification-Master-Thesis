@@ -727,7 +727,7 @@ $ivl(l, u)$ if the interval excludes $0$, that is, $u < 0$ or $l > 0$, and
 $"Some"("false")$ if $l = u = 0$. Otherwise, it returns $"None"$. So
 $absval(ivl(1, 5))$ is true, $absval(ivl(0, 0))$ is false, and $absval(ivl(0, 5))$ is undecided.
 
-== Answering checks with three-valued queries <sec:queries>
+== Three-valued queries for checks <sec:queries>
 
 A check `__voblint_check(c)` asks whether $c$ holds in every store that
 reaches its program point. The analysis must answer this from the abstract
@@ -834,7 +834,7 @@ the conjunction (@fig:query-tree).
     #_q.verdict.],
 ) <fig:query-tree>
 
-== Refining states at branch guards #thy-badge("Voblint_Domain", "Backward_Domain") <sec:branches>
+== State refinement at branch guards #thy-badge("Voblint_Domain", "Backward_Domain") <sec:branches>
 
 When the analysis enters a branch, it knows whether the condition held. On the
 true arm of `if (0 < x)`, for example, $x$ is positive. Ignoring this knowledge is sound, since the

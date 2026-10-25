@@ -173,7 +173,7 @@ but nothing about its size, and Sign knows only that $v$ is positive. Every
 answer is sound, yet none of the four proves `v == 51`. Only Int, which puts
 the bound and the oddness together, does (@sec:reduced-product).
 
-== Combining the domains in a reduced product #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
+== The reduced product of the domains #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
 
 An Int value (#isatype("int_dom")) holds one value of each base domain and
 stands for the integers that all four allow. Running the four side by side
@@ -360,7 +360,7 @@ numeric guard filter of @sec:branches (#isathm("relc_branch_step_sound")). The t
 instantiates the solver's classes and #isalocale("executable_domain") of
 @fig:domain-carrier, but it is not a numeric domain.
 
-== Proving order relations between variables #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
+== Order relations between variables #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
 
 @sec:rel-state introduced the relational state as an abstract domain. This
 section builds the order analysis on top of it and runs it on a program. After an

@@ -226,7 +226,7 @@ bottom entry states in the same way. Skipping them is sound because a state
 classified as bottom is required to have an empty concretization
 (#isathm("routed_context.is_bot_sound", thy: "Routed_Context", display: "is_bot_sound")).
 
-== Routing that agrees with the context policy #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-routing>
+== Routing consistent with the context policy #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-routing>
 
 Every call is assigned a callee context twice. The equations choose one from
 the abstract entry state, and the concrete semantics of @ch:traces chooses one
@@ -475,7 +475,7 @@ entry state that describes the call, which is adequacy. Entry coverage
 (@sec:calls) guarantees such an entry pair for every call from a store that the
 caller's solved state describes, which is totality.
 
-== Post-solutions satisfy the coverage contract #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
+== Coverage by post-solutions #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 
 #figure(
   table(

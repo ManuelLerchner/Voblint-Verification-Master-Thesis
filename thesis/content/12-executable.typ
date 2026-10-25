@@ -98,7 +98,7 @@ refine from its definition @tilscher26, and @sec:certificate shows that every
 run of it that returns satisfies the solver's correctness theorem. The values of the numeric domains (@sec:instances-supply) and the
 states of the order analysis (@sec:rel-state) are already finite data.
 
-== Exporting the analyzer to OCaml and WebAssembly #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
+== Export to OCaml and WebAssembly #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 With these replacements, every function that #isaconst("run_voblint") uses
 has code equations, and Isabelle's
@@ -204,7 +204,7 @@ time on the median run (@sec:eval-runtime, #link(site("profiling.html"))[profili
     project site.],
 ) <fig:build>
 
-== Tracing solver steps without changing the proofs #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
+== Traced solver runs #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 To explain a run, the command-line tool and the playground can trace the
 solver's steps. The solver trace records when each unknown is queried, which update
@@ -234,7 +234,7 @@ meets its obligations.
 
 
 #pagebreak(weak: true)
-== Unverified parsing, rendering, and playground <sec:ocaml-boundary>
+== Unverified parser, rendering, and playground <sec:ocaml-boundary>
 
 The generated #isaconst("run_voblint") works on a syntax tree and returns a
 typed answer, whereas a user writes source text and reads a report.
@@ -317,7 +317,7 @@ configuration it can select (#isathm("run_voblint_source_sound")).
   label: <fig:playground>,
 )
 
-== Testing the unverified components <sec:eval-corpus>
+== Tests of the unverified components <sec:eval-corpus>
 
 The handwritten OCaml around the generated analyzer (@tab:sizes) is tested.
 A #link(repo-blob + "tests/regression")[regression corpus] of

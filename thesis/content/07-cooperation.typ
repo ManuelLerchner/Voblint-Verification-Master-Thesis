@@ -155,7 +155,7 @@ By the two laws, the channel answering $ltop$ everywhere holds at every store,
 and the pointwise meet of two channels that hold at $s$ holds at $s$
 (#isathm("query_algebra.channel_holds_inf")).
 
-== Proving each analysis against true answers #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-channels>
+== Soundness against true answers #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-channels>
 
 Interval's assignment in @fig:mcp-step uses the wrapper
 #isaconst("ask_assign"), which any analysis can put around its assignment
@@ -210,7 +210,7 @@ transfer function under the hypothesis that the channels it receives are
 correct @jourdan15[§7], following Astrée @cousot07astree[§§5.3, 6], and Voblint
 applies the same form of proof to Goblint's queries.
 
-== Combining analyses into one sound analysis #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
+== Combination into one sound analysis #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
 
 The analyses cannot be solved one after another, because each may need the
 other's facts at the same program point and context. In the program below, the

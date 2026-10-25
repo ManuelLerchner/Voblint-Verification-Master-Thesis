@@ -9,7 +9,7 @@
 = Reading This Thesis <reading-guide>
 
 The thesis can be read on paper, but it is designed to be read on screen. It closely
-follows a machine-checked Isabelle/HOL development, and most of its definitions and
+follows the machine-checked Isabelle/HOL development, and most of its definitions and
 theorems link to the #link(site("Voblint/index.html"))[HTML rendering of the theories].
 A single #link(site("formalization.pdf"))[PDF export of the whole formalization] is available as
 well. The project site at #link(site-url)[#site-url.trim("https://", at: start)] also
@@ -19,8 +19,8 @@ profiles, and the #link(site("playground.html"))[playground], which runs the ana
 the browser on any VIMP program.
 
 Each kind of object the text refers to has its own marker, and most markers are also links.
-An Isabelle name opens its definition, a program opens the playground, and a fixture opens
-its file in the repository.
+The name of a definition, theorem, type, or locale opens its source in the rendered theories,
+a program opens the playground, and a test program opens its file in the repository.
 
 @sec:isabelle explains how to read the Isabelle listings, and @app:notation lists the
 mathematical notation shared by the theories and the text.
@@ -47,7 +47,7 @@ mathematical notation shared by the theories and the text.
     [Teal small capitals mark an obligation of the coverage contract
       (@sec:contract), linked to the locale assumption that states it.],
     [#ctor("FunctionEntry"), #keyw("while")],
-    [Purple sans-serif text marks a datatype constructor in notation, and
+    [Purple sans-serif text marks a constructor of an Isabelle datatype, and
       bold maroon text a keyword of the source language VIMP.],
     [Section title #thy-badge("Voblint_CLI", "Analysis_Run")],
     [A small blue #raw("thy") box beside a heading marks a section that
@@ -74,18 +74,22 @@ mathematical notation shared by the theories and the text.
     [A coloured monospace word on a tinted background is a verdict as the
       analyzer reports it (@sec:verdict-meaning).],
     [#claim-ref("intro-answers")],
-    [An underlined blue name marks a _claim_, a registered analyzer run. Every
-      verdict and state of Voblint quoted in the text is read from a claim,
-      which the build repeats, and the name opens the run in the playground.],
+    [An underlined blue name marks a _claim_, an analyzer run recorded with
+      the thesis sources. Every verdict and state of Voblint quoted in the text
+      comes from a claim. A check reruns each claim and fails if the analyzer
+      output differs from the quoted one. The name opens the run in the
+      playground.],
     [#fixture(
       "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
       label: "01-unbounded_…",
     )],
-    [A blue monospace file name marks a fixture of the regression corpus,
-      linked to its file in the repository.],
+    [A blue monospace file name marks a _fixture_, one test program of the
+      regression corpus, which records each program with its expected analyzer
+      output. The name links to the file in the repository.],
     [#signval("+"), $absval(ivl(1, 9))$, #absval(raw("1+2ℤ"))],
-    [A light purple background marks an abstract value, as opposed to a
-      concrete integer or set of stores.],
+    [A light purple background marks an abstract value, which describes a
+      set of concrete integers or of _stores_, the maps from variables to
+      their integer values.],
     table.hline(),
   )
 }

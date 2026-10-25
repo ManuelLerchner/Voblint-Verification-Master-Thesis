@@ -19,7 +19,7 @@ and states the _coverage contract_, the local conditions under which an
 analysis result contains every store that an execution brings to a node in a
 context.
 
-== Why calling contexts need activation traces <sec:why-traces>
+== Calling contexts and the collecting semantics <sec:why-traces>
 
 A context-sensitive analysis splits the unknown $[v]$ of a node into unknowns
 $[v, c]$, one per calling context $c$ (@sec:interproc). Seidl et al. state that the invariant for
@@ -164,11 +164,11 @@ composes the finished callee back into that caller.
     written out by hand, and stores are omitted.],
 ) <fig:flat-nested>
 
-== From graph executions to activation traces <sec:traces>
+== Activation traces of graph executions <sec:traces>
 
 Activation traces adapt the _local traces_ of threads @schwarz21 to procedure activations.
 
-=== Grouping a run by activation #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:activation-trace>
+=== Activations of a run #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:activation-trace>
 
 The grouping of @fig:flat-nested becomes a datatype with one constructor per
 way a box arises. The outermost box, the activation of `main`, is a root. A box
@@ -239,7 +239,7 @@ two other traces, and a $ctor("Resume")$ accepts only the callee that this
 activation itself created. Activations do not run concurrently, so nothing
 corresponds to reading globals written by another thread.
 
-=== Valid traces follow graph steps #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:valid>
+=== Valid traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:valid>
 
 The datatype also admits terms that no execution produces. A path may contain
 a step that follows no edge of the graph, for instance, a jump from the entry of
@@ -277,7 +277,7 @@ finds the caller through #isai("caller_of callee = Some caller") and takes the
 continuation $italic("cont")$, where the caller continues with the store that
 #isaconst("combine_collect") builds from both final stores.
 
-=== Every source execution yields a valid trace #thy-badge("Voblint_Compile", "Source_To_Trace") <sec:source-bridge>
+=== Valid traces of source executions #thy-badge("Voblint_Compile", "Source_To_Trace") <sec:source-bridge>
 
 The rules of valid traces mirror the rules of #isaconst("cstep"), but nothing
 so far states that a graph execution actually yields a valid trace. Graph configurations are therefore related to traces.
@@ -324,7 +324,7 @@ the lock-step correspondence above. The source configuration, the graph
 configuration, and the trace hold the same store, so every store a source
 execution reaches is the final store of a valid trace.
 
-=== Collecting trace stores per node #thy-badge("Voblint_CFG", "Activation_Trace_Collect") <sec:collect>
+=== Trace stores per node #thy-badge("Voblint_CFG", "Activation_Trace_Collect") <sec:collect>
 
 Collecting the final stores of the valid traces per node gives the _node
 collecting semantics_. It plays the role of the collecting semantics of @ch:background for programs
@@ -350,7 +350,7 @@ over it alone is context-insensitive. The valid traces themselves, however, keep
 structure. The same set of traces thus supports two views: collected per node,
 and split by context (@sec:contexts).
 
-== Assigning calling contexts to traces #thy-badge("Voblint_CFG", "Activation_Trace_Context") <sec:contexts>
+== Calling contexts of traces #thy-badge("Voblint_CFG", "Activation_Trace_Context") <sec:contexts>
 
 A context-sensitive analysis of the running example claims the result $6$ for
 `bump` in the context of the call `bump(5)` and $5$ in that of `bump(4)`. Checking

@@ -52,7 +52,7 @@ precise verdicts it computes on further programs (@sec:eval-corpus). The analyze
 acceptable time on that corpus, although its list-based sets and maps limit how far it
 scales (@sec:eval-runtime).
 
-== Lessons from the formalization <sec:lessons>
+== Recommendations for similar formalizations <sec:lessons>
 
 Formalizing Voblint required more than proving the components of an analyzer
 sound. Much of the work went into finding definitions and interfaces that let
@@ -185,7 +185,7 @@ rests on examples. The regression corpus is small and its expected verdicts were
 and beyond the small comparison of @sec:eval-flavors, no agreement rate with
 Goblint is measured (@sec:rel-goblint).
 
-== Extending Voblint towards C and Goblint <sec:outlook-extending>
+== Extensions towards C and Goblint <sec:outlook-extending>
 
 Addressing these limitations requires extending Voblint towards the language
 features and analyses that Goblint supports. Some analyses and concepts could be added to the current proof of concept

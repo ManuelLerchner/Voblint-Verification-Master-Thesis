@@ -84,16 +84,16 @@
 #include "content/01-introduction.typ"
 #include "content/02-background.typ"
 
-#part("What Must Be Over-Approximated", lbl: <part:over-approx>)
+#part("Semantics and the Coverage Contract", lbl: <part:over-approx>)
 #include "content/03-program-model.typ"
 #include "content/04-traces.typ"
 
-#part("Building Analyses", lbl: <part:analyses>)
+#part("Domains and Analyses", lbl: <part:analyses>)
 #include "content/05-domains.typ"
 #include "content/06-analysis-interface.typ"
 #include "content/07-cooperation.typ"
 
-#part("Computing Sound Results", lbl: <part:verdicts>)
+#part("Equations, Solver, and Verdicts", lbl: <part:verdicts>)
 #include "content/08-equations.typ"
 #include "content/09-solving.typ"
 #include "content/10-results.typ"
