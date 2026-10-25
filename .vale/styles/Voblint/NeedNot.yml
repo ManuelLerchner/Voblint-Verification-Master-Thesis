@@ -1,0 +1,9 @@
+# thesis/CLAUDE.md "Wording": modal "need" with a bare infinitive reads archaic.
+extends: existence
+message: "Archaic modal '%s': write 'does not have to', 'can' or 'only has to'."
+level: error
+ignorecase: true
+tokens:
+  - need not
+  - needn't
+  - need only

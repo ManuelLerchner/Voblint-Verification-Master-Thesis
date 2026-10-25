@@ -1,0 +1,11 @@
+# AGENTS.md, thesis/CLAUDE.md: give the reasoning instead of calling it easy.
+extends: existence
+message: "'%s' replaces an argument; give the reasoning."
+level: warning
+ignorecase: true
+tokens:
+  - clearly
+  - obviously
+  - trivially
+  - straightforward(?:ly)?
+  - of course

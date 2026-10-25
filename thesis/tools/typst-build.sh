@@ -15,6 +15,8 @@ strict=1
 # SITE_URL points the PDF's site links at a preview instead of the published site.
 set --
 [ -n "${SITE_URL:-}" ] && set -- --input "site-url=${SITE_URL%/}/"
+revision=$(git -C "$root" describe --always --dirty --abbrev=40 --exclude='*' 2>/dev/null || true)
+[ -n "$revision" ] && set -- "$@" --input "revision=$revision"
 
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT

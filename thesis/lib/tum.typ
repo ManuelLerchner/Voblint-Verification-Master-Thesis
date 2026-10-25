@@ -126,7 +126,13 @@
   logo: "../assets/tumlogo.svg",
   body,
 ) = {
-  set document(title: title, author: author)
+  // The commit a build came from, in the PDF metadata only, so feedback on an
+  // old copy can be traced back to its sources.
+  set document(
+    title: title,
+    author: author,
+    keywords: if "revision" in sys.inputs { ("revision " + sys.inputs.revision,) } else { () },
+  )
 
   set page(
     paper: "a4",
@@ -231,17 +237,20 @@
   // In a *reference* it runs at the reference site, which silently renders a
   // chapter-3 figure as "Figure 1.1" when cited from chapter 1 -- so
   // references are resolved separately, in the `show ref` rule below.
-  let chapter-number(loc) = {
+  // Front-matter chapters are unnumbered, so their figures carry no prefix.
+  let figure-number(loc, n) = {
     let c = counter(heading).at(loc).at(0, default: 0)
     let chapters = query(heading.where(level: 1).before(loc))
     let h = chapters.last(default: none)
-    if h != none and type(h.numbering) == str and h.numbering.starts-with("A") {
-      numbering("A", c)
+    if h == none or h.numbering == none {
+      str(n)
+    } else if type(h.numbering) == str and h.numbering.starts-with("A") {
+      numbering("A", c) + "." + str(n)
     } else {
-      str(c)
+      str(c) + "." + str(n)
     }
   }
-  set figure(numbering: n => context [#chapter-number(here()).#n])
+  set figure(numbering: n => context figure-number(here(), n))
 
   show ref: it => {
     let el = it.element
@@ -264,7 +273,6 @@
     }
     // Resolve both halves of the number where the figure is, not where the
     // sentence citing it happens to sit.
-    let chapter = chapter-number(loc)
     // A subpar part is the only unlisted figure. Its own counter may be of
     // another kind (a listing inside an image figure), so it takes the number
     // of the enclosing figure and its position among the parts.
@@ -272,10 +280,10 @@
       let parent = query(figure.where(kind: image, outlined: true).before(loc)).last()
       let n = counter(figure.where(kind: image)).at(parent.location()).first()
       let sub = counter("__subpar:sub-figure-counter").at(loc).first() + 1
-      return link(loc, [#el.supplement #chapter.#n#numbering("a", sub)])
+      return link(loc, [#el.supplement #figure-number(loc, n)#numbering("a", sub)])
     }
     let n = counter(figure.where(kind: el.kind)).at(loc).at(0, default: 0)
-    link(loc, [#el.supplement #chapter.#n])
+    link(loc, [#el.supplement #figure-number(loc, n)])
   }
   // Algorithms carry their caption above the body, as algorithm2e does.
   show figure.where(kind: "algorithm"): set figure.caption(position: top)
@@ -304,10 +312,9 @@
     let el = it.element
     if el.func() == figure and el.numbering != none {
       let loc = el.location()
-      let chapter = chapter-number(loc)
       let n = counter(figure.where(kind: el.kind)).at(loc).at(0, default: 0)
       // The list is rendered after the chapters; resolve at the figure itself.
-      return link(loc, it.indented([#el.supplement #chapter.#n], it.inner()))
+      return link(loc, it.indented([#el.supplement #figure-number(loc, n)], it.inner()))
     }
     if el.func() != heading {
       return it

@@ -31,7 +31,7 @@ fun main() {
 }
 ```)
 
-A reader easily sees that the check holds in every run, since both guards hold
+The check holds in every run, since both guards hold
 at the assignment, so $x = y$ and `z` is $1$. No single analysis, however, can
 prove it. Interval keeps one range per variable. After the guards, both `x` and `y` are
 still unbounded, so `x == y` evaluates to $absval(ivl(0, 1))$ and the check stays

@@ -1,0 +1,9 @@
+# AGENTS.md: never say "fully verified" without the exact boundary.
+extends: existence
+message: "'%s' needs the exact trust boundary next to it."
+level: error
+ignorecase: true
+tokens:
+  - fully (?:formally )?verified
+  - completely verified
+  - verified end-to-end

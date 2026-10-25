@@ -522,7 +522,7 @@ over intervals is ${x |-> absval(ivl(0, 5)), y |-> absval(ivl(0, 5))}$. It shows
 $y <= 5$, but not $x <= y$, since it also admits $x = 5, y = 0$. A relational
 description that records $x <= y$ shows exactly that fact, but it bounds
 neither variable, so it also admits $x = y = -7$. Therefore, neither description is stronger than the other. Together, however, they describe exactly
-the given set.
+the stores with $0 <= x <= y <= 5$.
 
 #figure(
   cetz.canvas(length: 0.5cm, {
@@ -568,7 +568,7 @@ $x <= y$ between variables uses a relational state, whose concretization maps
 a whole state to a set of stores instead of each variable to a set of
 integers. The interface of this chapter admits such a state, because the
 solver and the framework ask only for order, join, and a monotone
-concretization, never for a map from variables to abstract values. The
+concretization. Neither requires the state to map variables to abstract values. The
 relational state of the order analysis instantiates the solver's classes and
 #isalocale("executable_domain") without being a numeric domain. The
 remaining sections of this chapter develop the non-relational case, and
@@ -645,7 +645,7 @@ empties a single variable, as in ${x |-> signval(bot), y |-> signval(top)}$. Tre
 every empty state as unreachable is correct at the moment of the test, but the
 information does not survive the next step. Joining two differently empty
 states can give a nonempty one (@fig:domain-reachability). This is sound,
-since it only adds stores, but it loses the fact that the point is unreachable
+since it only adds stores, but it loses the information that the point is unreachable
 and is thus imprecise.
 
 #let _r = claim-row("dom-disjunct-sign", "13:5")

@@ -116,7 +116,7 @@ total, so \texttt{\&\&} and \texttt{||} have no evaluation order to model. A fai
 the execution, so a verdict for one check does not depend on an earlier one.
 The locals of \texttt{main} start unconstrained, while a callee's locals start
 at $0$. \texttt{min}, \texttt{max}, and the nondeterministic input are
-built-in calls, and \texttt{main} has no explicit \texttt{return}. A verdict therefore need not hold for a C program with the
+built-in calls, and \texttt{main} has no explicit \texttt{return}. A verdict therefore does not always hold for a C program with the
 same text.
 
 \begin{figure}[t]

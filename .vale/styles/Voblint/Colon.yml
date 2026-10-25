@@ -1,0 +1,9 @@
+# thesis/CLAUDE.md "Wording": a colon that announces a list or an explanation
+# in running prose reads machine-written; a full sentence usually says it
+# better. Display math and term lists end their paragraph and are not matched.
+extends: existence
+message: "Colon in running prose: '%s'. Prefer a full sentence unless a list or equation follows."
+level: warning
+nonword: true
+tokens:
+  - '[A-Za-z]+\)?: [a-z]+'

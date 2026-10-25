@@ -135,8 +135,8 @@ verdicts should relate two sets of concrete stores, so that a proof can check
 that the step loses nothing. This chapter introduces the ideas needed to state
 these steps. It first describes what a program can actually do, then how an
 analysis describes the same behavior more coarsely, and finally how a solver
-computes this description. One small counting loop serves as the example
-throughout.
+computes this description. A loop that counts from $0$ to $5$ is the running
+example for all three.
 
 == Control-flow graphs and the collecting semantics <sec:collecting>
 
@@ -430,8 +430,8 @@ $ f(d) = absval(ivl(0, 0)) ljoin ((d lmeet absval(ivl(-infinity, 4))) sh(+) absv
 whose post-fixpoints appear in @fig:lattice-fixpoints. A solution assigns an
 interval to every unknown such that all four inequalities hold, and
 @fig:loop-solutions shows two. Both contain the collecting semantics
-(${0, dots, 5}$ at $h$), and the second is less precise at $h$ and $e$, so a
-solution need not be the least one.
+(${0, dots, 5}$ at $h$), and the second is less precise at $h$ and $e$, so not
+every solution is the least one.
 
 In general, let $Unk$ be a set of unknowns and $sol : Unk -> A$ a
 _valuation_, which assigns a domain element to every unknown. Valuations are
@@ -505,7 +505,7 @@ current value $a$ and a candidate $b lle a$ to a value between the
 two @cousot77[§9.3.4] @cousot92plilp[§4]:
 $ b lle a narrow b lle a. $
 In the counting loop, the interval narrowing reaches $absval(ivl(0, 5))$, but in general,
-narrowing need not recover the least fixpoint. Both steps appear in
+narrowing does not always recover the least fixpoint. Both steps appear in
 @fig:widening-phases. The verified TD solver applies both operators in a single
 update, _warrowing_ (#isaconst("warrow")), shown in @fig:widening-warrow. It
 narrows when the candidate lies below the current value and widens otherwise
@@ -540,7 +540,7 @@ the lower bracket law $b lle a narrow b$. With them, each
 warrowing update lies above the candidate
 (#isathm("warrowing_properties", thy: "Warrowing")), so an unknown whose value
 no longer changes satisfies its inequality. The solver's correctness theorem
-uses only this and holds whether or not the right-hand sides are monotone
+uses only this and holds whether the right-hand sides are monotone
 (@sec:td). Monotonicity is needed for the classical theory of least fixpoints,
 but not to certify that a returned valuation is a post-solution. Termination
 needs more. A classical widening is chosen so that repeated widening stabilizes
@@ -629,7 +629,7 @@ as a _side effect_. As in the verified solver, side effects target
 only _global unknowns_ $Unk_G$, which have no right-hand side and receive only
 contributions. From here on, $Unk$ denotes the _local_ unknowns, which keep
 their right-hand sides, and a valuation $sol$ assigns values to both kinds. A
-global unknown need not correspond to a global variable of the program. It can
+global unknown does not have to correspond to a global variable of the program. It can
 hold any fact to which several right-hand sides contribute. In Voblint, for
 instance, the entry state of a callee in one context is a global unknown, and
 every call that enters this context publishes its entry state to it
@@ -673,8 +673,8 @@ that $x$ depends on $y$. An unknown is _stable_ if it has been evaluated and no
 unknown that it read has changed since then. When the value of $y$ changes
 later, every unknown that read it is _destabilized_ and evaluated again. The
 unknowns at which a read closes a cycle are the solver's _widening points_
-@seidl21. TD detects them while it solves @apinis16[§4], so they need not
-coincide with the loop heads of the control-flow graph. At a widening point, it
+@seidl21. TD detects them while it solves @apinis16[§4], so they can
+differ from the loop heads of the control-flow graph. At a widening point, it
 updates the old value with the new one by warrowing. The
 #link(playground-link(_counting-loop, trace: "verbose"))[playground] replays this run on the counting loop step by step. Contributions published to a
 global unknown are merged into its value by an _update rule_

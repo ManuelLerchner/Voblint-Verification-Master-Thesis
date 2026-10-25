@@ -436,6 +436,25 @@ pre-commit:
               - "thesis/shared/generated/snippets/*.thy"
             run: pixi run paper-check
 
+          # Vale fails only on error-level rules (.vale.ini); the warnings it
+          # prints are for review. A config or style change rechecks all.
+          - name: thesis-prose
+            glob:
+              - "thesis/content/**/*.typ"
+              - "paper/**/*.tex"
+            exclude:
+              - "paper/lipics/**"
+              - "paper/sty/**"
+              - "paper/generated/**"
+            run: pixi run prose-lint -- {staged_files}
+
+          - name: thesis-prose-config
+            glob:
+              - ".vale.ini"
+              - ".vale/styles/Voblint/*.yml"
+              - "scripts/mk/prose-lint.sh"
+            run: pixi run prose-lint
+
           # VIMP code must reach the thesis through the linked listing helper,
           # and the claim programs its links open must be current.
           - name: thesis-vimp-source

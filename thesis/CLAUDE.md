@@ -215,6 +215,9 @@ Rules the author set while reviewing drafts. They refine the sections above.
 
 - Plain words. No `load-bearing`, no labels such as RQ1 or K1: state the
   research questions and contributions in prose and refer to them by topic.
+- No modal "need" with a bare infinitive ("need not", "need only"). Write
+  "does not have to", "can" or "only has to". Vale's `Voblint.NeedNot` enforces
+  it.
 - Precise mathematics. Say post-fixpoint when a value only satisfies
   $f(d) lle d$, say inequality when soundness needs only $lle$, write abstract
   operations with a sharp ($sh(+)$), and do not say an iteration "reaches" a

@@ -83,7 +83,7 @@ At a call, the analyzer chooses the callee's context with a _routing_ function
 $ctxh(u, c, e)$ of the call site $u$, the caller context $c$, and the entry
 state $e$. Under entry-state contexts, the choice depends on $e$, which is
 known only while the equations are solved. The set of calls that contribute to
-a particular callee context is therefore not known in advance, and the
+a callee context is therefore not known in advance, and the
 callee's entry cannot list them in its equation. Each call instead publishes
 its entry state to the callee as a side effect (@sec:side-effects).
 

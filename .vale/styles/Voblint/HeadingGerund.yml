@@ -1,0 +1,9 @@
+# Supervisor feedback: activity titles ("Building", "Solving") describe the
+# work instead of the subject. Widening, narrowing and routing are the
+# names of techniques; "calling", "cooperating" and "running" are adjectives.
+extends: existence
+message: "Activity title '%s': prefer a noun phrase for the subject."
+level: suggestion
+scope: heading
+tokens:
+  - '^(?!Widening|Narrowing|Routing|Calling|Cooperating|Running)[A-Z][a-z]+ing\b'

@@ -1,0 +1,7 @@
+# Supervisor feedback: question titles read machine-written.
+extends: existence
+message: "Question title '%s': name the topic instead."
+level: warning
+scope: heading
+tokens:
+  - '^(?:What|Why|How|Where|When|Which)\b'

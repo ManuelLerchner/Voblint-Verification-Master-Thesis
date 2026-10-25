@@ -68,6 +68,10 @@ BUILD_DATE="$(date -u +%Y-%m-%d)"
 cp "$FORMALIZATION_PDF" "$SITE_DIR/formalization.pdf"
 cp "$THESIS_PDF" "$SITE_DIR/thesis.pdf"
 cp "$PAPER_PDF" "$SITE_DIR/paper.pdf"
+# A pull request preview also carries its changes against main.
+if [ -n "${THESIS_DIFF_DIR:-}" ]; then
+  cp "$THESIS_DIFF_DIR/thesis-diff.pdf" "$THESIS_DIFF_DIR/thesis-redline.pdf" "$SITE_DIR/"
+fi
 touch "$SITE_DIR/.nojekyll"
 
 echo "GitHub Pages site: $SITE_DIR"

@@ -56,7 +56,7 @@ responsibly and correctly in a formal development of this size. Agent output was
 treated as a proposal until Isabelle, a test or the author's review confirmed it. This
 caution was necessary, since the assistants' output was not reliable on its own. Agents proposed incorrect
 lemmas and, in one case, introduced a premise into the end-to-end soundness theorem that
-no program satisfied, making the theorem vacuous until the solver run was
+no program satisfied, so the theorem was vacuous until the solver run was
 redesigned. Audits of theorem statements and full batch builds exposed these
 errors. The non-vacuity instances of @sec:nonvacuity now demonstrate that the
 premises of the end-to-end soundness theorem and its companions can be satisfied.
@@ -69,8 +69,8 @@ generated material, the analyzer, the project site, and this thesis consistent
 repeated manual inspection with conditions that every change had to satisfy, and
 they exposed errors that manual reading had missed.
 
-The table below quantifies the recorded part of this assistance, following the
-session-log analysis of Bryant et al. @bryant26munkres[Section 5]. The counts
+@fig:ai-sessions quantifies the recorded part of this assistance using
+session-log counts, following Bryant et al. @bryant26munkres[Section 5]. The counts
 measure interaction with the tools, not authorship or the proportion of the work
 attributable to them.
 
@@ -81,9 +81,8 @@ attributable to them.
   ..(_cc.top_level, _cc.subagents).map(s => _n(s.at(key))),
   ..(_cx.top_level, _cx.subagents).map(s => if codex { _n(s.at(key)) } else [--]),
 )
-#v(0.4em)
-#block(breakable: false, width: 100%)[
-  #align(center, table(
+#figure(
+  table(
     columns: 5,
     align: (left, right, right, right, right),
     stroke: none,
@@ -100,21 +99,19 @@ attributable to them.
     .._row([#h(1em) Isabelle server (I/Q, PIDE)], "isabelle_mcp"),
     .._row([#h(1em) file edits and writes], "edits"),
     table.hline(),
-  ))
-  #v(0.4em)
-  #set text(size: 0.9em)
-  Recorded automated-assistant activity during development, counted on #_ai.snapshot from the
-  local session logs (#_cc.top_level.first_day to #_cc.top_level.last_day for
-  Claude Code, #_cx.top_level.first_day to #_cx.top_level.last_day for Codex).
-  No local logs are available for earlier Claude Code sessions, ChatGPT in
-  the browser, or Cursor, so these are not counted. The author sent
-  #_n(_cc.top_level.human_messages) messages to Claude Code and
-  #_n(_cx.top_level.human_messages) to Codex. Shell edits count as shell calls.
-  Interactions through the Isabelle server, including theory edits, count as
-  server calls. Co-author lines in commit messages were not kept consistently
-  and are not used as a measure.
-]
-#v(0.8em)
+  ),
+  kind: table,
+  caption: [Recorded automated-assistant activity during development, counted on #_ai.snapshot from the
+    local session logs (#_cc.top_level.first_day to #_cc.top_level.last_day for
+    Claude Code, #_cx.top_level.first_day to #_cx.top_level.last_day for Codex).
+    No local logs are available for earlier Claude Code sessions, ChatGPT in
+    the browser, or Cursor, so these are not counted. The author sent
+    #_n(_cc.top_level.human_messages) messages to Claude Code and
+    #_n(_cx.top_level.human_messages) to Codex. Shell edits count as shell calls.
+    Interactions through the Isabelle server, including theory edits, count as
+    server calls. Co-author lines in commit messages were not kept consistently
+    and are not used as a measure.],
+) <fig:ai-sessions>
 
 Isabelle/HOL accepts every theorem in the development. Proofs by evaluation,
 used for some facts about fixed programs, additionally rely on Isabelle's code

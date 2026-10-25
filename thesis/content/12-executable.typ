@@ -68,7 +68,7 @@ computable. Most of the development already is, since its datatypes and
 recursive functions translate directly into a functional program, but the
 concretizations and the pointwise states do not. The concretization $conc$ maps an abstract value to a possibly infinite set of integers, and in general
 no program can compute such a set. The analyzer does not need to, because
-$conc$ only states what a value means. This is why the domain interface
+$conc$ only states what a value means. The domain interface therefore
 separates #isalocale("executable_domain") from the classes and locales
 below it in @fig:domain-carrier, which add $conc$ and its laws. Code
 generation exports the executable part together with each domain's operation
@@ -164,7 +164,7 @@ and the browser are trusted (@sec:ocaml-boundary).
     are measured on the repository at build time.],
 ) <tab:sizes>
 
-The proofs say nothing about running time, and the generated code can be very
+The proofs say nothing about running time, and the generated code can be
 inefficient. In one case, a sampling profile of 256 chained assignments attributed
 most of the CPU time to a single function. The generated
 code of #isaconst("init_publications") recompiled the whole program at every

@@ -1,0 +1,18 @@
+# Supervisor feedback: the abstract must make sense to a computer scientist
+# who knows neither abstract interpretation, Goblint nor Isabelle.
+extends: existence
+message: "Term '%s' in the abstract: say it in plain words or drop it."
+level: warning
+ignorecase: true
+tokens:
+  - stores?
+  - post-solutions?
+  - collecting semantics
+  - context-indexed
+  - side-effecting
+  - constraint system
+  - end-to-end soundness theorem
+  - fixtures?
+  - locales?
+  - transfer functions?
+  - program globals

@@ -1,0 +1,6 @@
+# The vendored solver's workflow belongs to its upstream repository
+# (stilscher/td-verification), so its action pins can only change there.
+rules:
+  unpinned-uses:
+    ignore:
+      - build_session.yml

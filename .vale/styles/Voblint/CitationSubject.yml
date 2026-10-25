@@ -1,0 +1,8 @@
+# thesis/CLAUDE.md "Review patterns": put the citation at the end of the claim
+# instead of making the authors the subject.
+extends: existence
+message: "Citation as subject ('%s'): state the claim and cite at its end."
+level: suggestion
+ignorecase: true
+tokens:
+  - et al\.\s+(?:report|show|prove|propose|present|describe|argue)s?

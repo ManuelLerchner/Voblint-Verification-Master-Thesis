@@ -1,0 +1,6 @@
+# AGENTS.md: resolve every TODO marker before submission.
+extends: existence
+message: "Unresolved '%s' marker."
+level: warning
+tokens:
+  - 'TODO:'

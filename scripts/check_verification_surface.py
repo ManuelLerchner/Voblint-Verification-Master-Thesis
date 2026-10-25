@@ -38,6 +38,8 @@ CI_ONLY_TASKS = {
     "pages-site-links",
     # Needs a system TeX Live, which the pixi environment does not provide.
     "paper",
+    "thesis-diff",
+    "thesis-redline",
     "thesis-links-live",
     "thesis-links-write",
 }
@@ -177,8 +179,12 @@ def main() -> int:
         verify_tasks = set(verify.get("depends-on", []))
 
     thesis_check = tasks.get("thesis-check")
+    # A dependency in another environment is written {task, environment}.
     thesis_tasks = (
-        set(thesis_check.get("depends-on", []))
+        {
+            dep["task"] if isinstance(dep, dict) else dep
+            for dep in thesis_check.get("depends-on", [])
+        }
         if isinstance(thesis_check, dict)
         else set()
     )

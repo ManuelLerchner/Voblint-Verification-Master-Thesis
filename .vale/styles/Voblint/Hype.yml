@@ -1,0 +1,21 @@
+# AGENTS.md, docs/SITE_VOICE.md, thesis/CLAUDE.md "Wording" and
+# paper/STYLEGUIDE.md "Prose": name the mechanism instead of praising it.
+extends: existence
+message: "'%s' evaluates without a criterion; name the mechanism."
+level: warning
+ignorecase: true
+tokens:
+  - leverag(?:e|es|ed|ing)
+  - robust(?:ly|ness)?
+  - crucial(?:ly)?
+  - powerful
+  - seamless(?:ly)?
+  - elegant(?:ly)?
+  - transformative
+  - milestone
+  - blueprint
+  - nightmare
+  - load-bearing
+  - game-changing
+  - cutting-edge
+  - state-of-the-art

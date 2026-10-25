@@ -59,3 +59,8 @@ thesis/shared/generated/goblint-alignment.json
 
 # Paper: rebuilt from the uncommitted thesis stats.json on every build
 paper/generated/stats.tex
+
+# Vale packages fetched by `vale sync`; only the project style is ours.
+/.vale/styles/*
+!/.vale/styles/Voblint/
+/.vale/.sync.lock

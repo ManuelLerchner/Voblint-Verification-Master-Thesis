@@ -27,7 +27,7 @@ solver's correctness theorem.
 == Encoding the equations for the solver <sec:eq-encoding>
 
 The solver accepts a right-hand side only as a strategy tree, uses one value
-type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, along the lines of Apinis et al.
+type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, as in Apinis et al.
 and Goblint, needs four things this interface does not offer
 (@tab:eq-adapters). @ch:equations already stated the equations in the adapted
 form, and this section explains why each adaptation is needed. Buffering is the
@@ -162,21 +162,22 @@ unknown.
 == Update rules for global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
 
 A global unknown, such as a seed, receives contributions from several places.
-The solver merges each new contribution into the value it holds, and this
-merge, the _update rule_, decides both precision and termination. Tilscher et al. prove five update rules sound against a generic interface
-@tilscher26, and Voblint lets the user select any of them.
+The _update rule_ merges each new contribution into the value the unknown
+holds and decides both precision and termination. Tilscher et al. state the
+solver's requirements on an update rule as the locale
+#isalocale("update_rule") and prove that five rules satisfy it @tilscher26,
+so Voblint can offer all five as a user setting
+(#isathm("update_rule_update_global_of")). @fig:update-rules compares them.
 
 The rules differ in what they keep per _origin_, the right-hand side that
 published a contribution (@sec:td), and in whether they widen. Of the two
 _joining rules_, _join_ joins every contribution into the value, and _join per
-origin_ reports the join of each origin's latest contribution. Of the three
-_warrowing rules_, _warrow_ and _warrow per origin_ warrow toward
-the same join or per origin, and _bounded narrowing_ additionally limits how
-often an origin may switch from widening to narrowing. @fig:update-rules runs
-all five on one sequence of contributions. In #isaconst("run_voblint"), the rule
-decides how a callee's entry state accumulates across call sites and how a
-flow-insensitive program global (@sec:mixed-flow) accumulates its writes. No
-rule is more precise on every program, and @sec:eval-precision compares them.
+origin_ joins each origin's latest contribution. Of the three _warrowing rules_,
+_warrow_ and _warrow per origin_ warrow toward the same join or per origin, and
+_bounded narrowing_ also limits how often an origin may switch from widening to
+narrowing. In #isaconst("run_voblint"), the rule governs how a callee's entry
+state and a flow-insensitive program global (@sec:mixed-flow) accumulate their
+contributions. No rule is more precise on every program (@sec:eval-precision).
 
 #let _rule-steps = update-rule-steps()
 

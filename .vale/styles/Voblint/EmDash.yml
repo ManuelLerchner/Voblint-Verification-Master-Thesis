@@ -1,0 +1,7 @@
+# AGENTS.md: avoid unnecessary em dashes.
+extends: existence
+message: "Em dash: prefer a comma, colon, parentheses or two sentences."
+level: suggestion
+nonword: true
+tokens:
+  - '—'

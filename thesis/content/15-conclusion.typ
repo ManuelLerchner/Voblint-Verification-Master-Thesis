@@ -61,8 +61,9 @@ analyzer. The following observations summarize this experience and suggest what
 a similar formalization might do differently.
 
 *Reuse the architecture, but reconsider the model.* Goblint's architecture is
-documented in the literature and has been exercised on real programs, so following it closely
-avoided designing an analyzer and its soundness proof at the same time. The concrete semantics, however, had to
+documented in the literature and has been exercised on real programs. Following
+it closely settled the analyzer's design, so the work could concentrate on the
+soundness proof. The concrete semantics, however, had to
 be designed for the proof. The first prototype used whole-program executions
 with calls inlined. To account for one call, the soundness proof built a
 separate execution starting at the callee's entry and spliced it into the
@@ -171,7 +172,7 @@ pointers, a heap, threads, machine integers, and most of Goblint's analyses, so 
 immediate applicability to Goblint development is limited, although it already
 provides a reference for selected components and proof obligations
 (@sec:outlook-extending). Among the limitations identified in @sec:intro-scope, the gap between VIMP and
-C is the most significant. VIMP has no pointers, heap, or threads and
+C is the largest. VIMP has no pointers, heap, or threads and
 computes with unbounded integers, so a verdict about a VIMP program does not
 carry over to a C program with the same text (@sec:vimp-vs-c), and the
 adequacy of #isaconst("pstep") itself is argued rather than proved. As far as the author is aware, no commonly
