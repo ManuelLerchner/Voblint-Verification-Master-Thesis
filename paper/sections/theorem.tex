@@ -69,7 +69,8 @@ at some node, and at every node where it is observed, its store is collected,
 covered by the report, and consistent with every definite verdict there. The
 contexts appear only inside the proof, through
 $\NodeColl(v) = \bigcup_c \ActColl(v, c)$ and \cref{thm:routed}. The
-guarantee is therefore per program point. What the proof establishes about contexts at the report level
+end-to-end theorem is therefore per program point. At the report level, the
+theorem about contexts
 (\isaname{run_voblint_contexts}, stated with the predicate
 \isaname{context_sound}) bounds each $\ActColl(v, c)$ by
 $\Report_{\mathit{res}}(v)$, the union over all contexts at $v$. No theorem about \isaname{run_voblint} certifies the row of an
@@ -85,7 +86,7 @@ well-formedness, since a malformed program does not yield \ctor{Analysed}. The
 configuration is a quantified argument, so the statement holds for every
 configuration the function accepts.
 
-\subparagraph*{What verdicts mean.}
+\subparagraph*{Meaning of verdicts.}
 \verdict{PROVED} states that whenever a covered execution reaches the check,
 the condition holds; \verdict{REFUTED} that it fails
 (\isaname{run_voblint_check_sound}). Neither asserts that the check is
@@ -96,7 +97,7 @@ arithmetic diagnostics: without a diagnostic at a node, no divisor leaving it
 is zero (\isaname{run_voblint_arithmetic_safe}), and an error means the
 divisor is zero there (\isaname{run_voblint_arithmetic_refuted}).
 
-\subparagraph*{What is trusted.}
+\subparagraph*{Trusted components.}
 \Cref{fig:trust} separates what is proved from what is trusted. The theorem is
 about the constant that Isabelle's code generator~\cite{haftmann10} exports to
 OCaml and that the command-line tool calls. The lexer and parser, which

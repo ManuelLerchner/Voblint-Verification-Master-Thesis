@@ -13,7 +13,7 @@ are registered claims that \texttt{pixi run thesis-claims} re-checks;
 \cref{tab:contexts,tab:costs} are generated from claims and from the committed
 profiling data.
 
-\subparagraph*{The theorem is not vacuous (machine-checked, one program each).}
+\subparagraph*{Non-vacuity (machine-checked, one program each).}
 For the program of \cref{fig:running}, analyzed with Interval, entry-state
 contexts, and the warrowing update rule, a theory builds a source execution
 that returns from both calls. Evaluation shows that the analyzer answers with
@@ -22,7 +22,7 @@ both checks \verdict{PROVED}, and \isaname{nv_source_certified} instantiates
 same for a single check (\isaname{nv_check_proved_sound}) and for a
 \verdict{DEAD} check (\isaname{nv_dead_unreached}). They show that the premises are satisfiable.
 
-\subparagraph*{The obligations have force (machine-checked).}
+\subparagraph*{A Goblint defect the obligations reject (machine-checked).}
 \oblig{Total} is needed: \isaname{total_dropped_unsound} exhibits a cover that
 meets the other four obligations and misses a reached store. At the domain
 level, Goblint once claimed \texttt{c \% 2 == 1} for $c \in \{-5, -7\}$,
@@ -36,7 +36,7 @@ that every abstract remainder returning the constant~$1$ for
 $(1 + 2\mathbb{Z}) \bmod 2$ violates the obligation at $-5$, so the defective
 operator could not be registered.
 
-\subparagraph*{Contexts decide checks on recursive programs (executable).}
+\subparagraph*{Calling contexts on recursive programs (executable).}
 \Cref{tab:contexts} runs one regression program under every context policy.
 Mutually recursive procedures \texttt{f} and \texttt{g} return $2$ and $1$ at
 the bottom of the recursion. \texttt{main} calls \texttt{f(2)} and

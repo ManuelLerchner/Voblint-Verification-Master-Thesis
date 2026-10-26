@@ -11,8 +11,8 @@ analyzes \texttt{bump} once per argument and proves both. Goblint, an abstract
 interpreter for C~\cite{vojdani16,seidl26}, gains this precision by
 translating a program into a \emph{side-effecting constraint
 system}~\cite{seidl03,apinis12}. Its inequations relate unknowns
-indexed by program point and context, whose right-hand sides may also
-contribute to other unknowns. A generic top-down solver then solves the
+indexed by program point and context, and the right-hand side of one unknown
+may also contribute to other unknowns. A generic top-down solver then solves the
 system. Goblint's soundness rests on tests: its issue tracker lists more than a
 hundred issues labeled as unsound since 2021, and a defect in any of these
 layers can turn a verdict false.
@@ -24,13 +24,12 @@ effects~\cite{tilscher26}. When the solver terminates, it returns a
 unknowns it solved, a set closed under the reads of
 right-hand sides. Whether the equations describe the program lies outside
 that theorem. Closing the gap needs a concrete semantics in which a
-per-context state has something to cover. Such semantics are classical on
-paper~\cite{sharir81,knoop92,jeannet04,vanhorn10} (\cref{sec:related}). What
-has not been mechanized, to our knowledge, is the connection from a
-source semantics through such a context-indexed semantics to a side-effecting
-constraint system and its verified solver.
+per-context state has something to cover. Such semantics (\cref{sec:related}) are classical on
+paper~\cite{sharir81,knoop92,jeannet04,vanhorn10}. To our knowledge, no
+mechanization connects a source semantics through such a context-indexed
+semantics to a side-effecting constraint system and its verified solver.
 
-We mechanize this connection. The development, Voblint, is written in
+We mechanize this connection. The development, Voblint (verified Goblint), is written in
 Isabelle/HOL and contains no \texttt{sorry}. Its parts are the following.
 \begin{itemize}
   \item We adapt the local traces of Schwarz et al.~\cite{schwarz21} to
@@ -53,7 +52,7 @@ Isabelle/HOL and contains no \texttt{sorry}. Its parts are the following.
 \end{itemize}
 The solver, side-effecting constraint systems, local traces, and Goblint's
 split between analyses and solvers are prior work. The context-indexed
-semantics is the structure of our proof. The shipped guarantee is per program
+semantics is the structure of our proof. The end-to-end theorem is per program
 point. It is not a separate certificate for each context's row of the report
 (\cref{sec:theorem}).
 

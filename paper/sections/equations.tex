@@ -9,7 +9,7 @@ et al.~\cite{seidl03,apinis12}. The solver and its certificate are those of
 Tilscher et al.~\cite{tilscher26}. The routing conditions, which connect the
 equations to the context policy, and their discharge for each policy are ours.
 
-\subsection{What an analysis supplies}
+\subsection{The analysis interface}
 
 An analysis describes the stores at a node by an abstract state $d$. Its
 meaning $\conc(d, \rho)$ also depends on $\rho$, the solved values of the
@@ -154,7 +154,7 @@ such as an entry state published to a seed.
 (\cref{sec:traces}), and \texttt{calls\_unique} reduces it to the edge being
 returned through.
 
-\subsection{The solver enters through one certificate}
+\subsection{The solver certificate}
 
 \Cref{thm:routed} needs a set $W$ of unknowns that contains the program entry,
 is closed under execution steps, and on which $\sol$ is bounded. The verified top-down
