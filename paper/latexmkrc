@@ -3,3 +3,8 @@
 ensure_path('TEXINPUTS', './lipics//', './sty//');
 $pdf_mode = 1;
 $out_dir = '_build';
+# The commit the PDF is built from, recorded as its Revision metadata so that
+# annotated review copies map back to the sources.
+my $revision = `git describe --always --dirty --abbrev=40 --exclude='*' 2>/dev/null`;
+chomp $revision;
+$pdflatex = "pdflatex %O -jobname=%A '\\def\\paperrevision{$revision}\\input{%S}'";
