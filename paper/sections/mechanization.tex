@@ -54,12 +54,12 @@ are locales~\cite{ballarin14}; a domain is registered with one locale
 interpretation per context policy.
 
 \subparagraph*{Feedback on the proof assistant.}
-Two points cost effort that the tooling could reduce. First, functions in Isabelle/HOL are total. A solver that may diverge is
+Totality and code generation cost effort that the tooling could reduce. Functions in Isabelle/HOL are total. A solver that may diverge is
 therefore defined with a domain predicate, next to an executable variant that
 returns only when the recursion finishes, and a returned run must be
 transported to the logical definition. A lemma added to the vendored solver
 proves this transport once (\isaname{solve_dom_of_solve_c}).
-Second, code generation turns finite sets and maps into lists that every
+Code generation also turns finite sets and maps into lists that every
 lookup scans, and CPU profiles attribute most of the solve time to these scans.
 The Containers library could replace them in the code setup alone, without
 touching the proofs; we leave this to future work.

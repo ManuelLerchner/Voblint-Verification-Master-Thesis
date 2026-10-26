@@ -10,7 +10,7 @@ cannot prove either check. With contexts that record the argument, it
 analyzes \texttt{bump} once per argument and proves both. Goblint, an abstract
 interpreter for C~\cite{vojdani16,seidl26}, gains this precision by
 translating a program into a \emph{side-effecting constraint
-system}~\cite{seidl03,apinis12}. This is a system of inequations over unknowns
+system}~\cite{seidl03,apinis12}. Its inequations relate unknowns
 indexed by program point and context, whose right-hand sides may also
 contribute to other unknowns. A generic top-down solver then solves the
 system. Goblint's soundness rests on tests: its issue tracker lists more than a

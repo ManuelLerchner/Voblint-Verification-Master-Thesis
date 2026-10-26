@@ -12,11 +12,11 @@ belong to. The development provides (i) a coverage contract of five local
 obligations over an arbitrary control-flow graph, which bounds the final store
 of every valid trace in every admitted context; (ii) a proof
 that every post-solution of the generated, context-routed equations (a
-valuation that satisfies all of them) meets the contract when the context
+valuation satisfying all of them) meets the contract when the context
 policy agrees with the routing, using the verified solver only through its
 certificate; and (iii) an
 end-to-end theorem from a small-step source semantics to the verdicts of the
-analyzer function that Isabelle exports to OCaml, for every configuration it
+analyzer function exported to OCaml, for every configuration it
 offers. The guarantee is per program point: every reached store is covered by
 the report and satisfies its definite verdicts. It is partial correctness,
 since solver termination is not proved, and the language has no pointers or

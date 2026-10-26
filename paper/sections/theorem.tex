@@ -4,7 +4,7 @@
 The previous sections bound the activation collecting semantics of a
 \emph{graph}. Two links remain: from source executions to graph executions,
 and from the solved valuation to the report the user reads. The forward
-simulation follows the CompCert methodology~\cite{leroy09}. The elaboration
+simulation follows the CompCert methodology~\cite{leroy09}. The annotation
 that locates a source configuration at graph nodes, and the composition, are
 ours.
 
@@ -21,17 +21,17 @@ procedure body by continuations into a procedure-aware CFG, and a forward
 simulation matches every source step by graph steps that reach the same store
 (\isaname{csim_star}). A source configuration does not determine a graph node,
 since its residual command can occur at several places, as in
-\texttt{if (b) \{x = 1;\} else \{x = 1;\}}. The program is therefore elaborated
-into one whose commands are annotated with their nodes. The relation
+\texttt{if (b) \{x = 1;\} else \{x = 1;\}}. The proof therefore annotates every
+command of the program with its nodes. The relation
 $p, s_0 \vdash (r, s, \mathit{frs}) \rhd v$ (\isaname{at_node}) holds when some
-run of the elaborated program from $s_0$ reaches an annotated configuration
+run of the annotated program from $s_0$ reaches an annotated configuration
 that erases to $(r, s, \mathit{frs})$, names $v$, and is related to $v$ by the
 simulation. In the example, the configuration after either branch is
 observed at both branch nodes. It is a relation, and the
 theorem below quantifies over every node at which a configuration is observed.
 Combined with \cref{sec:traces}, every store a finite source execution reaches lies in $\NodeColl$ at a node
 the simulation relates to the run (\isaname{source_reaches_node_collect}),
-and on the elaboration this holds at every node where the run is observed
+and on the annotated program this holds at every node where the run is observed
 (\isaname{csim_point_compile_prog}).
 
 \subparagraph*{From valuation to report.}

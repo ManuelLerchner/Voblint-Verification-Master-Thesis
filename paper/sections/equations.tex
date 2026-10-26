@@ -19,8 +19,8 @@ analysis supplies the record \isaname{dg_spec}, the counterpart of Goblint's
 two combine operations. A call needs two states. After the return, the
 caller's locals come from before the call, while the globals and the result
 come from the callee. Enter therefore returns a list of entry pairs $(q, d)$:
-a resume state $q$ that describes the caller's store, and an entry state $d$
-that describes the store in which the callee starts. After the return,
+a resume state $q$ describing the caller's store and an entry state $d$
+describing the store in which the callee starts. After the return,
 \emph{combine\_env} merges the callee's exit state into $q$, taking the
 callee's globals, and \emph{combine\_assign} then writes the return value to
 the call's destination. Together they mirror the concrete
@@ -78,8 +78,8 @@ locale \isaname{routed_context}.
 \begin{description}
   \item[Adequacy] (\isaname{routing_adequate}). If $\adm$ admits $c'$ for a call
     from a store that the caller's solved state describes, then enter produces
-    a pair $(q, d)$ that is routed to $c'$, whose resume state covers the
-    caller's store and whose entry state covers the entered store. The
+    a pair $(q, d)$ routed to $c'$. The pair's resume state covers the
+    caller's store, and its entry state covers the entered store. The
     callee's entry unknown in $c'$ is solved.
   \item[Totality] (\isaname{routing_total}). $\adm$ admits at least one context
     for every call from a store that the caller's solved state describes.
@@ -95,7 +95,7 @@ defined from the solved valuation $\sol$:
 \adm_{u,c}(e, s, s') \;=\; \{\, \mathit{route}(u, c, d, e) \mid {}\\
 (q, d) \in \mathit{enter}_e(\sol(u, c)),\; s \in \conc(q),\; s' \in \conc(d) \,\}.
 \end{multline*}
-That is, a context is admitted when an entry pair of the solved caller state
+In words, a context is admitted when an entry pair of the solved caller state
 covers both concrete stores and is routed there. The definition is not
 circular. $\sol$ is fixed before the policy is applied, and the final
 guarantee concerns $\NodeColl$, which no policy changes. The policy only
