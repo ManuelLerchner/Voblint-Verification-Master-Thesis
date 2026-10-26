@@ -24,6 +24,7 @@ WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 # gates themselves.
 CI_SETUP_TASKS = {
     "ocaml-deps-install",
+    "thesis-stats-write",
 }
 
 # These tasks are CI/deployment orchestration rather than verification gates.
@@ -35,6 +36,8 @@ CI_ONLY_TASKS = {
     "pages-links-live",
     "pages-site-build",
     "pages-site-links",
+    # Needs a system TeX Live, which the pixi environment does not provide.
+    "paper",
     "thesis-diff",
     "thesis-redline",
     "thesis-links-live",

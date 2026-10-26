@@ -1,0 +1,2 @@
+# Isabelle snippets the paper shows, rendered from thesis/shared/generated/snippets.
+run_voblint_source_sound

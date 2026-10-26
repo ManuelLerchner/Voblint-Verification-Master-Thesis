@@ -1,0 +1,33 @@
+% Notation, one definition per concept. Mirrors thesis/lib/math.typ where the
+% thesis has a symbol; the paper adds none the theories lack.
+
+% Isabelle entities in prose: typewriter, never plain text.
+% Breaks after underscores, so long names do not overrun the margin.
+\makeatletter
+\DeclareRobustCommand{\isaname}[1]{\texttt{\isa@split#1_\isa@end}}
+\def\isa@split#1_#2\isa@end{#1\ifx\relax#2\relax\else\_\allowbreak\isa@split#2\isa@end\fi}
+\makeatother
+% A named obligation of the coverage contract.
+\newcommand{\oblig}[1]{\textsc{#1}}
+% Analyzer verdicts.
+\newcommand{\verdict}[1]{\textsf{\small #1}}
+% Trace constructors.
+\newcommand{\ctor}[1]{\textsf{#1}}
+
+% Semantic sets, as declared in the theories.
+\newcommand{\Traces}{\mathcal{T}}
+\newcommand{\NodeColl}{\mathcal{C}}
+\newcommand{\ActColl}{\mathcal{A}}
+\newcommand{\Report}{\mathcal{R}}
+\newcommand{\Verd}{\mathcal{V}}
+\newcommand{\Glob}{\mathcal{G}}
+\newcommand{\cover}{\mathit{cover}}
+\newcommand{\adm}{\mathit{adm}}
+\newcommand{\conc}{\gamma}
+\newcommand{\sol}{\sigma}
+
+% Drafting markers; must be gone before submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}} % chktex 13
+
+% A generated Isabelle snippet, typeset small.
+\newcommand{\snippet}[1]{{\small\input{generated/#1}}}

@@ -19,3 +19,14 @@ tokens:
   - game-changing
   - cutting-edge
   - state-of-the-art
+  # jdkato/voices Human.Tics: words that rose with machine-written prose.
+  - pivotal
+  - nuanced
+  - holistic
+  - landscape
+  - testament
+  - showcas(?:e|es|ed|ing)
+  - underscor(?:e|es|ed|ing)
+  - groundbreaking
+  - plethora
+  - a myriad of

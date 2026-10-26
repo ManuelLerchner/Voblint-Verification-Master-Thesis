@@ -1,0 +1,29 @@
+# Read by `pixi run links-external`.
+
+timeout = 30
+max_retries = 3
+max_concurrency = 8
+no_progress = true
+exclude_loopback = true
+# ACM, Springer and MIT Press answer automated requests with 403; a dead link
+# still shows up as 404 or a DNS failure.
+accept = ["200..=299", "403"]
+
+# Dated snapshots: reviews, surveys and history record what a link said then.
+exclude_path = [
+  "docs/history/",
+  "docs/generated/",
+  "paper/reviews/",
+  "paper/research/",
+]
+
+exclude = [
+  # The vendored solver repository is private until its AFP release.
+  '^https://(api\.)?github\.com/(repos/)?(stilscher|ManuelLerchner)/td-verification',
+  # Project boards are visible only to signed-in members.
+  '^https://github\.com/users/[^/]+/projects/',
+  # Redirects automated requests to a login page that answers 400.
+  '^https://www\.sciencedirect\.com/',
+  # Badge service that rate-limits every CI runner.
+  '^https://deepwiki\.com/',
+]

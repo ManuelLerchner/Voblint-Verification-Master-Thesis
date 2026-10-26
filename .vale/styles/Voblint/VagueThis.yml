@@ -1,0 +1,25 @@
+# Author reviews rewrote "This is an observation from this project", "This
+# matters when ...": a bare demonstrative followed by a verb makes the reader
+# search for the antecedent.
+extends: existence
+message: "Bare '%s': say what 'this' refers to."
+level: suggestion
+nonword: true
+tokens:
+  - '(?<=^|[.!?]\s+)(?:This|These|That) (?:is|are|was|were|has|have|had|can|could|will|would|may|might|must|should|does|do|did|means|matters|shows|makes|gives|lets|allows|explains|works|holds|suffices|leaves|ensures|requires|implies|keeps|avoids|reflects|follows|happens|changes|helps|separates|becomes)\b'
+
+tests:
+  - name: fires
+    input: |
+      The solver stops. This is why the bound holds.
+    want: |
+      1:19:Voblint.VagueThis:Bare 'This is': say what 'this' refers to.
+  - name: fires on a modal
+    input: |
+      The solver stops. This can fail.
+    want: |
+      1:19:Voblint.VagueThis:Bare 'This can': say what 'this' refers to.
+  - name: clean
+    input: |
+      The solver stops. This bound holds.
+    want: ""

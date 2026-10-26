@@ -57,6 +57,12 @@ codegen/generated/.source-hash
 thesis/shared/generated/stats.json
 thesis/shared/generated/goblint-alignment.json
 
+# Paper: rebuilt from the uncommitted thesis stats.json on every build
+paper/generated/stats.tex
+
 # Vale packages fetched by `vale sync`; only the project style is ours.
 /.vale/styles/*
 !/.vale/styles/Voblint/
+# Vendored: jdkato/prompts publishes no release for `vale sync` to pin.
+!/.vale/styles/Prompts/
+/.vale/.sync.lock

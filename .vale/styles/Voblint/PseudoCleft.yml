@@ -1,0 +1,21 @@
+# Author reviews: "What Voblint adds is the meaning of the equations", "What a
+# context records decides which calls stay apart". A statement that opens
+# with "What" delays its subject; name it and give it the verb. Questions end
+# in "?" and are left to ProseQuestion.
+extends: existence
+message: "Pseudo-cleft: a statement opening with 'What' delays its subject; name it and say what it does."
+level: warning
+nonword: true
+tokens:
+  - '(?<=^|[.!?]\s+)What\b(?=[^.?!]{3,160}\.)'
+
+tests:
+  - name: fires
+    input: |
+      What Voblint adds is the meaning of the equations.
+    want: |
+      1:1:Voblint.PseudoCleft:Pseudo-cleft: a statement opening with 'What' delays its subject; name it and say what it does.
+  - name: clean
+    input: |
+      Voblint gives the equations a meaning. What does it add?
+    want: ""

@@ -1,0 +1,80 @@
+\documentclass[a4paper,USenglish,cleveref,autoref,thm-restate]{lipics-v2021}
+
+\usepackage{isabelle}
+\usepackage{isabellesym}
+\isabellestyle{it}
+% The italic style prints `_` as a hyphen; Isabelle names in the prose keep it.
+\def\isacharunderscore{\_}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,backgrounds}
+
+\setlength{\emergencystretch}{1.5em}
+\input{macros}
+\input{generated/stats}
+% latexmkrc defines the commit; a plain pdflatex run records none.
+\providecommand\paperrevision{unknown}
+\hypersetup{pdfinfo={Revision={\paperrevision}}}
+
+\bibliographystyle{plainurl}
+
+\title{End-to-End Soundness of a Context-Sensitive Goblint-Style Analyzer in Isabelle/HOL}
+\titlerunning{End-to-End Soundness of a Goblint-Style Analyzer}
+
+\author{Manuel Lerchner}{Technical University of Munich, Germany}{manuel.lerchner@tum.de}{}{}
+\authorrunning{M. Lerchner}
+\Copyright{Manuel Lerchner}
+
+\ccsdesc[500]{Theory of computation~Program analysis}
+\ccsdesc[300]{Theory of computation~Logic and verification}
+\ccsdesc[300]{Software and its engineering~Formal software verification}
+
+\keywords{abstract interpretation, interprocedural analysis, calling contexts,
+  side-effecting constraint systems, verified static analysis, Isabelle/HOL}
+
+\relatedversiondetails{Master's thesis and full formalization}{https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis}
+\supplementdetails[subcategory={Isabelle/HOL formalization and analyzer}, cite=voblint]{Software}{https://doi.org/10.5281/zenodo.23260696}
+\acknowledgements{The author thanks Alexandra Gra{\ss} and Helmut Seidl, who
+supervised the master's thesis this paper is based on.}
+
+\nolinenumbers
+
+% Editor-only macros (do not touch as author)
+\EventEditors{John Q. Open and Joan R. Access}
+\EventNoEds{2}
+\EventLongTitle{Interactive Theorem Proving (ITP 2027)}
+\EventShortTitle{ITP 2027}
+\EventAcronym{ITP}
+\EventYear{2027}
+\EventDate{}
+\EventLocation{}
+\EventLogo{}
+\SeriesVolume{42}
+\ArticleNo{1}
+
+\begin{document}
+
+\maketitle
+
+\input{sections/abstract}
+
+\input{sections/introduction}
+\input{sections/overview}
+\input{sections/traces}
+\input{sections/equations}
+\input{sections/theorem}
+\input{sections/mechanization}
+\input{sections/evaluation}
+\input{sections/related}
+\input{sections/conclusion}
+
+\input{sections/statements}
+
+% Read by tools/pages.py: the last page counted against the page limit.
+\label{paper:body-end}
+\bibliography{generated/references}
+
+\end{document}

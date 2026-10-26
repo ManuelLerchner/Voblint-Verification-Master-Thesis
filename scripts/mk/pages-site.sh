@@ -17,9 +17,10 @@ SITE_DIR="${1:-$REPO_ROOT/build/github-pages}"
 HTML_SRC="${HTML_SRC:-$REPO_ROOT/build/isabelle-html}"
 FORMALIZATION_PDF="${FORMALIZATION_PDF:-$REPO_ROOT/output/document.pdf}"
 THESIS_PDF="${THESIS_PDF:-$REPO_ROOT/thesis/Lerchner_Master_Thesis.pdf}"
+PAPER_PDF="${PAPER_PDF:-$REPO_ROOT/paper/_build/main.pdf}"
 BROWSER_DIR="${BROWSER_DIR:-$REPO_ROOT/build/browser}"
 
-for path in "$HTML_SRC" "$FORMALIZATION_PDF" "$THESIS_PDF" "$BROWSER_DIR"; do
+for path in "$HTML_SRC" "$FORMALIZATION_PDF" "$THESIS_PDF" "$PAPER_PDF" "$BROWSER_DIR"; do
   test -e "$path" || {
     echo "ERROR: missing pages input: $path" >&2
     exit 1
@@ -57,7 +58,7 @@ BUILD_DATE="$(date -u +%Y-%m-%d)"
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'
   echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-  for entry in "/:1.0" "/playground.html:0.9" "/profiling.html:0.7" "/thesis.pdf:0.6" "/formalization.pdf:0.5"; do
+  for entry in "/:1.0" "/playground.html:0.9" "/profiling.html:0.7" "/thesis.pdf:0.6" "/paper.pdf:0.6" "/formalization.pdf:0.5"; do
     printf '  <url><loc>%s%s</loc><lastmod>%s</lastmod><priority>%s</priority></url>\n' \
       "$SITE_URL" "${entry%%:*}" "$BUILD_DATE" "${entry##*:}"
   done
@@ -66,6 +67,7 @@ BUILD_DATE="$(date -u +%Y-%m-%d)"
 
 cp "$FORMALIZATION_PDF" "$SITE_DIR/formalization.pdf"
 cp "$THESIS_PDF" "$SITE_DIR/thesis.pdf"
+cp "$PAPER_PDF" "$SITE_DIR/paper.pdf"
 # A pull request preview also carries its changes against main.
 if [ -n "${THESIS_DIFF_DIR:-}" ]; then
   cp "$THESIS_DIFF_DIR/thesis-diff.pdf" "$THESIS_DIFF_DIR/thesis-redline.pdf" "$SITE_DIR/"

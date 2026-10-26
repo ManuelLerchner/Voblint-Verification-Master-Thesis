@@ -1,7 +1,19 @@
 # Supervisor feedback: "that ..., that ..., that ..." chains read machine-written.
+# Author reviews flagged the same with "which" and "whose".
 extends: occurrence
-message: "Three or more that-clauses in one sentence: split it or make it a list."
+message: "Three or more that/which/whose clauses in one sentence: split it or make it a list."
 level: warning
 scope: sentence
 max: 2
-token: \bthat\b
+token: \b(?:that|which|whose)\b
+
+tests:
+  - name: fires
+    input: |
+      The claim that the run that the solver that we use returns holds.
+    want: |
+      1:11:Voblint.ThatChain:Three or more that/which/whose clauses in one sentence: split it or make it a list.
+  - name: clean
+    input: |
+      The claim that the run holds.
+    want: ""

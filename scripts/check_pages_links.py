@@ -73,6 +73,7 @@ BUILD_OUTPUTS = (
     "assets/regression-examples.json",
     "sitemap.xml",
     "thesis.pdf",
+    "paper.pdf",
     "formalization.pdf",
 )
 ISABELLE_HTML = REPO / "build" / "isabelle-html"

@@ -20,8 +20,21 @@ if [ "$(cat "$stamp" 2> /dev/null)" != "$TYPST2VAST_REV" ]; then
   printf '%s\n' "$TYPST2VAST_REV" > "$stamp"
 fi
 
-# Fetches the packages named in .vale.ini; cheap once they are present.
-vale sync > /dev/null
+# Fetches the packages named in .vale.ini when it changed. The pre-commit
+# hooks lint in parallel, and two concurrent syncs delete each other's files,
+# so a lock directory (mkdir is atomic) lets one sync while the other waits.
+stamp=.vale/styles/.synced
+if [ ! -e "$stamp" ] || [ .vale.ini -nt "$stamp" ]; then
+  lock=.vale/.sync.lock
+  until mkdir "$lock" 2> /dev/null; do sleep 1; done
+  trap 'rmdir "$lock"' EXIT
+  if [ ! -e "$stamp" ] || [ .vale.ini -nt "$stamp" ]; then
+    vale sync > /dev/null
+    touch "$stamp"
+  fi
+  rmdir "$lock"
+  trap - EXIT
+fi
 
 if [ "$#" -gt 0 ]; then
   exec vale "$@"

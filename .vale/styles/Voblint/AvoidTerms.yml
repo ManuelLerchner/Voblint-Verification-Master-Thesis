@@ -1,0 +1,20 @@
+# Author reviews: "elaboration" ("avoid all of them throughout the thesis") and
+# "read off" ("is it read off or computed from?").
+extends: existence
+message: "'%s': the author asked to avoid this; say what is computed or concluded."
+level: warning
+ignorecase: true
+tokens:
+  - elaborat(?:e|es|ed|ing|ion|ions)
+  - read off
+
+tests:
+  - name: fires
+    input: |
+      The elaboration turns the syntax tree into core VIMP.
+    want: |
+      1:5:Voblint.AvoidTerms:'elaboration': the author asked to avoid this; say what is computed or concluded.
+  - name: clean
+    input: |
+      The compiler turns the syntax tree into core VIMP.
+    want: ""

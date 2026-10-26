@@ -1,0 +1,154 @@
+\section{The End-to-End Theorem}
+\label{sec:theorem}
+
+The previous sections bound the activation collecting semantics of a
+\emph{graph}. Two links remain: from source executions to graph executions,
+and from the solved valuation to the report the user reads. The forward
+simulation follows the CompCert methodology~\cite{leroy09}. The annotation
+that locates a source configuration at graph nodes, and the composition, are
+ours.
+
+\subparagraph*{From source to graph.}
+VIMP has a small-step semantics \isaname{pstep} over configurations
+$(r, s, \mathit{frs})$ of a residual command, a store, and a frame stack. A
+call pushes a frame holding the caller's store and destination and continues
+with the callee's body followed by a $\mathit{Restore}$ marker; the marker pops
+the frame and combines the stores as in \cref{sec:traces}
+(\isaname{pstep}, rules \texttt{Call} and \texttt{RestoreStep}). A call whose
+arity does not match, or whose callee is undeclared, is stuck; well-formedness
+excludes such programs. The compiler translates each
+procedure body by continuations into a procedure-aware CFG, and a forward
+simulation matches every source step by graph steps that reach the same store
+(\isaname{csim_star}). A source configuration does not determine a graph node,
+since its residual command can occur at several places, as in
+\texttt{if (b) \{x = 1;\} else \{x = 1;\}}. The proof therefore annotates every
+command of the program with its nodes. The relation
+$p, s_0 \vdash (r, s, \mathit{frs}) \rhd v$ (\isaname{at_node}) holds when some
+run of the annotated program from $s_0$ reaches an annotated configuration
+that erases to $(r, s, \mathit{frs})$, names $v$, and is related to $v$ by the
+simulation. In the example, the configuration after either branch is
+observed at both branch nodes. It is a relation, and the
+theorem below quantifies over every node at which a configuration is observed.
+Combined with \cref{sec:traces}, every store a finite source execution reaches lies in $\NodeColl$ at a node
+the simulation relates to the run (\isaname{source_reaches_node_collect}),
+and on the annotated program this holds at every node where the run is observed
+(\isaname{csim_point_compile_prog}).
+
+\subparagraph*{From valuation to report.}
+The analyzer function \isaname{run_voblint} takes a configuration (the
+analyses to run, the update rule for global unknowns, the context policy, including the call-string length, and the placement of
+program globals) and a program. It rejects an invalid
+configuration or an ill-formed program, and otherwise runs the executable
+solver and returns $\ctor{Analysed}~\mathit{res}$ when the solve returns a
+result (\isaname{run_voblint}). The report lists, per node, the solved states of every solved context,
+and classifies each check \texttt{\_\_voblint\_check(b)} as \verdict{PROVED},
+\verdict{REFUTED}, \verdict{UNKNOWN}, or \verdict{DEAD}. As in
+\cref{sec:overview}, $\Report_{\mathit{res}}(v)$ is the set of stores that
+some state at $v$ describes, in any context, and $\Verd_{\mathit{res}}(v)$ the
+set of stores in which every \verdict{PROVED} check at $v$ holds and every
+\verdict{REFUTED} check fails.
+
+In the statement below, $\Pi$ is the procedure table of $p$, and
+$\Glob, \Pi \vdash (c, s, \mathit{frs}) \rightarrow_p^* (c', s', \mathit{frs}')$
+is a finite execution of \isaname{pstep} from residual command $c$, store $s$
+and frame stack $\mathit{frs}$. $\NodeColl_{\Glob,g,S}\,v$ is the node
+collecting semantics of the compiled graph $g$ from the initial stores $S$.
+
+\begin{theorem}[End-to-end soundness, \isaname{run_voblint_source_sound}]
+\label{thm:headline}
+\end{theorem}
+\vspace{-1.5ex}
+\snippet{run_voblint_source_sound}
+
+The premises are an initial store, in which every global is zero as for C
+objects of static storage duration and locals are unconstrained; a finite
+source execution from the body of \texttt{main} with any stopping point, so
+nonterminating programs are covered through their prefixes; and a returned
+report. The conclusion has two halves: the reached configuration is observed
+at some node, and at every node where it is observed, its store is collected,
+covered by the report, and consistent with every definite verdict there. The
+contexts appear only inside the proof, through
+$\NodeColl(v) = \bigcup_c \ActColl(v, c)$ and \cref{thm:routed}. The
+end-to-end theorem is therefore per program point. At the report level, the
+theorem about contexts
+(\isaname{run_voblint_contexts}, stated with the predicate
+\isaname{context_sound}) bounds each $\ActColl(v, c)$ by
+$\Report_{\mathit{res}}(v)$, the union over all contexts at $v$. No theorem about \isaname{run_voblint} certifies the row of an
+individual context. \Cref{thm:routed} bounds $\ActColl(v, c)$ by the solved
+state for $c$, but the report is not proved to list that state as the row
+for $c$. Closing this gap is future work (\cref{sec:conclusion}).
+
+No separate premise is needed for termination:
+\isaname{run_voblint} answers only when its executable solve returns, and a
+returned run lies in the solver's domain. None is needed for coverage, which
+\isaname{live_unknowns_cover} derives from the returned solve, or for
+well-formedness, since a malformed program does not yield \ctor{Analysed}. The
+configuration is a quantified argument, so the statement holds for every
+configuration the function accepts.
+
+\subparagraph*{Meaning of verdicts.}
+\verdict{PROVED} states that whenever a covered execution reaches the check,
+the condition holds; \verdict{REFUTED} that it fails
+(\isaname{run_voblint_check_sound}). Neither asserts that the check is
+reachable, and \verdict{REFUTED} is not a verified counterexample.
+\verdict{DEAD} is the reachability claim: nothing is collected at the check's
+node (\isaname{run_voblint_dead_check_unreached}). Analogous theorems cover
+arithmetic diagnostics: without a diagnostic at a node, no divisor leaving it
+is zero (\isaname{run_voblint_arithmetic_safe}), and an error means the
+divisor is zero there (\isaname{run_voblint_arithmetic_refuted}).
+
+\subparagraph*{Trusted components.}
+\Cref{fig:trust} separates what is proved from what is trusted. The theorem is
+about the constant that Isabelle's code generator~\cite{haftmann10} exports to
+OCaml and that the command-line tool calls. The lexer and parser, which
+construct the program, and the handwritten OCaml that prints the report lie
+outside the proof. The Isabelle kernel, the code generator, the OCaml
+toolchain, and the arbitrary-precision integer library are trusted. So is one
+handwritten OCaml function. For tracing, the exported code maps the logical
+constant \isaname{trace_event}, which is the unit, to a handwritten hook
+(\texttt{Solver\_trace\_hook.emit}) that the solve, the routing functions and
+the report construction call. The proofs treat each call as the unit, and the
+trusted base assumes that the hook does not change the results.
+
+That \isaname{pstep} models the intended language is argued, not proved. Some
+of VIMP's choices differ from C. Integers are unbounded. Division by zero
+yields $0$ and the remainder by zero yields the dividend. Expressions are pure and
+total, so \texttt{\&\&} and \texttt{||} have no evaluation order to model. A failed check does not stop
+the execution, so a verdict for one check does not depend on an earlier one.
+The locals of \texttt{main} start unconstrained, while a callee's locals start
+at $0$. \texttt{min}, \texttt{max}, and the nondeterministic input are
+built-in calls, and \texttt{main} has no explicit \texttt{return}. A verdict therefore does not always hold for a C program with the
+same text.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  part/.style={draw, rounded corners=1pt, align=center, inner sep=3pt},
+  zone/.style={draw, rounded corners=3pt, inner sep=4pt},
+  arr/.style={-{Stealth[length=1.6mm]}}]
+  \node[part, dashed] (src) {source text};
+  \node[part, dashed, below=3mm of src] (par) {lexer, parser};
+  \node[part, right=8mm of par] (cmp) {compiler};
+  \node[part, right=3mm of cmp] (eqs) {equations};
+  \node[part, right=3mm of eqs] (slv) {solver};
+  \node[part, right=3mm of slv] (rep) {report, verdicts};
+  \node[part, dashed, right=8mm of rep] (out) {printing};
+  \draw[arr] (src) -- (par); \draw[arr] (par) -- (cmp); \draw[arr] (cmp) -- (eqs);
+  \draw[arr] (eqs) -- (slv); \draw[arr] (slv) -- (rep); \draw[arr] (rep) -- (out);
+  \begin{scope}[on background layer]
+    \node[zone, fill=green!8, fit=(cmp)(rep), label={[font=\scriptsize]above:proved in Isabelle/HOL}] (pz) {};
+    \node[zone, dashed, fit=(src)(par), label={[font=\scriptsize]above:unverified}] {};
+    \node[zone, dashed, fit=(out), label={[font=\scriptsize]above:unverified}] {};
+  \end{scope}
+  \node[part, dashed, below=6mm of slv, font=\scriptsize] (hook) {trace hook};
+  \draw[dashed] (hook) -- (slv);
+  \node[zone, fill=black!5, below=3mm of hook, minimum width=125mm, align=center]
+    {trusted: Isabelle kernel $\cdot$ code generator $\cdot$ OCaml toolchain $\cdot$ Zarith $\cdot$ trace hook};
+\end{tikzpicture}
+\caption{The trust boundary of the delivered analyzer, for programs whose
+solve terminates. Dashed boxes are handwritten code outside the proof. The
+trace hook is called by the solve, the routing and the report construction,
+and is assumed not to change their results.}
+\label{fig:trust}
+\end{figure}

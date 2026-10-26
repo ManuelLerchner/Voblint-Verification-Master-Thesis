@@ -1,0 +1,133 @@
+digraph AnalysisCFG {
+  graph [rankdir=TB,ordering=out,splines=polyline,nodesep=0.5,ranksep=0.8,remincross=true,mclimit=4,fontname="Menlo"];
+  node [shape=box,style=filled,fillcolor=lightgreen,fontname="Menlo",id="\N",URL="javascript:show_info('\N');"];
+  edge [fontname="Menlo",fontsize=10,arrowsize=0.8];
+  subgraph cluster_ctx_0 {
+    label="main / root context";
+    style=rounded; color=gray70; penwidth=1;
+    main_pp23_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp23\ncheck res2 == 1",tooltip="pp23\ninterval:\n  i=[1,200]\n  res1=[1,12]\n  res2=[1,12]\ncheck res2 == 1"];
+    main_pp24_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp24",tooltip="pp24\ninterval:\n  i=[1,200]\n  res1=[1,12]\n  res2=[1,12]"];
+    main_pp19_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp19",tooltip="pp19\ninterval:\n  i=[0,200]\n  res1=⊤\n  res2=⊤"];
+    main_pp25_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp25",tooltip="pp25\ninterval:\n  i=[0,0]\n  res1=⊤\n  res2=⊤"];
+    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\ninterval:\n  i=[0,0]\n  res1=⊤\n  res2=⊤"];
+    main_pp18_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp18",tooltip="pp18\ninterval:\n  i=⊤\n  res1=⊤\n  res2=⊤"];
+    main_pp20_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp20",tooltip="pp20\ninterval:\n  i=[1,200]\n  res1=⊤\n  res2=⊤"];
+    main_pp21_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp21",tooltip="pp21\ninterval:\n  i=[1,200]\n  res1=[1,12]\n  res2=⊤"];
+    main_pp22_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp22\ncheck res1 == 2",tooltip="pp22\ninterval:\n  i=[1,200]\n  res1=[1,12]\n  res2=[1,12]\ncheck res1 == 2"];
+    main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\ninterval:\n  i=⊤\n  res1=⊤\n  res2=⊤"];
+  }
+  subgraph cluster_ctx_1 {
+    label="f / call-string=pp4";
+    style=rounded; color=gray70; penwidth=1;
+    f_pp10_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp10",tooltip="pp10\ninterval:\n  i=[0,0]\n  r=⊤"];
+    f_pp12_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp12",tooltip="pp12\ninterval:\n  i=[0,+∞]\n  r=⊤"];
+    f_pp16_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp16",tooltip="pp16\ninterval:\n  i=[0,0]\n  r=⊤"];
+    f_pp17_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp17\nunreachable",tooltip="pp17\nunreachable"];
+    f_exit_f_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_f",tooltip="exit_f\ninterval:\n  i=[0,+∞]\n  r=⊤"];
+    f_pp9_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp9",tooltip="pp9\ninterval:\n  i=[0,+∞]\n  r=⊤"];
+    f_pp13_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp13",tooltip="pp13\ninterval:\n  i=[1,+∞]\n  r=⊤"];
+    f_pp14_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp14",tooltip="pp14\ninterval:\n  i=[1,+∞]\n  r=[1,12]"];
+    f_entry_f_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_f",tooltip="entry_f\ninterval:\n  i=[0,+∞]\n  r=⊤"];
+  }
+  subgraph cluster_ctx_2 {
+    label="g / call-string=pp13";
+    style=rounded; color=gray70; penwidth=1;
+    g_pp1_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp1",tooltip="pp1\ninterval:\n  i=[0,0]\n  r=⊤"];
+    g_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\ninterval:\n  i=⊤\n  r=⊤"];
+    g_pp7_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp7",tooltip="pp7\ninterval:\n  i=[-∞,0]\n  r=⊤"];
+    g_pp8_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp8\nunreachable",tooltip="pp8\nunreachable"];
+    g_exit_g_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_g",tooltip="exit_g\ninterval:\n  i=⊤\n  r=⊤"];
+    g_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  i=⊤\n  r=⊤"];
+    g_pp4_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp4",tooltip="pp4\ninterval:\n  i=[1,+∞]\n  r=⊤"];
+    g_pp5_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\ninterval:\n  i=[1,+∞]\n  r=[1,12]"];
+    g_entry_g_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_g",tooltip="entry_g\ninterval:\n  i=⊤\n  r=⊤"];
+  }
+  subgraph cluster_ctx_3 {
+    label="f / call-string=pp20";
+    style=rounded; color=gray70; penwidth=1;
+    f_pp10_ctx1 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp10\nunreachable",tooltip="pp10\nunreachable"];
+    f_pp12_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp12",tooltip="pp12\ninterval:\n  i=[2,2]\n  r=⊤"];
+    f_pp16_ctx1 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp16\nunreachable",tooltip="pp16\nunreachable"];
+    f_pp17_ctx1 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp17\nunreachable",tooltip="pp17\nunreachable"];
+    f_exit_f_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_f",tooltip="exit_f\ninterval:\n  i=[2,2]\n  r=[1,12]"];
+    f_pp9_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp9",tooltip="pp9\ninterval:\n  i=[2,2]\n  r=⊤"];
+    f_pp13_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp13",tooltip="pp13\ninterval:\n  i=[2,2]\n  r=⊤"];
+    f_pp14_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp14",tooltip="pp14\ninterval:\n  i=[2,2]\n  r=[1,12]"];
+    f_entry_f_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_f",tooltip="entry_f\ninterval:\n  i=[2,2]\n  r=⊤"];
+  }
+  subgraph cluster_ctx_4 {
+    label="g / call-string=pp21";
+    style=rounded; color=gray70; penwidth=1;
+    g_pp1_ctx1 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp1\nunreachable",tooltip="pp1\nunreachable"];
+    g_pp3_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\ninterval:\n  i=[2,2]\n  r=⊤"];
+    g_pp7_ctx1 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp7\nunreachable",tooltip="pp7\nunreachable"];
+    g_pp8_ctx1 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp8\nunreachable",tooltip="pp8\nunreachable"];
+    g_exit_g_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_g",tooltip="exit_g\ninterval:\n  i=[2,2]\n  r=[1,12]"];
+    g_pp0_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  i=[2,2]\n  r=⊤"];
+    g_pp4_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp4",tooltip="pp4\ninterval:\n  i=[2,2]\n  r=⊤"];
+    g_pp5_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\ninterval:\n  i=[2,2]\n  r=[1,12]"];
+    g_entry_g_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_g",tooltip="entry_g\ninterval:\n  i=[2,2]\n  r=⊤"];
+  }
+  g_pp0_ctx0 -> g_pp1_ctx0 [weight=20,label="[i == 0]"];
+  g_pp0_ctx1 -> g_pp1_ctx1 [weight=20,label="[i == 0]"];
+  g_pp0_ctx0 -> g_pp3_ctx0 [weight=20,label="![i == 0]"];
+  g_pp0_ctx1 -> g_pp3_ctx1 [weight=20,label="![i == 0]"];
+  g_pp1_ctx0 -> g_exit_g_ctx0 [weight=20,label="return 1"];
+  g_pp1_ctx1 -> g_exit_g_ctx1 [weight=20,label="return 1"];
+  g_pp3_ctx0 -> g_pp4_ctx0 [weight=20,label="[0 < i]"];
+  g_pp3_ctx1 -> g_pp4_ctx1 [weight=20,label="[0 < i]"];
+  g_pp3_ctx0 -> g_pp7_ctx0 [weight=20,label="![0 < i]"];
+  g_pp3_ctx1 -> g_pp7_ctx1 [weight=20,label="![0 < i]"];
+  g_pp5_ctx0 -> g_exit_g_ctx0 [weight=20,label="return r"];
+  g_pp5_ctx1 -> g_exit_g_ctx1 [weight=20,label="return r"];
+  g_pp7_ctx0 -> g_exit_g_ctx0 [weight=20,label="return 11"];
+  g_pp7_ctx1 -> g_exit_g_ctx1 [weight=20,label="return 11"];
+  g_pp8_ctx0 -> g_exit_g_ctx0 [weight=20,label="return"];
+  g_pp8_ctx1 -> g_exit_g_ctx1 [weight=20,label="return"];
+  f_pp9_ctx0 -> f_pp10_ctx0 [weight=20,label="[i == 0]"];
+  f_pp9_ctx1 -> f_pp10_ctx1 [weight=20,label="[i == 0]"];
+  f_pp9_ctx0 -> f_pp12_ctx0 [weight=20,label="![i == 0]"];
+  f_pp9_ctx1 -> f_pp12_ctx1 [weight=20,label="![i == 0]"];
+  f_pp10_ctx0 -> f_exit_f_ctx0 [weight=20,label="return 2"];
+  f_pp10_ctx1 -> f_exit_f_ctx1 [weight=20,label="return 2"];
+  f_pp12_ctx0 -> f_pp13_ctx0 [weight=20,label="[0 < i]"];
+  f_pp12_ctx1 -> f_pp13_ctx1 [weight=20,label="[0 < i]"];
+  f_pp12_ctx0 -> f_pp16_ctx0 [weight=20,label="![0 < i]"];
+  f_pp12_ctx1 -> f_pp16_ctx1 [weight=20,label="![0 < i]"];
+  f_pp14_ctx0 -> f_exit_f_ctx0 [weight=20,label="return r"];
+  f_pp14_ctx1 -> f_exit_f_ctx1 [weight=20,label="return r"];
+  f_pp16_ctx0 -> f_exit_f_ctx0 [weight=20,label="return 12"];
+  f_pp16_ctx1 -> f_exit_f_ctx1 [weight=20,label="return 12"];
+  f_pp17_ctx0 -> f_exit_f_ctx0 [weight=20,label="return"];
+  f_pp17_ctx1 -> f_exit_f_ctx1 [weight=20,label="return"];
+  main_pp18_ctx0 -> main_pp19_ctx0 [weight=20,label="i := 200"];
+  main_pp19_ctx0 -> main_pp20_ctx0 [weight=20,label="[0 < i]"];
+  main_pp19_ctx0 -> main_pp25_ctx0 [weight=20,label="![0 < i]"];
+  main_pp22_ctx0 -> main_pp23_ctx0 [weight=20,label="check(res1 == 2)"];
+  main_pp23_ctx0 -> main_pp24_ctx0 [weight=20,label="check(res2 == 1)"];
+  main_pp24_ctx0 -> main_pp19_ctx0 [weight=20,label="i := i - 1"];
+  main_pp25_ctx0 -> main_exit_main_ctx0 [weight=20,label="return"];
+  f_entry_f_ctx0 -> f_pp9_ctx0 [weight=20,label="body(f)"];
+  f_entry_f_ctx1 -> f_pp9_ctx1 [weight=20,label="body(f)"];
+  g_entry_g_ctx0 -> g_pp0_ctx0 [weight=20,label="body(g)"];
+  g_entry_g_ctx1 -> g_pp0_ctx1 [weight=20,label="body(g)"];
+  main_entry_main_ctx0 -> main_pp18_ctx0 [weight=20,label="body(main)"];
+  g_pp4_ctx0 -> f_entry_f_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call f(i - 1)"];
+  f_exit_f_ctx0 -> g_pp5_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := f(i - 1)"];
+  g_pp4_ctx0 -> g_pp5_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+  g_pp4_ctx1 -> f_entry_f_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call f(i - 1)"];
+  f_exit_f_ctx0 -> g_pp5_ctx1 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := f(i - 1)"];
+  g_pp4_ctx1 -> g_pp5_ctx1 [style=dashed,color=gray40,weight=20,label="continuation"];
+  f_pp13_ctx0 -> g_entry_g_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call g(i - 1)"];
+  g_exit_g_ctx0 -> f_pp14_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := g(i - 1)"];
+  f_pp13_ctx0 -> f_pp14_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+  f_pp13_ctx1 -> g_entry_g_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call g(i - 1)"];
+  g_exit_g_ctx0 -> f_pp14_ctx1 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := g(i - 1)"];
+  f_pp13_ctx1 -> f_pp14_ctx1 [style=dashed,color=gray40,weight=20,label="continuation"];
+  main_pp20_ctx0 -> f_entry_f_ctx1 [color=purple,penwidth=2,weight=6,minlen=2,label="call f(2)"];
+  f_exit_f_ctx1 -> main_pp21_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / res1 := f(2)"];
+  main_pp20_ctx0 -> main_pp21_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+  main_pp21_ctx0 -> g_entry_g_ctx1 [color=purple,penwidth=2,weight=6,minlen=2,label="call g(2)"];
+  g_exit_g_ctx1 -> main_pp22_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / res2 := g(2)"];
+  main_pp21_ctx0 -> main_pp22_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+}

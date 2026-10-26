@@ -1,0 +1,19 @@
+# Author review: "no open questions". HeadingQuestion covers titles; this
+# covers running prose. Quoted questions belong in a citation or a footnote.
+extends: existence
+message: "Question in running prose: state the claim instead."
+level: warning
+nonword: true
+tokens:
+  - '[a-z)]\?(?:\s|$)'
+
+tests:
+  - name: fires
+    input: |
+      Why does the bound hold? It follows from the certificate.
+    want: |
+      1:23:Voblint.ProseQuestion:Question in running prose: state the claim instead.
+  - name: clean
+    input: |
+      The bound follows from the certificate.
+    want: ""

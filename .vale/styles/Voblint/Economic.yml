@@ -1,0 +1,25 @@
+# Author reviews: "The price is that R ... depends on the solution", "what the
+# split by context buys", "the choice costs the compiler and simulation proof".
+# Name the consequence instead of a trade.
+extends: existence
+message: "Economic metaphor '%s': name the actual consequence."
+level: warning
+ignorecase: true
+tokens:
+  - the price (?:is|of)
+  - at the (?:price|cost) of
+  - buys?
+  - bought
+  - pays? (?:for|off)
+  - costs? (?:the|it|nothing|them)
+
+tests:
+  - name: fires
+    input: |
+      The price is that the semantics depends on the solution.
+    want: |
+      1:1:Voblint.Economic:Economic metaphor 'The price is': name the actual consequence.
+  - name: clean
+    input: |
+      The semantics then depends on the solution.
+    want: ""

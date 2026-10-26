@@ -42,8 +42,18 @@ def git(*args: str) -> str:
 doc = pymupdf.open(pdf_path)
 
 # ---- revision -------------------------------------------------------------
+# The thesis records "revision <sha>" in Keywords; the paper, whose LIPIcs
+# class owns Keywords, records <sha> in a custom Revision entry.
 keywords = doc.metadata.get("keywords") or ""
-m = re.search(r"revision ([0-9a-f]{7,40})(-dirty)?", keywords)
+info = doc.xref_get_key(-1, "Info")
+custom = (
+    doc.xref_get_key(int(info[1].split()[0]), "Revision")[1]
+    if info[0] == "xref"
+    else ""
+)
+m = re.search(r"revision ([0-9a-f]{7,40})(-dirty)?", keywords) or re.fullmatch(
+    r"([0-9a-f]{7,40})(-dirty)?", custom
+)
 if m:
     revision, how = m.group(1), "PDF metadata" + (" (dirty tree)" if m.group(2) else "")
 else:

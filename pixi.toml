@@ -90,6 +90,8 @@ biome = ">=2.5"
 markdownlint-cli2 = ">=0.23"
 typos = ">=1.50"
 taplo = ">=0.10"
+chktex = ">=1.7"
+lychee = ">=0.24"
 [feature.lint.tasks]
 python-format = { cmd = "ruff format", description = "Format tracked Python sources with ruff." }
 python-format-check = { cmd = "ruff format --check", description = "Check that Python sources are formatted with ruff." }
@@ -97,6 +99,10 @@ python-lint = { cmd = "ruff check", description = "Lint Python sources with ruff
 shell-lint = { cmd = "bash scripts/mk/shell-lint.sh", description = "Lint tracked shell scripts, or the given ones, with shellcheck." }
 actions-lint = { cmd = "actionlint && zizmor --offline .github", description = "Lint GitHub workflows with actionlint and audit them with zizmor." }
 typst-format = { cmd = "bash scripts/mk/typst-format.sh", description = "Format thesis Typst sources, or the given ones, with typstyle." }
+paper-lint = { cmd = "bash scripts/mk/paper-lint.sh", description = "Lint the paper's LaTeX sources, or the given ones, with chktex." }
+# Network-bound and subject to remote outages, so it stays out of verify, CI
+# and the hooks; run it by hand.
+links-external = { cmd = "lychee thesis/literature.bib README.md 'docs/**/*.md' 'paper/**/*.md'", description = "Check external URLs and DOIs in the bibliography and Markdown docs with lychee." }
 typst-format-check = { cmd = "typstyle -l 100 --check $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Check that thesis Typst sources are formatted with typstyle." }
 markdown-lint = { cmd = "markdownlint-cli2", description = "Lint Markdown documentation with markdownlint-cli2." }
 spelling-check = { cmd = "typos", description = "Check source and prose spelling with typos." }
@@ -145,6 +151,7 @@ vale = ">=3.24"
 rust = ">=1.85"
 [feature.prose.tasks]
 prose-lint = { cmd = "bash scripts/mk/prose-lint.sh", description = "Lint thesis and paper prose, or the given files, with Vale; fails on error-level rules only." }
+prose-rules-test = { cmd = "vale test .vale/styles/Voblint", description = "Run the test cases kept in the project's Vale rules." }
 
 [feature.thesis.dependencies]
 typst = ">=0.15"
@@ -175,6 +182,12 @@ thesis-facts = { cmd = "python3 thesis/tools/facts.py --check", description = "C
 thesis-facts-write = { cmd = "python3 thesis/tools/facts.py --write", description = "Regenerate thesis theorem statements from a built Isabelle session." }
 
 thesis-figures = { cmd = "python3 thesis/tools/explainer_svg.py --check", description = "Check extracted explainer figures against pages/index.html." }
+
+paper-generated = { cmd = "python3 paper/tools/snippets.py --write && python3 paper/tools/bib.py --write && python3 paper/tools/stats.py && python3 paper/tools/contexts.py && python3 paper/tools/costs.py && python3 paper/tools/scale.py", description = "Regenerate the paper's Isabelle snippets, bibliography, statistics and tables from the thesis sources." }
+paper-check = { cmd = "python3 paper/tools/snippets.py --check && python3 paper/tools/bib.py --check", description = "Check the paper's snippets and bibliography against the thesis sources." }
+paper = { cmd = "python3 paper/tools/stats.py && python3 paper/tools/contexts.py && python3 paper/tools/costs.py && python3 paper/tools/scale.py && cd paper && latexmk -interaction=nonstopmode -halt-on-error main.tex && python3 tools/pages.py", depends-on = [
+  "paper-check",
+], description = "Build the paper PDF and check its page limit (needs a system TeX Live with latexmk)." }
 thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", description = "Re-extract explainer figures into thesis assets." }
 
 thesis-playground = { cmd = "python3 thesis/tools/playground_figures.py --check", description = "Check the thesis's playground figures against docs/images and docs/readme-figures." }
@@ -273,6 +286,7 @@ thesis-check = { depends-on = [
   "thesis-typst",
   "thesis-whitespace",
   { task = "prose-lint", environment = "prose" },
+  { task = "prose-rules-test", environment = "prose" },
 ], description = "Run all thesis drift and theorem checks." }
 
 thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", depends-on = [
@@ -431,6 +445,7 @@ verify = { depends-on = [
   "typst-format-check",
   "markdown-lint",
   "spelling-check",
+  "paper-lint",
   "toml-format-check",
   "pages-lint",
   "pages-links",
