@@ -302,6 +302,12 @@ code {
   font-size: 1.15rem;
 }
 
+.site-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
 .playground-title {
   margin-top: 10px;
   margin-bottom: 0;
@@ -2855,14 +2861,15 @@ a:focus-visible {
 
   .site-links {
     flex: 1 1 100%;
-    gap: 2px 14px;
+    gap: 2px 10px;
   }
 
   .site-links a {
-    font-size: 0.86rem;
+    font-size: 0.82rem;
   }
 
-  .site-links li:last-child {
+  /* The text links take the second row; the actions share the brand's. */
+  .site-actions {
     position: absolute;
     top: 8px;
     right: 0;
