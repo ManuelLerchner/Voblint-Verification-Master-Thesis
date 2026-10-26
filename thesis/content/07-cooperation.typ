@@ -12,11 +12,9 @@
 
 = Cooperating Analyses <ch:cooperation>
 
-An analysis of @ch:analysis-interface sees only its own state. For some
-properties a user checks, however, a single analysis is not enough. They can
-only be proved by combining what several analyses know while they run
-together. Consider the
-example below:
+An analysis of @ch:analysis-interface sees only its own state. Some checks,
+however, can only be proved by combining what several analyses know while
+they run together. The program below contains such a check:
 
 #listing(lang: "c", claim: "coop-eq-both", ```
 fun main() {
@@ -38,8 +36,8 @@ still unbounded, so `x == y` evaluates to $absval(ivl(0, 1))$ and the check stay
 #verdict("coop-eq-interval", "16:7") with #state("coop-eq-interval", "16:7").
 The order analysis (@sec:relational) is relational. Its state is a set of pairs $(x, y)$, each
 meaning that the value of $x$ is at most the value of $y$. After the guards, it
-holds $(x, y)$ and $(y, x)$, so it knows that $x = y$. It tracks no values of variables,
-however, so it learns nothing about `z` and reports #verdict("coop-eq-order", "16:7") too. Together, the two can
+holds $(x, y)$ and $(y, x)$, so it knows that $x = y$. Since it tracks no values of variables, it
+learns nothing about `z` and reports #verdict("coop-eq-order", "16:7") too. Together, the two can
 decide it, if Interval's assignment can learn what
 the order analysis knows at that point (@fig:mcp-step).
 
@@ -85,10 +83,10 @@ the order analysis knows at that point (@fig:mcp-step).
   kind: image,
   placement: none,
   caption: [One step of Interval and the order analysis at `z = (x == y)` in
-    the program above (schematic). Interval's assignment asks #isaconst("EvalInt") $(x == y)$. The channel
-    asks the handler of every analysis and gives Interval the meet of their
-    answers. Each analysis updates only its own field
-    of the product state. The final states match the analyzer run
+    the program above (schematic). Interval's assignment asks which values
+    $x == y$ may take (#isaconst("EvalInt") $(x == y)$, @sec:coop-queries). The channel
+    asks the query handler of every analysis and gives Interval the meet of their
+    answers. Each analysis updates only its own part of the combined state. The final states match the analyzer run
     #verdict("coop-eq-both", "16:7") with #state("coop-eq-both", "16:7").],
 ) <fig:mcp-step>
 
@@ -98,22 +96,22 @@ Goblint solves this with its
 )[_master control program_]
 (MCP). The selected analyses run side by side, each on its own part of one
 product state, and a transfer may ask all selected analyses a question
-through the manager's `ask` function. Goblint has no machine-checked argument that these exchanges are sound. A
-proof, however, has a modularity problem. If Interval's assignment is proved
+through the MCP's `ask` function. Goblint has no machine-checked argument
+that these exchanges are sound, and a proof of them has a modularity problem. If Interval's assignment is proved
 sound using the order analysis's invariant, the two proofs are coupled, every
 new pair of analyses needs a new proof, and adding an analysis reopens old
-ones. This chapter describes how each analysis instead gets one proof
-obligation that does not mention the analyses it runs with, and why analyses
-meeting it combine into one analysis that meets the analysis contract of
-@sec:sound-core.
+ones. Voblint instead gives each analysis one proof obligation that does not
+mention the analyses it runs with. Analyses that meet it combine into one
+analysis that meets the analysis contract of @sec:sound-core.
 
 == Queries, answers, and channels #thy-badge("Voblint_Framework", "Analysis_Query") <sec:coop-queries>
 
 The analyses must agree on what a question means and on what an answer
 claims. A _query_ asks for a fact about the stores a state describes. Voblint
 has one kind, named after Goblint's. The query #isaconst("EvalInt") $e$ asks
-which integers the expression $e$ may evaluate to. Its answer is a value of the reduced product Int (#isatype("int_dom"),
-@sec:reduced-product), lifted by a bottom and by a top element that claims nothing
+which integers the expression $e$ may evaluate to. Its answer is a value of Int (#isatype("int_dom")), the reduced product of
+the four numeric domains Sign, Interval, Parity, and Congruence
+(@sec:reduced-product), lifted by a bottom and by a top element that claims nothing
 (#isatype("query_lift")). A
 comparison evaluates to $0$ or $1$, so the exact answer $1$ to
 #isaconst("EvalInt") $(x == y)$ says that $x = y$.
@@ -157,13 +155,14 @@ and the pointwise meet of two channels that hold at $s$ holds at $s$
 
 == Soundness against true answers #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-channels>
 
+A transfer that uses an answer is sound only if the answer is true.
 Interval's assignment in @fig:mcp-step uses the wrapper
 #isaconst("ask_assign"), which any analysis can put around its assignment
 $x := e$. The wrapper asks #isaconst("EvalInt") $e$. When the answer is one
 integer $n$, it runs the analysis's own assignment of the literal $n$, and
 otherwise, the assignment of $e$. At $z := (x == y)$, Interval receives $1$ and
-sets $z$ to $absval(ivl(1, 1))$, which is right only if the answer is true. Proving
-that from the order analysis's invariant would couple the two proofs.
+sets $z$ to $absval(ivl(1, 1))$. Proving the answer true from the order analysis's
+invariant would couple the two proofs.
 
 Voblint avoids this coupling by separating two facts, that a transfer uses its
 answers correctly and that the answers are true. The transfer
@@ -172,21 +171,19 @@ receives the channel $italic("ch")$ as an extra argument, besides the action
 $a$ and the state $x$ before the edge. Its soundness is proved under the
 assumption that the channel holds. The transfer must lose no successor, as in
 @sec:calls, but only of stores at which every answer is true
-(#isathm("ls_step_sound_iff")). Whether the answers are true is not the
-transfer's concern, and @sec:coop-mcp shows that the framework always supplies
-a channel that holds.
+(#isathm("ls_step_sound_iff")). @sec:coop-mcp proves the answers true once
+for all analyses.
 
 For #isaconst("ask_assign"), this assumption is exactly what the proof needs.
 In the example, only the stores with $x = y$ remain, because the answer $1$ is
 false at all others. At these stores, $e$ evaluates to $1$, so the analysis's
 own assignment of the literal $1$ is sound for $e$ as well
-(#isathm("ask_assign_sound")). The proof never mentions the order analysis
-and works with any analyses whose answers hold.
+(#isathm("ask_assign_sound")). The proof never mentions the order analysis.
 
 An analysis without analysis globals is written as a _local specification_
 (#isatype("local_spec")). It bundles the operations of @sec:calls, each taking
 a channel, with a handler #isaconst("ls_query") that answers queries about a
-state, so that the analysis can answer queries from the analyses it runs with.
+state, so that the analysis can answer the queries of the others.
 
 #{
   show raw.where(block: true): set text(size: 6.5pt)
@@ -207,15 +204,14 @@ a law of its own. Its answers about a state $x$ must hold at every store of
 $conc(x)$ at which its own channel holds (#isaconst("sound_query")), and the
 analyses rely on one another only through this law. Verasco proves each
 transfer function under the hypothesis that the channels it receives are
-correct @jourdan15[§7], following Astrée @cousot07astree[§§5.3, 6], and Voblint
+correct @jourdan15[§7], following the static analyzer Astrée @cousot07astree[§§5.3, 6], and Voblint
 applies the same form of proof to Goblint's queries.
 
 == Combination into one sound analysis #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
 
 The analyses cannot be solved one after another, because each may need the
 other's facts at the same program point and context. In the program below, the
-exchange runs in both directions, here between the order analysis and Int, the
-reduced product (@sec:reduced-product).
+exchange runs in both directions, here between the order analysis and Int.
 
 #let _z(name) = claim-check(name, "z == 1")
 #listing(lang: "c", claim: "coop-mutual-both", ```
@@ -345,22 +341,22 @@ component reads and writes only its own field, through a _lens_
 a new value back, as Goblint's MCP hands each analysis its own part of the
 product state. A component therefore leaves the concretizations of all other
 fields unchanged (#isathm("field_frame")), which makes the components
-_independent_ (#isaconst("mcp_independent")). #isaconst("mcp_combine") runs the
+_independent_ (#isaconst("mcp_independent")).
+
+The combination #isaconst("mcp_combine") runs the
 components in turn, gives each of them the same channel, and meets the answers of
 their handlers. If the list of components is nonempty, the components are
 independent, and each is a sound local specification, then the combination is
 a sound local specification for the intersection of their concretizations
-(#isathm("mcp_combine_sound")). The components cannot invalidate one
-another's guarantees, since each guarantee is about a field no other component
-writes. Instantiated with the analyses Voblint ships, the theorem gives the
+(#isathm("mcp_combine_sound")). Instantiated with the analyses Voblint ships, the theorem gives the
 result of this chapter. Any nonempty list #isai("as") of distinct analyses
 combines into a sound local specification:
 
 #proved("mcp_comp_sound")
 
 Running the combined handler on the current state $x$ gives a channel for the
-premise of the theorem (#isaconst("ls_channel")). A query that comes back while
-it is being answered gets $ltop$, as in Goblint's `MCP.query'`. Every answer of
+premise of the theorem (#isaconst("ls_channel")). A query that is asked again
+while its answer is being computed gets $ltop$, as in Goblint's `MCP.query'`. Every answer of
 this channel holds at every store of $conc(x)$ (#isathm("ls_channel_sound")),
 so #isaconst("dg_spec_of") can pass it to the operations and turn the
 combination into a record that meets the analysis contract

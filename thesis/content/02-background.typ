@@ -132,11 +132,10 @@
 
 @sec:state-of-art ended with a plan. Each step from source executions to the
 verdicts should relate two sets of concrete stores, so that a proof can check
-that the step loses nothing. This chapter introduces the ideas needed to state
-these steps. It first describes what a program can actually do, then how an
-analysis describes the same behavior more coarsely, and finally how a solver
-computes this description. A loop that counts from $0$ to $5$ is the running
-example for all three.
+that the step loses nothing. Stating these steps requires the
+stores a program can actually reach, the coarser descriptions an analysis
+computes for them, and the solver that computes these descriptions. A loop that
+counts from $0$ to $5$ is the running example for all three.
 
 == Control-flow graphs and the collecting semantics <sec:collecting>
 
@@ -144,8 +143,8 @@ An analysis describes the states a program can be in at each of its points, so
 the points are made explicit first. A _control-flow graph_ (CFG) has the program
 points as nodes and an edge for every way control can pass from one point to
 the next, labeled with the assignment or condition executed on the way.
-@fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
-the running example. The loop becomes a cycle through $h$, $b$, and $t$, and
+@fig:counting-loop shows the graph of the running example, which counts `i`
+from $0$ to $5$. The loop becomes a cycle through $h$, $b$, and $t$, and
 its _loop head_ $h$ is the node through which control enters and exits the cycle.
 
 #figure(
@@ -181,10 +180,10 @@ there. For
 programs with procedures, @ch:traces defines Voblint's version over activation
 traces (#isaconst("node_collect")).
 
-The collecting semantics is the exact answer an analysis approximates. An
-analysis is _sound_ if, at every program point, its result describes every store
-that the collecting semantics gives there. It may describe more stores,
-which costs precision, but never fewer.
+The collecting semantics is the exact answer an analysis approximates, and it
+makes soundness (@sec:intro-static) precise. An analysis is sound if, at every
+program point $v$, its result describes every store in $cal(C)(v)$. It may
+describe more stores, which costs precision.
 
 == Lattices and fixpoints <sec:lattices>
 
@@ -213,16 +212,16 @@ no states and $ltop$ describes all of them. A _complete lattice_
 (#isalocale("complete_lattice")) has a join $lJoin X$ and a meet $lMeet X$ for
 every subset $X$ @nipkow14[Def. 13.1] @mine17[Def. 2.5].
 
-Voblint does not need a complete lattice. Its solver requires only a join
+Voblint's solver requires less than a complete lattice, namely a join
 semilattice with a least element (#isalocale("bounded_semilattice_sup_bot"))
 that carries the widening and narrowing operators of @sec:widening. The solver
 joins two values at a time, whenever a new value reaches an unknown, so
 joins need to exist only for pairs. Joins of infinite sets would not help an
 executable analyzer anyway, since it computes only with finite representations.
 
-A numeric domain adds two operations to this structure. Its top element
-describes a variable about which nothing is known, for instance, a value read
-from input. Refinement at a branch adds an intersection, which does not have to
+A numeric domain adds a top element and an intersection to this structure. The
+top element describes a variable about which nothing is known, for instance, a
+value read from input. Refinement at a branch uses the intersection, which does not have to
 be the exact meet. It must keep every value that both operands admit, and its
 result must lie below both operands (#isalocale("sound_intersection"),
 @sec:branches). An intersection that admits more values than both operands
@@ -540,14 +539,11 @@ warrowing update lies above the candidate
 (#isathm("warrowing_properties", thy: "Warrowing")), so an unknown whose value
 no longer changes satisfies its inequality. The solver's correctness theorem
 uses only this and holds whether the right-hand sides are monotone
-(@sec:td). Monotonicity is needed for the classical theory of least fixpoints,
-but not to certify that a returned valuation is a post-solution. Termination
-needs more. A classical widening is chosen so that repeated widening stabilizes
+(@sec:td). Termination needs more. A classical widening is chosen so that repeated widening stabilizes
 after finitely many steps @cousot77[§9.1.3] @cousot92plilp[§4], and a classical
 narrowing must also make repeated narrowing stabilize. The solver's classes
-omit these stabilization laws, since termination of the side-effecting TD that
-Voblint uses is not proved,
-so the laws they state do not make the solver terminate. Within these laws, the
+omit these stabilization laws, because termination of the side-effecting TD that
+Voblint uses is not proved (@sec:td). Within these laws, the
 choice of widening and narrowing affects only precision and termination.
 
 == Context-sensitive analysis of procedures <sec:interproc>
@@ -558,9 +554,8 @@ which abstract state a callee's body starts from. Take the calls `bump(5)` and
 unknown per program point, the entry of `bump` must cover both arguments, so,
 over intervals, its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
 that the first call returns $6$. A context-sensitive analysis instead
-separates the _activations_ of a procedure, each execution from its call to
-its return, by a _calling context_, an abstraction of how the activation was
-reached @aho06[§7.2.1]. Its unknowns become pairs $[v, c]$ of a program point
+separates the activations of a procedure (@sec:state-of-art) by their calling
+contexts (@sec:intro-static) @aho06[§7.2.1]. Its unknowns become pairs $[v, c]$ of a program point
 $v$ and a context $c$ @apinis12[§3], so every context of a procedure gets its
 own copy of the procedure's unknowns.
 
@@ -592,7 +587,7 @@ implements them as `enter` and `combine` (@sec:calls).
 
 == Side-effecting constraint systems <sec:side-effects>
 
-The analyses so far are _flow-sensitive_: they respect the order in which
+The analyses so far are _flow-sensitive_. They respect the order in which
 statements execute and therefore compute a separate abstract state for every
 program point. For some facts, one value for the whole program is enough. A
 _flow-insensitive_ analysis ignores execution order and keeps one abstract
@@ -629,8 +624,9 @@ hold any fact to which several right-hand sides contribute. In Voblint, for
 instance, the entry state of a callee in one context is a global unknown, and
 every call that enters this context publishes its entry state to it
 (@sec:eq-call). An analysis may also keep facts of its own in global unknowns
-that stand for no program variable at all (@ch:analysis-interface). A
-right-hand side then returns a pair @saan26phd[§2.4.5],
+that stand for no program variable at all (@ch:analysis-interface).
+
+Formally, a right-hand side returns a pair @saan26phd[§2.4.5],
 $rhs(x) : (Unk union Unk_G -> A) -> (Unk_G harpoon.rt A) times A$, of a
 partial map $rho$ of the contributions it publishes, joined per global
 unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a post-solution

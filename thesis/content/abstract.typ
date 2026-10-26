@@ -21,7 +21,7 @@ also has to cover every execution of the program, and the equations have to
 account for these executions in every calling context. Finally, the reported
 answers have to follow from the solver's result. Voblint proves all of these
 properties together for VIMP, a small C-like language with integer variables and
-recursive procedures. The proof, developed in the proof assistant
+recursive procedures, defined for this work. The proof, developed in the proof assistant
 Isabelle/HOL, thus covers the analysis from the parsed program to the reported
 answers. The main theorem states that the reported answers hold in every state
 that a finite execution of the program reaches. For example, if the analyzer proves an
@@ -30,7 +30,6 @@ analyzer is proved to flag every program point where a division can divide by
 zero. This guarantee applies whenever the analyzer finishes, since
 termination of the solver is not proved for every program.
 
-A central challenge in establishing this guarantee is context sensitivity.
 Voblint distinguishes calls to the same procedure by their calling contexts,
 avoiding the loss of precision that would result from merging their values. To prove
 these per-context results sound, Voblint introduces _activation traces_, a

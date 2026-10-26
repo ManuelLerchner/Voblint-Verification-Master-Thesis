@@ -6,17 +6,20 @@
 
 = Related Work <ch:related>
 
-Most parts of Voblint build on earlier work, from verified analyzers and
-solvers to Goblint and its local-trace semantics. The sections below compare
-each line of work with Voblint and separate what Voblint inherits from what it
-adds. The literature was found through web and OpenAlex searches. AI agents supported this work heavily, from the search
+This chapter separates the parts of Voblint that come from earlier work from the
+new ones. Most parts
+have a precedent, from verified analyzers and solvers to Goblint and its
+local-trace semantics. The new part is their connection in one mechanized
+soundness proof (@sec:rel-summary). The literature was found through web and
+OpenAlex searches. AI agents supported this work heavily, from the search
 to checking each claim against its source
 (#link(<ai-use>)[statement on the use of generative AI]).
 
 == Unverified analyzers for C <sec:rel-practice>
 
-Most analyzers applied to real C programs have no machine-checked soundness
-proof, and they differ from Voblint most in how they treat procedures.
+The analyzers applied to real C programs are tested rather than proved
+(@sec:state-of-art), and they differ from Voblint most in how they treat
+procedures.
 @tab:production-analyzers compares six of them with Voblint. Five of them claim
 to be sound. Pulse-X is a bug finder instead, and its under-approximating
 soundness theorem is proved on paper @le22[pp. 81:2--81:3]. Four of them inline
@@ -25,11 +28,11 @@ the callee at every call and therefore need no context policy
 cannot handle unbounded recursion, and these tools exclude recursion, unroll it
 to a bounded depth, rely on user-written contracts, or assume that a recursive
 call may change any value @blanchet03[§5.3] @eva-manual[§6.3.9]
-@mopsa-manual[Limitations] (#link("https://github.com/NASA-SW-VnV/ikos/blob/ac7f7c1738976cabc58c6a53413df6e458995c38/analyzer/README.md#analysis-assumptions")[IKOS README]). Goblint, in
-contrast, keeps one abstract state per program point and calling context and
-analyzes recursive programs.
+@mopsa-manual[Limitations] (#link("https://github.com/NASA-SW-VnV/ikos/blob/ac7f7c1738976cabc58c6a53413df6e458995c38/analyzer/README.md#analysis-assumptions")[IKOS README]). Goblint and
+Voblint, in contrast, keep one abstract state per program point and calling
+context (@sec:state-of-art), and Voblint's theorem covers recursive calls.
 
-Without proof, these tools are tested against independent evidence, such as
+These tools are tested against independent evidence, such as
 compiled execution, other analyzers, or the known verdicts of benchmark
 programs. Such testing keeps finding errors. On eight analyzers for C and C++,
 metamorphic testing found 24 issues, 16 of them related to soundness, and
@@ -91,8 +94,8 @@ seven of the analyzers had soundness issues, MOPSA among them
 
 == Verified analyzers in the CompCert line
 
-CompCert and Verasco state their theorems about the tool that users run, and
-Voblint follows their pattern for a language with recursive procedures and
+CompCert and Verasco (@sec:state-of-art) state their theorems about the code
+that actually runs, and Voblint follows their pattern for a language with recursive procedures and
 context-sensitive calls. CompCert is a compiler from Clight, a large subset of
 C, to PowerPC assembly, programmed and proved correct in Coq, now Rocq
 @leroy09. Its theorem is semantic preservation, so safety properties proved of
@@ -129,16 +132,16 @@ solver needs no such test, but its proof holds for that one algorithm.
 
 == Mechanized abstract interpreters <sec:rel-mechanized>
 
-Abstract interpreters have been mechanized in several provers.
-@tab:state-of-art compares those most closely related to Voblint. Their proofs
-cover small or intermediate languages, from While and IMP to C\#minor, and the
-differences that matter for Voblint lie in recursion, contexts, and the
-fixpoint computation. Three of the works have no procedures at all. In every work of the table, a call is analyzed in at most one context. An
-analysis that splits a call into several alternatives, however, needs one
-context for each. Voblint's context policy may therefore admit several
-contexts for one call, and its semantics and proofs cover this case, although
-the shipped analyses do not use it (@sec:contexts). Only Cachera et al. compute the fixpoint with a verified
-solver, and that solver handles ordinary inequations, not side-effecting ones
+@tab:state-of-art compares the mechanized abstract interpreters closest to
+Voblint. Their proofs cover small or intermediate languages, from While and IMP
+to C\#minor, and they differ from Voblint in recursion, contexts, and the
+fixpoint computation. Three of the works have no procedures at all. Every work
+in the table analyzes a call in at most one context. An analysis that splits a
+call into several alternatives, however, needs one context for each. Voblint's
+context policy may therefore admit several contexts for one call, and its
+semantics and proofs cover this case, although the shipped analyses do not use
+it (@sec:contexts). Only Cachera et al. compute the fixpoint with a verified
+solver, and that solver handles only ordinary inequations without side effects
 @cachera05.
 
 #figure(
@@ -298,12 +301,12 @@ et al. to activations.
 
 === Correspondence with Goblint's architecture
 
-Side-effecting constraint systems let one equation both define a local unknown
-and publish contributions to global unknowns @seidl03 @apinis12. Seidl et al.
-@seidl26 describe how Goblint uses them to decouple a mixed flow-sensitive
-analysis from the solver, with digests on the analysis side and update rules on
-the solver side, recovering precision. Voblint adopts the split. An analysis
-supplies the transfer behavior, and the solver organizes the interaction.
+Goblint uses the side-effecting constraint systems of @sec:side-effects
+@seidl03 @apinis12 to decouple a mixed flow-sensitive analysis from the solver.
+Digests (@sec:rel-digests) on the analysis side and update rules on the solver
+side recover precision @seidl26. Voblint adopts the split. An analysis supplies
+the transfer behavior, and the solver applies one of the update rules of
+@sec:update-rules.
 
 The correspondence with Goblint's implementation is architectural. Voblint was compared
 with the framework interface of Goblint's
@@ -347,7 +350,7 @@ proved for a pair of analyses. Verasco threads its channels so that the second
 domain can query the state the first has just computed @jourdan15[§7], whereas
 Voblint's answers describe the predecessor state only, as Goblint's do.
 
-=== Digests and the context relation
+=== Digests and the context relation <sec:rel-digests>
 
 Local traces give each thread of a concurrent program a semantics against which
 thread-modular analyses are proved sound and compared @schwarz21, and they

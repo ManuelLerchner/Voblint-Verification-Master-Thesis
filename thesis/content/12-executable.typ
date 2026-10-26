@@ -49,16 +49,17 @@
 = The Executable Analyzer <ch:executable>
 
 @ch:results proved that every report #isaconst("run_voblint") returns is
-sound. A user, however, does not evaluate a HOL function. The user writes
-source text and reads a report in a terminal or a browser tab. Between the
-two, the proved function has to become a program. Its abstract states are
+sound. Someone who analyzes a VIMP program, however, writes source text and
+reads a report in a terminal or a browser tab. This chapter asks how the
+proved HOL function becomes a program between the two, and which components the
+soundness guarantee for that program rests on. The proved function's abstract states are
 mathematical functions, which code cannot compute with, so they are first
 replaced by finite representations (@sec:represented-function). Isabelle's
 code generator then exports #isaconst("run_voblint") to OCaml
 (@sec:codegen), and an unverified shell of handwritten OCaml parses the source text and displays
 the report (@sec:ocaml-boundary). The change of representation is proved
 to preserve the theorem. The code generator and the shell are not proved
-correct, so the guarantee for the running tool also rests on them, as
+correct, so the soundness guarantee for the running tool also rests on them, as
 @fig:intro-trust shows.
 
 == Finite representations of abstract states <sec:represented-function>
@@ -72,7 +73,7 @@ $conc$ only states what a value means. The domain interface therefore
 separates #isalocale("executable_domain") from the classes and locales
 below it in @fig:domain-carrier, which add $conc$ and its laws. Code
 generation exports the executable part together with each domain's operation
-record, and the rest serves only the proofs.
+record. The concretizations and their laws serve only the proofs.
 
 The pointwise states of @ch:domains are total functions on
 infinitely many variable names, so the solver could not even test whether two
@@ -91,12 +92,11 @@ agrees with its counterpart on pointwise states, and the soundness results of
 @ch:analysis-interface carry over to the code that runs
 (#isathm("exec_local_spec_sound")).
 
-With concretizations left to the proofs and pointwise states replaced, nothing
-else stands in the way. The verified TD solver already comes with an executable
-version, #isaconst("solve_c", thy: "TD_side_upd_rule"), which Tilscher et al.
-refine from its definition @tilscher26, and @sec:certificate shows that every
-run of it that returns satisfies the solver's correctness theorem. The values of the numeric domains (@sec:instances-supply) and the
-states of the order analysis (@sec:rel-state) are already finite data.
+The remaining parts are executable already. The analyzer runs the TD
+solver's executable form #isaconst("solve_c", thy: "TD_side_upd_rule")
+(@sec:certificate), which Tilscher et al. refine from its definition
+@tilscher26. The values of the numeric domains (@sec:instances-supply) and the
+states of the order analysis (@sec:rel-state) are finite data.
 
 == Export to OCaml and WebAssembly #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
@@ -117,8 +117,8 @@ code.
   str(calc.round(r.before.mean_s / r.after.mean_s, digits: 0))
 }
 
-The generated module has #stat("generated_ocaml") lines and follows the proofs rather than the
-habits of OCaml programmers, which makes it hard to read. Type classes become records of operations passed
+The generated module has #stat("generated_ocaml") lines. Its code mirrors the
+definitions of the proofs, which makes it hard to read. Type classes become records of operations passed
 as arguments, finite sets and maps become lists that every lookup scans, and
 the solver keeps its valuation as a chain of closures, one per update.
 
@@ -169,11 +169,11 @@ inefficient. In one case, a sampling profile of 256 chained assignments attribut
 most of the CPU time to a single function. The generated
 code of #isaconst("init_publications") recompiled the whole program at every
 equation evaluation, because its definition names the program's entry through the compiler from
-VIMP to control-flow graphs (@sec:compile). A proved code equation, #isathm("init_publications_code"), that names
-the entry directly as #ctor("FunctionEntry") #isaconst("prog_main_name") fixed this
-without changing any theorem, and the chain of 256 assignments then ran
-#_speedup("chain256") times faster and a program of 512 assignments in
-procedures of eight statements #_speedup("procs512") times faster, in one
+VIMP to control-flow graphs (@sec:compile). A proved code equation, #isathm("init_publications_code"), names
+the entry directly as #ctor("FunctionEntry") #isaconst("prog_main_name") and fixed this
+without changing any theorem. The chain of 256 assignments then ran
+#_speedup("chain256") times faster, and a program of 512 assignments in
+procedures of eight statements ran #_speedup("procs512") times faster, in one
 measurement each
 (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded]).
 Finding further inefficiencies and improving the generated code is future work.
@@ -215,7 +215,9 @@ that code generation translates. Every traced equation reports each step
 through one constant, #isaconst("trace_event"), which is defined as the unit
 value $()$ and so does nothing in the logic. Each traced equation is thus
 provably equal to the vendored one it copies (for example,
-#isathm("solve_rec_c_traced")). The traced copies make up a second entry point, #isaconst("run_voblint_traced"), which
+#isathm("solve_rec_c_traced")).
+
+The traced copies make up a second entry point, #isaconst("run_voblint_traced"), which
 equals #isaconst("run_voblint") in the logic
 (#isathm("run_voblint_traced_eq")). Code generation exports both. A
 #isacmd("code_printing") declaration then tells the code generator to emit, in
@@ -245,12 +247,13 @@ Both are generated from the grammar manifest
 #link(repo-blob + "manifests/vimp-grammar.yaml")[`vimp-grammar.yaml`] by
 #link(repo-blob + "scripts/gen_vimp_menhir.py")[`gen_vimp_menhir.py`]. On
 the output side, the generated #isaconst("render_report") turns the report's
-states into text, and handwritten OCaml either prints the command-line report,
+states into text. Handwritten OCaml then either prints the command-line report,
 placing each check at the position its label carries, or serializes the answer
-as JSON, from which the playground draws the graph and marks the verdicts and
+as JSON. From the JSON, the playground draws the graph and marks the verdicts and
 diagnostics in the editor. The command-line tool and the playground share all
-of this code and differ only in how they receive a request. The code generator maps HOL's integers to
-arbitrary-precision Zarith integers, as VIMP requires (@sec:vimp-vs-c).
+of this code and differ only in how they receive a request. Inside the generated
+code, the code generator maps HOL's integers to arbitrary-precision Zarith
+integers, as VIMP requires (@sec:vimp-vs-c).
 
 @fig:shell shows, for the program below, the call that #isaconst("run_voblint")
 receives and the answer it returns once #isaconst("render_report") has turned
@@ -278,16 +281,15 @@ the states into text, serialized as for the playground.
   },
   kind: image,
   placement: none,
-  caption: [The input and output of the generated analyzer for the program
-    above (claim #claim-ref("shell-json")). The call carries the configuration
-    and the syntax tree `p` the parser built, of the kind @fig:vimp-ast shows in
-    full; the answer carries the report with its states rendered as text, here
-    with its one check in full. Everything before the call, and the rendering
-    from the answer on, is unverified. `{…}` and `[…×n]` fold parts of the JSON.],
+  caption: [Input and output of the generated analyzer for the program above
+    (recorded analyzer output #claim-ref("shell-json")). The call carries the
+    configuration and the parsed syntax tree `p` (cf. @fig:vimp-ast). The answer
+    carries the report with its one check in full. Everything before the call
+    and after the answer is unverified. `{…}` and `[…×n]` fold parts of the JSON.],
 ) <fig:shell>
 
-The #link(site("playground.html"))[playground] runs the analyzer in the
-browser. Its toolbar sets the configuration of #isaconst("run_voblint") and
+The #link(site("playground.html"))[playground] is the browser front end of
+@fig:build. Its toolbar sets the configuration of #isaconst("run_voblint") and
 toggles the tracing of @sec:tracing, and the end-to-end soundness theorem covers every
 configuration it can select (#isathm("run_voblint_source_sound")).
 @fig:pg-overview shows one run.
@@ -321,8 +323,9 @@ configuration it can select (#isathm("run_voblint_source_sound")).
 
 The handwritten OCaml around the generated analyzer (@tab:sizes) is tested.
 A #link(repo-blob + "tests/regression")[regression corpus] of
-#stat("corpus.cases") VIMP fixtures pins the expected verdicts: a definite one
+#stat("corpus.cases") VIMP programs pins the expected verdicts: a definite one
 in `precision/`, #verdict("UNKNOWN") in `soundness/`, and a documented loss in
-`known-imprecision/`. #link(repo-blob + "tests/solver-trace")[Golden files] pin
-solver traces (@sec:tracing), and property tests check that the parser reads
+`known-imprecision/`. Stored expected traces
+(#link(repo-blob + "tests/solver-trace")[golden files]) pin the solver traces of
+@sec:tracing, and property tests check that the parser reads
 back random syntax trees.

@@ -28,7 +28,7 @@ $
 at every node $v$ and context $c$. The left side is the activation collecting
 semantics of @sec:contexts, and $conc_(M)(sol(v, c))$ is the set of stores
 that the solved abstract state at $(v, c)$ describes under the solved values
-of the analysis globals (@sec:sound-core). For the edges inside a procedure,
+of the analysis globals (@sec:analysis-globals). For the edges inside a procedure,
 the equations follow the graph directly. A call is harder, since the equations
 must also determine which context of the callee it enters. Under entry-state
 policies, this context is computed from the abstract state at the call, which
@@ -36,16 +36,15 @@ is known only while the equations are being solved.
 
 == Context-indexed unknowns and call equations #thy-badge("Voblint_Framework", "DG_Indexed_Generator") <sec:eq-call>
 
-Separate contexts give the activations of `bump(5)` and `bump(4)` separate
-copies of `bump`, so the first result stays exactly $6$ (@sec:interproc).
-
-Voblint therefore indexes the unknowns of the equations by contexts. For every
+The equations must keep the activations of `bump(5)` and `bump(4)` apart, so
+that the first call's result stays exactly $6$ (@sec:interproc). Voblint
+therefore indexes the unknowns of the equations by contexts. For every
 node $v$ and context $c$, there is a _local_ unknown $(v, c)$, whose value
 $sol(v, c)$ is the abstract state for the activations of context $c$ at $v$.
 The pairs $(v, c)$ are the indices of the cover. Goblint's local unknowns have the
 #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape] @apinis14[§5.2].
 Besides the local unknowns, the equations have _global_ unknowns without a
-program point (@sec:td). They hold the analysis globals of @sec:shared-facts
+program point (@sec:side-effects). They hold the analysis globals of @sec:shared-facts
 and the entry states that calls publish to their callees.
 
 The equation of $(v, c)$ has to collect every abstract state that can reach
@@ -80,11 +79,11 @@ this join.
 
 At a call, the analyzer chooses the callee's context with a _routing_ function
 $ctxh(u, c, e)$ of the call site $u$, the caller context $c$, and the entry
-state $e$. Under entry-state contexts, the choice depends on $e$, which is
-known only while the equations are solved. The set of calls that contribute to
-a callee context is therefore not known in advance, and the
-callee's entry cannot list them in its equation. Each call instead publishes
-its entry state to the callee as a side effect (@sec:side-effects).
+state $e$. Under entry-state contexts, the choice depends on $e$, so the
+calls that contribute to a callee context become known only during solving,
+as the opening of this chapter noted. The equation of the callee's entry
+therefore cannot list them. Each call instead publishes its entry state to the
+callee as a side effect (@sec:side-effects).
 
 #let _loc(pos, body) = node(
   pos,
@@ -198,10 +197,9 @@ call's continuation, $(italic("pp4"), c_0)$, does the same with
 $c_2 = [[4, 4]]$. The two calls thus use separate copies of `bump`, and the
 first result stays exactly 6.
 
-In this protocol, the caller's equation publishes the entry state to the callee
-and reads the callee's exit state. The verified TD solver, however, accepts side effects
-only to global unknowns (@sec:eq-seed-global), so a call cannot publish to the
-local unknown of the callee's entry directly. Each callee entry $p$ and context
+The callee's entry $(ctor("FunctionEntry") thin p, c')$ is a local unknown,
+and the verified TD solver accepts side effects only to global unknowns
+(@sec:side-effects, @sec:eq-seed-global). Each callee entry $p$ and context
 $c'$ therefore has a global unknown, the _seed_
 $ctor("Activation_Seed") thin p space c'$ (#isatype("global_unknown")). Every
 call routed to $(p, c')$ publishes to it, and the equation of
@@ -497,13 +495,16 @@ caller's solved state describes, which is totality.
     @ch:traces, for an arbitrary program.],
 ) <tab:eq-obligations>
 
-Each obligation of @ch:traces is met by one part of the generated equations
-(@tab:eq-obligations). The argument holds for every
-domain and context policy. Its locale
-#isalocale("routed_context") assumes a post-solution $sol$ on a solved set
-closed under local edges and call continuations, the
-#isalocale("analysis_contract") of @ch:analysis-interface, a sound emptiness test,
-a sound callee resolution, and adequate and total routing. The theorem adds that the program entry
+With the equations and their routing fixed, it remains to show that every
+post-solution induces a cover that meets the five obligations of @ch:traces.
+Each obligation is met by one part of the generated equations
+(@tab:eq-obligations), for every domain and context policy. The locale
+#isalocale("routed_context") of this argument assumes a post-solution $sol$ on
+a solved set closed under local edges and call continuations, and the
+#isalocale("analysis_contract") of @ch:analysis-interface. It further assumes
+that a state classified as bottom describes no store (@sec:eq-call) and that
+routing is adequate and total. The resolved callees of a call must include its
+callee from every store that the caller's solved state describes. The theorem adds that the program entry
 is solved in the initial context and that the initial state $d_0$ describes the initial stores $S_0$.
 #theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[
   #proved("activation_collect_dg_sound")
