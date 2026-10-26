@@ -1,0 +1,24 @@
+# Author review: "The fix keeps reachability apart from the store description,
+# as Goblint does." A trailing comparison hides the claim it qualifies.
+extends: existence
+message: "Trailing comparison '%s': give the comparison its own sentence or cut it."
+level: suggestion
+nonword: true
+tokens:
+  - '\b(?:as|like) (?:[A-Z][\w-]*(?: et al\.)?|the [a-z]+|its [a-z]+|[a-z]+) (?:does|did|do)\b'
+
+tests:
+  - name: fires
+    input: |
+      The fix keeps reachability apart, as Goblint does.
+    want: |
+      1:35:Voblint.AsXDoes:Trailing comparison 'as Goblint does': give the comparison its own sentence or cut it.
+  - name: fires on like
+    input: |
+      Overflow wraps like C does.
+    want: |
+      1:16:Voblint.AsXDoes:Trailing comparison 'like C does': give the comparison its own sentence or cut it.
+  - name: clean
+    input: |
+      The fix keeps reachability apart.
+    want: ""

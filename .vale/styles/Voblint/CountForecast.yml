@@ -1,0 +1,43 @@
+# Author reviews: "Two differences make the relation nontrivial", "Two steps
+# connect it to the soundness theorem", "Three simplifications affect how
+# results transfer", "which has two parts", "these two facts and two more" all
+# read machine-written. State the items; the reader can count them. The tell is
+# a count of an abstract noun announced before the items. "A domain supplies
+# two things", "we need two things": the count also hides after a verb.
+extends: existence
+message: "Count forecast '%s': state the items instead of announcing how many there are."
+level: warning
+nonword: true
+tokens:
+  - '(?<=^|[.!?]\s+)(?:Two|Three|Four|Five|Six|Several) (?:[a-z-]+ )?(?:facts|ideas|differences|steps|parts|stages|changes|observations|properties|ingredients|reasons|points|issues|questions|aspects|simplifications|components|pieces|lessons|problems|obstacles|choices|consequences|insights|ways|features|limitations|things)\b'
+  - '\b(?:has|have|takes?|in) (?:two|three|four|five|six) (?:[a-z-]+ )?(?:parts|steps|stages|ingredients|pieces|phases)\b'
+  - '\b(?:these|the|those) (?:two|three|four|five) (?:facts|ideas|differences|simplifications|observations|insights|lessons|reasons)\b'
+  - '\b(?:two|three|four|five|six|several) (?:things|ingredients)\b'
+  - '\bfor (?:two|three|four|five|six|several) reasons\b'
+  - '\b(?:needs?|required?|requires|suppl(?:y|ies)|provides?|gives?|offers?|contributes?|makes?|adds?) (?:two|three|four|five|six|several) (?:[a-z-]+ )?(?:facts|ideas|steps|parts|properties|reasons|points|pieces|components|guarantees|obligations|conditions|operations|laws|kinds)\b'
+
+tests:
+  - name: fires
+    input: |
+      Two differences make the relation nontrivial.
+    want: |
+      1:1:Voblint.CountForecast:Count forecast 'Two differences': state the items instead of announcing how many there are.
+  - name: fires on parts
+    input: |
+      The answer has two parts.
+    want: |
+      1:12:Voblint.CountForecast:Count forecast 'has two parts': state the items instead of announcing how many there are.
+  - name: fires on things after a verb
+    input: |
+      A domain therefore supplies two things.
+    want: |
+      1:29:Voblint.CountForecast:Count forecast 'two things': state the items instead of announcing how many there are.
+  - name: fires on need with a noun
+    input: |
+      The proof needs three properties of the order.
+    want: |
+      1:11:Voblint.CountForecast:Count forecast 'needs three properties': state the items instead of announcing how many there are.
+  - name: clean
+    input: |
+      Two calls feed the seed of f. Enter supplies two states.
+    want: ""

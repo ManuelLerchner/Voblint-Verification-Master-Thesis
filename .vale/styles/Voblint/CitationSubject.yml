@@ -3,6 +3,6 @@
 extends: existence
 message: "Citation as subject ('%s'): state the claim and cite at its end."
 level: suggestion
-ignorecase: true
+nonword: true
 tokens:
-  - et al\.\s+(?:report|show|prove|propose|present|describe|argue)s?
+  - 'et al\.\s+(?!and\b|in\b|for\b|on\b|at\b|to\b|of\b|with\b)[a-z]+'

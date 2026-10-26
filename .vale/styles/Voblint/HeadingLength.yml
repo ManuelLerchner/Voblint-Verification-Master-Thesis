@@ -1,0 +1,23 @@
+# Author reviews: "the title is too long and overflows". Supervisor feedback:
+# the table of contents must be readable at a glance.
+extends: occurrence
+message: "Title over 7 words: shorten it so it fits one line in the contents."
+level: warning
+scope: heading
+max: 7
+token: \b\w[\w-]*\b
+
+tests:
+  - name: fires
+    input: |
+      # How the solver certificate maps to the proof obligations
+
+      Text.
+    want: |
+      1:3:Voblint.HeadingLength:Title over 7 words: shorten it so it fits one line in the contents.
+  - name: clean
+    input: |
+      # Solver certificates
+
+      Text.
+    want: ""

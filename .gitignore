@@ -63,4 +63,6 @@ paper/generated/stats.tex
 # Vale packages fetched by `vale sync`; only the project style is ours.
 /.vale/styles/*
 !/.vale/styles/Voblint/
+# Vendored: jdkato/prompts publishes no release for `vale sync` to pin.
+!/.vale/styles/Prompts/
 /.vale/.sync.lock

@@ -1,0 +1,32 @@
+# Author reviews: "lets not use complicated english words; necessary terms for
+# mathematical correctness are fine", "just exchange some complex words". Each
+# swap keeps the meaning. "whereas" (contrast only, where "while" is also
+# temporal) and "substantial" stay; so do "therefore" and "terminate".
+extends: substitution
+message: "Plain word: '%s' instead of '%s'."
+level: suggestion
+ignorecase: true
+action:
+  name: replace
+swap:
+  demonstrates: shows
+  demonstrated: showed
+  demonstrate: show
+  subsequent: later
+  subsequently: then
+  utili[sz]es?: use
+  in order to: to
+  accordingly: so
+  facilitates?: help
+  commenc(?:e|es|ed): start
+
+tests:
+  - name: fires
+    input: |
+      The run demonstrates the bound.
+    want: |
+      1:9:Voblint.PlainWords:Plain word: 'shows' instead of 'demonstrates'.
+  - name: clean
+    input: |
+      The run shows the bound.
+    want: ""

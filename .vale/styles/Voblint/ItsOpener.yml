@@ -1,0 +1,19 @@
+# Author review: "dont use 'Its' but spell out goblint". A sentence-initial
+# "Its" often has two candidate owners in the previous sentence.
+extends: existence
+message: "Sentence opens with 'Its': name the owner if the previous sentence has two candidates."
+level: suggestion
+nonword: true
+tokens:
+  - '(?<=^|[.!?]\s+)Its\b'
+
+tests:
+  - name: fires
+    input: |
+      Goblint analyzes C. Its solver is generic.
+    want: |
+      1:21:Voblint.ItsOpener:Sentence opens with 'Its': name the owner if the previous sentence has two candidates.
+  - name: clean
+    input: |
+      Goblint analyzes C. Goblint's solver is generic.
+    want: ""

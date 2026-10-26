@@ -151,6 +151,7 @@ vale = ">=3.24"
 rust = ">=1.85"
 [feature.prose.tasks]
 prose-lint = { cmd = "bash scripts/mk/prose-lint.sh", description = "Lint thesis and paper prose, or the given files, with Vale; fails on error-level rules only." }
+prose-rules-test = { cmd = "vale test .vale/styles/Voblint", description = "Run the test cases kept in the project's Vale rules." }
 
 [feature.thesis.dependencies]
 typst = ">=0.15"
@@ -285,6 +286,7 @@ thesis-check = { depends-on = [
   "thesis-typst",
   "thesis-whitespace",
   { task = "prose-lint", environment = "prose" },
+  { task = "prose-rules-test", environment = "prose" },
 ], description = "Run all thesis drift and theorem checks." }
 
 thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", depends-on = [

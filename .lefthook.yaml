@@ -442,6 +442,8 @@ pre-commit:
             glob:
               - "thesis/content/**/*.typ"
               - "paper/**/*.tex"
+              - "AGENTS.md"
+              - "thesis/CLAUDE.md"
             exclude:
               - "paper/lipics/**"
               - "paper/sty/**"
@@ -452,8 +454,9 @@ pre-commit:
             glob:
               - ".vale.ini"
               - ".vale/styles/Voblint/*.yml"
+              - ".vale/styles/Prompts/*.yml"
               - "scripts/mk/prose-lint.sh"
-            run: pixi run prose-lint
+            run: pixi run prose-lint && pixi run prose-rules-test
 
           # VIMP code must reach the thesis through the linked listing helper,
           # and the claim programs its links open must be current.
