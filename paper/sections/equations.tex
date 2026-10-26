@@ -91,10 +91,10 @@ unknown being solved.
 
 For entry-state contexts, the policy \isaname{routed_entry_context_rel} is
 defined from the solved valuation $\sol$:
-\begin{multline*}
-\adm_{u,c}(e, s, s') \;=\; \{\, \mathit{route}(u, c, d, e) \mid {}\\
+\[
+\adm_{u,c}(e, s, s') \;=\; \{\, \mathit{route}(u, c, d, e) \mid
 (q, d) \in \mathit{enter}_e(\sol(u, c)),\; s \in \conc(q),\; s' \in \conc(d) \,\}.
-\end{multline*}
+\]
 In words, a context is admitted when an entry pair of the solved caller state
 covers both concrete stores and is routed there. The definition is not
 circular. $\sol$ is fixed before the policy is applied, and the final
