@@ -144,11 +144,12 @@ theory-anchors-check = { cmd = "isar check --group links . pages/*.html && pytho
 pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
 pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }
 
-# Vale reads Typst through typst2vast, which conda-forge does not package
-# yet; rust builds it into this environment on first use.
+# Vale reads Typst through typst2vast. Release 0.1.0 still reads table
+# cells, captions and display math into the surrounding sentence, which
+# inflates the sentence-length warnings until jdkato/typst2vast#2 is released.
 [feature.prose.dependencies]
 vale = ">=3.24"
-rust = ">=1.85"
+typst2vast = ">=0.1.0"
 [feature.prose.tasks]
 prose-lint = { cmd = "bash scripts/mk/prose-lint.sh", description = "Lint thesis and paper prose, or the given files, with Vale; fails on error-level rules only." }
 prose-rules-test = { cmd = "vale test .vale/styles/Voblint", description = "Run the test cases kept in the project's Vale rules." }
