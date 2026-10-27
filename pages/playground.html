@@ -6,7 +6,7 @@
 
   <meta
     name="description"
-    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser: pick one or more analyses, a globals rule and a context sensitivity, then inspect every state."
+    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser. Pick one or more analyses, a globals rule and a context sensitivity, then inspect every state."
   >
   <meta property="og:title" content="Voblint Playground">
   <meta
@@ -33,7 +33,7 @@
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#f4f7f6">
 
-  <title>Voblint Playground — run a verified abstract interpreter in your browser</title>
+  <title>Voblint Playground: verified abstract interpretation</title>
 
   <link rel="canonical" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html">
   <link rel="sitemap" type="application/xml" href="sitemap.xml">
@@ -165,12 +165,7 @@
                 </select>
                 <span id="placement-help" class="visually-hidden">
                   Flow-sensitive keeps every global in each point's own state.
-                  Flow-insensitive gives each global its own unknown, read by the points
-                  that mention it, for the analyses whose state splits by variable; the
-                  order analysis relates variables across that split and keeps its whole
-                  state per point. Warrowing a flow-insensitive global need not settle, so
-                  choosing Flow-insensitive selects bounded narrowing unless a rule
-                  was picked.
+                  Flow-insensitive assigns each global an unknown, read by points that use it. This placement applies to analyses whose states split by variable. The order analysis retains its whole relational state at each point. Warrowing a flow-insensitive global can fail to stabilize. Flow-insensitive therefore selects bounded narrowing unless you chose a rule explicitly.
                 </span>
               </div>
 
@@ -336,7 +331,7 @@
         <details id="raw-result" class="raw-result">
           <summary>
             <span class="eyebrow">run_voblint: call and answer</span>
-            <span class="panel-lead">What the Isabelle-generated analyzer received and returned, and the trace it recorded.</span>
+            <span class="panel-lead">Analyzer input, returned report, and solver trace.</span>
             <code id="raw-result-call" class="raw-call"></code>
             <span class="expand-hint" aria-hidden="true">
               <span class="expand-hint-closed">Click to expand</span>
@@ -346,10 +341,7 @@
           </summary>
 
           <p class="raw-result-note">
-            The call exactly as the Isabelle-generated <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> received
-            it, and the answer it returned after <a href="Voblint/Voblint_CLI/Analysis_Render.html#Analysis_Render.render_report%7Cconst"><code>render_report</code></a>, the generated
-            projection that turns each state into text, serialized field by field with
-            Isabelle's own field and constructor names. Each abstract value is rendered by
+            Input to the Isabelle-generated <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> function, and its returned answer after <a href="Voblint/Voblint_CLI/Analysis_Render.html#Analysis_Render.render_report%7Cconst"><code>render_report</code></a>, which converts states to text. The output is serialized field by field using Isabelle's field and constructor names. Each abstract value is rendered by
             its own analysis; the presentation layer only replaces ASCII symbol names such
             as <code>&lt;top&gt;</code> with glyphs such as ⊤. Integers
             too large for a JSON number appear as strings. The editor annotations, state
@@ -406,16 +398,12 @@
           </div>
 
           <p class="raw-result-note">
-            Every solver step of the run, as <code>voblint --trace --verbose</code> prints it,
-            recorded by the run itself: each unknown solved, each
-            query with the value it returns, each side effect, each update, each
-            destabilization and each call's routing, in a Goblint-aligned tracing vocabulary,
-            indented by the solver's query depth. A banner marks where the solver asks for a
+            Solver steps recorded during the run, as printed by <code>voblint --trace --verbose</code>. The trace includes solved unknowns, queries and answers, side effects, updates, destabilizations, and call routing. It uses Goblint-aligned terms and indentation for query depth. A banner marks where the solver asks for a
             procedure's result.
           </p>
 
           <p class="raw-result-note">
-            Three layers: the solver result is the exported computation of proved equations,
+            The solver result is the exported computation of proved equations,
             and the trace calls come from code equations proved equal to the untraced ones.
             The trace is an unverified observation of that computation, recorded by a hook
             that returns nothing, swallows exceptions and never touches solver state. The
@@ -453,7 +441,7 @@
         >
           <summary>
             <h2 id="analysis-graph-heading" class="eyebrow">Graph</h2>
-            <span id="graph-panel-lead" class="panel-lead">The compiled control-flow graph: each program point once, with every context's state listed at it.</span>
+            <span id="graph-panel-lead" class="panel-lead">Compiled control-flow graph with one node per program point and a state for each context.</span>
             <span class="expand-hint" aria-hidden="true">
               <span class="expand-hint-closed">Click to expand</span>
               <span class="expand-hint-open">Click to collapse</span>
@@ -560,15 +548,11 @@
           <p class="solver-globals-note">
             Steps through the solve on the control-flow graph, one solver step at a time. The
             solver starts from the program's exit and queries backward toward the entry. Each
-            node shows the value the solver holds for its point in its context box at that step;
-            every context has its own box, so every unknown has its own node. The global
-            unknowns are the seeds: the circle at the top of each box, which the calls routed
-            to that context publish into and its entry reads.
+            node shows the current value at that program point and context. Each context has a separate box, with one node per unknown. The circle at the top of each box is an entry seed. Calls publish the entry state there, and the entry equation reads it.
           </p>
 
           <p class="solver-globals-note">
-            The run's own JSON Lines trace, recorded in the same solve as the result, is folded
-            by one reducer into every state shown here: an unverified visualization of the trace.
+            A reducer constructs the displayed states from the JSON Lines trace recorded during the solve. This visualization is outside the proof.
           </p>
 
           <p id="solve-replay-message" class="solver-globals-note" hidden></p>
@@ -634,8 +618,7 @@
               <section class="replay-card">
                 <h3 class="eyebrow">Solve stack</h3>
                 <p class="solver-globals-note">
-                  The queries open at this step, innermost first: each unknown waits for the
-                  one above it to answer.
+                  Open queries, innermost first. Each unknown waits for the one above it to answer.
                 </p>
                 <ol id="solve-replay-stack" class="replay-stack replay-scroll" aria-label="Open queries, innermost first"></ol>
               </section>
@@ -690,7 +673,7 @@
       </div>
       <p class="examples-note">
         Every program the regression suite runs, opened with the settings its
-        <code>// PARAM:</code> header selects. Its comments name the verdict each check
+        <code>// PARAM:</code> header selects. The program comments name the verdict each check
         is expected to reach.
       </p>
       <div id="examples-body" class="examples-body"></div>

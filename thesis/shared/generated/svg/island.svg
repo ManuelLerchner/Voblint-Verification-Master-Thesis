@@ -16,7 +16,7 @@
     700 20px "New Computer Modern", "Latin Modern Roman", Georgia, serif !important; }
 </style>
           <path class="sea" d="M40 70 C 120 10, 380 20, 520 30 S 860 40, 870 170 S 820 380, 560 385 S 150 390, 70 320 S -20 130, 40 70 Z"/>
-          <text class="sea-label" x="84" y="72">C, as Goblint sees it</text>
+          <text class="sea-label" x="84" y="65"><tspan x="84">C features</tspan><tspan x="84" dy="19">analyzed by Goblint</tspan></text>
 
           <g class="region" tabindex="0" data-note="Pointers, addresses, `malloc` and `free`. VIMP has no memory model at all, so aliasing never arises; Goblint spends much of its machinery here.">
             <ellipse cx="190" cy="150" rx="92" ry="46"/><text x="190" y="155">pointers &amp; heap</text>

@@ -9,8 +9,9 @@ this file only covers how the prose sounds.
 
 - Open a section with a situation, a program or an event, then the idea it
   needs. A claim comes after the example that motivates it, never before.
-- Head a section with the reader's question ("What if the analyzer is wrong?")
-  or a plain phrase. No slogans.
+- Use plain topic headings, following the thesis terminology ("Activation
+  traces", "Scope and limitations"). Avoid question titles, slogans, and
+  claims of trustworthiness. Keep navigation labels consistent with headings.
 - Introduce a term the moment it is needed, in one clause ("a context is the
   part of the call history the analysis keeps"), not in a definition block.
 - An Isabelle name follows the idea it stands for, as a link the reader may
