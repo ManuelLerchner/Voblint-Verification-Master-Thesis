@@ -1,9 +1,11 @@
 \section{The End-to-End Theorem}
 \label{sec:theorem}
 
-To obtain source-level soundness, we connect source executions to graph
-executions by a forward simulation following the CompCert
-methodology~\cite{leroy09}, and the solved valuation to the returned report.
+The solved valuation now bounds the context-indexed collecting semantics of
+the CFG\@. To obtain a guarantee for source programs, we connect source and
+graph executions by a forward simulation following the CompCert
+methodology~\cite{leroy09}, then prove that report construction preserves
+coverage and gives sound verdicts.
 
 \subparagraph*{From source to graph.}
 VIMP has a small-step semantics \isaname{pstep} over configurations

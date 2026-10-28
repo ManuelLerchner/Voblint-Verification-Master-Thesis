@@ -1,11 +1,13 @@
 \section{From Equations to a Cover}
 \label{sec:equations}
 
-We construct a cover from a solved equation system using Goblint's
-\texttt{Spec} interface~\cite{vojdani16,seidl26}, side-effecting
-equations~\cite{seidl03,apinis12}, and the verified solver of Tilscher
-et al.~\cite{tilscher26}. We add conditions relating the equations' routing
-to the context policy and prove them for each policy.
+We interpret a solved valuation as a cover of the concrete stores defined
+in \cref{sec:traces}. The equations follow Goblint's \texttt{Spec}
+interface~\cite{vojdani16,seidl26} and side-effecting constraint
+systems~\cite{seidl03,apinis12}. For suitable post-solutions, sound abstract
+operations and agreement between routing and the context policy establish
+the five coverage obligations. We then use the verified solver's
+certificate~\cite{tilscher26} to obtain a valuation satisfying these obligations.
 
 \subsection{The analysis interface}
 
@@ -160,7 +162,8 @@ entry and is closed under execution steps. On $W$, $\sol$ must bound the
 right-hand sides and their side effects. The verified top-down
 solver~\cite{tilscher26} provides a different certificate,
 \isaname{part_post_solution}, for the query $x$ it started on, its solved set
-$V$, and its result $\sol$: the query is in $V$, $V$ is closed under the reads of right-hand sides, and $\sol$ bounds
+$V$, and its result $\sol$: the query is in $V$, $V$ is closed under
+right-hand-side reads of local unknowns, and $\sol$ bounds
 both the right-hand side and every side effect of each solved unknown.
 
 The solver works backward from its query, the result of

@@ -1,16 +1,16 @@
 \section{Activation Traces and the Coverage Contract}
 \label{sec:traces}
 
-We adapt the local traces of Schwarz et al.~\cite{schwarz21} to procedure
-activations. Context policies associate concrete calls with calling contexts,
-following the use of call history by Sharir and Pnueli~\cite{sharir81}. We
-formulate these policies as relations and introduce a coverage contract with
-a soundness theorem. These definitions and the theorem are independent of
-abstract domains, equations, and solvers.
+A context-sensitive soundness proof must identify the concrete stores that
+an abstract state at node $v$ in context $c$ is meant to cover. We adapt the
+local traces of Schwarz et al.~\cite{schwarz21} to retain procedure
+activations and their callers. A separate relational policy associates
+concrete calls with contexts, including call histories in the sense of
+Sharir and Pnueli~\cite{sharir81}. Five local obligations then suffice to
+prove coverage of the resulting context-indexed collecting semantics,
+independently of abstract domains, equations, and solvers.
 
-For each node $v$ and context $c$, a context-sensitive analysis associates a set
-intended to contain every store reached there in that context. To prove this
-inclusion, we first define those concrete stores. A graph execution with a
+A graph execution with a
 plain frame stack does not record contexts: a frame holds only what is needed
 to resume the caller and disappears at the return. Frames could carry a ghost context
 (\cref{sec:mechanization}). We keep contexts out of the base trace semantics
@@ -64,10 +64,10 @@ callers represents the runtime frame stack
 collected per node, form the node collecting semantics
 $\NodeColl_{\Glob,g,S}(v)$ (\isaname{node_collect}).
 
-In the local traces of Schwarz et al.~\cite{schwarz21}, $\ctor{Root}$
-corresponds to an initial trace, $\ctor{Call}$ to thread creation, and
-$\ctor{Resume}$ to the binary rule for acquiring a lock, which incorporates a
-second trace (\cref{sec:related}).
+The constructors follow patterns from the local traces of Schwarz et
+al.~\cite{schwarz21}: initial traces, thread creation, and binary lock
+acquisition incorporating a second trace. Voblint adapts these patterns to
+procedure entry and return (\cref{sec:related}).
 
 \subsection{Calling contexts as a relation}
 
