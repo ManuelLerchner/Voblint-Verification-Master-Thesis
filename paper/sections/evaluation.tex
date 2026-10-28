@@ -1,43 +1,45 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-A machine-checked theorem can hold for uninteresting reasons. Its premises may
-never hold together, its obligations may exclude no error a real analyzer
-makes, and an analyzer that answers \verdict{UNKNOWN} everywhere satisfies it
-as well (\isaname{unknown_everywhere_sound}). We therefore check that the
-premises can hold and that the obligations have force, and then measure what
-contexts and domains gain in precision on concrete programs. Each item states its kind of
-evidence. Facts about one fixed program are proved by \texttt{eval}, which runs
+A soundness theorem may have unsatisfiable premises or allow an analyzer that
+answers \verdict{UNKNOWN} everywhere (\isaname{unknown_everywhere_sound}).
+We therefore exhibit programs for which the theorem applies and the analyzer
+proves checks, and show that a domain obligation rejects a known defect.
+We then compare the precision of context policies on a recursive program.
+Facts about one fixed program are proved by \texttt{eval}, which runs
 generated code and therefore also trusts the code generator. Analyzer outputs
 are registered claims that \texttt{pixi run thesis-claims} re-checks;
-\cref{tab:contexts,tab:costs} are generated from claims and from the committed
-profiling data.
+\cref{tab:contexts} is generated from these claims.
 
 \subparagraph*{Non-vacuity (machine-checked, one program each).}
 For the program of \cref{fig:running}, analyzed with Interval, entry-state
-contexts, and the warrowing update rule, a theory builds a source execution
+contexts, and the warrowing update rule, we construct a source execution in Isabelle
 that returns from both calls. Evaluation shows that the analyzer answers with
 both checks \verdict{PROVED}, and \isaname{nv_source_certified} instantiates
 \cref{thm:headline} with every premise discharged. Companion instances do the
 same for a single check (\isaname{nv_check_proved_sound}) and for a
-\verdict{DEAD} check (\isaname{nv_dead_unreached}). They show that the premises are satisfiable.
+\verdict{DEAD} check (\isaname{nv_dead_unreached}).
 
-\subparagraph*{A Goblint defect the obligations reject (machine-checked).}
-\oblig{Total} is needed: \isaname{total_dropped_unsound} exhibits a cover that
-meets the other four obligations and misses a reached store. At the domain
-level, Goblint once claimed \texttt{c \% 2 == 1} for $c \in \{-5, -7\}$,
+\subparagraph*{Necessity of the soundness obligations (machine-checked).}
+The theorem \isaname{total_dropped_unsound} exhibits a cover that meets the
+other four coverage obligations but omits a reachable store, showing why
+\oblig{Total} is required.
+
+A separate example tests a domain obligation against a real Goblint defect.
+Goblint once claimed \texttt{c \% 2 == 1} for $c \in \{-5, -7\}$,
 although C's truncating remainder gives $-1$ (issue 1156, fixed
-in~\cite{goblint1161}). The defect is in a domain, not in contexts. Every Voblint
-domain's remainder must meet \isaname{mod_sound} of the locale
-\isaname{sound_arith_ops} (the truncating remainder of concrete values lies in
-the concretization of the abstract one), which the shipped congruence
-remainder discharges by \isaname{congruence_mod_sound}. \isaname{prefix_congruence_mod_unsound} proves
+in~\cite{goblint1161}). The defect is in a domain, not in contexts. Each domain's
+abstract remainder operation must satisfy \isaname{mod_sound} in the locale
+\isaname{sound_arith_ops}: the concretization of its result must contain the truncating remainders
+of all concrete operands represented by its arguments.
+The theorem \isaname{congruence_mod_sound} establishes this property for the
+congruence domain. \isaname{prefix_congruence_mod_unsound} proves
 that every abstract remainder returning the constant~$1$ for
 $(1 + 2\mathbb{Z}) \bmod 2$ violates the obligation at $-5$, so the defective
 operator could not be registered.
 
 \subparagraph*{Calling contexts on recursive programs (executable).}
-\Cref{tab:contexts} runs one regression program under every context policy.
+\Cref{tab:contexts} reports one regression program's results under each context policy.
 Mutually recursive procedures \texttt{f} and \texttt{g} return $2$ and $1$ at
 the bottom of the recursion. \texttt{main} calls \texttt{f(2)} and
 \texttt{g(2)} inside a loop of 200 iterations and checks both results. Each
@@ -45,14 +47,16 @@ call chain is three call sites deep. The table also counts the copies of
 \texttt{f} and \texttt{g} the analysis creates. With one context per
 procedure, or with call strings of length 1, the activations of different
 depths share a state and both results widen to $[1,12]$. With call strings of length 2 or with
-entry-state contexts, the depths stay apart and both checks are proved. The
+entry-state contexts, activations at different depths have separate abstract
+states, and both checks are proved. The
 loop adds no contexts, because the callee contexts do not depend on the loop
 counter. For a related program, the theories prove that the solution of the
 routed equation system at call-string length 2 is strictly more precise at the
 entry of a callee than at length 1
 (\isaname{sign_k2_strictly_more_precise_than_k1_at_g}). That theorem compares
-two solutions computed by \texttt{eval}. It concerns neither
-\isaname{run_voblint} nor call strings in general.
+two equation-system solutions computed by \texttt{eval} for this program.
+It establishes neither a corresponding result about \isaname{run_voblint}
+nor a general precision ordering between call-string lengths.
 
 \begin{table}[t]
 \centering
@@ -62,42 +66,45 @@ two solutions computed by \texttt{eval}. It concerns neither
 values for the two checks of the regression fixture
 \texttt{09-depth2\_mutual\_recursion\_in\_loop} (group \texttt{17-call-string})
 under Interval, per context policy. Concretely, \texttt{res1} is always $2$ and
-\texttt{res2} always $1$. Generated from registered claims.}
+\texttt{res2} always $1$. Generated from reproducible analyzer runs.}
 \label{tab:contexts}
 \end{table}
 
-The thesis~\cite{voblint} also runs Voblint on the programs of Monniaux's
+The thesis~\cite{voblint} also reports Voblint's results on the programs of Monniaux's
 tutorial on the flavors of abstract interpretation~\cite{monniaux24} and
 compares the verdicts with Goblint's.
 
 \subparagraph*{Running time (empirical).}
-Speed was not a goal: the generated code runs as Isabelle emits it, plus one
-proved code equation. The profiling run at repository revision
+We use the OCaml code generated by Isabelle without handwritten optimization.
+A proved code equation, \isaname{init_publications_code}, avoids recompiling
+the program during equation evaluation.
+The profiling run at repository revision
 \texttt{17fcb363d} analyzed the 380 regression fixtures that set no timeout of
 their own under 15 configurations: five domains times three context
 policies (none, call strings of length 1, entry states). Eleven fixtures are
 ill-formed programs and are excluded, which leaves \stat{prof.fixtures}
 fixtures and \stat{prof.cases} cases. A case's time is the median of three repetitions on an
 Apple M4 Pro; a case that times out (30\,s) or fails in any repetition counts
-as failed. \Cref{tab:costs} summarizes the successful cases
-per policy. All \stat{prof.timeouts} timeouts are entry-state cases with
+as failed. Most fixtures are tiny regression programs, so low solve times
+on this corpus do not establish performance on larger programs. All \stat{prof.timeouts} timeouts are entry-state cases with
 Interval, Int or Congruence on seven recursive fixtures, where each recursion
 level creates a new context. One is
 \texttt{24-site-figures/precision/13-recursion\_grows\_warrow.vimp}: \texttt{f(x)}
-checks \texttt{x >= 0} and calls \texttt{f(x + 1)}. It is proved without contexts and
-does not terminate with entry-state contexts. Call strings of length 2 were
-not profiled. On generated programs of growing size, solve time
-grows with fitted exponents of \stat{prof.scaling.time_min} to
-\stat{prof.scaling.time_max} while solver evaluations grow about linearly
-(\cref{sec:mechanization}). These measurements cover small programs on one
-machine and imply no performance bound.
+checks \texttt{x >= 0} and calls \texttt{f(x + 1)}. With Interval and one context
+per procedure, the analyzer proves the check; with entry-state contexts, the
+analysis exceeds the 30\,s timeout. Call strings of length 2 were not profiled.
 
-\begin{table}[t]
-\centering
-\small
-\input{generated/costs}
-\caption{Solve time per context policy (milliseconds over successful cases),
-timeouts, and the largest number of contexts a successful case created.
-Generated from the committed profiling snapshot.}
-\label{tab:costs}
-\end{table}
+A separate scaling sweep uses Interval on eight generated program families.
+For each family, we fit solve time $t$ against its size parameter $n$ as $t = a n^b$ by least
+squares on logarithmic axes, using successful
+timings from $n=100$ to the largest completed size (500--2000, depending on
+the family). The fitted exponents range from \stat{prof.scaling.time_min} to
+\stat{prof.scaling.time_max}. The
+\href{https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/pages/data/profiling/2026-10-21-17fcb363d.json}{profiling snapshot}
+records the measurements, and
+\href{https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/scripts/profile_corpus.py}{the profiling script}
+defines the families. The
+\href{https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/profiling.html}{profiling page}
+shows the runtime distributions and scaling curves. The scaling sweep exposes
+costs hidden by the tiny regression fixtures; it establishes neither an
+asymptotic bound nor performance on realistic large programs.

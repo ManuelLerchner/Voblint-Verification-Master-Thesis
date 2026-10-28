@@ -71,9 +71,10 @@ procedure in one context; \texttt{bump} gets one copy per entry state. Solid
 violet arrows are calls (enter), dashed blue arrows are returns (combine), and
 dashed gray arrows link a call site to its continuation. Both checks are
 \verdict{PROVED}. Without contexts, the single copy of \texttt{bump} joins both
-calls and both checks are \verdict{UNKNOWN}. States are analyzer output with
-the warrowing update rule for global unknowns (\cref{sec:equations}); the intermediate node of \texttt{bump}'s body and the unreachable node after
-\texttt{return} are omitted.}
+calls and both checks are \verdict{UNKNOWN}. The states shown are analyzer
+output using the warrowing update rule for global unknowns
+(\cref{sec:equations}). The drawing omits the intermediate node of
+\texttt{bump}'s body and the unreachable node after \texttt{return}.}
 \label{fig:running}
 \end{figure}
 
@@ -95,21 +96,24 @@ $(v, c)$ for a node $v$ and a context $c$, and over \emph{global unknowns}
 without a program point. At \texttt{a = bump(5)}, the analysis's \emph{enter}
 operation binds \texttt{n} to $[5,5]$, and this entry state is \emph{routed}
 to the callee context $c_1 = [5,5]$; the second call routes to
-$c_2 = [4,4]$. \Cref{sec:equations} gives the equations of a call. Each
-activation of \texttt{bump} is analyzed in its own copy, and both checks are
-proved.
+$c_2 = [4,4]$. \Cref{sec:equations} gives the equations of a call. For these
+two calls, the analyzer maintains separate context states and proves both
+checks.
 
-For these per-context states to mean something, the concrete semantics has to
-say which stores belong to $c_1$. Activation traces (\cref{sec:traces}) supply
-this. The trace of the activation \texttt{bump(5)} records its caller, the
-context policy admits it in $c_1$, and the \emph{activation collecting
+To interpret the abstract state in $c_1$, we need the concrete stores
+associated with that context. Activation traces and a context policy define
+this association (\cref{sec:traces}). The trace of the activation
+\texttt{bump(5)} records its caller, the policy admits $c_1$ for that call, and
+the \emph{activation collecting
 semantics} $\ActColl(v, c)$ collects the final stores of the traces that end
 at $v$ and carry $c$. The \emph{node collecting semantics} $\NodeColl(v)$
-collects them regardless of context. A report $\mathit{res}$ of the analyzer
-defines two sets at each node $v$. The report set $\Report_{\mathit{res}}(v)$
-contains the stores that some state of the report at $v$ describes, in any
-context. The verdict set $\Verd_{\mathit{res}}(v)$ contains the stores in which
-every definite verdict at $v$ holds. The soundness argument is a chain of
+collects them regardless of context. An analyzer report $\mathit{res}$ defines
+two sets at each node $v$. Its report set $\Report_{\mathit{res}}(v)$ is the
+union of the stores represented by its abstract states at $v$ across all
+contexts. The verdict set $\Verd_{\mathit{res}}(v)$ contains the stores in which
+every definite verdict at $v$ holds: the check condition is true for
+\verdict{PROVED} and false for \verdict{REFUTED}. Neither verdict asserts
+reachability (\cref{sec:theorem}). The soundness argument is a chain of
 inclusions at every node:
 \begin{equation}
 \label{eq:chain}
@@ -120,5 +124,6 @@ inclusions at every node:
 \;\subseteq\; \Verd_{\mathit{res}}(v).
 \end{equation}
 Each inclusion may add unreached stores, which costs precision, but none may
-lose a reached store. Contexts appear only in the middle of the chain; the
-end-to-end theorem (\cref{sec:theorem}) states its outer inclusions.
+lose a reached store. The main end-to-end theorem
+(\cref{sec:theorem}) states the outer inclusions, combining all contexts at
+each node.

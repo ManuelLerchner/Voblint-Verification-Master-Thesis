@@ -10,31 +10,34 @@ which indexes a callee's exit states by its entry state, resembles a
 functional approach tabulated per input. Knoop and Steffen handle the locals of recursive procedures with
 stacks of lattice elements, of which the maximal-fixpoint strategy needs only
 two~\cite{knoop92}; Voblint's return has the shape of their return
-function~\cite[§4.1]{knoop92}. Reps et al.\ solve such
-problems precisely when facts are finite and transfer functions
-distributive~\cite{reps95}. Voblint requires neither and proves no precision
-result. Jeannet and Serwe derive interprocedural analyses by abstract
+function~\cite[§4.1]{knoop92}. Reps et al.\ compute precise solutions when
+the set of dataflow facts is finite and the transfer functions are
+distributive~\cite{reps95}. Voblint requires neither a finite domain nor
+distributive transfer functions, but establishes no corresponding general
+precision theorem. Jeannet and Serwe derive interprocedural analyses by abstract
 interpretation of a standard stack-based operational semantics and combine the
 call-string and functional approaches~\cite{jeannet04}. Van Horn and Might
 derive sound analyses from abstract machines by bounding their
-stores~\cite{vanhorn10}. These give contexts a concrete counterpart on paper. In the a
-posteriori soundness of Might and Manolios~\cite{might09}, the state
+stores~\cite{vanhorn10}. These approaches relate analysis contexts to concrete
+executions. In the a posteriori soundness framework of Might and
+Manolios~\cite{might09}, the state
 abstraction is fixed in advance and a map from concrete to abstract contexts
-is chosen per run, after the analysis, from non-empty candidate sets. Voblint's entry-state policy instead reads a single relation off the
-solution, with \oblig{Total} in the role of non-emptiness
+is chosen per run, after the analysis, from non-empty candidate sets.
+Voblint instead derives its entry-state context relation from the solution;
+\oblig{Total} ensures that every call from a covered store admits a callee context
 (\cref{sec:equations}).
 
 \subparagraph*{Verified analyzers.}
 Verasco is a Coq-verified analyzer for most of C99, excluding recursion and
 dynamic allocation~\cite{jourdan15}. Its interpreter iterates over the
 structure of C\#minor, reanalyzes a function at every call site, and raises an
-alarm at a possible recursive call. Blazy et al.\ check the candidate of an untrusted iterator with a verified
-checker~\cite{blazy13}. Nipkow and Klein develop
+alarm at a possible recursive call. Blazy et al.\ use a verified checker to
+validate the candidate fixpoint produced by an untrusted
+iterator~\cite{blazy13}. Nipkow and Klein develop
 abstract interpretation for IMP in Isabelle/HOL~\cite{nipkow12,nipkow14}, and
-Voblint's non-relational domains follow their generic interpreter. Their
-language has no procedures. Franceschino et al.~\cite{franceschino21} and Cachera and
-Pichardie~\cite{cachera10} verify executable analyzers for languages without
-procedures.
+Voblint's non-relational domains follow their generic interpreter. Like the
+verified analyzers of Franceschino et al.~\cite{franceschino21} and Cachera and
+Pichardie~\cite{cachera10}, Nipkow and Klein's IMP interpreter targets a language without procedures.
 Michelland et al.\ make soundness proofs reusable by sharing one interpreter
 between the concrete and the abstract semantics~\cite{michelland24}. Cachera
 et al.\ compute a context-insensitive dataflow analysis with a verified solver
@@ -45,8 +48,8 @@ Dabrowski and Pichardie instrument a concrete semantics with contexts through
 a module type whose call-context function computes a callee's context, and
 prove a context-sensitive points-to analysis sound in Coq~\cite{dabrowski09}.
 This is the closest precedent for Voblint's context-indexed semantics. Their
-analyses are given only as constraints that no solver
-computes~\cite[§7]{dabrowski09}. Voblint's
+development specifies the analyses as constraints but does not provide an
+executable implementation~\cite[§7]{dabrowski09}. Voblint's
 contexts are admitted by a relation, the totality condition makes the indexed
 collection exhaustive, and the indexing is connected to an executable verified
 solver. Trace partitioning indexes sets of traces by control
@@ -57,9 +60,7 @@ Isabelle developments, Lammich and Müller-Olm verify the soundness and
 precision of a conflict analysis for programs with procedures and
 threads~\cite{lammich07afp}, Wasserrab verifies an interprocedural
 slicer~\cite{wasserrab09afp}, and Breitner formalizes Shivers' control-flow
-analysis for functional programs~\cite{breitner10afp}. None of these entries
-claims an extracted analyzer or represents an activation with its caller
-chain.
+analysis for functional programs~\cite{breitner10afp}.
 
 \subparagraph*{Verified solvers.}
 Hofmann et al.\ verify a local generic solver in Coq~\cite{hofmann10}, and de
@@ -67,25 +68,21 @@ Vilhena et al.\ verify one that discovers dependencies dynamically in
 Iris~\cite{devilhena20}. Stade et al.\ prove the top-down solver partially
 correct in Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extend it to side
 effects with a generic interface for update rules~\cite{tilscher26}. Voblint
-vendors the latter. Their termination result for top-down solvers without
+reuses this solver formalization. Their termination result for top-down solvers without
 side effects assumes a finite type of unknowns~\cite{tilscher26jar}, which
 Voblint's node and context types are not.
 
 \subparagraph*{Goblint and local traces.}
 Side-effecting constraint systems~\cite{seidl03,apinis12} and the split
 between analyses and solvers are Goblint's architecture~\cite{vojdani16,seidl26},
-and Voblint's \isaname{dg_spec} follows its \texttt{Spec} interface. No
-theorem transfers to Goblint's OCaml implementation. Schwarz et al.\ prove
+and Voblint's \isaname{dg_spec} follows its \texttt{Spec} interface.
+Voblint's theorems do not establish soundness of Goblint's OCaml implementation.
+Schwarz et al.\ prove
 Goblint's thread-modular analyses sound against local traces on
-paper~\cite{schwarz21,schwarz23}; activation traces adapt the construction,
-but no concurrency result transfers.
+paper~\cite{schwarz21,schwarz23}. Activation traces adapt this construction
+to sequential procedure activations; the adaptation establishes no concurrency result.
 
 \subparagraph*{Differences from prior work.}
-Voblint inherits its solver, the side-effecting constraint systems, the
-analysis interface, the shape of its traces, and the distinction between
-call-string and functional contexts. Voblint adds their mechanized
-connection, ending in a theorem about the exported analyzer; we know of no
-prior mechanization of it. Dabrowski and Pichardie~\cite{dabrowski09} have
-contexts in the semantics but no solver. Verasco~\cite{jourdan15} covers a far
-larger language but reanalyzes functions per call site, raises an alarm at recursion,
-and iterates structurally instead of using a generic solver.
+The contribution is the mechanized connection of these existing components,
+from source executions to the exported analyzer's reports, rather than a new
+analysis or solver algorithm.

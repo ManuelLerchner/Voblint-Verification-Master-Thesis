@@ -1,9 +1,7 @@
 \section{Mechanization}
 \label{sec:mechanization}
 
-\Cref{tab:scale} lists the size of the development~\cite{voblint} by layer. It
-counts the theories that the sessions list, and lemmas, theorems and
-corollaries as proved statements. The development reuses part of the verified
+\Cref{tab:scale} lists the size of the development~\cite{voblint} by layer. The development reuses part of the verified
 solver of Tilscher et al.~\cite{tilscher26}. The solver is vendored with four
 changes made for this work and proposed upstream. They restore the build
 under Isabelle2025-2, remove from the widening and narrowing classes the
@@ -11,9 +9,9 @@ stabilization assumptions that only termination proofs use, rename clashing
 names, and add facts such as \isaname{solve_dom_of_solve_c}. None changes the
 algorithm.
 Neither Voblint nor the imported solver theories contain \texttt{sorry} or
-\texttt{oops}. Code generation emits \stat{generated_ocaml} lines of OCaml, and
-\stat{handwritten_ocaml} lines of handwritten OCaml parse programs, print
-reports, and implement the trace hook. A full build takes several minutes on
+\texttt{oops}. Code generation emits \stat{generated_ocaml} lines of OCaml. The handwritten
+OCaml implementation contains \stat{handwritten_ocaml} lines for parsing,
+report printing, and the trace hook. A full build takes several minutes on
 an Apple M4 Pro laptop.
 
 \begin{table}[t]
@@ -29,19 +27,15 @@ the grammar manifest (\texttt{VIMP\_Grammar\_Generated}).}
 
 \subparagraph*{Design choices and their alternatives.}
 Besides the relational context policy (\cref{sec:traces}) and the solver
-as a parameter (\cref{sec:equations}), two choices shaped the proof. Only for
-the first was an alternative implemented and abandoned.
+as a parameter (\cref{sec:equations}), two choices shaped the proof.
 \begin{itemize}
   \item \emph{Activation traces as the soundness target.} A first prototype
-    used whole-program executions with calls inlined. To account for one call,
-    the proof built a separate execution from the callee's entry and spliced it
-    into the caller's run. This handled single calls but did not reflect the
-    call stack and was hard to extend to recursion. The obvious alternative,
-    which we did not implement, is the graph semantics itself, with a frame
-    stack whose frames carry a ghost context. Its soundness proof would carry an invariant over
-    the whole stack. Activation traces turn it into a fact about the caller
-    chain, recovered through $\mathit{caller\_of}$, and keep contexts out of
-    the concrete semantics, so the policy can be a parameter.
+    used whole-program executions with calls inlined. Its proof spliced
+    a callee execution into the caller's run, which was hard to extend to
+    recursion. An unimplemented alternative would annotate graph-semantics
+    stack frames with ghost contexts and maintain an invariant over the stack.
+    With activation traces, the invariant concerns the caller chain recovered
+    by $\mathit{caller\_of}$; contexts remain a separate policy parameter.
   \item \emph{Two-default executable states.} Soundness is stated over total
     functions on variable names; the solver runs on a quotient
     type~\cite{huffman13} of a finite override list with separate defaults
@@ -49,17 +43,13 @@ the first was an alternative implemented and abandoned.
     refining the single default of Concrete Semantics~\cite[§13.6]{nipkow14}.
 \end{itemize}
 
-The contracts of \cref{sec:traces,sec:equations} and the certified solver
-are locales~\cite{ballarin14}; a domain is registered with one locale
-interpretation per context policy.
-
 \subparagraph*{Feedback on the proof assistant.}
-Totality and code generation cost effort that the tooling could reduce. Functions in Isabelle/HOL are total. A solver that may diverge is
-therefore defined with a domain predicate, next to an executable variant that
-returns only when the recursion finishes, and a returned run must be
-transported to the logical definition. A lemma added to the vendored solver
-proves this transport once (\isaname{solve_dom_of_solve_c}).
+Connecting the executable solver to its logical definition required a
+separate proof. Functions in Isabelle/HOL are total, so the potentially
+diverging solver has a domain predicate. For a terminating execution, we must
+show that the logical solver is defined. The added lemma
+\isaname{solve_dom_of_solve_c} establishes this implication.
 Code generation also turns finite sets and maps into lists that every
-lookup scans, and CPU profiles attribute most of the solve time to these scans.
-The Containers library could replace them in the code setup alone, without
-touching the proofs; we leave this to future work.
+lookup scans, and CPU profiles attribute most of the solving time to these scans.
+Replacing these list representations through the Containers library is a
+possible optimization that we have not evaluated.
