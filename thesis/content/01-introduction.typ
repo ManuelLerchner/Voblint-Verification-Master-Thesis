@@ -552,7 +552,7 @@ block therefore measures its share of the exported corpus, not the difficulty
 of its proofs. The interactive view links each declaration to its documentation.
 
 #figure(
-  link(site("proof-map.html?view=treemap"), image("/assets/proof-map-treemap.png", width: 100%)),
+  link(site("proof-map.html?view=treemap"), image("/assets/proof-map-treemap.png", width: 90%)),
   placement: auto,
   caption: [The formalization's exported declarations, captured from the
     #link(site("proof-map.html?view=treemap"))[interactive treemap].
@@ -562,35 +562,24 @@ of its proofs. The interactive view links each declaration to its documentation.
     This is a corpus overview; it does not depict proof dependencies.],
 ) <fig:intro-corpus>
 
-#partref(<part:problem>) consists of this introduction and @ch:background,
-which recalls abstract interpretation, constraint systems, calling contexts,
-side-effecting constraint systems, and the verified TD solver.
+#partref(<part:problem>) introduces the problem and recalls abstract interpretation,
+constraint systems, and the verified TD solver (@ch:background).
 
-#partref(<part:over-approx>) fixes what an analysis must over-approximate:
-source programs and their graphs (@ch:program-model) and activation traces with
-the coverage contract (@ch:traces). The contract reduces soundness to five
-local obligations about a _cover_, one set of stores per node and context, and
-every later part works toward a cover that meets them.
+#partref(<part:over-approx>) defines source programs and their graphs
+(@ch:program-model), then activation traces and the coverage contract
+(@ch:traces). The later parts establish this contract.
 
-#partref(<part:analyses>) states what domains, analyses, and cooperating analyses
-must prove (@ch:domains to @ch:cooperation). A domain proves its primitives
-sound once, an analysis supplies abstract transfer functions and proves the
-analysis contract about them, and cooperating analyses prove conditions on the answers
-they exchange.
+#partref(<part:analyses>) develops the soundness obligations for domains
+(@ch:domains), analyses (@ch:analysis-interface), and their cooperation
+(@ch:cooperation).
 
-#partref(<part:verdicts>) builds the equations, solves them, and composes the
-end-to-end soundness theorem (@ch:equations to @ch:results). A _post-solution_ assigns
-each unknown an abstract state that satisfies its inequalities. Every
-post-solution of the equations induces a cover that meets the contract
-(@ch:equations). The verified TD solver returns such a post-solution whenever it
-terminates (@ch:solving), and the report computed from it is sound for every
-source execution (@ch:results).
+#partref(<part:verdicts>) builds the equations (@ch:equations), solves them
+(@ch:solving), and derives sound source-level verdicts (@ch:results).
 
-#partref(<part:instances>) instantiates the theorem (@ch:instances), follows
-#isaconst("run_voblint") to the delivered tools and their trust boundary
-(@ch:executable), and evaluates it (@ch:evaluation).
+#partref(<part:instances>) presents the analysis instances (@ch:instances),
+the executable and its trust boundary (@ch:executable), and the evaluation
+(@ch:evaluation).
 
-#partref(<part:assessment>) compares Voblint with prior work (@ch:related) and
-concludes (@ch:conclusion). @sec:isabelle explains the Isabelle syntax of the
-listings, @app:notation lists the notation, and @sec:voblint-repo describes the repository, its
-checks, and the source tooling built for this work.
+#partref(<part:assessment>) discusses related work (@ch:related) and concludes
+(@ch:conclusion). @sec:isabelle explains the Isabelle listings, @app:notation
+collects the notation, and @sec:voblint-repo describes the repository and tooling.
