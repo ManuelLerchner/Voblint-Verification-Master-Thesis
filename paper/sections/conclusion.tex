@@ -1,28 +1,35 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-We have mechanized the connection between a source semantics and a
-Goblint-style, context-sensitive, side-effecting equation system solved by a
-verified solver, with activation traces as the concrete counterpart of
-contexts. The theorem is a first step. The result is partial correctness, VIMP is
-scalar, the theorem is per program point, and precision is shown only by
-witnesses for single programs.
+We have connected the source semantics of VIMP to a Goblint-style analyzer
+based on context-sensitive, side-effecting equations and a verified solver.
+Activation traces provide the concrete execution histories used to interpret
+calling contexts. Whenever the analyzer returns a report for an accepted
+configuration and a scalar VIMP program, the report covers reached stores
+at every program point, and its definite verdicts hold for those stores. Precision improvements have
+been demonstrated for individual programs, but no general precision guarantee
+is proved.
 
-\subparagraph*{Per-context certification.}
-\Cref{thm:routed} bounds each context by its solved state, but the report-level
-theorem keeps only the union over contexts. Proving that the report's row for
-a context covers $\ActColl(v, c)$ would certify the per-context states.
+The report also provides a context-specific coverage guarantee. If
+\isaname{run_voblint} returns a report, \isaname{run_voblint_context_covers}
+shows that $\ActColl(v,c)$, defined using the run's context policy, is covered
+by the abstract states reported for context $c$ at node $v$
+(\cref{sec:theorem}).
 
-\subparagraph*{Memory.}
-The contract refers to the language only through a few step functions, so
-features such as machine integers leave it intact. The trace semantics,
-however, assumes that a callee cannot modify its caller's locals. Pointers into
-stack frames and threads break this assumption; a heap without such pointers
-needs only a richer store model.
+\subparagraph*{Language extensions.}
+The coverage contract abstracts over the language's step functions. Extending
+VIMP with machine integers would require new concrete operations, abstract
+transfers, and soundness proofs. A heap without pointers into caller frames
+could be modeled by extending the store, again with new transfers and proofs.
+Pointers into caller frames and interference from other threads would also
+require revisiting the trace semantics, which assumes that a callee cannot
+modify its caller's locals. These extensions remain future work.
 
 \subparagraph*{Termination.}
 Known termination results for top-down solvers assume finitely many
-unknowns~\cite{tilscher26jar}. Entry-state contexts need not be finite, and
-all timeouts in \cref{sec:evaluation} come from them. Goblint bounds them with
-optional widening on contexts (\texttt{ana.context.widen}) or a context gas; a
-general result would need such a bound in the routing.
+unknowns~\cite{tilscher26jar}. Entry-state context sets can be infinite, and
+all timeouts in \cref{sec:evaluation} occur under this policy. Goblint controls
+context creation through optional widening on contexts (\texttt{ana.context.widen})
+or \emph{context gas}, a budget for context-sensitive calls along a call stack.
+Establishing termination for Voblint would require controlling context
+creation and satisfying the remaining solver termination conditions.

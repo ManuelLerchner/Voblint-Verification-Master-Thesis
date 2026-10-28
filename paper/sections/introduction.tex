@@ -1,66 +1,65 @@
 \section{Introduction}
 \label{sec:intro}
 
-A context-sensitive static analyzer keeps a separate abstract state for each
-program point and calling context. In the program of \cref{fig:running},
+A context-sensitive static analyzer can distinguish abstract states for
+different calling contexts at the same program point. In the program of \cref{fig:running},
 \texttt{main} calls \texttt{bump(5)} and \texttt{bump(4)}, and \texttt{bump}
-returns its argument plus one. An interval analysis with one state per program
-point must describe both calls at the return of \texttt{bump}. It therefore
-cannot prove either check. With contexts that record the argument, it
-analyzes \texttt{bump} once per argument and proves both. Goblint, an abstract
-interpreter for C~\cite{vojdani16,seidl26}, gains this precision by
-translating a program into a \emph{side-effecting constraint
+returns its argument plus one. An interval analysis without calling contexts must describe both calls at
+the return of \texttt{bump} and therefore cannot prove either check. With
+contexts that distinguish the arguments, it analyzes \texttt{bump} separately
+for each argument and proves both. Goblint, an abstract
+interpreter for C~\cite{vojdani16,seidl26}, supports this form of context sensitivity through a \emph{side-effecting constraint
 system}~\cite{seidl03,apinis12}. Its inequations relate unknowns
 indexed by program point and context, and the right-hand side of one unknown
 may also contribute to other unknowns. A generic top-down solver then solves the
-system. Goblint's soundness rests on tests: its issue tracker lists more than a
-hundred issues labeled as unsound since 2021, and a defect in any of these
-layers can turn a verdict false.
+system. A defect in any of these layers can produce an unsound verdict.
+\Cref{sec:evaluation} examines one such defect in Goblint's remainder operation.
 
-That solver has been verified. Stade et al.\ proved it partially correct in
+Stade et al.\ proved the solver partially correct in
 Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extended the proof to side
-effects~\cite{tilscher26}. When the solver terminates, it returns a
-\emph{post-solution}, a valuation that satisfies the inequations, on the
-unknowns it solved, a set closed under the reads of
-right-hand sides. Whether the equations describe the program lies outside
-that theorem. Closing the gap needs a concrete semantics in which a
-per-context state has something to cover. Such semantics (\cref{sec:related}) are classical on
-paper~\cite{sharir81,knoop92,jeannet04,vanhorn10}. To our knowledge, no
-mechanization connects a source semantics through such a context-indexed
+effects~\cite{tilscher26}. When the solver terminates, its valuation satisfies
+the inequations for all solved unknowns: it is a \emph{post-solution} on that
+set. The solved set is closed under the reads of its right-hand sides.
+The solver theorem does not establish that these equations soundly
+approximate program execution. To prove this, we need a concrete semantics
+that associates reachable stores with calling contexts. Such semantics are established in the
+literature~\cite{sharir81,knoop92,jeannet04,vanhorn10} (\cref{sec:related}). To
+our knowledge, no mechanization connects a source semantics through such a context-indexed
 semantics to a side-effecting constraint system and its verified solver.
 
-We mechanize this connection. The development, Voblint (verified Goblint), is written in
-Isabelle/HOL and contains no \texttt{sorry}. Its parts are the following.
+We mechanize this connection in Voblint (verified Goblint), an Isabelle/HOL
+formalization with the following contributions:
 \begin{itemize}
   \item We adapt the local traces of Schwarz et al.~\cite{schwarz21} to
     procedure activations. A context policy, which may admit several contexts
-    for one call, relates these activation traces to contexts. We prove that
-    five local obligations on a cover bound every valid trace in every admitted
-    context, over an arbitrary control-flow graph (\cref{sec:traces}).
+    for one call, relates these activation traces to contexts. For an arbitrary
+    control-flow graph, we give five local obligations on a cover and prove
+    that any cover satisfying them bounds the final store of every valid trace
+    in every admitted context (\cref{sec:traces}).
   \item We prove that every post-solution of the generated, context-routed
     equations meets these obligations, provided the context policy agrees with
     the routing of the equations. The verified solver enters only through its
     certificate (\cref{sec:equations}).
   \item We prove an end-to-end theorem about the analyzer function that
-    Isabelle exports to OCaml. Whenever it returns a report, every store a finite
-    source execution reaches is covered by the report at its program point
-    and satisfies the definite verdicts there, for every configuration
-    (\cref{sec:theorem}).
-  \item We show that the theorem is not vacuous, that a domain obligation
-    rejects a real Goblint defect, and how calling contexts change verdicts on
+    Isabelle exports to OCaml. For every accepted configuration, whenever the
+    analyzer returns a report, the report covers every store reached by a finite source
+    execution at its program point. Every definite verdict there holds for
+    those stores (\cref{sec:theorem}).
+  \item We demonstrate concrete instances of the theorem, show that the faulty
+    remainder operation behind a Goblint defect violates a domain obligation,
+    and compare the verdicts obtained with different calling contexts on
     recursive programs (\cref{sec:evaluation}).
 \end{itemize}
 The solver, side-effecting constraint systems, local traces, and Goblint's
-split between analyses and solvers are prior work. The context-indexed
-semantics is the structure of our proof. The end-to-end theorem is per program
-point. It is not a separate certificate for each context's row of the report
-(\cref{sec:theorem}).
+separation of analyses and solvers are prior work. Our proof uses
+context-indexed collecting semantics. The main end-to-end theorem combines
+the reported states across contexts at each program point. A companion
+theorem also establishes coverage by the reported states for each individual
+context (\cref{sec:theorem}).
 
-The scope is limited. The source language, VIMP, has integer variables,
-global variables, and recursive procedures with parameters and return values,
-but no pointers, arrays, or heap. The result is partial correctness: the
-analyzer answers only when its solver run terminates, and termination is not
-proved for every program. The parser and the report printer are unverified
-handwritten code. Isabelle's code generator, the OCaml toolchain, and a
-solver-tracing hook are trusted.
-
+VIMP supports local and global integer variables and recursive procedures with
+parameters and return values, but no pointers, arrays, or heap. The correctness
+results are conditional on solver termination, which is not proved for every
+program. The parser and report printer are unverified handwritten code;
+Isabelle's code generator, the OCaml toolchain, and the solver-tracing hook
+used in traced runs are trusted.
