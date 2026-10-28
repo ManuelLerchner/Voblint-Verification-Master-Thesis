@@ -8,8 +8,8 @@ approach, which tags information with the history of calls~\cite{sharir81}.
 Voblint's call-string policy follows the second, and its entry-state policy,
 which indexes a callee's exit states by its entry state, resembles a
 functional approach tabulated per input. Knoop and Steffen handle the locals of recursive procedures with
-stacks of lattice elements, of which the maximal-fixpoint strategy needs only
-two~\cite{knoop92}; Voblint's return has the shape of their return
+stacks of lattice elements; their maximal-fixpoint strategy uses stacks of
+length at most two~\cite{knoop92}; Voblint's return has the shape of their return
 function~\cite[§4.1]{knoop92}. Reps et al.\ compute precise solutions when
 the set of dataflow facts is finite and the transfer functions are
 distributive~\cite{reps95}. Voblint requires neither a finite domain nor
@@ -20,9 +20,9 @@ call-string and functional approaches~\cite{jeannet04}. Van Horn and Might
 derive sound analyses from abstract machines by bounding their
 stores~\cite{vanhorn10}. These approaches relate analysis contexts to concrete
 executions. In the a posteriori soundness framework of Might and
-Manolios~\cite{might09}, the state
-abstraction is fixed in advance and a map from concrete to abstract contexts
-is chosen per run, after the analysis, from non-empty candidate sets.
+Manolios~\cite{might09}, a map from concrete to abstract resources
+parameterizes the state abstraction. They construct a suitable map after
+the analysis.
 Voblint instead derives its entry-state context relation from the solution;
 \oblig{Total} ensures that every call from a covered store admits a callee context
 (\cref{sec:equations}).
@@ -38,8 +38,8 @@ abstract interpretation for IMP in Isabelle/HOL~\cite{nipkow12,nipkow14}, and
 Voblint's non-relational domains follow their generic interpreter. Like the
 verified analyzers of Franceschino et al.~\cite{franceschino21} and Cachera and
 Pichardie~\cite{cachera10}, Nipkow and Klein's IMP interpreter targets a language without procedures.
-Michelland et al.\ make soundness proofs reusable by sharing one interpreter
-between the concrete and the abstract semantics~\cite{michelland24}. Cachera
+Michelland et al.\ derive concrete and abstract interpreters from a shared
+monadic denotation and prove the abstract interpreter sound~\cite{michelland24}. Cachera
 et al.\ compute a context-insensitive dataflow analysis with a verified solver
 for ordinary inequations~\cite{cachera05}.
 
@@ -58,9 +58,10 @@ has several indices and present calling contexts as one such indexing. The
 activation collecting semantics is a covering of this relational kind. Among
 Isabelle developments, Lammich and Müller-Olm verify the soundness and
 precision of a conflict analysis for programs with procedures and
-threads~\cite{lammich07afp}, Wasserrab verifies an interprocedural
-slicer~\cite{wasserrab09afp}, and Breitner formalizes Shivers' control-flow
-analysis for functional programs~\cite{breitner10afp}.
+threads~\cite{lammich07afp}, and Breitner formalizes Shivers' control-flow
+analysis for functional programs~\cite{breitner10afp}. Wasserrab proves
+correctness of HRB interprocedural slicing by weak simulation~\cite{wasserrab09afp}.
+This preserves slicing observations; Voblint instead bounds reachable stores.
 
 \subparagraph*{Verified solvers.}
 Hofmann et al.\ verify a local generic solver in Coq~\cite{hofmann10}, and de
@@ -68,9 +69,10 @@ Vilhena et al.\ verify one that discovers dependencies dynamically in
 Iris~\cite{devilhena20}. Stade et al.\ prove the top-down solver partially
 correct in Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extend it to side
 effects with a generic interface for update rules~\cite{tilscher26}. Voblint
-reuses this solver formalization. Their termination result for top-down solvers without
-side effects assumes a finite type of unknowns~\cite{tilscher26jar}, which
-Voblint's node and context types are not.
+reuses this solver formalization. Their termination theorem for the solver
+with widening and narrowing in phases assumes finitely many
+unknowns~\cite{tilscher26jar}. Voblint does not establish this condition
+for entry-state contexts.
 
 \subparagraph*{Goblint and local traces.}
 Side-effecting constraint systems~\cite{seidl03,apinis12} and the split
@@ -81,8 +83,3 @@ Schwarz et al.\ prove
 Goblint's thread-modular analyses sound against local traces on
 paper~\cite{schwarz21,schwarz23}. Activation traces adapt this construction
 to sequential procedure activations; the adaptation establishes no concurrency result.
-
-\subparagraph*{Differences from prior work.}
-The contribution is the mechanized connection of these existing components,
-from source executions to the exported analyzer's reports, rather than a new
-analysis or solver algorithm.
