@@ -266,10 +266,10 @@ unknown to which every program point contributes. They also serve calling
 contexts. Under some context policies, a callee's contexts become known only
 while the system is solved, so each call contributes its entry state to the
 callee instead of the callee listing its callers in advance (@sec:side-effects). For the solver itself, a proof already exists. The top-down (TD)
-solver that Goblint uses, including its extension to side effects, has been formalized
+solver algorithm, including an extension to side effects, has been formalized
 and proved partially correct in Isabelle/HOL @stade24 @tilscher26. When it
 terminates, it returns values that satisfy the inequalities of the queried
-unknown and of every unknown it transitively reads
+local unknown and of every local unknown it transitively reads
 (#isaconst("part_post_solution", thy: "Basics_side")). Whether the equation
 system describes the program, and whether the verdicts computed from its solution hold, lies outside that theorem.
 

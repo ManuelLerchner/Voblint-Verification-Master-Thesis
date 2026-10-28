@@ -10,8 +10,10 @@ one another. The analyzer is exported from the theories, the thesis cites
 their names and statements, and both the site and the thesis quote the
 analyzer's output. Every change to the theories can therefore make another
 part stale, and keeping them consistent is engineering work outside the proof.
-Isabelle offers comparatively little project-level tooling for this beyond its
-distribution. Users have pointed this out as well @paulson26lean
+For this project, the distribution's tools were supplemented with checks
+connecting the theories, analyzer output, and document. A reader commenting on
+Paulson's discussion of proof assistants @paulson26lean also criticized
+Isabelle's build and contribution tooling
 (#link("https://github.com/lawrencecpaulson/lawrencecpaulson.github.io/issues/62#issuecomment-4333878708")[reader comment]). The need grew with AI assistance. Agents wrote many proofs
 and much of the surrounding code (#link(<ai-use>)[statement on the use of
   generative AI]), and a reviewer cannot read every line they produce. A change
@@ -23,7 +25,7 @@ not the agent, decide whether the repository is consistent.
 One repository holds everything this thesis describes: the Isabelle theories,
 a submodule reference to the vendored TD solver, the exported analyzer with its
 command-line tool and playground, the regression corpus, and the sources of
-this thesis. Each release is archived on Zenodo with a citable DOI @voblint,
+this thesis. Released snapshots are archived on Zenodo with a citable DOI @voblint,
 and the project site hosts the playground, the explainer, and the rendered
 theories that every Isabelle name in this thesis links to.
 
@@ -40,9 +42,9 @@ short field and constructor names that clashed with downstream theories, and
 #link("https://github.com/stilscher/td-verification/pull/16")[PR 16] adds facts
 about the solver's definitions, such as #isathm("solve_dom_of_solve_c"), that
 #isathm("td_certified_solver") uses (@sec:certificate). At the time of
-writing, all four pull requests await review. The solver's repository is
-private, so the development cannot yet be built from public sources alone,
-and there are plans to publish the solver in the Archive of Formal Proofs.
+writing, all four pull requests await review. The upstream solver has a public artifact @tilscher26artifact. Voblint's
+modified fork remains private, so reproducing this development still
+requires access to that exact dependency.
 
 == OCaml packages on conda-forge
 
@@ -83,8 +85,8 @@ lines per context policy by interpreting a shared locale
 (@sec:instances-supply). The product state of
 @ch:cooperation is written by hand, with one field per analysis, each of a
 different type. A dependently typed logic could express such a heterogeneous
-structure once @chlipala13cpdt[ch. 9], but HOL's simple types cannot, so adding
-an analysis adds a field and one case to each function over the analyses.
+structure directly @chlipala13cpdt[ch. 9]. With the chosen HOL encoding,
+adding an analysis adds a field and a case to each function over the analyses.
 
 The most important derived file is the analyzer itself. Isabelle's code
 generator exports #isaconst("run_voblint") as OCaml, and the repository commits

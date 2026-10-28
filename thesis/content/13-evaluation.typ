@@ -360,8 +360,7 @@ measured on programs selected by someone else. Monniaux's tutorial on the flavor
 interpretation walks through finite lattices, relational domains, widening and
 narrowing, and alternatives to iterative solving. For each, it gives a small
 program on which a standard analysis gains or loses precision @monniaux24.
-Every program of the tutorial that VIMP can express is transliterated into a
-regression fixture of
+The tutorial programs expressible in VIMP are adapted into regression fixtures in
 #link(repo-blob + "tests/regression/28-flavors")[`28-flavors`], and Voblint's
 verdicts on them are registered as claims. Each check holds in every execution, so each
 #verdict("UNKNOWN") below is lost precision.
@@ -509,8 +508,8 @@ express (@sec:flavors-foiled).
 
 #_flavor("flavors-not-inductive-sign")
 
-In this loop from the tutorial @monniaux24[slide 27], `i` takes the values $4$
-and $2$ at the check, so `i > 0` holds. The property
+Adapting the tutorial loop @monniaux24[slide 27] to start at $4$ rather than
+$6$, `i` takes the values $4$ and $2$ at the check, so `i > 0` holds. The property
 is not inductive, however. If all that is known at the loop head is that `i`
 is positive, `i` may be $1$, and the next iteration then yields $-1$. Sign can
 express `i > 0` but nothing stronger about `i`, so the loop head reaches every
@@ -561,8 +560,9 @@ bounded loop, which counts `i` to $10$ (claim
 
 #_flavor("flavors-reset-bound-interval")
 
-Widening sends the upper bound of `i` to $+infinity$, and narrowing through the
-test `i >= 10` brings it back to $9$ @monniaux24[slide 59]. Both checks are
+Widening sends the upper bound of `i` to $+infinity$; narrowing through
+`i >= 10` restores $9$. The tutorial uses a machine-integer upper bound
+@monniaux24[slide 59]. Both checks are
 #_vv("flavors-reset-bound-interval", "i <= 9") over
 #absval(raw(claim-check("flavors-reset-bound-interval", "i >= 0").at(4).split("i=").at(1)))
 (claim #claim-ref("flavors-reset-bound-interval")). Goblint's
@@ -601,9 +601,9 @@ The known repairs change how the solver iterates. Goblint proves both checks
 when it delays widening by $10$ rounds @blanchet03[§7.1.3], but not by $9$, so
 the delay must exceed the loop bound. It also proves them with threshold
 widening @blanchet03[§7.1.2], but only when the thresholds include the $9$ of
-the check itself. Policy iteration @costan05[§3.2] and guided static analysis
-@gopan07 replace the decreasing iteration altogether. In Voblint, each repair
-would change the vendored solver and its partial-correctness proof.
+the check itself. Policy iteration @costan05[§3.2] solves successive selected policies; guided
+static analysis @gopan07 analyzes growing program fragments and can use
+narrowing within each phase. Neither is implemented in Voblint.
 
 The flavors benchmark has eight checks on small programs, so it compares the
 mechanisms of the two analyzers and says little about their precision on
@@ -811,8 +811,8 @@ sets and maps are lists (@sec:codegen), which membership tests, unions, and dupl
 removal scan element by element. The Collections
 Framework @lammich10collections refines abstract sets and maps into balanced trees or hash
 tables, and the Light-weight Containers @lochbihler13containers replace the list-based
-default of code generation. Either route changes only the code setup and leaves the
-soundness proofs as they are.
+default of code generation. The former requires refinement proofs, the latter a code-generation setup.
+Neither has been evaluated for Voblint.
 
 On one machine, the generated analyzer thus handles the small programs of the regression
 corpus in acceptable time, while its data structures limit how far it scales.

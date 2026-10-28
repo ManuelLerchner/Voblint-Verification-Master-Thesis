@@ -14,7 +14,7 @@ soundness proofs drastically reduce the likelihood of such bugs.
 This thesis presents Voblint, short for verified Goblint, a static analyzer
 modeled on the Goblint analyzer for C programs. Like Goblint, Voblint translates the program into a
 control-flow graph, derives a system of equations from the graph, and solves
-the system with a generic solver. Previous work proved Goblint's solver
+the system with a generic solver. Previous work proved a formalization of the solver algorithm
 partially correct @stade24 @tilscher26, so whenever it terminates, its result
 satisfies the equations. This alone does not make the analyzer sound. The graph
 also has to cover every execution of the program, and the equations have to

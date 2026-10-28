@@ -22,7 +22,7 @@ and raises an alarm at a possible recursive call, and the interpreter of
 Nipkow and Klein analyzes IMP, which has no procedures. Goblint instead solves
 equations over unknowns indexed by program point and calling context, publishes
 side effects to global unknowns, and computes the solution with a top-down
-solver. The TD solver itself has been verified @tilscher26, but no proof connects
+solver. A formalization of TD has been verified @tilscher26, but no proof connects
 Goblint's solved equations to the executions of the program. Voblint keeps Goblint's architecture and
 states a CompCert-style theorem about the analyzer it runs. As far as the author is aware, a proof that connects context-indexed,
 side-effecting equations and their solver to source executions has not been
@@ -164,12 +164,11 @@ pointers, a heap, threads, machine integers, and most of Goblint's analyses
 the gap between VIMP and C is the largest. Because VIMP lacks these features and
 computes with unbounded integers, a verdict about a VIMP program
 does not carry over to a C program with the same text (@sec:vimp-vs-c). The
-adequacy of #isaconst("pstep") itself is argued rather than proved. As far as the author is aware, no commonly
-accepted C11 semantics exists in Isabelle against which #isaconst("pstep")
-could be checked @brecknell24autocorres2 @tuong19isabellec @krebbers15phd
-@memarian23phd.
+adequacy of #isaconst("pstep") itself is argued rather than proved. Relating VIMP to AutoCorres2 @brecknell24autocorres2, Isabelle/C
+@tuong19isabellec, CH2O @krebbers15phd, or Cerberus @memarian23phd would require
+a verified translation for a common fragment.
 
-A second limitation concerns the evaluation of precision. No precision or completeness theorem is proved, so the evidence for precision
+A second limitation concerns the evaluation of precision. No general precision or completeness theorem is proved, so the evidence for precision
 rests on examples. The regression corpus is small and its expected verdicts were set by hand (@sec:eval-corpus),
 and beyond the small comparison of @sec:eval-flavors, no agreement rate with
 Goblint is measured (@sec:rel-goblint).
@@ -201,13 +200,10 @@ locals, so a return can
 resume the caller with the locals it had before the call (@sec:calls).
 Features that keep this assumption, such as machine integers, change the
 step functions and the proofs that unfold them, while the contract and its
-composition keep their shape. Pointers, shared mutable memory, and threads would invalidate this assumption. With
-a pointer into the caller's frame or into the heap, a callee can modify data the
-caller reads after the return, and with threads, other code can run between a
-call and its return. Such features
-would require extending the trace semantics @sotin11 @schwarz21, and the
-soundness arguments that depend on its current separation of caller and callee
-state would need substantial revision.
+composition keep their shape. A heap could be modeled as shared state with new transfers and proofs.
+Pointers into caller frames break the separation of locals @sotin11; threads
+add interference @schwarz21. These features require revisiting the trace
+semantics and its soundness argument.
 
 Revisions of this scale may become more feasible as AI-assisted tools improve.
 Such tools have already made large-scale mathematical formalization practical

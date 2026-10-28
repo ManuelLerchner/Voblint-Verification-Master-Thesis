@@ -836,8 +836,8 @@ is not complete, so C may differ from VIMP in further places.
       [`&&`, `||`], [both operands evaluated],
       [second operand only if needed (#c11("6.5.13p4"), #c11("6.5.14p4"))],
       [initial values], [globals $0$, `main`'s locals arbitrary],
-      [static $0$, automatic indeterminate (#c11("6.7.9p10"))],
-      [callee locals], [$0$ on every entry], [indeterminate (#c11("6.7.9p10"))],
+      [uninitialized: static $0$, automatic indeterminate (#c11("6.7.9p10"))],
+      [callee locals], [$0$ on every entry], [uninitialized automatic: indeterminate (#c11("6.7.9p10"))],
       [checks], [never stop the execution, never refine],
       [`assert` aborts on $0$ unless `NDEBUG` (#c11("7.2p1"), #c11("7.2.1.1"))],
       [`min`, `max`], [library calls (#isaconst("special_table"))], [no counterpart],
@@ -884,10 +884,7 @@ such as the Simpl programs that the C parser of AutoCorres2
 @leroy09. Relating VIMP to them would need a translation with its own adequacy
 argument.
 
-These differences limit what a verdict says about a C program. The subject of
-the formalization, however, is the analyzer architecture, and VIMP has the
-features this architecture has to handle: procedures, recursion, locals and globals, and
-calls with results. Since VIMP also has the shape of Goblint's normalized
-input, a C front end with a verified translation could reuse the framework,
-although each omitted feature would add its own clauses to the semantics, the
-compiler and the soundness proofs (@sec:vimp).
+VIMP supplies the features needed to study this analyzer architecture:
+procedures, recursion, locals, globals, and calls with results. A C front end
+could reuse the framework through a verified translation, with a preservation
+argument for each additional feature.

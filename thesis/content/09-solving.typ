@@ -264,7 +264,7 @@ The soundness theorem of @sec:eq-discharge needs a post-solution on a set of
 unknowns that contains the program entry and is closed under execution steps.
 A solve that returns provides something different. It gives a valuation #sol
 and a set $V$ of local unknowns on which #sol is a post-solution, and $V$ is
-closed under the reads of right-hand sides, starting from the result of
+closed under local reads of right-hand sides, starting from the result of
 `main`. The solver thus works backward from that result, whereas the theorem
 follows executions forward from the entry. The two directions meet because
 every node of a procedure reaches the procedure's result, even code after a

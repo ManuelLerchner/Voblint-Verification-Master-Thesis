@@ -22,12 +22,11 @@ The analyzers applied to real C programs are tested rather than proved
 procedures.
 @tab:production-analyzers compares six of them with Voblint. Five of them claim
 to be sound. Pulse-X is a bug finder instead, and its under-approximating
-soundness theorem is proved on paper @le22[pp. 81:2--81:3]. Four of them inline
-the callee at every call and therefore need no context policy
-@blanchet03[§5.3] @eva-manual[§5.3] @journault19[§5.1] @brat14[§3]. Inlining
+soundness theorem is proved on paper @le22[pp. 81:2--81:3]. Four reanalyze the callee at each call
+@blanchet03[§5.4] @eva-manual[§5.3] @journault19[§5.1] @brat14[§3]. Inlining
 cannot handle unbounded recursion, and these tools exclude recursion, unroll it
 to a bounded depth, rely on user-written contracts, or assume that a recursive
-call may change any value @blanchet03[§5.3] @eva-manual[§6.3.9]
+call may change any value @blanchet03[§5.4] @eva-manual[§6.3.9]
 @mopsa-manual[Limitations] (#link("https://github.com/NASA-SW-VnV/ikos/blob/ac7f7c1738976cabc58c6a53413df6e458995c38/analyzer/README.md#analysis-assumptions")[IKOS README]). Goblint and
 Voblint, in contrast, keep one abstract state per program point and calling
 context (@sec:state-of-art), and Voblint's theorem covers recursive calls.
@@ -35,7 +34,7 @@ context (@sec:state-of-art), and Voblint's theorem covers recursive calls.
 These tools are tested against independent evidence, such as
 compiled execution, other analyzers, or the known verdicts of benchmark
 programs. Such testing keeps finding errors. On eight analyzers for C and C++,
-metamorphic testing found 24 issues, 16 of them related to soundness, and
+interrogation testing found 24 issues, 16 of them related to soundness, and
 seven of the analyzers had soundness issues, MOPSA among them
 @kaindlstorfer24[p. 326, Tab. 2; p. 329].
 
@@ -63,7 +62,7 @@ seven of the analyzers had soundness issues, MOPSA among them
       [Pulse-X @le22], [C], [bug finding], [summaries], [unrolled], [pure conditions],
       [one domain], [none],
       [Goblint @saan23], [C], [sound], [per context], [analyzed], [Apron], [products, queries],
-      [TD algorithm],
+      [TD algorithm @stade24 @tilscher26],
       table.hline(stroke: 0.4pt),
       [*Voblint*], [VIMP], [proved sound], [per context], [covered], [order analysis],
       [products, queries], [end to end],
@@ -166,7 +165,7 @@ solver, and that solver handles only ordinary inequations without side effects
       [Cachera, Pichardie @cachera10], [Coq], [While], [no procedures], [none],
       [structural], [yes],
       [Dabrowski, Pichardie @dabrowski09], [Coq], [Java-like], [covered],
-      [object-sensitive], [specified], [no],
+      [functional policy], [specified], [no],
       [Nipkow, Klein @nipkow14], [Isabelle], [IMP], [no procedures], [none],
       [iterator], [in prover],
       [Lammich, Müller-Olm @lammich07afp], [Isabelle], [flowgraphs], [exact],
@@ -187,7 +186,7 @@ solver, and that solver handles only ordinary inequations without side effects
     recursive programs, _exact_ interprets calls and returns exactly, and _no
     procedures_ means the language has none. _Contexts_ says how calls are
     distinguished: _per call site_ reanalyzes a function at every call site,
-    _object-sensitive_ computes contexts by a function, _summaries_ computes
+    _functional policy_ computes a context by a function, _summaries_ computes
     one summary per procedure, _set per call_ lets the context policy return
     several contexts for one call, and _none_ and _intraprocedural_ mean that
     calls are not distinguished or not analyzed. _Fixpoint_ says how the
@@ -210,18 +209,17 @@ pattern (@sec:domain-contract). Its collecting semantics, however, ranges over
 activation traces of a procedure-aware control-flow graph (@ch:traces),
 because a return must know which caller resumes.
 
-Other works make soundness proofs reusable by sharing one interpreter between
-the concrete and the abstract semantics @michelland24 @keidel18 @darais15.
+Other works derive concrete and abstract interpreters from shared semantic
+definitions @michelland24 @keidel18 @darais15.
 Voblint instead splits analysis, context policy, and solver for a
 constraint-based analyzer and composes them in one theorem,
 #isathm("activation_collect_dg_sound"). Executable verified analyzers are not
 new either. Cachera and Pichardie extract theirs to OCaml @cachera10[§§1, 6],
 and the analyzer of Franceschino et al. runs in a browser @franceschino21.
-Interprocedural analyses have also been verified in Isabelle before
-@lammich07afp @wasserrab09afp @breitner10afp. None of these entries claims an
-extracted analyzer, however, and none of their semantics represents one
-activation with its caller chain, the object Voblint's context relation
-#isaconst("activation_context_rel") reads.
+Other Isabelle developments verify conflict analysis @lammich07afp,
+HRB interprocedural slicing @wasserrab09afp, and Shivers' control-flow
+analysis @breitner10afp. The slicing result preserves observations by weak
+simulation; Voblint bounds stores in each admitted calling context.
 
 == Verified solvers and termination results <sec:rel-solvers>
 
@@ -234,16 +232,16 @@ Isabelle/HOL @stade24. Tilscher et al. @tilscher26 extend this line to
 $"TD"_"side"$, which accepts contributions to global unknowns, verify it
 against a generic interface for update rules, prove five update rules of
 Stemmler et al. @stemmler25 sound, and refine the solver to executable code.
-For updates without widening and narrowing, they also prove that a terminating
-solve returns the least partial post-solution, minimal in both valuation and
-solved set. CompCert similarly hides its
+For their abort-enabled variant with precise updates and monotonic right-hand
+sides, dependencies, and side effects, they also prove minimality of the
+valuation and solved set. CompCert similarly hides its
 intraprocedural dataflow solvers behind a module type whose clients rely only
 on fixpoint properties of the result @compcertKildall @laspina25.
 
-Termination results exist, but none applies to Voblint. Tilscher et al. prove
-termination for top-down solvers without side effects over a finite type of
-unknowns @tilscher26jar[Thm. 2, Cor. 1], whereas Voblint's unknowns pair nodes
-of an infinite type with contexts (@sec:certificate). Seidl and Vogler prove on
+Tilscher et al. prove termination for top-down solvers without side effects
+over a finite set of unknowns, with further hypotheses on widening and
+monotonicity @tilscher26jar[Thm. 2, Cor. 1]. These conditions have not been
+established for Voblint (@sec:certificate). Seidl and Vogler prove on
 paper that their side-effecting solver terminates when side effects target
 only unknowns without a right-hand side and only finitely many unknowns are
 encountered @seidl21[§9, Thm. 5]. Their result assumes widening and narrowing
@@ -270,8 +268,8 @@ resembles the functional approach tabulated per input @sharir81. At the return, 
 callee's exit state (@sec:calls), the shape of the return function of
 #cite(<knoop92>, form: "prose", supplement: [§4.1]). Reps et al. solve such
 problems precisely when the facts are finite and the transfer functions
-distributive @reps95, whereas Voblint requires neither and proves no precision
-result. Seidl and Fecht model procedures by a pushdown automaton that pushes an
+distributive @reps95, whereas Voblint requires neither and proves no general
+precision guarantee. Seidl and Fecht model procedures by a pushdown automaton that pushes an
 activation record at each call and pops it at each return @seidl00[§4], and
 Voblint's activation traces keep this structure per activation (@ch:traces).
 The entry-state policy's unknowns, a node
@@ -281,11 +279,9 @@ $⟨v, d⟩$ of their forward accumulation @seidl00[§7.1].
 Trace partitioning abstracts a set of traces by indexing it with control
 history before abstracting states @rival07. Rival and Mauborgne define both
 partitions and coverings, in which one trace may belong to several indices,
-and present calling-context sensitivity as one such indexing. They also note
-that the function mapping tokens to tokens in a covering may be replaced by a
-relation @rival07[Rem. 3.2.4]. Voblint's activation collecting semantics
-is a covering of this relational kind, since a context policy may admit one
-activation in several contexts. Voblint mechanizes the indexing over
+and present calling-context sensitivity as one such indexing. Voblint's activation collecting semantics
+forms an overlapping covering: a context policy may admit one activation in
+several contexts. Voblint mechanizes the indexing over
 activation traces and proves that the solved, routed result bounds the
 activation collecting semantics of every admitted context. Contexts also
 determine how many unknowns a solve creates. The context lifters of Erhard et
@@ -343,10 +339,9 @@ and caches answers per transfer
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml")[`mCP.ml`]
 at revision `5320a6b7`). Voblint's combination follows this design and adds a
 proof obligation per analysis that quantifies over every channel that holds.
-Unlike a reduced product @cousot79 @rival20[§5.1.2], which Int uses
-(@sec:reduced-product), the product state keeps separate carriers and
-exchanges facts only through answers, so no reduction operator has to be
-proved for a pair of analyses. Verasco threads its channels so that the second
+Int uses an explicit reduced-product operator @cousot79 @rival20[§5.1.2]
+(@sec:reduced-product). The cooperating analyses exchange facts through
+queries, without a pair-specific reduction operator. Verasco threads its channels so that the second
 domain can query the state the first has just computed @jourdan15[§7], whereas
 Voblint's answers describe the predecessor state only, as Goblint's do.
 

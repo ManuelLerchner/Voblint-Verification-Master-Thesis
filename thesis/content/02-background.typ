@@ -560,11 +560,11 @@ $v$ and a context $c$ @apinis12[§3], so every context of a procedure gets its
 own copy of the procedure's unknowns.
 
 Sharir and Pnueli describe two classical choices of what a context records
-@sharir81. The call-string approach uses the
-most recent call sites as the context. Since `bump(5)` and `bump(4)` are
+@sharir81. The call-string approach records calling histories; bounded variants keep
+the most recent sites. Since `bump(5)` and `bump(4)` are
 called from different sites, each gets its own copy. The functional approach
-instead summarizes a procedure by its effect on each entry state, computed
-only for the entry states that occur. With the entry state as context, `bump`
+summarizes a procedure's effect on entry states. Demand tabulation computes
+only entries encountered during analysis. With the entry state as context, `bump`
 gets one copy for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the
 results $6$ and $5$. Neither choice subsumes the other. Only entry states
 separate two calls from one site with different arguments, and only call
@@ -657,19 +657,19 @@ locally, on demand from a query, as the solver RLD does @hofmann10. Voblint
 reuses the verified local top-down solver (TD) of @stade24 @tilscher26.
 
 TD starts from the query and evaluates right-hand sides on demand. When the
-right-hand side of $x$ reads an unknown $y$, TD first solves $y$ and records
-that $x$ depends on $y$. An unknown is _stable_ if it has been evaluated and no
-unknown that it read has changed since then. When the value of $y$ changes
-later, every unknown that read it is _destabilized_ and evaluated again. The
+right-hand side of $x$ reads a local unknown $y$, TD first solves $y$ and records
+that $x$ depends on $y$. TD provisionally marks an unknown _stable_ before
+evaluating its right-hand side. A changed dependency removes that mark
+(_destabilizes_ the unknown) and triggers reevaluation. The
 unknowns at which a read closes a cycle are the solver's _widening points_
 @seidl21. TD detects them while it solves @apinis16[§4], so they can
 differ from the loop heads of the control-flow graph. At a widening point, it
 updates the old value with the new one by warrowing. The
 #link(playground-link(_counting-loop, trace: "verbose"))[playground] replays this run on the counting loop step by step. Contributions published to a
 global unknown are merged into its value by an _update rule_
-(#isalocale("update_rule")), which keeps one record per _origin_, the unknown whose right-hand side
-published the contribution (@sec:update-rules). The run ends
-once every unknown the query transitively reads is stable, and it returns this
+(#isalocale("update_rule")). Some rules retain separate contributions per
+_origin_, the local unknown publishing them (@sec:update-rules). The run ends
+once every local unknown the query transitively reads is stable, and it returns this
 _stable set_ $V$ together with the valuation $sol$.
 
 To solve on demand, TD has to discover which unknowns a right-hand side reads.

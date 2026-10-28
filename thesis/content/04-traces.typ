@@ -226,8 +226,8 @@ local trace is the view of one thread on a concurrent execution and ends at a
 program point with that thread's local state. The set of local traces is
 defined inductively, from initial traces, a rule that starts a created thread
 with the local state of its creator, and one rule per edge that extends a
-trace by a step. For a lock, this rule also incorporates a second trace, one
-that ends in an unlock of the same mutex. Activation traces take over this
+trace by a step. A lock also incorporates an initial trace or one ending
+in an unlock of the same mutex. Activation traces take over this
 scheme with an activation in place of a thread. $ctor("Root")$ corresponds to
 an initial trace, $ctor("Call", thy: "Activation_Trace_Def")$ to thread
 creation, a local step to a unary edge rule, and $ctor("Resume")$ to the
