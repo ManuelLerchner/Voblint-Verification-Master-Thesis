@@ -19,10 +19,11 @@ Stade et al.\ proved the solver partially correct in
 Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extended the proof to side
 effects~\cite{tilscher26}. When the solver terminates, its valuation satisfies
 the inequations for all solved unknowns: it is a \emph{post-solution} on that
-set. The solved set is closed under the reads of its right-hand sides.
-The solver theorem does not establish that these equations soundly
-approximate program execution. To prove this, we need a concrete semantics
-that associates reachable stores with calling contexts. Such semantics are established in the
+set. The solved set is closed under right-hand-side reads of local unknowns.
+To derive program correctness from this certificate, we must prove that the
+equations soundly approximate execution and that the report preserves their
+guarantee. This requires a concrete semantics associating reachable stores
+with calling contexts. Such semantics are established in the
 literature~\cite{sharir81,knoop92,jeannet04,vanhorn10} (\cref{sec:related}). To
 our knowledge, no mechanization connects a source semantics through such a context-indexed
 semantics to a side-effecting constraint system and its verified solver.
