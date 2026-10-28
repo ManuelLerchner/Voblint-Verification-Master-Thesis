@@ -100,7 +100,7 @@ class PdfInventoryTests(unittest.TestCase):
         )
         self.assertNotIn("document_tags", main_root)
         self.assertIn('document_variants = "document=+proof,+ML,+invisible"', main_root)
-        self.assertIn('    "readme.pdf"', main_root)
+        self.assertNotIn('    "readme.pdf"', main_root)
         self.assertIn('"Voblint_Examples_Sign.Example_Sign"', main_root)
         main_contents = (main / "document/contents.tex").read_text()
         full_contents = (full / "document/contents.tex").read_text()

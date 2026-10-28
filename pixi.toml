@@ -202,6 +202,10 @@ thesis-locale-graph = { cmd = "bash scripts/mk/locale-graph.sh", description = "
 
 # The entity dependency graph is read off the built heap by
 # thesis/tools/entity_deps.ML, so `thesis-deps-write` needs `pixi run isabelle-build` first.
+proof-map-figure = { cmd = "node scripts/capture_proof_map.mjs --check", description = "Check that the site and thesis treemap screenshots match their capture sources." }
+proof-map-data = { cmd = "python3 scripts/pages_proof_map.py", depends-on = [
+  "thesis-deps-export",
+], description = "Refresh the proof-map snapshot from Isabelle entities and rendered HTML." }
 thesis-deps-export = { cmd = "bash scripts/mk/entity-deps.sh", description = "Export the statement-level dependency graph of every project theory from the built Voblint_Examples heap." }
 thesis-deps-write = { cmd = "python3 thesis/tools/entity_deps.py --write", depends-on = [
   "thesis-deps-export",
@@ -265,6 +269,7 @@ thesis-generated = { depends-on = [
 ], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
 
 thesis-check = { depends-on = [
+  "proof-map-figure",
   "thesis-refs",
   "thesis-snippets",
   "thesis-domain-tree",

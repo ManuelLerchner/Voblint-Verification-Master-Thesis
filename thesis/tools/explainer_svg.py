@@ -163,19 +163,19 @@ VAR_MAP = {
 # palette; that threw away the metaphor and made the figure look like a generic
 # layer diagram.  The original values pass through unchanged.
 STRATA_MAP = {
-    "--strata-bedrock": "#5B5048",
-    "--strata-d1": "#8A6D52",
-    "--strata-d2": "#A47D58",
-    "--strata-d3": "#B98F63",
-    "--strata-d4": "#C9A57A",
-    "--strata-d5": "#B7AD85",
-    "--strata-d6": "#9FAE8B",
-    "--strata-d7": "#7FA38F",
-    "--strata-d8": "#8FB3B0",
-    "--strata-d9": "#A9C4C9",
-    "--strata-d10": "#C4D6D8",
-    "--strata-d11": "#D9C8A2",
-    "--strata-examples": "#7E9B5F",
+    "--strata-bedrock": "#566273",
+    "--strata-d1": "#4D76B5",
+    "--strata-d2": "#427F9E",
+    "--strata-d3": "#338F91",
+    "--strata-d4": "#439762",
+    "--strata-d5": "#88A248",
+    "--strata-d6": "#B7A33D",
+    "--strata-d7": "#C68A43",
+    "--strata-d8": "#C56954",
+    "--strata-d9": "#B85C85",
+    "--strata-d10": "#9264B2",
+    "--strata-d11": "#6C70C3",
+    "--strata-examples": "#A47B50",
 }
 
 # Custom properties that carry no colour.  Listed so the colour pass leaves

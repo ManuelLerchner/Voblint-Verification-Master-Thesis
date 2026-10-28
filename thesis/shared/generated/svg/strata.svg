@@ -6,20 +6,20 @@
 <style>
   .strata-svg { max-width: 1000px; }
   .stratum-part { outline: none; }
-  .stratum-part rect { fill: #D9C8A2; stroke: #37474F; stroke-opacity: 0.35; stroke-width: 1; }
-  .stratum-bedrock rect { fill: #5B5048; }
-  .stratum-d1 rect { fill: #8A6D52; }
-  .stratum-d2 rect { fill: #A47D58; }
-  .stratum-d3 rect { fill: #B98F63; }
-  .stratum-d4 rect { fill: #C9A57A; }
-  .stratum-d5 rect { fill: #B7AD85; }
-  .stratum-d6 rect { fill: #9FAE8B; }
-  .stratum-d7 rect { fill: #7FA38F; }
-  .stratum-d8 rect { fill: #8FB3B0; }
-  .stratum-d9 rect { fill: #A9C4C9; }
-  .stratum-d10 rect { fill: #C4D6D8; }
-  .stratum-d11 rect { fill: #D9C8A2; }
-  .stratum-examples rect { fill: #7E9B5F; }
+  .stratum-part rect { fill: #6C70C3; stroke: #37474F; stroke-opacity: 0.35; stroke-width: 1; }
+  .stratum-bedrock rect { fill: #566273; }
+  .stratum-d1 rect { fill: #4D76B5; }
+  .stratum-d2 rect { fill: #427F9E; }
+  .stratum-d3 rect { fill: #338F91; }
+  .stratum-d4 rect { fill: #439762; }
+  .stratum-d5 rect { fill: #88A248; }
+  .stratum-d6 rect { fill: #B7A33D; }
+  .stratum-d7 rect { fill: #C68A43; }
+  .stratum-d8 rect { fill: #C56954; }
+  .stratum-d9 rect { fill: #B85C85; }
+  .stratum-d10 rect { fill: #9264B2; }
+  .stratum-d11 rect { fill: #6C70C3; }
+  .stratum-examples rect { fill: #A47B50; }
   .stratum-bedrock rect { stroke-dasharray: 3 3; }
   .stratum-part text { fill: #37474F; font: 700 12px "Isabelle DejaVu Sans Mono", "DejaVu Sans Mono", monospace; text-anchor: middle; }
   .stratum-bedrock .stratum-part text, .stratum-d1 .stratum-part text { fill: #FAFAFA; }

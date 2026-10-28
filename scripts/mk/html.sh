@@ -19,5 +19,8 @@ test -n "$ISABELLE_HOME_USER" || { echo "ERROR: could not resolve ISABELLE_HOME_
 rm -rf "$HTML_DIR"
 mkdir -p "$HTML_DIR"
 cp -R "$ISABELLE_HOME_USER/browser_info/." "$HTML_DIR/"
+# Keep the interactive map with the HTML artifact: Pages needs no Isabelle runtime.
+bash "$REPO_ROOT/scripts/mk/entity-deps.sh"
+python3 "$REPO_ROOT/scripts/pages_proof_map.py" --html "$HTML_DIR" --out "$HTML_DIR/assets/proof-map.json"
 touch "$HTML_DIR/.nojekyll"
 echo "Open $HTML_DIR/Voblint/Voblint_Examples/index.html"

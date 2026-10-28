@@ -516,7 +516,7 @@ s
 
 String.translate
 
-(fn # "\"" => "\\\"" | # "\\" => "\\\\" | c => String.str c)
+(fn #"\"" => "\\\"" | #"\\" => "\\\\" | c => String.str c)
 
 s
 
