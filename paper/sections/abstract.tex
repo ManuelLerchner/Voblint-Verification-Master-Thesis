@@ -1,24 +1,24 @@
 \begin{abstract}
-Goblint-style abstract interpreters translate a program into side-effecting
-equations, with one unknown per program point and calling context, and solve
-them with a generic solver. The partial correctness of that solver has been
-verified in Isabelle/HOL, but the theorem does not connect the equations to
-the program. We mechanize this connection for a small imperative language with
-recursive procedures.
+Goblint-style analyzers solve side-effecting equations over shared global
+unknowns and local unknowns indexed by program point and calling context.
+An existing solver for these equations has been proved partially correct in
+Isabelle/HOL, but its theorem does not connect the equations to source
+execution. We mechanize this connection for a scalar imperative language
+with recursive procedures, but without pointers or heap memory.
+
 We adapt the local traces of Schwarz et al.\ to procedure activations,
-because a return must resume exactly the activation that made the call. A
-context policy relates each activation trace to the calling contexts it may
-belong to. The development provides (i) a coverage contract of five local
-obligations over an arbitrary control-flow graph, which bounds the final store
-of every valid trace in every admitted context; (ii) a proof
-that every post-solution of the generated, context-routed equations (a
-valuation satisfying all of them) meets the contract when the context
-policy agrees with the routing, using the verified solver only through its
-certificate; and (iii) an
-end-to-end theorem from a small-step source semantics to the verdicts of the
-analyzer function exported to OCaml, for every configuration it
-offers. The theorem is per program point: every reached store is covered by
-the report and satisfies its definite verdicts. It is partial correctness,
-since solver termination is not proved, and the language has no pointers or
-heap.
+retaining the caller that each return resumes. A relational context policy
+specifies which contexts are admissible for each concrete call. We give five
+local obligations on a cover and prove that, for any control-flow graph,
+any cover satisfying them covers every valid trace's final store in every
+admitted context. Post-solutions of the generated equations (valuations satisfying
+their inequations) satisfy this contract when the context policy agrees
+with the routing. The verified solver's certificate supplies such a
+post-solution.
+
+For every supported configuration, whenever the analyzer function exported
+to OCaml returns a report, the report covers every store reached by a finite
+source execution at its program point, and its definite verdicts hold for
+those stores. This establishes partial correctness; solver termination
+is not proved.
 \end{abstract}

@@ -1,25 +1,21 @@
 \subparagraph*{Data availability.}
-The Isabelle/HOL development and the regression corpus are public on GitHub,
-and an earlier version is archived on Zenodo~\cite{voblint}. That archive
-lacks the vendored solver, the claims and profiling data behind
-\cref{tab:contexts,tab:costs}, and the scripts that render the paper's tables;
-they will be released together with this paper. The vendored
-solver~\cite{tilscher26} is not yet public; it is planned for publication in
-the Archive of Formal Proofs. Until then the theories cannot be built from
-public sources alone.
+The Isabelle/HOL development and regression corpus are public on GitHub.
+The earlier Zenodo archive~\cite{voblint} lacks the vendored solver, the
+claims behind \cref{tab:contexts}, the profiling snapshot, and the table
+scripts. A reproducible release must archive these dependencies together.
+The solver~\cite{tilscher26} awaits publication in the Archive of Formal
+Proofs; until then, the theories cannot be built from public sources alone.
 
 \subparagraph*{Declaration about GenAI/LLM use.}
-Generative AI tools (Anthropic's Claude, OpenAI's ChatGPT and Codex, and
-Cursor) were used substantially in this work and contributed a large share of
-the implementation-level material under the author's supervision. In the
-Isabelle development, they generated many proofs once definitions and
-interfaces had stabilized, carried out refactorings across theories, and turned
-tactic-style proofs into structured Isar. They also assisted with design: they
-helped adapt the local traces of Schwarz et al.\ to procedure activations, and
-the requirements on activation traces were refined in collaboration with them.
-Agents wrote much of the surrounding tooling, including the command-line
-interface, the regression corpus, and the consistency checks. The author chose
-the research direction, selected and revised the designs, and approved the
-definitions and theorem statements; Isabelle checked every proof. The tools also assisted with literature search and with drafting
-and revising this text and its figures, which the author reviewed. Grammarly
-was used for spelling and grammar.
+The author extensively used Anthropic's Claude, OpenAI's ChatGPT and Codex,
+and Cursor. Under the author's supervision, these tools produced a large
+share of the implementation: Isabelle proofs after definitions and interfaces
+stabilized, cross-theory refactorings, and conversions of tactic-style proofs
+to structured Isar. They helped adapt the local traces of Schwarz et al.\ to
+procedure activations and refine the trace requirements. Agents wrote much
+of the command-line interface, regression corpus, and consistency tooling.
+The author chose the research direction, selected and revised designs, and
+approved definitions and theorem statements; Isabelle checked every proof.
+The tools also assisted with literature search and drafting and revising the
+text and figures, which the author reviewed. Grammarly checked spelling and
+grammar.
