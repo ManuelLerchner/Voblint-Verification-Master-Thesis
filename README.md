@@ -11,12 +11,33 @@
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 [![DOI](https://zenodo.org/badge/1222030547.svg)](https://doi.org/10.5281/zenodo.23260696)
 
+[![Treemap of the Isabelle formalization](docs/images/proof-map-treemap.png)](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/proof-map.html?view=treemap)
+
+Explore the [interactive proof map](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/proof-map.html)
+as a corpus wheel or treemap. Blocks group entities by session and theory;
+their area reflects entity counts, including generated declarations. Colors
+follow the session dependency layers. Zoom in to inspect entities and open
+their Isabelle documentation.
+
+## What is Voblint?
+
+Voblint is a context-sensitive static analyzer for VIMP, a small C-like language
+with integer variables and recursive procedures. Modeled on Goblint, it builds
+a control-flow graph, derives a system of equations, and solves them with a
+verified generic solver. Its soundness proof in Isabelle/HOL connects the
+parsed program to the analyzer's reported answers.
+
+The proof is modular: domains, analyses, and calling-context policies each
+establish their own soundness obligations. Activation traces connect individual
+procedure activations to the contexts used by the analysis. The analyzer is
+exported to OCaml and runs in a command-line tool and a
+[browser playground](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html).
+
 ## What is verified?
 
-Voblint proves end-to-end soundness of its executable analyzer. Whenever `run_voblint`
-returns a report, every reachable source configuration can be observed at one or more CFG
-nodes. At every such node, the report covers the reached store, and every definite verdict
-holds concretely.
+Whenever the analyzer returns a report, its abstract states cover every state
+that a finite execution of the program reaches. The reported verdicts follow
+from that coverage:
 
 ```math
 \underbrace{(\mathit{main}, s_0, [\,]) \to_p^{*} (r, s, \mathit{fs})}_{\text{source run}}
@@ -31,67 +52,22 @@ holds concretely.
 \underbrace{[\![\, \mathit{res} \,]\!]_{v} \subseteq \mathcal{V}_{\mathit{res}}(v)}_{\text{verdict soundness}}
 ```
 
-Every configuration a source run from an initial store $s_0$ reaches is
-observed at some CFG node, written $(r, s, \mathit{fs}) \rhd v$. In full the
-relation reads $p, s_0 \vdash (r, s, \mathit{fs}) \rhd v$: it also depends on the
-program $p$ and the initial store $s_0$ of the run. At every node
-$v$ where it is observed, the store $s$ is collected, is represented by the
-analyzer's report, and satisfies every definite verdict reported there.
+Read the formula from left to right: a source execution reaches a state $s$;
+that state corresponds to a graph node $v$; the analysis covers all reachable
+states there; and its definite verdicts hold for those states. The analysis may
+include states that no execution reaches, so it can report uncertainty.
 
-The residual command $r$ is not enough to determine a node, because equal
-commands can occur at different places. In `if (b) { x = 1; } else { x = 1; }`,
-for example, both branches leave the command `x = 1` behind, but the compiler
-places the two assignments at different nodes. The relation $\rhd$ therefore
-uses an elaboration of the program, which annotates every statement with the
-nodes the compiler emits for it and compiles to the same graph. Every run of the
-program lifts to a run of its elaboration, and the annotated command at which
-that run stops names $v$. A configuration reachable along two paths can be
-observed at two nodes, and the theorem covers each of them. The elaboration is
-used only in the proof, and `run_voblint` analyzes the program as written. The
-[headline theorem](#the-headline-theorem) gives the exact statement.
+For example, `PROVED` means an assertion holds whenever execution reaches it.
+`DEAD` means the point is unreachable. `REFUTED` means the assertion is false
+whenever reached; it does not establish that any execution reaches it.
 
-The context-indexed sets $\mathcal{A}(v, \kappa)$ cover the collecting
-semantics without loss, so their union
-$\mathcal{C}(v) = \bigcup_{\kappa} \mathcal{A}(v, \kappa)$ recovers it
-exactly. The two inclusions hold for every successful analyzer run, independently of
-any particular store, and the headline theorem uses them to conclude that the reached
-store is a member of all three sets. They are one-way guarantees. The report may describe
-stores that no run reaches, and the verdict semantics keeps only what the
-definite verdicts assert.
+The guarantee assumes an accepted program and configuration and a terminating
+solver run. Solver termination is not proved for every program. Parsing,
+code generation, the target-language toolchain, and presentation of results
+remain outside the proof.
 
-Each step is an Isabelle theorem:
-[`psteps_lift`](src/Program_Model/Compile/Elaborated_Compilation.thy),
-[`csim_point_compile_prog`](src/Program_Model/Compile/Elaborated_Compilation.thy),
-[`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
-[`node_collect_eq_Union_activation_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy),
-[`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy) and
-[`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy).
-
-[`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-states the whole chain for every run that returns a report, at every node the run is observed at.
-
-The report's states at $v$ can also be joined over their contexts. Every store
-the report describes at $v$ lies in the concretization of that join,
-$`[\![\, \mathit{res} \,]\!]_{v}
-\subseteq \gamma\big(\bigsqcup_{\kappa} \mathit{res}(v,\kappa)\big)`$
-([`report_sem_point_join`](src/Executable_Surface/CLI/Analysis_Report.thy)),
-so [`run_voblint_source_sound_joined`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-gives the same guarantee for the one state per point that the playground's
-control-flow view shows. The join can lose precision but not reached stores.
-
-## What is Voblint?
-
-Voblint is a machine-checked Isabelle/HOL framework for building, running and
-verifying interprocedural abstract interpreters, modelled on Goblint's D/G
-architecture. It chains verified CFG compilation, activation-trace operational
-semantics, executable equation generation, and a vendored verified top-down
-solver into one soundness statement about the analyzer's own output.
-
-The solver runs inside Isabelle/HOL and computes an abstract **post-solution**.
-With widening and narrowing in play that is not necessarily a least fixpoint.
-The end-to-end analyzer corollaries apply to that computed solution rather than to
-an externally supplied one; the generic framework theorems below them are
-stated for an arbitrary abstract bound.
+The [headline theorem](#the-headline-theorem) gives the precise statement and
+its connection to the Isabelle development.
 
 ## Running Voblint
 
@@ -421,7 +397,6 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 
 | Symbol | Reads as | Isabelle | Meaning |
 | --- | --- | --- | --- |
-| γ a | gamma of _a_ | [`gamma`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst) | the integers the abstract value _a_ represents |
 | 𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>&#42;</sup> c' | _c_ steps to _c′_ | [`pstep`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst) / [`psteps`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst) | one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure |
 | p,s0 ⊢ c ⊳ v | from _s₀_, _c_ is observed at node _v_ in _p_ | [`at_node`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Compile/Elaborated_Compilation.html#Elaborated_Compilation.at_node%7Cconst) | some run of the elaboration of program _p_ from store _s₀_ reaches an annotated configuration that erases to _c_, names node _v_ of the compiled graph and is related to _v_ by the simulation; a configuration reachable along two paths can be observed at two nodes |
 | 𝒢 | the global-variable classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |

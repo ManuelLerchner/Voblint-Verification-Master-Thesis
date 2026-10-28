@@ -167,7 +167,6 @@ def generate(destination, include_examples=False):
         "  document_files",
         '    "root.tex"',
         '    "contents.tex"',
-        '    "readme.pdf"',
     ]
     (destination / "ROOT").write_text("\n".join(root) + "\n")
     contents = []

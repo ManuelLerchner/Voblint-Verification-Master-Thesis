@@ -196,6 +196,7 @@
       <ul class="site-links">
         <li><a href="index.html" aria-current="page">How it works</a></li>
         <li><a href="profiling.html">Profiling</a></li>
+        <li><a href="proof-map.html">Proof map</a></li>
         <li><a href="formalization.pdf">Formalization</a></li>
         <li><a href="thesis.pdf">Thesis</a></li>
         <li><a href="paper.pdf">Paper</a></li>
@@ -280,6 +281,7 @@
         <a href="#verified">Verification scope</a>
         <a href="#chain">Proof chain</a>
         <a href="#theorems">Soundness theorems</a>
+        <a href="#formalization-map">Explore the formalization</a>
         <a href="#goblint">Voblint and Goblint</a>
         <a href="#limits">Limits</a>
         <a href="#further-reading">Further reading</a>
@@ -5226,6 +5228,24 @@ qed</code></pre>
     </section>
 
         <!-- ================================================================== -->
+    <section class="section" id="formalization-map" aria-labelledby="formalization-map-heading">
+      <div class="section-heading">
+        <p class="eyebrow">Inside the development</p>
+        <h2 id="formalization-map-heading">Explore the formalization</h2>
+        <p class="section-intro">The proof chain follows the main soundness results. The interactive proof map lets you explore the declarations around them, from the source semantics to the domain instances and the executable analyzer.</p>
+      </div>
+      <figure class="scene">
+        <a href="proof-map.html?view=treemap" aria-label="Open the interactive treemap">
+          <img src="assets/proof-map-treemap.png" alt="Treemap of exported Isabelle entities, grouped into session blocks and theory tiles. Colors follow the session dependency layers." loading="lazy" width="1866" height="1348" style="width: 100%; height: auto;">
+        </a>
+        <figcaption>
+          <p>Each small mark is an exported fact, constant, type or locale, including automatically generated declarations. The treemap groups them by session and theory; block area follows the number of entities. Colors match the dependency layers in the strata figure below. Gold diamonds mark facts cited in the thesis, and red stars mark selected source-level soundness results.</p>
+          <p>Switch to the corpus wheel to follow each theory’s declarations in radial streaks. Pinch to reveal more detail, use two-finger scrolling to pan, or search for a name. Click a mark to open its Isabelle documentation. The connecting lines show references in statements and specifications; they do not record which lemmas a proof uses.</p>
+          <p><a class="try-link" href="proof-map.html?view=treemap">Explore the interactive proof map ↗</a></p>
+        </figcaption>
+      </figure>
+    </section>
+
     <section class="section" id="goblint" aria-labelledby="goblint-heading">
       <div class="section-heading">
         <p class="eyebrow">Goblint correspondence</p>
@@ -5948,6 +5968,22 @@ qed</code></pre>
               <span class="resource-description">
                 Open <code>Voblint.thy</code>, the downstream entry point that presents
                 the certified pipeline and links its major layers and flagship theorems.
+              </span>
+            </span>
+            <span class="resource-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+
+        <li>
+          <a class="resource-card" href="proof-map.html">
+            <span class="resource-icon" aria-hidden="true">
+              <i class="fa-solid fa-diagram-project"></i>
+            </span>
+            <span class="resource-content">
+              <span class="resource-title">Interactive proof map</span>
+              <span class="resource-description">
+                Explore the formalization as a corpus wheel or treemap. Zoom into
+                sessions and theories, inspect entities, and open their Isabelle documentation.
               </span>
             </span>
             <span class="resource-arrow" aria-hidden="true">→</span>

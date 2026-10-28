@@ -58,7 +58,7 @@ BUILD_DATE="$(date -u +%Y-%m-%d)"
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'
   echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-  for entry in "/:1.0" "/playground.html:0.9" "/profiling.html:0.7" "/thesis.pdf:0.6" "/paper.pdf:0.6" "/formalization.pdf:0.5"; do
+  for entry in "/:1.0" "/playground.html:0.9" "/proof-map.html:0.8" "/Voblint/index.html:0.7" "/profiling.html:0.7" "/thesis.pdf:0.6" "/paper.pdf:0.6" "/formalization.pdf:0.5"; do
     printf '  <url><loc>%s%s</loc><lastmod>%s</lastmod><priority>%s</priority></url>\n' \
       "$SITE_URL" "${entry%%:*}" "$BUILD_DATE" "${entry##*:}"
   done

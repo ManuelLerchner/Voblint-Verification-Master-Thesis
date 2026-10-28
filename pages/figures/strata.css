@@ -1,17 +1,18 @@
-.scene-strata {
-  --strata-bedrock: #5b5048;
-  --strata-d1: #8a6d52;
-  --strata-d2: #a47d58;
-  --strata-d3: #b98f63;
-  --strata-d4: #c9a57a;
-  --strata-d5: #b7ad85;
-  --strata-d6: #9fae8b;
-  --strata-d7: #7fa38f;
-  --strata-d8: #8fb3b0;
-  --strata-d9: #a9c4c9;
-  --strata-d10: #c4d6d8;
-  --strata-d11: #d9c8a2;
-  --strata-examples: #7e9b5f;
+.scene-strata,
+.proof-map-page {
+  --strata-bedrock: #566273;
+  --strata-d1: #4d76b5;
+  --strata-d2: #427f9e;
+  --strata-d3: #338f91;
+  --strata-d4: #439762;
+  --strata-d5: #88a248;
+  --strata-d6: #b7a33d;
+  --strata-d7: #c68a43;
+  --strata-d8: #c56954;
+  --strata-d9: #b85c85;
+  --strata-d10: #9264b2;
+  --strata-d11: #6c70c3;
+  --strata-examples: #a47b50;
 }
 
 .scene-strata .strata-layout {
