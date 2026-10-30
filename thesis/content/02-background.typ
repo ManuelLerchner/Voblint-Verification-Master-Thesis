@@ -132,11 +132,10 @@
 
 @sec:state-of-art ended with a plan. Each step from source executions to the
 verdicts should relate two sets of concrete stores, so that a proof can check
-that the step loses nothing. This chapter introduces the ideas needed to state
-these steps. It first describes what a program can actually do, then how an
-analysis describes the same behavior more coarsely, and finally how a solver
-computes this description. A loop that counts from $0$ to $5$ is the running
-example for all three.
+that the step loses nothing. Stating these steps requires the
+stores a program can actually reach, the coarser descriptions an analysis
+computes for them, and the solver that computes these descriptions. A loop that
+counts from $0$ to $5$ is the running example for all three.
 
 == Control-flow graphs and the collecting semantics <sec:collecting>
 
@@ -144,8 +143,8 @@ An analysis describes the states a program can be in at each of its points, so
 the points are made explicit first. A _control-flow graph_ (CFG) has the program
 points as nodes and an edge for every way control can pass from one point to
 the next, labeled with the assignment or condition executed on the way.
-@fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
-the running example. The loop becomes a cycle through $h$, $b$, and $t$, and
+@fig:counting-loop shows the graph of the running example, which counts `i`
+from $0$ to $5$. The loop becomes a cycle through $h$, $b$, and $t$, and
 its _loop head_ $h$ is the node through which control enters and exits the cycle.
 
 #figure(
@@ -181,10 +180,10 @@ there. For
 programs with procedures, @ch:traces defines Voblint's version over activation
 traces (#isaconst("node_collect")).
 
-The collecting semantics is the exact answer an analysis approximates. An
-analysis is _sound_ if, at every program point, its result describes every store
-that the collecting semantics gives there. It may describe more stores,
-which costs precision, but never fewer.
+The collecting semantics is the exact answer an analysis approximates, and it
+makes soundness (@sec:intro-static) precise. An analysis is sound if, at every
+program point $v$, its result describes every store in $cal(C)(v)$. It may
+describe more stores, which costs precision.
 
 == Lattices and fixpoints <sec:lattices>
 
@@ -213,16 +212,16 @@ no states and $ltop$ describes all of them. A _complete lattice_
 (#isalocale("complete_lattice")) has a join $lJoin X$ and a meet $lMeet X$ for
 every subset $X$ @nipkow14[Def. 13.1] @mine17[Def. 2.5].
 
-Voblint does not need a complete lattice. Its solver requires only a join
+Voblint's solver requires less than a complete lattice, namely a join
 semilattice with a least element (#isalocale("bounded_semilattice_sup_bot"))
 that carries the widening and narrowing operators of @sec:widening. The solver
 joins two values at a time, whenever a new value reaches an unknown, so
 joins need to exist only for pairs. Joins of infinite sets would not help an
 executable analyzer anyway, since it computes only with finite representations.
 
-A numeric domain adds two operations to this structure. Its top element
-describes a variable about which nothing is known, for instance, a value read
-from input. Refinement at a branch adds an intersection, which does not have to
+A numeric domain adds a top element and an intersection to this structure. The
+top element describes a variable about which nothing is known, for instance, a
+value read from input. Refinement at a branch uses the intersection, which does not have to
 be the exact meet. It must keep every value that both operands admit, and its
 result must lie below both operands (#isalocale("sound_intersection"),
 @sec:branches). An intersection that admits more values than both operands
@@ -273,8 +272,7 @@ The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
 when $l' <= l$ and $u <= u'$. The join
 $[l, u] ljoin [l', u'] = [min(l, l'), max(u, u')]$ is the smallest interval
 containing both. An interval cannot have holes, so the join may contain values
-that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet
-intersects the bounds. This is the textbook domain. Voblint's representation
+that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet intersects the bounds. These operations form the textbook interval domain. Voblint's representation
 #isatype("ivl") admits every pair of bounds, so $lbot$ is one of several empty
 pairs (@sec:domain-carrier-laws).
 
@@ -541,14 +539,11 @@ warrowing update lies above the candidate
 (#isathm("warrowing_properties", thy: "Warrowing")), so an unknown whose value
 no longer changes satisfies its inequality. The solver's correctness theorem
 uses only this and holds whether the right-hand sides are monotone
-(@sec:td). Monotonicity is needed for the classical theory of least fixpoints,
-but not to certify that a returned valuation is a post-solution. Termination
-needs more. A classical widening is chosen so that repeated widening stabilizes
+(@sec:td). Termination needs more. A classical widening is chosen so that repeated widening stabilizes
 after finitely many steps @cousot77[§9.1.3] @cousot92plilp[§4], and a classical
 narrowing must also make repeated narrowing stabilize. The solver's classes
-omit these stabilization laws, since termination of the side-effecting TD that
-Voblint uses is not proved,
-so the laws they state do not make the solver terminate. Within these laws, the
+omit these stabilization laws, because termination of the side-effecting TD that
+Voblint uses is not proved (@sec:td). Within these laws, the
 choice of widening and narrowing affects only precision and termination.
 
 == Context-sensitive analysis of procedures <sec:interproc>
@@ -559,18 +554,17 @@ which abstract state a callee's body starts from. Take the calls `bump(5)` and
 unknown per program point, the entry of `bump` must cover both arguments, so,
 over intervals, its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
 that the first call returns $6$. A context-sensitive analysis instead
-separates the _activations_ of a procedure, each execution from its call to
-its return, by a _calling context_, an abstraction of how the activation was
-reached @aho06[§7.2.1]. Its unknowns become pairs $[v, c]$ of a program point
+separates the activations of a procedure (@sec:state-of-art) by their calling
+contexts (@sec:intro-static) @aho06[§7.2.1]. Its unknowns become pairs $[v, c]$ of a program point
 $v$ and a context $c$ @apinis12[§3], so every context of a procedure gets its
 own copy of the procedure's unknowns.
 
 Sharir and Pnueli describe two classical choices of what a context records
-@sharir81. The call-string approach uses the
-most recent call sites as the context. Since `bump(5)` and `bump(4)` are
+@sharir81. The call-string approach records calling histories; bounded variants keep
+the most recent sites. Since `bump(5)` and `bump(4)` are
 called from different sites, each gets its own copy. The functional approach
-instead summarizes a procedure by its effect on each entry state, computed
-only for the entry states that occur. With the entry state as context, `bump`
+summarizes a procedure's effect on entry states. Demand tabulation computes
+only entries encountered during analysis. With the entry state as context, `bump`
 gets one copy for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the
 results $6$ and $5$. Neither choice subsumes the other. Only entry states
 separate two calls from one site with different arguments, and only call
@@ -585,9 +579,7 @@ A context-sensitive analysis handles a call with two abstract operations @apinis
 $"enter"^sharp$, maps the caller's state before the call to the callee's entry
 state. The callee's context is chosen at the same point, for example as the
 extended call string or as this entry state itself. The second, $"comb"^sharp$,
-computes the caller's state after the call. It needs the callee's exit state,
-which holds the return value, and the caller's state before the call, which
-holds the caller's local variables that the callee does not see. Goblint's
+computes the caller's state after the call. It needs the callee's exit state for the return value and the caller's state before the call for the caller's local variables, which the callee does not see. Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",
 )[constraint generator]
@@ -595,7 +587,7 @@ implements them as `enter` and `combine` (@sec:calls).
 
 == Side-effecting constraint systems <sec:side-effects>
 
-The analyses so far are _flow-sensitive_: they respect the order in which
+The analyses so far are _flow-sensitive_. They respect the order in which
 statements execute and therefore compute a separate abstract state for every
 program point. For some facts, one value for the whole program is enough. A
 _flow-insensitive_ analysis ignores execution order and keeps one abstract
@@ -603,9 +595,7 @@ value for an aspect of the state across the program, for example, one range for
 a global variable, and mixed analyses choose between the two per aspect
 @seidl26.
 
-A flow-insensitive fact needs an unknown of its own that belongs to no program
-point, and every point that changes the fact has to feed its new value into
-that unknown. An ordinary right-hand side for the unknown would have to list
+A flow-insensitive fact needs an unknown of its own, attached to no program point, and every point that changes the fact has to feed its new value into this unknown. An ordinary right-hand side for the unknown would have to list
 all these points in advance, which is not always possible. In a
 context-sensitive analysis, for example, an unknown that writes a global is a
 pair of a program point and a calling context, and the contexts are discovered
@@ -634,8 +624,9 @@ hold any fact to which several right-hand sides contribute. In Voblint, for
 instance, the entry state of a callee in one context is a global unknown, and
 every call that enters this context publishes its entry state to it
 (@sec:eq-call). An analysis may also keep facts of its own in global unknowns
-that stand for no program variable at all (@ch:analysis-interface). A
-right-hand side then returns a pair @saan26phd[§2.4.5],
+that stand for no program variable at all (@ch:analysis-interface).
+
+Formally, a right-hand side returns a pair @saan26phd[§2.4.5],
 $rhs(x) : (Unk union Unk_G -> A) -> (Unk_G harpoon.rt A) times A$, of a
 partial map $rho$ of the contributions it publishes, joined per global
 unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a post-solution
@@ -647,9 +638,7 @@ describes what a right-hand side computes. The verified solver represents its
 evaluation by a strategy tree (@sec:td), so that it discovers reads and side
 effects while it solves.
 
-With contexts as indices, a system can have infinitely many unknowns, of which
-only those that influence the _query_, the unknown whose value is asked for,
-matter. A _local_ solver therefore explores the system from the query and
+With contexts as indices, a system can have infinitely many unknowns. Only those that influence the _query_, the unknown whose value is asked for, matter. A _local_ solver therefore explores the system from the query and
 solves only the unknowns that it meets @seidl21. Its result comes with a
 _certificate_, the property #isaconst("part_post_solution", thy: "Basics_side"),
 which requires the bounds above only on a set of unknowns that contains the
@@ -668,19 +657,19 @@ locally, on demand from a query, as the solver RLD does @hofmann10. Voblint
 reuses the verified local top-down solver (TD) of @stade24 @tilscher26.
 
 TD starts from the query and evaluates right-hand sides on demand. When the
-right-hand side of $x$ reads an unknown $y$, TD first solves $y$ and records
-that $x$ depends on $y$. An unknown is _stable_ if it has been evaluated and no
-unknown that it read has changed since then. When the value of $y$ changes
-later, every unknown that read it is _destabilized_ and evaluated again. The
+right-hand side of $x$ reads a local unknown $y$, TD first solves $y$ and records
+that $x$ depends on $y$. TD provisionally marks an unknown _stable_ before
+evaluating its right-hand side. A changed dependency removes that mark
+(_destabilizes_ the unknown) and triggers reevaluation. The
 unknowns at which a read closes a cycle are the solver's _widening points_
 @seidl21. TD detects them while it solves @apinis16[§4], so they can
 differ from the loop heads of the control-flow graph. At a widening point, it
 updates the old value with the new one by warrowing. The
 #link(playground-link(_counting-loop, trace: "verbose"))[playground] replays this run on the counting loop step by step. Contributions published to a
 global unknown are merged into its value by an _update rule_
-(#isalocale("update_rule")), which keeps one record per _origin_, the unknown whose right-hand side
-published the contribution (@sec:update-rules). The run ends
-once every unknown the query transitively reads is stable, and it returns this
+(#isalocale("update_rule")). Some rules retain separate contributions per
+_origin_, the local unknown publishing them (@sec:update-rules). The run ends
+once every local unknown the query transitively reads is stable, and it returns this
 _stable set_ $V$ together with the valuation $sol$.
 
 To solve on demand, TD has to discover which unknowns a right-hand side reads.

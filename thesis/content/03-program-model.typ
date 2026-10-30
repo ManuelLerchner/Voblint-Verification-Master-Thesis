@@ -11,11 +11,16 @@
 
 = VIMP and Its Control-Flow Graphs <ch:program-model>
 
-@ch:background analyzed a single loop through its control-flow graph. The
-soundness theorem, however, should talk about the programs a user writes, and
-these have procedures and recursion. Such a program has a meaning of its own,
-given by a source semantics that executes the program text directly
-(@sec:pstep). To generate its equations, however, an analysis needs a fixed,
+Voblint's soundness theorem speaks about executions of a VIMP program, while
+its analysis computes on a control-flow graph. This chapter connects the two.
+Its result is the first inclusion of the chain of @fig:intro-nest. Every
+source execution of a well-formed program (@sec:vimp) is matched by a graph execution that
+holds the same store (@sec:csim).
+
+@ch:background analyzed a single loop through its control-flow graph. VIMP
+programs also have procedures and recursion, and their meaning is given by a
+source semantics that executes the program text directly (@sec:pstep). To
+generate its equations, however, an analysis needs a fixed,
 finite set of program points, because its constraint system attaches one
 abstract state to each of them. The source semantics provides no such set. It
 locates an execution only by the command that still has to run, and under
@@ -24,10 +29,7 @@ program to a procedure-aware control-flow graph, whose nodes serve as the
 program points, and generates its equations from the graph
 (@fig:program-to-equations). The compilation step must then be part of the
 proof. If soundness held only for the graph, the compiler would stay outside
-the theorem, and a verdict would say nothing about the source program. This
-chapter closes the gap with the first link of the soundness chain. Every
-source execution of a well-formed program is matched by a graph execution that holds the
-same store (@sec:csim). The running example is the program of
+the theorem, and a verdict would say nothing about the source program. The running example is the program of
 @fig:program-to-equations, in which `main` calls `bump(5)` and `bump(4)`.
 
 // Node names and edge labels come from registered `--dot` output
@@ -148,16 +150,14 @@ same store (@sec:csim). The running example is the program of
 
 == VIMP syntax and well-formed programs <sec:vimp>
 
-VIMP (@fig:vimp-island) is a small imperative language with C-like syntax
-that the formalization analyzes. It is kept small because every construct needs a
+VIMP (@fig:vimp-island) is kept small because every construct needs a
 semantics, compiler clauses, and a transfer function proved sound in every
 abstract domain. It has unbounded integer variables, locals and globals,
 procedures with value parameters, direct calls with an optional result,
 recursion, assignment, sequencing, conditionals, `while` loops,
 nondeterministic input, and checks. It omits machine integers, pointers and the
 heap, arrays and structs, indirect calls, threads, floating point, `goto`,
-`break`, `continue`, and exceptions. Each of these would need its own
-preservation argument at every layer (@ch:conclusion discusses the heap).
+`break`, `continue`, and exceptions (@ch:conclusion discusses the heap).
 @sec:vimp-vs-c compares the fragment with C and with Goblint's input.
 
 #figure(
@@ -165,7 +165,7 @@ preservation argument at every layer (@ch:conclusion discusses the heap).
   kind: image,
   placement: auto,
   caption: [Constructs represented in VIMP relative to Goblint's C input,
-    taken from the explainer page. Dashed regions are constructs that VIMP
+    taken from the interactive explainer page of the project website. Dashed regions are constructs that VIMP
     omits. Sizes and positions are schematic. The figure compares only syntax.
     @sec:vimp-vs-c lists where shared constructs have different meanings.],
 ) <fig:vimp-island>
@@ -191,21 +191,21 @@ condition holds when it is nonzero (#isaconst("truthy"), #c11("6.8.4.1p2"),
 ]
 
 Each operator has its own constructor, because an abstract domain chooses its
-transformer by the operator, and the executable analyzer has to make this
-choice by inspecting the syntax. The two AFP languages with procedures that were
-considered, IMP2 and Simpl, do not allow this. IMP2 @lammich19imp2 represents a binary operator by a HOL
+abstract operation by the operator, and the executable analyzer has to make
+this choice by inspecting the syntax. We considered two languages with
+procedures from Isabelle's Archive of Formal Proofs (AFP), IMP2 and Simpl.
+Both represent operators semantically instead. IMP2 @lammich19imp2 represents a binary operator by a HOL
 function of type #isai("int \<Rightarrow> int \<Rightarrow> int"). Concrete
 evaluation can apply such a function, but executable code cannot compare it
-with another one, so it cannot tell `+` from `*`. IMP2 also matches Voblint's
-programs poorly in other respects. Its semantics is deterministic, so it has
-no input, and its call command takes no arguments and returns no value, so
-parameters and results pass through variables set by generated code
+with another one, so it cannot tell `+` from `*`. IMP2's semantics is also deterministic, so it
+has no input, and its call command takes no arguments and returns no value.
+Parameters and results pass through variables set by generated code
 (@ch:related). Schirmer's Simpl @schirmer08simpl is more expressive, with
 nondeterministic specifications and a derived call command that passes
 parameters, but its basic commands and conditions are likewise HOL functions
-and sets of states. Both languages target program verification, where semantic objects are
-convenient, whereas an analyzer needs syntax that it can inspect. VIMP is therefore defined from scratch, with such a syntax, which code
-generation can also export.
+and sets of states. Both languages target program verification, where such
+semantic objects are convenient. VIMP is therefore defined from scratch, with
+a syntax that the analyzer can inspect and that code generation can export.
 
 An expression is evaluated in a _store_ $s$ of type #isatype("store"), a total
 function #isai("vname \<Rightarrow> int") from variable names to integers.
@@ -221,8 +221,7 @@ Every expression has a value, because VIMP fixes the results of division and
 remainder by zero (#isaconst("c_div"), #isaconst("c_mod"), @sec:vimp-vs-c). It also has no
 effects, so a transfer function may evaluate a guard again, as the backward
 filtering of @ch:domains does. Input enters only through the statement
-`x = __voblint_nondet_int();` and never inside an expression. This keeps
-#isaconst("aval") a function.
+`x = __voblint_nondet_int();` and never inside an expression. Restricting input to this statement keeps #isaconst("aval") a function.
 
 Commands are built from expressions. Besides the structured statements, there
 are calls, which may store a result, and two markers that appear only during
@@ -244,14 +243,15 @@ are needed.
 
 In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
-expression grammar above. A check states a condition for the analyzer to
-decide (@sec:verdicts) and does not influence the execution. It behaves like
+expression grammar above. As in @sec:intro-static, a check states a condition
+for the analyzer to decide (@sec:verdicts). It does not influence the
+execution. It behaves like
 #skipC whatever value $e$ has, so it neither stops the execution nor refines the
 store. Its constructor also carries the source position, which only the report
 uses, to name the check.
 
-Calls come in two kinds. A call of a declared procedure starts an
-_activation_, one execution of the procedure body from its call to its return.
+Calls come in two kinds. A call of a declared procedure starts an activation
+of that procedure (@sec:interproc).
 VIMP also has three built-in _library calls_, `__voblint_nondet_int`, `min`, and `max`, which a program calls but does not declare. The fixed table
 #isaconst("special_table") recognizes their names, and
 #isaconst("special_result") gives the values they may return: any integer for
@@ -330,8 +330,7 @@ theorem (@fig:intro-trust).
 ) <fig:vimp-ast>
 
 Not every parsed program can run meaningfully. The theorems therefore
-assume the _source contract_ #isaconst("wf_source_program"), which excludes
-programs whose calls cannot step or whose results are undefined. It requires
+assume the _source contract_ #isaconst("wf_source_program"), which excludes programs in which a call cannot step or a result is undefined. It requires
 that
 
 - every call names either a declared procedure with matching arity or a
@@ -403,8 +402,8 @@ a program, it is #isaconst("declared_global"). The relation is written
 configurations $kappa$, $kappa'$, and a procedure table #isai("\<Pi>"). Its
 closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and its rules are
 listed below. No rule inspects an annotation. The rules only copy annotations, from
-the rewritten command or from the procedure table. The
-#link(site("index.html#semantics"))[explainer page]
+the rewritten command or from the procedure table. The interactive
+#link(site("index.html#semantics"))[explainer page] of the project website
 animates these steps.
 
 A call evaluates the actuals in the caller's store, resets the locals, binds
@@ -436,15 +435,16 @@ library call has a result (#isathm("special_result_ex")).
 
 == The procedure-aware control-flow graph <sec:graph>
 
-The source semantics executes a program by rewriting the command that remains
-to run. The analysis instead works on a procedure-aware control-flow graph,
-whose nodes are the program points that carry abstract states and whose local
-edges and call edges carry the transfers.
+The analysis attaches an abstract state to each program point and a transfer
+function to each transition between points. Voblint takes both from a
+procedure-aware control-flow graph, whose nodes are the program points and
+whose local edges and call edges carry the transfers. The source semantics
+cannot play this role (@sec:why-graph).
 
-=== Why the analysis needs program points <sec:why-graph>
+=== Program points for the analysis <sec:why-graph>
 
-An analysis attaches abstract states to program points and transfer functions
-to transitions. #isaconst("pstep") offers neither in a usable form. Its only
+The source semantics #isaconst("pstep") offers neither program points nor
+transitions in a usable form. Its only
 notion of location is the command that remains to run. Without recursion, only finitely many distinct residual commands arise,
 because a loop may run arbitrarily often, but its unfolding revisits the same
 command forms. Recursion is different, because a recursive call can nest
@@ -452,7 +452,9 @@ another #ctor("Restore") marker at every call depth. Residual commands
 therefore do not form the finite, fixed set of locations that Voblint needs. An assignment is also not a transition between fixed program points. Inside a sequence, it steps through the rule
 #isathm("pstep.Seq2"), which rebuilds the surrounding residual command. So the same assignment is executed by a different derivation inside every surrounding command.
 Finally, nothing names the entry of a procedure, its result, or the point where
-a caller resumes. The schematic control-flow graph of @fig:counting-loop solves
+a caller resumes.
+
+The schematic control-flow graph of @fig:counting-loop solves
 the first two problems. It has finitely many nodes and one transfer per edge.
 The procedure-aware graph then solves the third. It adds an entry node and a result
 node per procedure, and call edges that record their continuations. Each gives
@@ -469,8 +471,7 @@ and is _constraint-based_ @apinis12: it turns the program into a system of
 inequalities over unknowns indexed by the graph's nodes. A generic solver
 that knows nothing about programs then solves this system. The solver
 needs no knowledge of calls, because a call contributes right-hand sides and
-side effects to the same system (@ch:equations). The price is two extra
-proof layers. This chapter must prove by a simulation that the compiler
+side effects to the same system (@ch:equations). The approach requires two extra proof layers. This chapter must prove by a simulation that the compiler
 preserves the program's executions, and @ch:traces must say what the inequalities
 mean for those executions. In return, the argument about programs
 ends at a solver-independent certificate, a post-solution on the solved set
@@ -514,8 +515,7 @@ one of the two relations.
 
 Returns, in contrast, are ordinary local edges. A #keyw("return") in $p$ leads
 to the result node $ctor("FunctionResult") thin p$, which all callers of $p$
-share, so recursion needs no copies of nodes. A shared result node cannot know
-where to continue, and in a compiled graph, no edge leaves it. The call edge
+share, so recursion needs no copies of nodes. A shared result node does not determine where to continue, and in a compiled graph, no edge leaves it. The call edge
 records that place instead, as its continuation $k$. After a return, execution
 resumes at the continuation saved in the frame, and an analysis connects the
 callee's exit state to the correct caller through the call edge. The matching
@@ -524,13 +524,13 @@ needed. A completed program ends at
 $ctor("FunctionResult") thin #raw("main")$ (#isaconst("cfg_exit")), so there
 is no separate global exit node.
 
-== Compiling VIMP to a graph <sec:compilation>
+== Compilation to a control-flow graph <sec:compilation>
 
 The compiler turns a VIMP program into a procedure-aware graph. Its design
 decides which program points exist, and the simulation of @sec:csim relies on
 how it lays out the code of each command.
 
-=== Compiling commands with continuations #thy-badge("Voblint_Compile", "VIMP_Proc_to_CFG") <sec:compile>
+=== Compilation with continuations #thy-badge("Voblint_Compile", "VIMP_Proc_to_CFG") <sec:compile>
 
 To emit the edges of a command, a compiler has to know where control goes
 after it. Compilers commonly pass this target down, so that each statement
@@ -651,7 +651,7 @@ procedures are no longer disjoint, which later proofs rely on
 #isaconst("wf_source_program") that $italic("ps")$ lists every declared
 procedure except `main` exactly once.
 
-=== Executing a graph with a frame stack #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
+=== Graph execution with a frame stack #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
 
 The compiler produces a static object. To say that it preserves the behavior
 of a program, the graph needs an execution of its own, which @sec:csim then
@@ -692,14 +692,14 @@ change the store through #isaconst("call_enter") and
 @ch:traces, #isaconst("cstep") is defined for an arbitrary graph, not only for
 compiled ones.
 
-== Compilation preserves source executions <sec:csim>
+== Simulation of source executions <sec:csim>
 
 So far, #isaconst("pstep") and #isaconst("cstep") are two separate
 definitions. One describes source programs, the other arbitrary graphs, and
 nothing yet says that a compiled graph behaves like its program. The soundness
 theorem is stated over #isaconst("pstep"), but the analysis solves equations
 generated from the graph, so every source execution must be matched by an execution of the
-compiled graph that holds the same store at corresponding points. This is proved with a _forward simulation_, a
+compiled graph that holds the same store at corresponding points. The matching is proved with a _forward simulation_, a
 relation between source and graph configurations that every source step
 preserves.
 
@@ -775,10 +775,10 @@ CompCert's simulation diagrams @leroy09[§4.3].
 The initial source configuration is related to the node after the
 #isaconst("EA_Body") edge of `main` (#isathm("compile_prog_main_base")).
 Every finite source execution of a well-formed program is therefore matched by a
-graph execution from the entry that reaches corresponding nodes with the same store. This gives the first inclusion of the soundness chain of
+graph execution from the entry that reaches corresponding nodes with the same store. This matching gives the first inclusion of the soundness chain of
 @fig:intro-nest.
 
-=== Locating source configurations at graph nodes #thy-badge("Voblint_Compile", "Elaborated_Compilation") <sec:at-node>
+=== Source configurations at graph nodes #thy-badge("Voblint_Compile", "Elaborated_Compilation") <sec:at-node>
 
 The simulation names no node for a source configuration taken on its own.
 @ch:results needs one, because the analyzer's verdicts are stated at graph
@@ -789,32 +789,31 @@ at different places. In `if (b) { x = 1; } else { x = 1; }`, the residual
 the run.
 
 Every command therefore carries an annotation (@sec:vimp). A parsed program
-leaves it empty, and the proof fills it in. The program's _elaboration_
+leaves it empty, and the proof fills it in. The program's _annotated copy_
 (#isaconst("elab_pt")) annotates each statement with the nodes the compiler
-emits for it. The elaboration compiles to the same graph
+emits for it. The annotated copy compiles to the same graph
 (#isathm("compile_prog_elab_pt")), and on it,
-#isaconst("point", thy: "Elaborated_Compilation") reads the related node off
+#isaconst("point", thy: "Elaborated_Compilation") takes the related node from
 the residual's annotation (#isathm("csim_point_compile_prog")). Every source execution of a
 well-formed program is the _erasure_ (#isaconst("erase")) of a run of its
-elaboration (#isathm("psteps_lift")), so the node can be read off the elaborated
-run.
+annotated copy (#isathm("psteps_lift")), so the annotated run determines the node.
 
 #definition(name: [Observed at a node], isa: "at_node", cmd: "fun")[
   A configuration $(r, s, "frs")$ is _observed_ at $v$, written
-  $p, s_0 tack.r (r, s, "frs") gt.closed v$, if a run of the elaboration of
+  $p, s_0 tack.r (r, s, "frs") gt.closed v$, if a run of the annotated copy of
   $p$ from $s_0$ reaches an annotated configuration that erases to it, names
   $v$, and is related to $v$ by the simulation. A configuration reachable
   along two paths can be observed at two nodes.
 ]
 
-== Adequacy of VIMP relative to C <sec:vimp-vs-c>
+== Comparison of VIMP with C <sec:vimp-vs-c>
 
-Every source-level guarantee in this thesis is interpreted against the
-executions of #isaconst("pstep"), the source semantics of VIMP, so no
-guarantee can show that #isaconst("pstep") describes the intended language.
-This can only be argued, and this section collects the argument.
-@tab:vimp-vs-c compares VIMP with C11 @iso-c11 (committee draft N1570)
-wherever both languages have a construct but model it differently. The comparison
+Every source-level guarantee in this thesis is stated over the executions of
+#isaconst("pstep"). Whether #isaconst("pstep") describes the intended language,
+its adequacy, therefore lies outside the proof (@ch:intro). This section
+argues adequacy by comparing VIMP with C11 @iso-c11 (committee draft N1570).
+@tab:vimp-vs-c lists the constructs that both languages have but model
+differently. The comparison
 is not complete, so C may differ from VIMP in further places.
 
 #figure(
@@ -837,8 +836,10 @@ is not complete, so C may differ from VIMP in further places.
       [`&&`, `||`], [both operands evaluated],
       [second operand only if needed (#c11("6.5.13p4"), #c11("6.5.14p4"))],
       [initial values], [globals $0$, `main`'s locals arbitrary],
-      [static $0$, automatic indeterminate (#c11("6.7.9p10"))],
-      [callee locals], [$0$ on every entry], [indeterminate (#c11("6.7.9p10"))],
+      [uninitialized: static $0$, automatic indeterminate (#c11("6.7.9p10"))],
+      [callee locals],
+      [$0$ on every entry],
+      [uninitialized automatic: indeterminate (#c11("6.7.9p10"))],
       [checks], [never stop the execution, never refine],
       [`assert` aborts on $0$ unless `NDEBUG` (#c11("7.2p1"), #c11("7.2.1.1"))],
       [`min`, `max`], [library calls (#isaconst("special_table"))], [no counterpart],
@@ -885,10 +886,7 @@ such as the Simpl programs that the C parser of AutoCorres2
 @leroy09. Relating VIMP to them would need a translation with its own adequacy
 argument.
 
-These differences limit what a verdict says about a C program, but the
-analysis of VIMP still answers the question this thesis asks. The subject of
-the formalization is the analyzer architecture, and VIMP has the features the
-architecture has to handle: procedures, recursion, locals and globals, and
-calls with results. Since VIMP also has the shape of Goblint's normalized
-input, a C front end with a verified translation could reuse the framework,
-although each omitted feature would need its own preservation argument.
+VIMP supplies the features needed to study this analyzer architecture:
+procedures, recursion, locals, globals, and calls with results. A C front end
+could reuse the framework through a verified translation, with a preservation
+argument for each additional feature.

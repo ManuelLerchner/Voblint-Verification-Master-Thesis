@@ -20,12 +20,13 @@ analyzer makes, and an analyzer that answers #verdict("UNKNOWN") everywhere
 satisfies it as well (#isathm("unknown_everywhere_sound")). Following
 #cite(<kim26regulatory>, form: "prose", supplement: [§6]), this chapter first
 checks that the premises can hold and that the obligations exclude real
-errors. It then shows, on concrete programs, what precision the analyzer reaches
-and where it ends. Several facts below concern one
-fixed program and are proved by `eval`, which runs generated code and therefore
+errors. It then shows, on concrete programs and in comparison with Goblint,
+what precision the analyzer reaches and where it ends, and finally how long the
+generated code takes. Several facts below concern one fixed program and are
+proved by Isabelle's `eval` method, which runs generated code and therefore
 also trusts the code generator (@fig:intro-trust).
 
-== The soundness theorems are not vacuous #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
+== Non-vacuity of the soundness theorems #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
 
 A theorem whose premises can never hold together is true but says nothing. The
 end-to-end soundness theorem has three premises: an initial store, a source execution from it,
@@ -53,18 +54,17 @@ check #verdict("DEAD"), and #isathm("nv_dead_unreached") instantiates
 semantics at that node is empty. In all three instances, the source executions are
 proved by rule application, while `eval` computes the compiled graphs and the
 analyzer's answers. The end-to-end soundness theorem and its companions therefore do not hold vacuously, since
-each applies to at least one program on which the solve actually terminates.
+each applies to at least one program on which the solve terminates.
 
-== The obligations reject a real Goblint bug <sec:eval-1161>
+== A Goblint soundness bug <sec:eval-1161>
 
 Non-vacuity does not show that the obligations are strong enough to reject a
-wrong analysis. One way to test them is to check them against a real error. @ch:intro opened
-with #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156], in
-which Goblint claimed `c % 2 == 1` for $c in {-5, -7}$, although C's truncating
-remainder gives $-1$ for both values.
+wrong analysis. One way to test them is to check them against a real error,
+such as #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156]
+of @ch:intro, where Goblint claimed `c % 2 == 1` for $c in {-5, -7}$.
 #link("https://github.com/goblint/analyzer/pull/1161")[Pull request 1161]
 restricted when the congruence domain returns a constant remainder and added
-the program as regression test `37-congruence/14-negative.c` @goblint1161.
+the program as regression test `37-congruence/14-negative.c`.
 
 
 In Voblint, the defective operator could not have been proved sound. Every
@@ -136,10 +136,11 @@ check and proves the second.
     both executions.],
 ) <fig:goblint-1161>
 
-== Measuring precision on concrete programs <sec:eval-precision>
+== Precision on concrete programs <sec:eval-precision>
 
-The theorem says nothing about precision, so the examples below measure it on
-single programs whose concrete behavior is known.
+The soundness theorem says nothing about precision, so the examples below
+measure it on single programs whose concrete behavior is known. Each verdict
+and state quoted from Voblint comes from a claim, a recorded run that every build checks (@sec:nonrel-state).
 
 Earlier chapters already showed precise answers. Narrowing recovers the bound of the counting loop after widening
 (@sec:widening), entry-state contexts keep the two calls of `bump` apart
@@ -163,7 +164,7 @@ negative value. With call strings of length 1, a context of `g` records only
 its call site in `f`, so both activations of `g` share one context. Sign joins
 #signval("+") and #signval("-") there to $absval(top)$, and neither check is
 proved. Call strings of length 2 also record the call in `main`, keep the two
-activations apart, and prove both checks. The price is a second copy of `g`.
+activations apart, and prove both checks. The separation requires a second copy of `g`.
 The theories prove the same separation for #isaconst("run_voblint") itself
 (#isathm("run_voblint_call_string_2_decides"), #isathm("cs_nest_checks_hold"))
 and at the entry of `g` on hand-built equation systems
@@ -206,8 +207,7 @@ and at the entry of `g` on hand-built equation systems
 
 More contexts also cost more, since every context of a procedure gets its own
 copy of the procedure's unknowns. The program `down(100)`, which recurses down
-to `down(0)` and checks `n >= 0` at every level, shows that this cost does not
-buy precision gradually. With call strings of length 100, every level gets its
+to `down(0)` and checks `n >= 0` at every level, shows that this cost does not yield precision gradually. With call strings of length 100, every level gets its
 own context, and the check is #verdict(snapshot-verdict(_k100, "n >= 0")) with
 #_k100.clusters.len() procedure copies. With length 99, the analyzer still
 builds #_k99.clusters.len() copies, but the deepest calls share one context.
@@ -230,7 +230,7 @@ diverge. Goblint's configuration for the SV-COMP competition avoids this
 explosion by omitting intervals from the contexts of recursive functions
 @saan26phd[§3.4.3].
 
-=== Comparing the update rules for global unknowns <sec:eval-rules>
+=== Precision of the update rules <sec:eval-rules>
 
 #let _verdict(key, rule, cond) = {
   let name = "rules-" + key + "-" + rule
@@ -332,7 +332,7 @@ programs.
     the run. "No answer in 5 s": stopped by `--timeout 5`.],
 ) <fig:rules-programs>
 
-== Comparing precision with Goblint <sec:eval-flavors>
+== Precision compared with Goblint <sec:eval-flavors>
 
 #let _gob = {
   let rows = (:)
@@ -360,8 +360,7 @@ measured on programs selected by someone else. Monniaux's tutorial on the flavor
 interpretation walks through finite lattices, relational domains, widening and
 narrowing, and alternatives to iterative solving. For each, it gives a small
 program on which a standard analysis gains or loses precision @monniaux24.
-Every program of the tutorial that VIMP can express is transliterated into a
-regression fixture of
+The tutorial programs expressible in VIMP are adapted into regression fixtures in
 #link(repo-blob + "tests/regression/28-flavors")[`28-flavors`], and Voblint's
 verdicts on them are registered as claims. Each check holds in every execution, so each
 #verdict("UNKNOWN") below is lost precision.
@@ -470,8 +469,7 @@ execution leaves the range of `int`. It can still change an analysis result,
 because an abstract value may reach the limit of `int` although no execution
 does. Goblint then applies its default setting `assume_top` of
 #link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L1640")[`sem.int.signed_overflow`], which gives a
-signed operation that may overflow the whole range of its type. This happens
-for one check, discussed in @sec:flavors-widening.
+signed operation that may overflow the whole range of its type. Only one check depends on this setting. @sec:flavors-widening discusses it.
 
 The settings of @tab:flavors are chosen such that each analyzer has its best
 chance on each flavor. Voblint runs Sign, Interval, Int, the reduced product of its four
@@ -483,7 +481,9 @@ which a second benchmark compares (@tab:flavors-ctx). The Goblint rows
 "delay 10", "thresholds", and "comparisons" apply the repairs the literature
 proposes for failed narrowing, and $10$ is the smallest delay that proves a
 check Interval leaves unknown. In "Int, delay 3", Goblint's closest
-counterpart of Voblint's Int, Interval and Congruence refine each other. The last two rows add Apron's octagons @jeannet09apron, the second together with Goblint's
+counterpart of Voblint's Int, Interval and Congruence refine each other. The last two rows add the octagon domain of the Apron library @jeannet09apron,
+a relational domain of bounds on sums and differences of two variables, the
+second row together with Goblint's
 #link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/analyses/branchSet.ml")[`branchSet`] analysis, which keeps
 a separate state for each set of branches taken.
 
@@ -503,13 +503,13 @@ stays inside it. In the terms of @sec:lattices, it is a post-fixpoint of the loo
 transfer function that contains the initial states. The abstract value that an
 analyzer computes at a loop head describes such an invariant, so a check that
 the analyzer proves follows from an inductive invariant that its domain can
-express. The converse fails: widening may miss an invariant the domain can
+express. The converse fails, because widening may miss an invariant the domain can
 express (@sec:flavors-foiled).
 
 #_flavor("flavors-not-inductive-sign")
 
-In this loop from the tutorial @monniaux24[slide 27], `i` takes the values $4$
-and $2$ at the check, so `i > 0` holds. The property
+Adapting the tutorial loop @monniaux24[slide 27] to start at $4$ rather than
+$6$, `i` takes the values $4$ and $2$ at the check, so `i > 0` holds. The property
 is not inductive, however. If all that is known at the loop head is that `i`
 is positive, `i` may be $1$, and the next iteration then yields $-1$. Sign can
 express `i > 0` but nothing stronger about `i`, so the loop head reaches every
@@ -560,8 +560,9 @@ bounded loop, which counts `i` to $10$ (claim
 
 #_flavor("flavors-reset-bound-interval")
 
-Widening sends the upper bound of `i` to $+infinity$, and narrowing through the
-test `i >= 10` brings it back to $9$ @monniaux24[slide 59]. Both checks are
+Widening sends the upper bound of `i` to $+infinity$; narrowing through
+`i >= 10` restores $9$. The tutorial uses a machine-integer upper bound
+@monniaux24[slide 59]. Both checks are
 #_vv("flavors-reset-bound-interval", "i <= 9") over
 #absval(raw(claim-check("flavors-reset-bound-interval", "i >= 0").at(4).split("i=").at(1)))
 (claim #claim-ref("flavors-reset-bound-interval")). Goblint's
@@ -600,9 +601,9 @@ The known repairs change how the solver iterates. Goblint proves both checks
 when it delays widening by $10$ rounds @blanchet03[§7.1.3], but not by $9$, so
 the delay must exceed the loop bound. It also proves them with threshold
 widening @blanchet03[§7.1.2], but only when the thresholds include the $9$ of
-the check itself. Policy iteration @costan05[§3.2] and guided static analysis
-@gopan07 replace the decreasing iteration altogether. In Voblint, each repair
-would change the vendored solver and its partial-correctness proof.
+the check itself. Policy iteration @costan05[§3.2] solves successive selected policies; guided
+static analysis @gopan07 analyzes growing program fragments and can use
+narrowing within each phase. Neither is implemented in Voblint.
 
 The flavors benchmark has eight checks on small programs, so it compares the
 mechanisms of the two analyzers and says little about their precision on
@@ -611,8 +612,8 @@ on the mechanisms both analyzers share. With Int and the order
 analysis, it proves five of the eight checks of @tab:flavors, and Goblint's
 plain Interval proves three. Across all its settings, Goblint proves all eight,
 though no single setting does, using widening delays, thresholds, and path
-partitioning. Voblint lacks these techniques, and each would bring its own
-proof obligation.
+partitioning. Voblint lacks these techniques, whose proof obligations
+@sec:flavors-paths and @sec:flavors-foiled describe.
 
 === Procedures <sec:flavors-procedures>
 
@@ -628,7 +629,8 @@ with its default domain of excluded values, so both refine a guard such as
 In _three contexts_, a loop steps `i` by `f(i) = i + 1` and then checks
 `i == 10`. The _deep call chain_ consists of recursive procedures that call
 each other up to $21$ levels deep, and its ten checks ask for their results. In the _chain with guards_, `f` calls `g`, `g` calls `h`, and
-`h` counts its argument down to $0$ behind the guards `i == 0` and `0 < i`, and all seven calls, with arguments up to $300$, return $3$. In the
+`h` counts its argument down to $0$ behind the guards `i == 0` and `0 < i`.
+All seven calls of this chain, with arguments up to $300$, return $3$. In the
 _mutual recursion_, $f(i) = g(i-2) + g(i-3)$ and $g(i) = f(i+1)$, and twelve
 checks ask for exact values. The _two-formal countdown_
 `f(x, y)` decrements both arguments until `x` reaches $0$ and returns `y`, so its three calls return $0$.
@@ -727,22 +729,20 @@ checks ask for exact values. The _two-formal countdown_
   kind: table,
   placement: bottom,
   caption: [Checks proved out of those that hold, on procedure programs adapted
-    from Goblint's regression suite (Voblint with Int, Goblint with Interval).
-    Voblint: no contexts, also with bounded
-    narrowing; call strings of length $k$; entry-state contexts. Goblint
-    (#link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]):
-    context gas $0$, also with narrowing of global unknowns; call strings
-    of length $k$; its default full contexts; context gas $10$.],
+    from Goblint's regression suite (Voblint with Int, Goblint with Interval,
+    #link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]).
+    Rows are context policies, where _none_ is Goblint's context gas $0$, and
+    _call string_ keeps the $k$ most recent call sites.],
 ) <tab:flavors-ctx>
 
-Goblint's context gas $0$, call strings, full contexts, and narrowing of
-global unknowns
+Goblint's context gas
+(#link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L1061")[`ana.context.gas_value`])
+limits how many recursive calls keep full contexts. Gas $10$ keeps them only
+for the first ten recursive calls and has no counterpart in Voblint. Gas $0$,
+call strings, full contexts, and narrowing of global unknowns
 (#link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L2595")[`solvers.td3.narrow-globs`])
 correspond to Voblint's policy without contexts, its call strings,
-entry-state contexts, and bounded narrowing (@sec:update-rules). Context gas $10$
-(#link("https://github.com/goblint/analyzer/blob/6127869c56c61fa184a830a3fcfb7df44de33829/src/config/options.schema.json#L1061")[`ana.context.gas_value`]),
-which keeps full contexts only for the first ten recursive calls, has no
-counterpart.
+entry-state contexts, and bounded narrowing (@sec:update-rules).
 
 With entry-state contexts, Voblint proves every check of all five programs.
 Goblint's full contexts prove every check except the one of the three-contexts
@@ -755,23 +755,29 @@ recursion. The two-formal
 countdown recurses up to $300$ levels deep and needs a context per level,
 which only entry-state contexts provide.
 
-On this benchmark, Voblint's entry-state contexts prove every check that
-Goblint's full contexts prove, and one more. With call strings, each analyzer
-proves checks the other loses, and without contexts Voblint proves more. Goblint's widening
+Without contexts, Voblint proves more checks than Goblint. Goblint's widening
 then loses the lower bound $0$ of `i` in `h` unless it narrows global unknowns
 (#link(repo-blob + "thesis/shared/code/goblint-contexts/results.tsv")[`results.tsv`]), whereas Voblint keeps it and turns `i != 0` into `i > 0`.
 
-== Running time <sec:eval-runtime>
+== Running-time benchmarks <sec:eval-runtime>
 
-A sound result is of little use if the analyzer takes too long to produce it. Speed,
-however, was not a goal of this thesis. Apart from the defect fixed in @sec:codegen, the
-generated code runs as Isabelle emits it. The measurements below therefore ask only
-whether this unoptimized code runs in acceptable time on the regression corpus.
+#figure(
+  scaling-plot(width: 12.5cm, height: 3.2cm),
+  kind: image,
+  placement: bottom,
+  caption: [Fitted exponents $k$ of $n^k$ for solve time and solver evaluations, each family
+    growing one program size $n$ under Interval. The fits describe the measured ranges and
+    are no complexity bounds.],
+) <fig:runtime-scaling>
 
-The #link(site("profiling.html"))[profiling page] reports the measurements in full. The
-profiler runs the #prof-int("fixtures") well-formed regression fixtures that set no timeout of their
-own under all #prof-int("configurations") combinations of domain and context policy, with
-the default update rule warrow. Each pair of a fixture and a configuration is one case.
+Speed was not a goal of this thesis. Apart from the defect fixed in @sec:codegen, the
+generated code runs as Isabelle emits it, and the measurements below ask only whether it
+runs in acceptable time on the regression corpus.
+
+The #link(site("profiling.html"))[profiling page] runs the #prof-int("fixtures")
+well-formed regression fixtures without a timeout of their own under all
+#prof-int("configurations") combinations of domain and context policy, with the default
+update rule warrow, which gives one case per fixture and configuration.
 
 #if prof-value("timeouts") > 0 [Of the #prof-int("cases") cases, #prof-int("timeouts") pass
   the limit of #prof-int("meta.timeout_s")~s, all of them under
@@ -779,9 +785,9 @@ the default update rule warrow. Each pair of a fixture and a configuration is on
 The other #prof-int("cases_solved") cases finish, and each is timed as #prof-runs().
 #if prof-value("solve_median_ms") < 5 [Most of them are solved within a few
   milliseconds,] else [Their median solve time is #prof-ms("solve_median_ms"),] except for recursive programs
-under entry-state contexts, where successive calls can create distinct contexts. A procedure `h` that calls itself $n$ times with
-arguments $n, n - 1, dots, 0$ shows the effect. Sign and Parity have only a few abstract
-values, so the number of contexts stays bounded and the solve time is
+under entry-state contexts, where successive calls can create distinct contexts. For a
+procedure `h` that calls itself with arguments $n, n - 1, dots, 0$, Sign and Parity keep
+the number of contexts bounded, and the solve time is
 #prof-growth("depth_fits.sign.time"). Congruence, Interval and Int tell the successive
 arguments apart and create one context per level. Their solve time grows
 #prof-growth("depth_fits.interval.time"), although the number of solver evaluations grows
@@ -791,35 +797,23 @@ only #prof-growth("depth_fits.interval.evals").
   Generated programs that grow other sizes, such as variables or statements, show no such
   gap, so the growth is tied to contexts.
 ] else if prof-value("scaling.flat").len() == 0 [
-  The same gap appears without recursion. The profiling page grows
-  #prof-int("scaling.count") sizes of a program independently, from variables and
-  statements to call chains. In all of them the number of evaluations grows about linearly,
+  The same gap appears in programs that grow one of #prof-int("scaling.count") sizes
+  without recursion, from variables to call chains. In all of them the number of evaluations grows about linearly,
   while solve time grows as #prof-exp("scaling.time_min") to #prof-exp("scaling.time_max")
-  (@fig:runtime-scaling). Each evaluation therefore gets more expensive as the program
-  grows, along every size measured.
+  (@fig:runtime-scaling), so each evaluation gets more expensive as the program grows.
 ] else [
   Generated programs that grow one size at a time show the same gap with
   #prof-list("scaling.broken"), while time and evaluations grow alike with
   #prof-list("scaling.flat") (@fig:runtime-scaling).
 ]
 The CPU profiles trace this cost to the data structures of the generated code. Its finite
-sets and maps are lists (@sec:codegen), so a membership test scans the list, a union
-inserts element by element, and removing duplicates compares every pair. Balanced trees or
-hash tables would avoid these scans. The Collections Framework @lammich10collections
-refines abstract sets and maps into such structures, and the Light-weight Containers
-@lochbihler13containers can replace the list-based default of code generation altogether.
-Either route needs only targeted replacements in the code setup and no change to the
-soundness proofs.
+sets and maps are lists (@sec:codegen), which membership tests, unions, and duplicate
+removal scan element by element. The Collections
+Framework @lammich10collections refines abstract sets and maps into balanced trees or hash
+tables, and the Light-weight Containers @lochbihler13containers replace the list-based
+default of code generation. The former requires refinement proofs, the latter a code-generation setup.
+Neither has been evaluated for Voblint.
 
-The generated analyzer therefore handles the regression corpus in acceptable time, while
-its data structures limit how far it scales. These measurements cover small programs on
-one machine and give no performance guarantee beyond them.
+On one machine, the generated analyzer thus handles the small programs of the regression
+corpus in acceptable time, while its data structures limit how far it scales.
 
-#figure(
-  scaling-plot(width: 12.5cm, height: 3.6cm),
-  kind: image,
-  placement: bottom,
-  caption: [Fitted exponents $k$ of $n^k$ for solve time and solver evaluations, each family
-    growing one program size $n$ under Interval. The fits describe the measured ranges and
-    are no complexity bounds.],
-) <fig:runtime-scaling>

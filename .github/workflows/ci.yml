@@ -711,7 +711,7 @@ jobs:
         run: pixi run thesis-domain-tree
 
       # Fails on error-level rules only; warnings and suggestions are printed
-      # for review. Builds typst2vast with cargo until conda-forge ships it.
+      # for review.
       - name: Thesis prose follows the project's writing rules (no build needed)
         run: pixi run prose-lint
 

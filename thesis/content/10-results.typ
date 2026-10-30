@@ -23,14 +23,16 @@
 
 = From Solutions to Verdicts <ch:results>
 
-This chapter derives the guarantees of the analyzer's report for the
+This chapter answers what the analyzer's report guarantees about the
 executions of the source program. Solving the equations of @ch:equations
 (@ch:solving) gives an abstract state for each CFG node and context the solver
 reached, as well as a value for each global unknown. By @sec:certificate, these states cover every
-execution. A user, however, reads neither the states nor the contexts. The user reads
+execution. A user of the analyzer, however, reads neither the states nor the contexts. The user reads
 a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
-from the solution and why every verdict in it is sound.
+from the solution. Its main result, a theorem about the analyzer function
+itself, states that every store a finite source execution reaches at a check
+satisfies the definite verdicts there.
 
 == The analyzer function and its report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 
@@ -82,13 +84,13 @@ context. The states at $v$ in context $c$ describe the set
 of #isai("\<R>\<^bsub>res\<^esub> v"). @sec:chain shows that this set contains every
 store that an activation in context $c$ reaches at $v$.
 
-== Computing check verdicts from the report <sec:verdicts>
+== Check verdicts from the report <sec:verdicts>
 
 The command-line tool prints the report through its checks: each check at $v$
 receives one of four verdicts, #verdict("PROVED"), #verdict("REFUTED"),
 #verdict("UNKNOWN"), or #verdict("DEAD"). The
 #link(playground-base)[browser playground] shows the same verdicts inline in
-the editor and beside the graph, together with the state of every node and context, and a replay of the solve (@sec:ocaml-boundary, @sec:tracing). Each
+the editor and beside the graph (@sec:ocaml-boundary). Each
 verdict is printed at the source position of its check, and the text report checks that these positions are unique (#isathm("run_voblint_labelled_check_sound")).
 
 The analyzer first computes one verdict per state. Each state $d$ in
@@ -104,12 +106,12 @@ answers: an exact $1$ gives #verdict("PROVED"), an exact $0$ gives
 holds in every store the state describes (#isathm("mcp_classify_proved"),
 #isathm("mcp_classify_refuted")).
 
-The verdict of the CFG node soundly joins the per-context verdicts of its states
-(#isaconst("aggregate_verdicts")). If every state other than #ctor("Bot")
+The analyzer then joins the per-context verdicts of a node's states into one
+verdict for the node (#isaconst("aggregate_verdicts")). If every state other than #ctor("Bot")
 gives #verdict("PROVED"), the node is #verdict("PROVED"). If every such state
 gives #verdict("REFUTED"), it is #verdict("REFUTED"). If the states disagree,
 or one of them gives #verdict("UNKNOWN"), the node is #verdict("UNKNOWN").
-Disagreement cannot be resolved otherwise. If one context proves `x > 0` and
+For disagreeing states, #verdict("UNKNOWN") is the only sound choice. If one context proves `x > 0` and
 another refutes it, the stores reaching $v$ in the first satisfy the condition
 and those in the second violate it, so no single definite verdict holds for
 every store at the node.
@@ -117,11 +119,10 @@ States classified #verdict("DEAD"), the #ctor("Bot") states, are neutral in
 this aggregation, so a node at which the report holds no state, or only
 #ctor("Bot") states, is #verdict("DEAD").
 
-The chain of @sec:chain has to end in
-something an end user reads, and an end user reads the verdicts rather than
-the states. To state that
-the verdicts are correct as an inclusion of sets, the verdicts at $v$ are turned
-into the set of stores consistent with them, the _verdict set_
+A user reads the verdicts rather than the states. To state their correctness
+as an inclusion of sets of stores, like that of the states (@sec:contract),
+the verdicts at $v$ are turned into the stores consistent with them, the
+_verdict set_
 #isai("\<V>\<^bsub>res\<^esub> v"). If $v$ carries the check `x > 0` with
 verdict #verdict("PROVED"), the verdict set is $setcomp(s, s(x) > 0)$: the verdict
 tells the user that $x$ is positive there and nothing else.
@@ -146,8 +147,8 @@ of that single check.
 
 The verdict set can be much larger than
 #isai("\<R>\<^bsub>res\<^esub> v"), because a verdict keeps only
-the truth value of one condition (last row of @fig:chain). Soundness needs
-only that every store reaching $v$ lies in it.
+the truth value of one condition (last row of @fig:chain). Soundness only
+requires that every store reaching $v$ lies in it.
 
 Since the verdicts at $v$ are computed from the states at $v$, every store that
 one of these states describes satisfies every definite verdict there. Thus
@@ -198,12 +199,11 @@ of the chain is a theorem:
   isai("\<V>\<^bsub>res\<^esub> v"),
 )))
 The first step places a store that a finite source execution reaches in the node
-collecting semantics, at a node $v$ that the simulation relates to the run. On the
-elaboration, this is every node at which the run is observed
+collecting semantics, at a node $v$ that the simulation relates to the run. On the annotated copy of the program, this is every node at which the run is observed
 (#isathm("csim_point_compile_prog"), @sec:at-node). The second step splits
 #isaconst("node_collect") into #isaconst("activation_collect") over the
 contexts #isai("adm") admits, with `main` in #isai("c\<^sub>0")
-(@sec:contexts). It needs only that every valid trace carries some context.
+(@sec:contexts). It only requires that every valid trace carries some context.
 Functional policies meet this for every trace, and the entry-state policy
 meets it through #oblig("TOTAL") on the solution (@sec:contract). The third
 inclusion is the analyzer's soundness result. Its proof combines the second
@@ -374,9 +374,9 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
     nonterminating programs are covered through their prefixes.
   + #isaconst("run_voblint") $"config"$ $p$ $=$ #ctor("Analysed") $"res"$: the
     analyzer returned a report. Input validity and solver termination are
-    therefore not separate premises (@sec:report), and the theorem is a
-    partial-correctness result: termination is not proved for every program
-    (@sec:certificate).
+    therefore not separate premises (@sec:report). The theorem is a
+    partial-correctness result, since termination is not proved for every
+    program (@sec:certificate).
 ]
 
 The conclusions are stated at graph nodes, but a source configuration names
@@ -384,10 +384,8 @@ none, since its residual command can occur at several places in the program.
 The node comes from the run, through the relation
 $p, s_0 tack.r ("residual", s, "frs") gt.closed v$ of @sec:at-node
 (#isaconst("at_node")), which may observe one configuration at several nodes.
-
-The theorem has two halves. The first states that the configuration is
-observed at some node. The second states that at every node $v$ where it is
-observed
+The theorem states that the configuration is observed at some node, and that
+at every node $v$ where it is observed
 
 #[
   #set enum(numbering: n => "(S" + str(n) + ")")
@@ -398,7 +396,7 @@ observed
     holds in $s$, and every #verdict("REFUTED") check is false in $s$.
 ]
 
-== What verdicts and diagnostics guarantee #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
+== Meaning of verdicts and diagnostics #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
 By the theorem of @sec:headline, the four verdicts make the following
 statements about _covered executions_, the finite source executions from an
@@ -407,11 +405,11 @@ initial store in #isaconst("cinit_stores"), stopped at any point:
   holds (#isathm("run_voblint_check_sound")).
 - #verdict("REFUTED"): whenever a covered execution reaches the check, the condition
   fails (#isathm("run_voblint_check_sound")). It is not a verified
-  counterexample: it establishes no reaching execution.
+  counterexample, since it establishes no reaching execution.
 - #verdict("UNKNOWN"): the analysis decides neither.
-- #verdict("DEAD"): no covered execution reaches the check: nothing is
-  collected at its node (#isathm("run_voblint_dead_check_unreached")), and a
-  check that an execution reaches is never #verdict("DEAD") (#isathm("run_voblint_check_sound")).
+- #verdict("DEAD"): no covered execution reaches the check, because nothing is
+  collected at its node (#isathm("run_voblint_dead_check_unreached")).
+  Conversely, a check that an execution reaches is never #verdict("DEAD") (#isathm("run_voblint_check_sound")).
 #verdict("PROVED") and #verdict("REFUTED") hold vacuously when no execution
 reaches the check, and only #verdict("DEAD") claims anything about
 reachability. The corresponding theorem for #verdict("PROVED") and #verdict("REFUTED") is:
@@ -421,15 +419,13 @@ reachability. The corresponding theorem for #verdict("PROVED") and #verdict("REF
   #proved("run_voblint_check_sound")
 ]
 
-The report also contains arithmetic diagnostics. At every division and
-remainder, the analyzer asks, through the queries of
-@sec:coop-queries, whether the divisor can be zero. It reports an error if the analyses
-show that it is zero, a warning if they cannot exclude zero, and nothing
-otherwise. An error means that the divisor is zero whenever a covered execution reaches
-its node (#isathm("run_voblint_arithmetic_refuted")). At a node $v$ without a diagnostic,
-every divisor in an expression on an intraprocedural edge leaving $v$ is
-nonzero in every store collected at $v$
-(#isathm("run_voblint_arithmetic_safe") adds call arguments):
+At every division and remainder, the analyzer asks the queries of
+@sec:coop-queries whether the divisor can be zero. It reports an error if the
+divisor is zero whenever a covered execution reaches its node
+(#isathm("run_voblint_arithmetic_refuted")), a warning if the analyses cannot
+exclude zero, and nothing otherwise. Without a diagnostic at $v$, every divisor
+on an intraprocedural edge leaving $v$ is nonzero in every store collected at
+$v$ (#isathm("run_voblint_arithmetic_safe") adds call arguments):
 
 #[
   #show raw.where(block: true): set text(size: 6.5pt)
@@ -438,5 +434,3 @@ nonzero in every store collected at $v$
 
 These theorems complete the chain of @fig:intro-nest. Each verdict holds for
 every covered execution that reaches its check, in every analysis configuration.
-Termination (@sec:certificate) and the components outside the proof
-(@fig:intro-trust) are not covered.

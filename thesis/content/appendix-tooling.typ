@@ -10,8 +10,10 @@ one another. The analyzer is exported from the theories, the thesis cites
 their names and statements, and both the site and the thesis quote the
 analyzer's output. Every change to the theories can therefore make another
 part stale, and keeping them consistent is engineering work outside the proof.
-Isabelle offers comparatively little project-level tooling for this beyond its
-distribution. Users have pointed this out as well @paulson26lean
+For this project, the distribution's tools were supplemented with checks
+connecting the theories, analyzer output, and document. A reader commenting on
+Paulson's discussion of proof assistants @paulson26lean also criticized
+Isabelle's build and contribution tooling
 (#link("https://github.com/lawrencecpaulson/lawrencecpaulson.github.io/issues/62#issuecomment-4333878708")[reader comment]). The need grew with AI assistance. Agents wrote many proofs
 and much of the surrounding code (#link(<ai-use>)[statement on the use of
   generative AI]), and a reviewer cannot read every line they produce. A change
@@ -23,25 +25,26 @@ not the agent, decide whether the repository is consistent.
 One repository holds everything this thesis describes: the Isabelle theories,
 a submodule reference to the vendored TD solver, the exported analyzer with its
 command-line tool and playground, the regression corpus, and the sources of
-this thesis. Each release is archived on Zenodo with a citable DOI @voblint,
+this thesis. Released snapshots are archived on Zenodo with a citable DOI @voblint,
 and the project site hosts the playground, the explainer, and the rendered
 theories that every Isabelle name in this thesis links to.
 
 The vendored TD solver of Tilscher et al. @tilscher26 carries four changes made
-for this thesis, each proposed upstream and none changing the algorithm. They
-restore the build under Isabelle2025-2
-(#link("https://github.com/stilscher/td-verification/pull/15")[PR 15]), remove the stabilization
-assumptions from the classes #isalocale("widening") and
+for this thesis, each proposed upstream and none changing the algorithm.
+#link("https://github.com/stilscher/td-verification/pull/15")[PR 15] restores
+the build under Isabelle2025-2.
+#link("https://github.com/stilscher/td-verification/pull/13")[PR 13] removes the
+stabilization assumptions from the classes #isalocale("widening") and
 #isalocale("narrowing"), which only termination proofs use
-(#link("https://github.com/stilscher/td-verification/pull/13")[PR 13], @sec:domain-carrier-laws), rename short field and constructor names that
-clashed with downstream theories
-(#link("https://github.com/stilscher/td-verification/pull/14")[PR 14]), and add facts about the solver's
-definitions, such as #isathm("solve_dom_of_solve_c"), that
-#isathm("td_certified_solver") uses
-(#link("https://github.com/stilscher/td-verification/pull/16")[PR 16], @sec:certificate). At the time of
-writing, all four pull requests await review. The solver's repository is
-private, so the development cannot yet be built from public sources alone,
-and there are plans to publish the solver in the Archive of Formal Proofs.
+(@sec:domain-carrier-laws).
+#link("https://github.com/stilscher/td-verification/pull/14")[PR 14] renames
+short field and constructor names that clashed with downstream theories, and
+#link("https://github.com/stilscher/td-verification/pull/16")[PR 16] adds facts
+about the solver's definitions, such as #isathm("solve_dom_of_solve_c"), that
+#isathm("td_certified_solver") uses (@sec:certificate). At the time of
+writing, all four pull requests await review. The upstream solver has a public artifact @tilscher26artifact. Voblint's
+modified fork remains private, so reproducing this development still
+requires access to that exact dependency.
 
 == OCaml packages on conda-forge
 
@@ -82,8 +85,8 @@ lines per context policy by interpreting a shared locale
 (@sec:instances-supply). The product state of
 @ch:cooperation is written by hand, with one field per analysis, each of a
 different type. A dependently typed logic could express such a heterogeneous
-structure once @chlipala13cpdt[ch. 9], but HOL's simple types cannot, so adding
-an analysis adds a field and one case to each function over the analyses.
+structure directly @chlipala13cpdt[ch. 9]. With the chosen HOL encoding,
+adding an analysis adds a field and a case to each function over the analyses.
 
 The most important derived file is the analyzer itself. Isabelle's code
 generator exports #isaconst("run_voblint") as OCaml, and the repository commits
@@ -192,10 +195,7 @@ reaching the reader.
 == Maintaining the formalization: `isar-tools` <sec:isar-tools>
 
 Isabelle checks that every proof goes through, but a successful build says
-little about how well a development is maintained. A lemma that no proof
-cites, an import that another import already brings in, a constant written out
-next to the notation the project gave it, or a locale assumption that no proof
-uses all leave the build green. Documentation that quotes formal statements or
+little about how well a development is maintained. The build stays green with a lemma no proof cites, an import that another import already brings in, a constant written out next to the notation the project gave it, or a locale assumption no proof uses. Documentation that quotes formal statements or
 links to the rendered theories can also fall out of date without affecting the
 build. In a development of #stat("isabelle.theories") theories, such problems
 accumulate.
@@ -211,7 +211,7 @@ checks proof style inside Isabelle, and
 #link("https://github.com/ott2/isabelle-query")[`isabelle-query`] answers
 source-level queries about declarations, dependencies, and unfinished proofs.
 
-The tool has three parts. `isar fmt` changes only layout. `isar check` offers
+The tool consists of `isar fmt`, `isar check`, and `isar project`. `isar fmt` changes only layout. `isar check` offers
 about fifty checks in groups. Checks for unfinished proofs and unreached
 theories run by default, and checks for unused or duplicated lemmas, unused
 locale assumptions, or terms written out next to their notation run when
@@ -254,11 +254,10 @@ approximates Isabelle's inner syntax lexically, so its report is a warning to
 inspect and does not prove an error.
 
 A second kind of finding concerns build time. A session inherits the heaps of
-its parent sessions, but a library theory outside that ancestry is elaborated
-again in every session that imports it. `isar stats build` reads the time each
+its parent sessions, but a library theory outside that ancestry is processed again in every session that imports it. `isar stats build` reads the time each
 theory took from a verbose build log and reports such repetitions, and
 continuous integration enforces a budget per library session. In this
-repository, repeated elaboration once cost 19% of a clean build.
+repository, repeated processing once took 19% of a clean build.
 
 All of these checks work on the sources and complement Isabelle. They point to
 suspicious patterns and structural problems, and they may report false

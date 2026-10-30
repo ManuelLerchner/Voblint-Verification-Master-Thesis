@@ -4,17 +4,14 @@
 
 = Conclusion <ch:conclusion>
 
-Static analyzers such as Goblint report properties intended to hold for every
-execution of a program, but their implementations generally lack machine-checked
-end-to-end soundness proofs. This thesis shows that the soundness of a
-Goblint-style analyzer with calling contexts, side effects, and a verified TD
-solver can be machine-checked from source executions to the verdicts of the
-analysis function. The result holds for a scalar language with recursive
-procedures. It is a partial-correctness result, so its guarantee holds whenever
-the analyzer returns an answer. For a user, a #verdict("PROVED") verdict therefore
-establishes the reported property for every covered execution that reaches the
-check, instead of resting on
-the tests the analyzer has passed.
+Voblint shows that the soundness of a Goblint-style analyzer with calling
+contexts, side effects, and a verified TD solver can be machine-checked from
+source executions to the verdicts of the analysis function. The result covers
+VIMP, a scalar language with recursive procedures. It is a partial-correctness
+result, so its guarantee holds whenever the analyzer returns an answer. For a
+user, a #verdict("PROVED") verdict therefore establishes the reported property
+for every covered execution that reaches the check, instead of resting on the
+tests the analyzer has passed.
 
 The current implementation of Voblint lies between existing formalized
 analyzers, such as Verasco @jourdan15 and the abstract interpreter of Nipkow and
@@ -25,7 +22,7 @@ and raises an alarm at a possible recursive call, and the interpreter of
 Nipkow and Klein analyzes IMP, which has no procedures. Goblint instead solves
 equations over unknowns indexed by program point and calling context, publishes
 side effects to global unknowns, and computes the solution with a top-down
-solver. The TD solver itself has been verified @tilscher26, but no proof connects
+solver. A formalization of TD has been verified @tilscher26, but no proof connects
 Goblint's solved equations to the executions of the program. Voblint keeps Goblint's architecture and
 states a CompCert-style theorem about the analyzer it runs. As far as the author is aware, a proof that connects context-indexed,
 side-effecting equations and their solver to source executions has not been
@@ -52,13 +49,12 @@ precise verdicts it computes on further programs (@sec:eval-corpus). The analyze
 acceptable time on that corpus, although its list-based sets and maps limit how far it
 scales (@sec:eval-runtime).
 
-== Lessons from the formalization <sec:lessons>
+== Recommendations for similar formalizations <sec:lessons>
 
-Formalizing Voblint required more than proving the components of an analyzer
-sound. Much of the work went into finding definitions and interfaces that let
-these proofs compose, and into checking that the theorems describe the intended
-analyzer. The following observations summarize this experience and suggest what
-a similar formalization might do differently.
+Much of the work on Voblint went into finding definitions and interfaces that
+let the component proofs compose, and into checking that the theorems describe
+the intended analyzer. The following recommendations for a similar
+formalization come from this experience.
 
 *Reuse the architecture, but reconsider the model.* Goblint's architecture is
 documented in the literature and has been exercised on real programs. Following
@@ -81,11 +77,10 @@ Goblint's implementation.
 following Goblint's architecture, with every proof obligation left open as
 `sorry`. This
 made it inexpensive to try definitions, find missing assumptions, and move
-interfaces without repairing finished proofs. The largest revisions indeed
-concerned the semantics rather than individual arguments. Because Voblint
-followed Goblint's structure, most interfaces were settled before the proofs
-were written, and later changes seldom reached finished proofs. The end-to-end
-theorem itself, however, took shape only as the components were connected.
+interfaces without repairing finished proofs. Because Goblint's structure fixed
+most interfaces early, the largest revisions concerned the semantics, and later
+changes seldom reached finished proofs. The end-to-end theorem itself, however,
+took shape only as the components were connected.
 Stating it first and deriving each component's obligations from it would likely
 have saved some rework.
 
@@ -101,15 +96,14 @@ obligations depend on it.
 function #isaconst("run_voblint"), and the command-line tool, the playground, and
 the regression tests all run code generated from this function. Regression tests committed to the repository
 record the expected verdicts on representative programs and detect changes in
-the analyzer's observed precision. Generated theorem statements, registered
-claims, and repository checks keep the thesis and documentation from drifting
-away from the theories (@sec:voblint-repo).
+the analyzer's observed precision. Generated theorem statements, analyzer
+output that every build recomputes, and repository checks keep the thesis and
+documentation consistent with the theories (@sec:voblint-repo).
 
 *Make the solver observable.* The
-#link(repo-blob + "cli")[command-line tool] and the browser
-#link(site("playground.html"))[playground] were also important for understanding the analyzer's behavior. The
-solver trace of the command-line tool and the playground's rendered graph and
-trace replay (@sec:tracing) show where an analysis loses precision or where the
+#link(repo-blob + "cli")[command-line tool] prints a solver trace, and the browser
+#link(site("playground.html"))[playground] renders the graph and replays the
+trace (@sec:tracing). Both show where an analysis loses precision or where the
 solver does needless work. The trace hook lies outside the proof. Only traced runs execute it, and
 for them the trusted base assumes that it leaves the analysis results unchanged
 (@sec:tracing). Because the analyzer is exported to OCaml, standard profiling and
@@ -121,27 +115,24 @@ its seed was published, and
 #link(
   "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/pull/256",
 )[pull request 256]
-reordered the two, as Goblint does.
+reordered the two into Goblint's order.
 
 *Proof correctness and proof quality require different checks.* Isabelle checks
-that the theorems follow from the definitions and assumptions, but not that the
-definitions model the intended analyzer. Once the definitions and interfaces had
-stabilized, generative AI tools produced many of the proofs. Isabelle checked
-their validity relative to the formal assumptions, while human review focused on
-the definitions, the assumptions, and the intended meaning of the theorems. Acceptance by Isabelle does not make a proof readable
-or reusable, however. Unused and duplicated lemmas accumulated during the
-development, and some arguments stayed more specialized than necessary. To find
-such problems, the author developed
+that the theorems follow from the definitions and assumptions. Human review could
+therefore concentrate on the definitions, the assumptions, and the intended
+meaning of the theorems, while AI agents produced many of the proofs
+(#link(<ai-use>)[statement on the use of generative AI]). Acceptance by Isabelle,
+however, does not make a proof readable or reusable. Unused and duplicated
+lemmas accumulated during the development, and some arguments stayed more
+specialized than necessary. To find such problems, the author developed
 #link("https://github.com/ManuelLerchner/isar-tools")[`isar-tools`] alongside
-the formalization (@sec:isar-tools). It
-detects maintenance issues such as duplicated or subsumed lemmas, unused
+the formalization (@sec:isar-tools). It detects duplicated, subsumed, and unused
 lemmas, leftover proof-search and diagnostic commands, redundant brackets, and
-inconsistent indentation.
-Full Isabelle builds and these maintenance checks complement each other. A full
-build of the development takes several minutes on the author's laptop (an Apple M4 Pro),
-whereas the checks of `isar-tools` are deterministic and complete in seconds.
-Agents that edit the theories can therefore run them after individual changes,
-while full Isabelle builds remain necessary to establish correctness.
+inconsistent indentation. Its checks are deterministic and complete in seconds,
+whereas a full build of the development takes several minutes on the author's
+laptop (an Apple M4 Pro). Agents that edit the theories can therefore run them
+after individual changes, while full Isabelle builds remain necessary to
+establish correctness.
 
 In retrospect, three questions required different kinds of evidence. The
 soundness theorem establishes that the analysis results satisfy their formal
@@ -153,39 +144,36 @@ and needless solver work, which the soundness theorem does not address.
 
 == Relevance to Goblint and limitations <sec:limitations>
 
-The proofs do not show that Goblint is correct, since they concern
-Voblint's definitions and the correspondence with Goblint is architectural
-(@sec:rel-goblint). They show, however, that Goblint's architecture admits a
-soundness proof that composes along its own boundaries, provided each analysis
-and each context policy meets its obligations.
+The proofs concern Voblint's definitions, and the correspondence with Goblint
+is architectural (@sec:rel-goblint), so they do not establish that Goblint is
+correct. They show that Goblint's architecture admits a soundness proof that
+composes along its own boundaries, provided each analysis and each context
+policy meets its obligations.
 
-A documented Goblint defect can be replayed as a regression
-fixture and as a counterexample theorem, as the congruence remainder was
-(@sec:eval-1161). A proposed domain operation with a counterpart in Voblint
+The formalization can also serve Goblint's development directly. A documented
+Goblint defect can be replayed as a regression fixture and as a counterexample
+theorem (@sec:eval-1161). A proposed domain operation with a counterpart in Voblint
 could be checked against the obligation that its counterpart meets before the
 change lands in Goblint. Conversely, a verified component exported as
 OCaml could replace its unverified counterpart in Goblint.
 
 For Goblint's developers, however, the current formalization is still largely
 a proof of concept. It lacks many concepts that their work depends on, such as
-pointers, a heap, threads, machine integers, and most of Goblint's analyses, so its
-immediate applicability to Goblint development is limited, although it already
-provides a reference for selected components and proof obligations
-(@sec:outlook-extending). Among the limitations identified in @sec:intro-scope, the gap between VIMP and
-C is the largest. VIMP has no pointers, heap, or threads and
-computes with unbounded integers, so a verdict about a VIMP program does not
-carry over to a C program with the same text (@sec:vimp-vs-c), and the
-adequacy of #isaconst("pstep") itself is argued rather than proved. As far as the author is aware, no commonly
-accepted C11 semantics exists in Isabelle against which #isaconst("pstep")
-could be checked @brecknell24autocorres2 @tuong19isabellec @krebbers15phd
-@memarian23phd.
+pointers, a heap, threads, machine integers, and most of Goblint's analyses
+(@sec:outlook-extending). Among the limitations identified in @sec:intro-scope,
+the gap between VIMP and C is the largest. Because VIMP lacks these features and
+computes with unbounded integers, a verdict about a VIMP program
+does not carry over to a C program with the same text (@sec:vimp-vs-c). The
+adequacy of #isaconst("pstep") itself is argued rather than proved. Relating VIMP to AutoCorres2 @brecknell24autocorres2, Isabelle/C
+@tuong19isabellec, CH2O @krebbers15phd, or Cerberus @memarian23phd would require
+a verified translation for a common fragment.
 
-A second limitation concerns the evaluation of precision. No precision or completeness theorem is proved, so the evidence for precision
+A second limitation concerns the evaluation of precision. No general precision or completeness theorem is proved, so the evidence for precision
 rests on examples. The regression corpus is small and its expected verdicts were set by hand (@sec:eval-corpus),
 and beyond the small comparison of @sec:eval-flavors, no agreement rate with
 Goblint is measured (@sec:rel-goblint).
 
-== Extending Voblint towards C and Goblint <sec:outlook-extending>
+== Extensions towards C and Goblint <sec:outlook-extending>
 
 Addressing these limitations requires extending Voblint towards the language
 features and analyses that Goblint supports. Some analyses and concepts could be added to the current proof of concept
@@ -197,8 +185,7 @@ already admits (@sec:calls). Other features of Goblint, such as machine
 integers, pointers, or threads, would require extensive changes to Voblint. Machine integers illustrate the scale of such an extension.
 #link("https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/pull/357")[Pull request 357],
 developed separately from the version this thesis describes, introduces
-machine-integer kinds from `i8` to `u64` and a typed core language elaborated
-from VIMP. Integrating it requires revisiting several layers and their
+machine-integer kinds from `i8` to `u64` and a typed core language translated from VIMP. Integrating it requires revisiting several layers and their
 soundness proofs, which is left as future work. With machine integers, Goblint's bitfield domain, which tracks each
 bit separately and which the author co-developed
 (#link("https://github.com/goblint/analyzer/pull/1623")[Goblint pull request 1623]),
@@ -213,19 +200,16 @@ locals, so a return can
 resume the caller with the locals it had before the call (@sec:calls).
 Features that keep this assumption, such as machine integers, change the
 step functions and the proofs that unfold them, while the contract and its
-composition keep their shape. Pointers, shared mutable memory, and threads would invalidate this assumption. With
-a pointer into the caller's frame or into the heap, a callee can modify data the
-caller reads after the return, and with threads, other code can run between a
-call and its return. Such features
-would require extending the trace semantics @sotin11 @schwarz21, and the
-soundness arguments that depend on its current separation of caller and callee
-state would need substantial revision.
+composition keep their shape. A heap could be modeled as shared state with new transfers and proofs.
+Pointers into caller frames break the separation of locals @sotin11; threads
+add interference @schwarz21. These features require revisiting the trace
+semantics and its soundness argument.
 
-Revisions of this scale may become more feasible as AI-assisted tools improve. Such tools
-have already made large-scale mathematical formalization practical
-@hales26lean[Sec. "Autoformalization is a practical reality"] and played an important role
-in the formalization presented in this thesis. Over the course of this project, the models
-behind these tools, including Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor,
-handled the formalization consistently better, and the surrounding
-Isabelle tooling improved as well. Continued progress in both areas may make ambitious formalization projects
-and large-scale refactorings increasingly practical.
+Revisions of this scale may become more feasible as AI-assisted tools improve.
+Such tools have already made large-scale mathematical formalization practical
+@hales26lean[Sec. "Autoformalization is a practical reality"], and they produced
+many of the proofs in this development. Over the course of
+this project, the models behind these tools handled the formalization
+consistently better, and the surrounding Isabelle tooling improved as well.
+Continued progress in both areas may bring the revision of the trace semantics
+for pointers and threads within reach.
