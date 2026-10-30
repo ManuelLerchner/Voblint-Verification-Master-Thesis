@@ -294,7 +294,7 @@ thesis-check = { depends-on = [
   { task = "prose-rules-test", environment = "prose" },
 ], description = "Run all thesis drift and theorem checks." }
 
-thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", depends-on = [
+thesis-links = { cmd = "python3 -m pytest -q tests/test_isabelle_html.py tests/test_check_thesis_links.py tests/test_pages_proof_map.py && python3 scripts/check_thesis_links.py --check --lenient", depends-on = [
   "thesis-alignment-write",
 ], description = "Require HTML targets for every citation and check available generated HTML." }
 thesis-links-coverage = { cmd = "python3 scripts/check_thesis_links.py --coverage", depends-on = [
