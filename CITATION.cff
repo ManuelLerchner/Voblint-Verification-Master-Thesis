@@ -46,6 +46,7 @@ references:
         orcid: "https://orcid.org/0000-0002-5167-465X"
     institution:
       name: Technical University of Munich
+    year: 2026
     notes: Master's thesis draft.
     url: >-
       https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/thesis.pdf

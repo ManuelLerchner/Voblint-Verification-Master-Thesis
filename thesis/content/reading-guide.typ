@@ -15,8 +15,9 @@ A single #link(site("formalization.pdf"))[PDF export of the whole formalization]
 well. The project site at #link(site-url)[#site-url.trim("https://", at: start)] also
 hosts an #link(site("index.html"))[explainer] that animates several of the constructions,
 a #link(site("profiling.html"))[profiling page] with the full benchmark data and CPU
-profiles, and the #link(site("playground.html"))[playground], which runs the analyzer in
-the browser on any VIMP program.
+profiles, the #link(site("playground.html"))[playground], which runs the analyzer in
+the browser on any VIMP program, and a #link(site("paper.pdf"))[preprint] that summarizes
+the soundness argument @lerchner26paper.
 
 Each kind of object the text refers to has its own marker, and most markers are also links.
 An Isabelle name opens its definition, a program opens the playground, and a fixture opens
