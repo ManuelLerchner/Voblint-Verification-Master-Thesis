@@ -1,0 +1,91 @@
+/* Reading a result */
+
+.scene:where(.scene-graph) .mono {
+  font-family: var(--mono);
+}
+
+/* Side by side the panels share a height; the legend centers in the extra room. */
+.scene-graph {
+  justify-content: center;
+}
+
+.scene-graph svg {
+  max-width: 640px;
+}
+
+:where(.scene-graph) .legend-head {
+  fill: var(--primary) !important;
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+/* GraphViz's own colors, so the legend matches the drawn graph. */
+:where(.scene-graph) .gn {
+  stroke-width: 2;
+}
+
+:where(.scene-graph) .gn.proved {
+  fill: palegreen;
+  stroke: darkgreen;
+}
+
+:where(.scene-graph) .gn.refuted {
+  fill: mistyrose;
+  stroke: firebrick;
+}
+
+:where(.scene-graph) .gn.unknown {
+  fill: #ffec8b;
+  stroke: darkgoldenrod;
+}
+
+:where(.scene-graph) .gn.dead {
+  fill: #e5e5e5;
+  stroke: #737373;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-graph) .gn.plain {
+  fill: lightgreen;
+  stroke: #000000;
+  stroke-width: 1;
+}
+
+:where(.scene-graph) .gn.entry {
+  fill: lightyellow;
+  stroke: orange;
+}
+
+:where(.scene-graph) .gn.entry-inner {
+  fill: none;
+  stroke: orange;
+}
+
+:where(.scene-graph) .ge {
+  stroke-width: 2;
+}
+
+:where(.scene-graph) .ge.call {
+  stroke: purple;
+}
+
+:where(.scene-graph) .ge.resume {
+  stroke: blue;
+  stroke-width: 1.2;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-graph) .ge.cont {
+  stroke: #666666;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-graph) .g-cluster {
+  fill: none;
+  stroke: #b3b3b3;
+}
+
+:where(.scene-graph) .g-cluster-label {
+  font-size: 12px !important;
+  font-weight: 700;
+}

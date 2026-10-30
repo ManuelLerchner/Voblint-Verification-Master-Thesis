@@ -1,0 +1,212 @@
+/* Walking one procedure, building its equations, never opening a callee.
+   The same node/port vocabulary draws the context-key figure, which shows the
+   two places a context reaches, so both scenes share these rules. */
+
+:where(.scene-walk, .scene-ctxkey) .walk-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-panel {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-walk, .scene-ctxkey) svg.walk-svg {
+  max-width: 340px;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-code {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-code .wl {
+  display: block;
+  padding: 0 6px;
+  border-radius: 4px;
+  transition: background 200ms ease;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-code .wl.is-current {
+  background: var(--accent-soft);
+}
+
+/* The nodes of the procedure being walked. */
+:where(.scene-walk, .scene-ctxkey) .walk-node rect {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  transition:
+    fill 200ms ease,
+    stroke 200ms ease;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-node text {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-node.is-done rect {
+  fill: var(--surface-muted);
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-node.is-current rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-edge line {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+/* The callee: present as an address, never as a body. Dashed because the
+   walk only ever touches its two ports. */
+/* One copy of a procedure, and the key it lives under. The box is the context;
+   the dashed procedure inside it is the same one the walk never opened. */
+:where(.scene-ctxkey) .walk-ctxbox rect {
+  fill: var(--surface-muted);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-ctxkey) .walk-ctxbox text {
+  fill: var(--accent);
+  font: 700 10px var(--mono);
+  letter-spacing: 0.04em;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-sealed rect {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-sealed text {
+  fill: var(--text-faint);
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-sealed .walk-sealed-name {
+  fill: var(--text-muted);
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+/* Both ports stay drawn, so the reader can see they are the only contact,
+   and light up on the step that uses them. */
+:where(.scene-walk, .scene-ctxkey) .walk-port line {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  transition: stroke 200ms ease;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-port text {
+  fill: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  transition: fill 200ms ease;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-port.is-publish line {
+  stroke-dasharray: 5 3;
+}
+
+:where(.scene-walk, .scene-ctxkey).is-call .walk-port line {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+}
+
+:where(.scene-walk, .scene-ctxkey).is-call .walk-port text {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+:where(.scene-walk, .scene-ctxkey).is-call .walk-sealed rect {
+  stroke: var(--accent);
+}
+
+/* The equations, revealed as the walk builds them. */
+:where(.scene-walk, .scene-ctxkey) .walk-eq {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  transition:
+    border-color 200ms ease,
+    opacity 200ms ease;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-eq.is-current {
+  border-left-color: var(--accent);
+}
+
+/* Every step must leave the panel the same height, or the figure resizes under
+   the cursor and the page below it jumps. Hidden blocks keep their space. */
+:where(.scene-walk, .scene-ctxkey).is-stepping .walk-eq {
+  visibility: hidden;
+}
+
+:where(.scene-walk, .scene-ctxkey).is-stepping .walk-eq.is-shown {
+  visibility: visible;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-note {
+  max-width: none;
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+/* One cell, every note in it: the tallest note fixes the height for all. */
+:where(.scene-walk, .scene-ctxkey) .walk-notes {
+  display: grid;
+}
+
+:where(.scene-walk, .scene-ctxkey) .walk-notes > .walk-note {
+  grid-area: 1 / 1;
+}
+
+:where(.scene-walk, .scene-ctxkey).is-stepping .walk-note {
+  visibility: hidden;
+}
+
+:where(.scene-walk, .scene-ctxkey).is-stepping .walk-note.is-shown {
+  visibility: visible;
+}
+
+@media (max-width: 860px) {
+  :where(.scene-walk, .scene-ctxkey) .walk-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The context-key scene is one static graph, wider than the walk's column and
+   with both ports permanently lit, so it carries `is-call` in the markup. */
+:where(.scene-ctxkey) .ctxkey-frame {
+  max-width: 980px;
+  margin-inline: auto;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+/* Four copies side by side need more room than the single-column walk, and at
+   the walk's cap an 800-unit viewBox would render its 9.5px labels at 7. */
+:where(.scene-ctxkey) svg.walk-svg {
+  width: 100%;
+  max-width: 940px;
+}

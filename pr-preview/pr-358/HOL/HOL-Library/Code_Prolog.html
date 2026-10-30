@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Code_Prolog</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Code_Prolog</h1>
+</div>
+
+<pre class="source"><span class="comment1"><span>(*  Title:      HOL/Library/Code_Prolog.thy
+    Author:     Lukas Bulwahn, TUM 2010
+*)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Code generation of prolog programs›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Code_Prolog.html"><span>Code_Prolog</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><a href="../HOL/Main.html"><span>Main</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>keywords</span></span></span><span> </span><span class="quoted"><span>"values_prolog"</span></span><span> </span><span class="main"><span>::</span></span><span> diag
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>ML_file</span></span></span><span> </span><span class="quoted"><a href="ISABELLE_HOME/src/HOL/Tools/Predicate_Compile/code_prolog.ML.html"><span>‹~~/src/HOL/Tools/Predicate_Compile/code_prolog.ML›</span></a></span><span>
+
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Setup for Numerals›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>setup</span></span></span><span> </span><span class="quoted"><span>‹</span><span class="entity"><span>Predicate_Compile_Data.ignore_consts</span></span><span> </span><span class="main"><span>[</span></span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const_name</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../HOL/Num.html#Num.numeral_class.numeral|const"><span class="const"><span>numeral</span></span></a><span>›</span></span><span class="main"><span>]</span></span><span>›</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>setup</span></span></span><span> </span><span class="quoted"><span>‹</span><span class="entity"><span>Predicate_Compile_Data.keep_functions</span></span><span> </span><span class="main"><span>[</span></span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const_name</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../HOL/Num.html#Num.numeral_class.numeral|const"><span class="const"><span>numeral</span></span></a><span>›</span></span><span class="main"><span>]</span></span><span>›</span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>

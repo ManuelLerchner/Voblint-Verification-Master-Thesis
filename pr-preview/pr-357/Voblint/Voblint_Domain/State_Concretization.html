@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory State_Concretization</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory State_Concretization</h1>
+</div>
+
+<pre class="source"><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="State_Concretization.html"><span>State_Concretization</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><span class="quoted"><span>"</span><a href="../Voblint_VIMP/VIMP_Syntax.html"><span>Voblint_VIMP.VIMP_Syntax</span></a><span>"</span></span><span> </span><a href="Abstract_Domain.html"><span>Abstract_Domain</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹The stores an abstract state describes›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  Every kind of abstract state, pointwise or relational, denotes a set of
+  stores. </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>γ d›</span></span></span><span> is that set for every state type: each state theory
+  registers its own concretization under this one constant with
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>adhoc_overloading›</span></span></span><span>, and the type of </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>d›</span></span></span><span> selects it.
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹The class parameter </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma|const"><span class="const"><span>gamma</span></span></a><span>›</span></span><span> gives up its own notation here, so that </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>γ›</span></span></span><span>
+  has exactly one production in every theory that sees this one.›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>no_notation</span></span></span><span> </span><a class="entity_ref" href="Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma|const"><span class="const"><span>gamma</span></span></a><span> </span><span class="main"><span>(</span></span><span class="quoted"><span>"</span><span class="keyword1"><span>γ</span></span><span>"</span></span><span class="main"><span>)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>consts</span></span></span><span> </span><span class="entity_def" id="State_Concretization.gamma_S|const"><span>gamma_S</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="tfree"><span>'s</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><span class="tfree"><span>'v</span></span><span> </span><a class="entity_ref" href="../../HOL/HOL/Set.html#Set.set|type"><span class="tconst"><span>set</span></span></a><span>"</span></span></span><span> </span><span class="main"><span>(</span></span><span class="quoted"><span>"</span><span class="keyword1"><span>γ</span></span><span>"</span></span><span class="main"><span>)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>adhoc_overloading</span></span></span><span> </span><a class="entity_ref" href="State_Concretization.html#State_Concretization.gamma_S|const"><span class="const"><span>gamma_S</span></span></a><span> </span><span class="main"><span>==</span></span><span> </span><span class="quoted"><a class="entity_ref" href="Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma|const"><span class="const"><span>gamma</span></span></a></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  An executable state is read back as the abstract state it represents, given the
+  classifier that tells locals from globals. </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>readback 𝒢 x›</span></span></span><span> is that reading for
+  every executable representation, registered the same way, so a concretization of an
+  executable state is </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>γ (readback 𝒢 x)›</span></span></span><span> whatever its representation. Its notation
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>ρ<span class="hidden">⇘</span><sub>𝒢</sub><span class="hidden">⇙</span> x›</span></span></span><span> is opt-in, in the bundle </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>default_st_syntax›</span></span></span><span>.
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>consts</span></span></span><span> </span><span class="entity_def" id="State_Concretization.readback|const"><span>readback</span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="main"><span>(</span></span><span class="tfree"><span>'k</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><a class="entity_ref" href="../../HOL/HOL/HOL.html#HOL.bool|type"><span class="tconst"><span>bool</span></span></a><span class="main"><span>)</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><span class="tfree"><span>'e</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><span class="tfree"><span>'a</span></span><span>"</span></span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>
