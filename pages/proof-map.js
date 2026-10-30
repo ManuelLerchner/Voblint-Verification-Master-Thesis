@@ -113,6 +113,7 @@ function layout(data) {
       deps,
       external,
       anchored,
+      location: data.locations?.[id],
       cited: cited && kind === "thm",
       i,
       incoming: [],
@@ -704,12 +705,33 @@ function select(i, focus = false) {
     panel.append(element("p", `${theory.name} · ${shortSession(theory.session)}`));
     const link = element(
       "a",
-      n.anchored ? "Open declaration in Isabelle ↗" : "Open containing theory ↗",
+      n.location?.kind === "interpretation"
+        ? "Open interpretation in Isabelle ↗"
+        : n.anchored
+          ? "Open source command in Isabelle ↗"
+          : "Open containing theory ↗",
     );
     link.href = documentationURL(n);
     link.target = "_blank";
     link.rel = "noreferrer";
     panel.append(link);
+    if (n.location?.kind === "interpretation") {
+      panel.append(
+        element(
+          "p",
+          "Isabelle generates this entity at the interpretation command; its statement is not displayed there.",
+          "proof-muted",
+        ),
+      );
+      if (n.location.generic !== undefined) {
+        const generic = state.nodes[n.location.generic];
+        const source = element("a", "Open generic source ↗");
+        source.href = documentationURL(generic);
+        source.target = "_blank";
+        source.rel = "noreferrer";
+        panel.append(source, element("p", generic.name, "proof-muted"));
+      }
+    }
     panel.append(
       element(
         "p",

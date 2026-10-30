@@ -234,6 +234,20 @@ theory page. URLs are never guessed at render time:
 `scripts/check_thesis_links.py` resolves each cited name against a real anchor
 and writes only the verified ones to `shared/generated/links.json`.
 
+An anchor on an interpretation command does not display the generated fact's
+statement. The resolver uses Isabelle's HTML command markup to prefer a source
+declaration, including one in a library session, for an unqualified citation.
+If only an interpretation matches, qualify the intended instance explicitly or
+cite the generic declaration. Qualified instance citations retain their identity.
+The proof map uses the same command classification and offers a separate generic
+source link when the exported locale ancestry identifies one unambiguous match.
+
+With `pages-dev` running and the figure-capture Playwright installation available,
+`node scripts/check_proof_map_links.mjs` samples proof-map and thesis links against
+the published HTML in Chrome. It checks source commands and browser scroll targets,
+and writes `build/proof-map-link-audit.json`. `LINK_SAMPLE_SEED` (default `20261030`)
+and `LINK_SAMPLE_SIZE` (default `10` per category) make the sample reproducible.
+
 Validation happens in three places, because a link points at a *deployed* page
 and only one of them can see it:
 

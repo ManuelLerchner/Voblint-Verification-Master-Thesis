@@ -11,25 +11,15 @@ import hashlib
 import json
 import sys
 from datetime import datetime, timezone
-from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote
+
+from isabelle_html import Source, generic_sources
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "thesis/tools"))
 from entity_deps import project_theories  # noqa: E402
 from isar_json import graph  # noqa: E402
-
-
-class Anchors(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.ids = set()
-
-    def handle_starttag(self, tag, attrs):
-        for name, value in attrs:
-            if name == "id":
-                self.ids.add(value)
 
 
 def package(raw, html_root, cited, owners=None):
@@ -48,20 +38,21 @@ def package(raw, html_root, cited, owners=None):
             continue
         if path.stem in theory_ids:
             continue
-        parser = Anchors()
-        parser.feed(path.read_text())
+        parser = Source(path.read_text())
         theory_ids[path.stem] = len(theories)
         theories.append(
             [path.stem, path.parent.name, path.relative_to(html_root).as_posix()]
         )
-        anchors[path.stem] = parser.ids
+        anchors[path.stem] = parser
     missing = sorted({n["theory"] for n in raw.values()} - theory_ids.keys())
     if missing:
         raise ValueError(
             f"Render Isabelle HTML before exporting the map; missing: {missing}"
         )
     ids = {name: i for i, name in enumerate(sorted(raw))}
+    origins = generic_sources(raw, anchors)
     nodes = []
+    locations = {}
     for name, i in ids.items():
         node = raw[name]
         kind, entity = name.split(":", 1)
@@ -73,11 +64,16 @@ def package(raw, html_root, cited, owners=None):
                 theory_ids[node["theory"]],
                 deps,
                 len(set(node["deps"]) - ids.keys()),
-                anchor in anchors[node["theory"]],
+                anchor in anchors[node["theory"]].anchors,
                 anchor in cited,
             ]
         )
-    return {"theories": theories, "nodes": nodes}
+        location = anchors[node["theory"]].location(anchor)
+        if location == "interpretation":
+            locations[name] = {"kind": location}
+            if name in origins:
+                locations[name]["generic"] = ids[origins[name]]
+    return {"theories": theories, "nodes": nodes, "locations": locations}
 
 
 def main():

@@ -45,9 +45,10 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urljoin, urlsplit
 
 import tomllib
+from isabelle_html import INTERPRETATIONS, Source
 
 REPO = Path(__file__).resolve().parent.parent
 HTML = REPO / "build" / "isabelle-html"
@@ -129,6 +130,16 @@ SCOPES: set[str] = set()
 # Unqualified locale and class names: `context dg_analysis begin` in another
 # theory anchors its facts as `<Theory>.dg_analysis.<fact>`.
 SCOPE_NAMES: set[str] = set()
+LOCATIONS: dict[str, str] = {}
+
+
+def _collect_locations(rel: str, body: str) -> None:
+    if not any(command in body for command in INTERPRETATIONS):
+        return
+    source = Source(body)
+    for anchor in source.anchors:
+        target = rel + "#" + quote(anchor, safe="._()'")
+        LOCATIONS[target] = source.location(anchor)
 
 
 def _add_scope(qualified: str) -> None:
@@ -147,6 +158,7 @@ def _index_rel(index: dict[tuple[str, str], str], rel: str) -> None:
 def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
     """A fetched page's anchors, for the published site, where no build directory exists."""
     _index_rel(index, rel)
+    _collect_locations(rel, body)
     for m in ANCHOR.finditer(body):
         escaped, kind = m.group(1), m.group(2)
         _index_anchor(
@@ -191,10 +203,11 @@ def _index_anchor(
         # (see definitions_of), so the ranking never has to guess between them.
         def rank(
             value: str,
-        ) -> tuple[bool, bool, bool, bool, bool, bool, str]:
+        ) -> tuple:
             page, _, entity = value.partition("#")
             project = page.startswith(("Voblint/", "Unsorted/TD/"))
             return (
+                LOCATIONS.get(value) == "interpretation",
                 not page.startswith("Voblint/"),
                 not project,
                 not (project or page.startswith("HOL/HOL/")),
@@ -273,6 +286,24 @@ def index_live(
             if body is None:
                 continue
             fetched.append((rel, body))
+    # An interpreted project's generic source may live in a library session.
+    # Follow Isabelle's locale links instead of assuming Voblint owns the source.
+    seen = {rel for rel, _ in fetched}
+    for rel, body in fetched:
+        for href in re.findall(r'href="([^"]+)"', body):
+            if not unquote(href).endswith("|locale"):
+                continue
+            target = urlsplit(urljoin(base + rel, html.unescape(href)))
+            full = target._replace(fragment="").geturl()
+            if not full.startswith(base):
+                continue
+            page = full.removeprefix(base)
+            if page in seen or not page.startswith(("Unsorted/", "HOL/", "Pure/")):
+                continue
+            seen.add(page)
+            content = fetch(full, retries)
+            if content is not None:
+                fetched.append((page, content))
     # Ranking reads SCOPES, so every page's locales are known before any is indexed.
     _collect_scopes(
         [
@@ -336,6 +367,8 @@ def index_anchors() -> dict[tuple[str, str], str]:
         for row in listing["anchors"]
     ]
     _collect_scopes(rows)
+    for rel in {rel for rel, _, _ in rows}:
+        _collect_locations(rel, (HTML / rel).read_text())
     for rel, qualified, kind in rows:
         _index_anchor(index, rel, qualified, kind)
     return index
@@ -478,10 +511,18 @@ def resolve(
             target = min(
                 hits,
                 key=lambda hit: (
+                    LOCATIONS.get(hit) == "interpretation",
                     not hit.startswith("Voblint/"),
                     not hit.startswith("Unsorted/TD/"),
                 ),
             )
+            if "." not in name and LOCATIONS.get(target) == "interpretation":
+                unresolved.append(
+                    f"  {path.relative_to(REPO)}:{line}: {name} only resolves to "
+                    "an interpretation command, which does not display its statement; "
+                    "cite the generic declaration or qualify the intended instance"
+                )
+                continue
             store(path, line, kind, name, target, name)
         elif kind != "ctor":
             unresolved.append(

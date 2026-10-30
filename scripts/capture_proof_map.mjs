@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const sourceFiles = ["pages/proof-map.js", "pages/proof-map.css", "pages/figures/strata.css", "pages/style.css", "scripts/pages_proof_map.py", "scripts/capture_proof_map.mjs"];
+const sourceFiles = ["pages/proof-map.js", "pages/proof-map.css", "pages/figures/strata.css", "pages/style.css", "scripts/pages_proof_map.py", "scripts/isabelle_html.py", "scripts/capture_proof_map.mjs"];
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const sources = Object.fromEntries(sourceFiles.map((name) => [name, hash(readFileSync(join(root,name)))]));
 const images = ["docs/images/proof-map-treemap.png", "thesis/assets/proof-map-treemap.png"];
