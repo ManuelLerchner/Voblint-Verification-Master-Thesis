@@ -420,6 +420,11 @@ pre-commit:
               - "thesis/shared/generated/notation.json"
               - "src/**/*.thy"
               - "scripts/check_thesis_links.py"
+              - "scripts/isabelle_html.py"
+              - "scripts/pages_proof_map.py"
+              - "tests/test_isabelle_html.py"
+              - "tests/test_check_thesis_links.py"
+              - "tests/test_pages_proof_map.py"
               - "pixi.toml"
             run: pixi run thesis-links
 

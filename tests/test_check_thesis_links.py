@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "scripts"))
 
 
 def test_write_and_check_exported_html(tmp_path):
@@ -15,6 +16,7 @@ def test_write_and_check_exported_html(tmp_path):
     scripts.mkdir()
     checker = scripts / "check_thesis_links.py"
     shutil.copyfile(REPO / "scripts/check_thesis_links.py", checker)
+    shutil.copyfile(REPO / "scripts/isabelle_html.py", scripts / "isabelle_html.py")
     thesis = tmp_path / "thesis"
     thesis.mkdir()
     (thesis / "example.typ").write_text('isatype("pp")\nisa: "pp"\n')
@@ -93,6 +95,7 @@ def test_lenient_check_still_rejects_missing_target(tmp_path):
     scripts.mkdir()
     checker = scripts / "check_thesis_links.py"
     shutil.copyfile(REPO / "scripts/check_thesis_links.py", checker)
+    shutil.copyfile(REPO / "scripts/isabelle_html.py", scripts / "isabelle_html.py")
     thesis = tmp_path / "thesis"
     thesis.mkdir()
     (thesis / "example.typ").write_text('proved("missing_fact")\n')
@@ -133,6 +136,93 @@ def test_original_locale_fact_precedes_interpretation():
             "Voblint/Voblint_CFG/LTR_Abstract.html"
             "#LTR_Abstract.ltr_coverage.cover_sound%7Cfact"
         )
+
+
+def test_library_declaration_precedes_project_interpretation():
+    spec = importlib.util.spec_from_file_location(
+        "thesis_links", REPO / "scripts/check_thesis_links.py"
+    )
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    library = (
+        "Unsorted/TD/TD.html",
+        '<span class="command">lemma</span>'
+        '<span id="TD.solver.partial_post_solution|fact">partial_post_solution</span>',
+    )
+    instance = (
+        "Voblint/Voblint_Solver/Globals_Rule.html",
+        '<span class="command">'
+        '<span id="Globals_Rule.TD_side_rule_Interp.partial_post_solution|fact">'
+        "global_interpretation</span></span>",
+    )
+    for pages in ((library, instance), (instance, library)):
+        index = {}
+        for page, body in pages:
+            checker._index_page(index, page, body)
+        assert index[("partial_post_solution", "fact")].startswith(library[0])
+        # Explicit instance citations must retain the specialized theorem.
+        assert index[
+            ("Globals_Rule.TD_side_rule_Interp.partial_post_solution", "fact")
+        ].startswith(instance[0])
+
+
+def test_unqualified_interpretation_requires_explicit_choice(tmp_path, monkeypatch):
+    spec = importlib.util.spec_from_file_location(
+        "thesis_links", REPO / "scripts/check_thesis_links.py"
+    )
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    index = {}
+    checker._index_page(
+        index,
+        "Voblint/Test/Example.html",
+        '<span class="command"><span id="Example.i.result|fact">'
+        "global_interpretation</span></span>",
+    )
+    monkeypatch.setattr(checker, "REPO", tmp_path)
+    monkeypatch.setattr(
+        checker, "cited", lambda: [(tmp_path / "example.typ", 1, "thm", "result")]
+    )
+    links, _, errors = checker.resolve(index)
+    assert not links
+    assert "qualify the intended instance" in errors[0]
+
+
+def test_live_resolution_follows_library_locale_links(monkeypatch):
+    spec = importlib.util.spec_from_file_location(
+        "thesis_links", REPO / "scripts/check_thesis_links.py"
+    )
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    base = "https://example.org/site/"
+    pages = {
+        "Voblint/index.html": '<a href="Voblint_Solver/index.html">solver</a>',
+        "Voblint/Voblint_Solver/index.html": '<a href="Globals.html">Globals</a>',
+        "Voblint/Voblint_Solver/Globals.html": (
+            '<span class="command"><span id="Globals.i.result|fact">'
+            "global_interpretation</span></span>"
+            '<a href="../../Unsorted/TD/TD.html#TD.solver%7Clocale">solver</a>'
+            '<a href="https://elsewhere.org/X.html#X.x|locale">external</a>'
+        ),
+        "Unsorted/TD/TD.html": (
+            '<span class="command">locale</span>'
+            '<span id="TD.solver|locale">solver</span>'
+            '<span class="command">lemma</span>'
+            '<span id="TD.solver.result|fact">result</span>'
+        ),
+    }
+    fetched = []
+
+    def fetch(url, retries):
+        assert url.startswith(base)
+        path = url.removeprefix(base)
+        fetched.append(path)
+        return pages[path]
+
+    monkeypatch.setattr(checker, "fetch", fetch)
+    index = checker.index_live(base, retries=1)
+    assert index[("result", "fact")] == "Unsorted/TD/TD.html#TD.solver.result%7Cfact"
+    assert len(fetched) == len(pages)
 
 
 def test_manifest_facts_need_targets(tmp_path, monkeypatch):

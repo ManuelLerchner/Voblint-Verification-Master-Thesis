@@ -1,5 +1,7 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it using the metadata below."
+message: >-
+  Cite the paper below for the research contribution, the thesis for its
+  detailed exposition, and the software DOI for the formalization and analyzer.
 title: >-
   Voblint: A Verified Goblint-Style Static Analysis Pipeline in
   Isabelle/HOL
@@ -17,6 +19,37 @@ repository-code: >-
   https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis
 url: >-
   https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/
+preferred-citation:
+  type: unpublished
+  status: preprint
+  title: >-
+    End-to-End Soundness of a Context-Sensitive Goblint-Style Analyzer in Isabelle/HOL
+  authors:
+    - family-names: Lerchner
+      given-names: Manuel
+      affiliation: Technical University of Munich
+      orcid: "https://orcid.org/0000-0002-5167-465X"
+  year: 2026
+  notes: Preprint.
+  url: >-
+    https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/paper.pdf
+references:
+  - type: thesis
+    status: in-preparation
+    thesis-type: Master's thesis
+    title: >-
+      Voblint: Towards a Verified Goblint-Style Analysis Pipeline in Isabelle/HOL
+    authors:
+      - family-names: Lerchner
+        given-names: Manuel
+        affiliation: Technical University of Munich
+        orcid: "https://orcid.org/0000-0002-5167-465X"
+    institution:
+      name: Technical University of Munich
+    year: 2026
+    notes: Master's thesis draft.
+    url: >-
+      https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/thesis.pdf
 abstract: >-
   Voblint is a machine-checked Isabelle/HOL framework for building, running
   and verifying interprocedural abstract interpreters, modeled on Goblint's

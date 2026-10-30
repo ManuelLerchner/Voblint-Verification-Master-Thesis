@@ -14,8 +14,9 @@ and theorems link to the #link(site("Voblint/index.html"))[rendered theories],
 also available as a #link(site("formalization.pdf"))[single PDF].
 The project site hosts an animated #link(site("index.html"))[explainer],
 a #link(site("proof-map.html"))[proof map] of the declarations,
-#link(site("profiling.html"))[benchmark data and CPU profiles], and a
-#link(site("playground.html"))[playground] for running VIMP programs.
+#link(site("profiling.html"))[benchmark data and CPU profiles], a
+#link(site("playground.html"))[playground] for running VIMP programs, and a
+#link(site("paper.pdf"))[preprint] that summarizes the soundness argument @lerchner26paper.
 
 Each kind of object has its own marker, usually also a link. Isabelle names open
 their declarations, programs open the playground, and test programs open their

@@ -64,7 +64,7 @@ such as #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156]
 of @ch:intro, where Goblint claimed `c % 2 == 1` for $c in {-5, -7}$.
 #link("https://github.com/goblint/analyzer/pull/1161")[Pull request 1161]
 restricted when the congruence domain returns a constant remainder and added
-the program as regression test `37-congruence/14-negative.c` @goblint1161.
+the program as regression test `37-congruence/14-negative.c`.
 
 
 In Voblint, the defective operator could not have been proved sound. Every

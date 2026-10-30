@@ -25,7 +25,7 @@ instance, Goblint claimed that `c % 2 == 1` holds for $c in {-5, -7}$, although
 the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$ for both values.
 Goblint's congruence domain had ignored the sign of the dividend, and
 #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] fixed
-it @goblint1161. An error of this kind is worse than imprecision. An imprecise
+it. An error of this kind is worse than imprecision. An imprecise
 answer leaves the question undecided, whereas a wrong answer gives a developer
 who trusts it no reason to look for the error.
 

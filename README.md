@@ -11,14 +11,6 @@
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 [![DOI](https://zenodo.org/badge/1222030547.svg)](https://doi.org/10.5281/zenodo.23260696)
 
-[![Treemap of the Isabelle formalization](docs/images/proof-map-treemap.png)](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/proof-map.html?view=treemap)
-
-Explore the [interactive proof map](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/proof-map.html)
-as a corpus wheel or treemap. Blocks group entities by session and theory;
-their area reflects entity counts, including generated declarations. Colors
-follow the session dependency layers. Zoom in to inspect entities and open
-their Isabelle documentation.
-
 ## What is Voblint?
 
 Voblint is a context-sensitive static analyzer for VIMP, a small C-like language
@@ -68,6 +60,16 @@ remain outside the proof.
 
 The [headline theorem](#the-headline-theorem) gives the precise statement and
 its connection to the Isabelle development.
+
+## Interactive proof map
+
+[![Treemap of the Isabelle formalization](docs/images/proof-map-treemap.png)](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/proof-map.html?view=treemap)
+
+Explore the [interactive proof map](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/proof-map.html)
+as a corpus wheel or treemap. Blocks group entities by session and theory;
+their area reflects entity counts, including generated declarations. Colors
+follow the session dependency layers. Zoom in to inspect entities and open
+their Isabelle documentation.
 
 ## Running Voblint
 
