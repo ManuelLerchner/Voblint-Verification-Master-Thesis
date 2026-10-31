@@ -1,0 +1,173 @@
+/* Context sensitivity: how many copies of a procedure */
+
+.scene-context svg {
+  max-width: 880px;
+}
+
+:where(.scene-context) .context-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+:where(.scene-context) .context-tabs input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:where(.scene-context) .context-tabs label {
+  padding: 6px 14px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-context) .context-tabs label code {
+  padding: 0;
+  background: none;
+}
+
+:where(.scene-context) .context-tabs input:checked + label {
+  color: #ffffff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+:where(.scene-context) .context-tabs input:focus-visible + label {
+  outline: 3px solid rgb(23 75 87 / 0.22);
+  outline-offset: 2px;
+}
+
+:where(.scene-context) .callgraph rect {
+  fill: var(--surface-muted);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+:where(.scene-context) .callgraph text {
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+:where(.scene-context) .ctx-verdict {
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+/* The program beside the lattice it is about, so the call sites the columns name
+   s1, s2 and s3 can be found in the source without leaving the figure. */
+:where(.scene-context) .context-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.6fr);
+  gap: 18px;
+  align-items: center;
+}
+
+:where(.scene-context) .context-code {
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+:where(.scene-context) .context-layout .context-svg {
+  min-width: 0;
+  max-width: none;
+}
+
+@media (max-width: 860px) {
+  :where(.scene-context) .context-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+:where(.scene-context) .context-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+/* Each card is the same object as a context box in the figure above: a box with
+   its key on it. Same border, same radius, same key styling, so the comparison
+   reads as four contexts rather than four unrelated notes. */
+:where(.scene-context) .context-notes > div {
+  padding: 12px 14px;
+  background: var(--surface-muted);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  opacity: 0.55;
+  transition:
+    opacity 150ms ease,
+    border-color 150ms ease;
+}
+
+:where(.scene-context) .context-notes dt {
+  color: var(--accent);
+  font: 700 0.72rem var(--mono);
+  letter-spacing: 0.04em;
+}
+
+:where(.scene-context) .context-notes dd {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.scene-context:has(#ctx-none:checked) .note-none,
+.scene-context:has(#ctx-entry:checked) .note-entry,
+.scene-context:has(#ctx-k1:checked) .note-k1,
+.scene-context:has(#ctx-k2:checked) .note-k2 {
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+:where(.scene-context) .context-tabs label code {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+/* One lattice per mode: same rows every time, and only the columns change. */
+:where(.scene-context) .lat {
+  display: none;
+}
+
+.scene-context:has(#ctx-none:checked) .lat-none,
+.scene-context:has(#ctx-entry:checked) .lat-entry,
+.scene-context:has(#ctx-k1:checked) .lat-k1,
+.scene-context:has(#ctx-k2:checked) .lat-k2 {
+  display: block;
+}
+
+/* What the mode buys, said once per lattice. */
+:where(.scene-context) .lat-verdict {
+  font: 700 11px var(--mono);
+}
+
+:where(.scene-context) .lat-verdict.is-ok {
+  fill: var(--success);
+}
+
+:where(.scene-context) .lat-verdict.is-meh {
+  fill: var(--caution);
+}

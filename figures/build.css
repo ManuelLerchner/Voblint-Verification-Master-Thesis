@@ -1,0 +1,308 @@
+/* From Isabelle to your browser tab */
+
+.scene-build svg {
+  max-width: 1120px;
+}
+
+.scene:where(.scene-build) .mono {
+  font-family: var(--mono);
+}
+
+:where(.scene-build) .lane-title {
+  fill: var(--primary) !important;
+  font-size: 15px !important;
+  font-weight: 700;
+}
+
+:where(.scene-build) .lane-rule {
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+:where(.scene-build) .bstage rect {
+  fill: var(--surface);
+  stroke-width: 2;
+}
+
+:where(.scene-build) .bstage.proved rect {
+  fill: var(--success-soft);
+  stroke: var(--success);
+}
+
+:where(.scene-build) .bstage.trusted rect {
+  fill: rgb(167 105 36 / 0.08);
+  stroke: var(--warning);
+}
+
+:where(.scene-build) .bstage.untrusted rect {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-dasharray: 7 5;
+}
+
+:where(.scene-build) .bwires path,
+:where(.scene-build) .load-link {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.8;
+}
+
+:where(.scene-build) .load-link {
+  stroke-dasharray: 5 5;
+  animation: dash-flow 1.4s linear infinite;
+}
+
+:where(.scene-build) .bwires text,
+:where(.scene-build) .load-label {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+}
+
+:where(.scene-build) .build-token rect {
+  stroke: none;
+  animation: token-color 10s step-end infinite;
+}
+
+:where(.scene-build) .build-token {
+  animation: token-move 10s ease-in-out infinite;
+}
+
+:where(.scene-build) .build-token text {
+  fill: #ffffff !important;
+  font-family: var(--mono);
+  font-size: 12px !important;
+  font-weight: 700;
+  opacity: 0;
+}
+
+:where(.scene-build) .tok-isa {
+  animation: tok-isa 10s step-end infinite;
+}
+
+:where(.scene-build) .tok-ml {
+  animation: tok-ml 10s step-end infinite;
+}
+
+:where(.scene-build) .tok-wasm {
+  animation: tok-wasm 10s step-end infinite;
+}
+
+@keyframes token-move {
+  0% {
+    transform: translate(105px, 168px);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  14% {
+    transform: translate(375px, 168px);
+  }
+  24% {
+    transform: translate(635px, 168px);
+  }
+  34% {
+    transform: translate(870px, 168px);
+  }
+  42% {
+    transform: translate(1020px, 168px);
+    opacity: 1;
+  }
+  48%,
+  100% {
+    transform: translate(1020px, 168px);
+    opacity: 0;
+  }
+}
+
+:where(.scene-build) .token-track {
+  stroke: var(--border);
+  stroke-width: 2;
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+
+:where(.scene-build) .source-link .bstage rect {
+  transition:
+    stroke-width 150ms ease,
+    filter 150ms ease;
+}
+
+:where(.scene-build) .source-link:hover .bstage rect,
+:where(.scene-build) .source-link:focus-visible .bstage rect {
+  stroke: var(--primary);
+  stroke-width: 3;
+}
+
+.scene:where(.scene-build) .link-sub {
+  fill: var(--primary) !important;
+  font-weight: 650 !important;
+  text-decoration: underline;
+}
+
+@keyframes token-color {
+  0% {
+    fill: #8a5fb0;
+  }
+  12% {
+    fill: var(--accent);
+  }
+  32% {
+    fill: #3f6fb0;
+  }
+}
+
+@keyframes tok-isa {
+  0% {
+    opacity: 1;
+  }
+  12%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes tok-ml {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  32%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes tok-wasm {
+  0% {
+    opacity: 0;
+  }
+  32% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+:where(.scene-build) .msg rect {
+  stroke-width: 1.5;
+}
+
+:where(.scene-build) .msg text {
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-build) .msg-request rect {
+  fill: var(--primary-soft);
+  stroke: var(--primary);
+}
+
+:where(.scene-build) .msg-request text {
+  fill: var(--primary) !important;
+}
+
+:where(.scene-build) .msg-response rect {
+  fill: var(--success-soft);
+  stroke: var(--success);
+}
+
+:where(.scene-build) .msg-response text {
+  fill: var(--success) !important;
+}
+
+:where(.scene-build) .msg-request {
+  opacity: 0;
+  animation: msg-request 10s ease-in-out infinite;
+}
+
+:where(.scene-build) .msg-response {
+  opacity: 0;
+  animation: msg-response 10s ease-in-out infinite;
+}
+
+@keyframes msg-request {
+  0%,
+  46% {
+    transform: translate(135px, 246px);
+    opacity: 0;
+  }
+  48% {
+    transform: translate(135px, 246px);
+    opacity: 1;
+  }
+  55%,
+  58% {
+    transform: translate(535px, 246px);
+    opacity: 1;
+  }
+  66% {
+    transform: translate(950px, 246px);
+    opacity: 1;
+  }
+  69%,
+  100% {
+    transform: translate(950px, 246px);
+    opacity: 0;
+  }
+}
+
+@keyframes msg-response {
+  0%,
+  70% {
+    transform: translate(950px, 372px);
+    opacity: 0;
+  }
+  72% {
+    transform: translate(950px, 372px);
+    opacity: 1;
+  }
+  79%,
+  82% {
+    transform: translate(535px, 372px);
+    opacity: 1;
+  }
+  90% {
+    transform: translate(135px, 372px);
+    opacity: 1;
+  }
+  94%,
+  100% {
+    transform: translate(135px, 372px);
+    opacity: 0;
+  }
+}
+
+:where(.scene-build) .build-legend text {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+}
+
+:where(.scene-build) .lg-proved {
+  fill: var(--success-soft);
+  stroke: var(--success);
+  stroke-width: 1.5;
+}
+
+:where(.scene-build) .lg-trusted {
+  fill: rgb(167 105 36 / 0.08);
+  stroke: var(--warning);
+  stroke-width: 1.5;
+}
+
+:where(.scene-build) .lg-untrusted {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.scene-build) .build-token,
+  :where(.scene-build) .msg {
+    display: none;
+  }
+}

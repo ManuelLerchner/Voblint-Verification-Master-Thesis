@@ -1,0 +1,101 @@
+/* -------------------------------------------------------------------------- */
+/* Program globals: the same set/get run under both placements                */
+/* -------------------------------------------------------------------------- */
+
+:where(.scene-placement) .pl-title {
+  fill: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+:where(.scene-placement) .pl-node rect {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+:where(.scene-placement) .pl-node text {
+  fill: var(--text);
+  font: 700 11px var(--mono);
+  text-anchor: middle;
+}
+
+:where(.scene-placement) .pl-flow {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-placement) .pl-carried {
+  fill: var(--accent);
+  font: 700 11px var(--mono);
+}
+
+:where(.scene-placement) .pl-local {
+  fill: var(--text-faint);
+  font: 11px var(--mono);
+}
+
+:where(.scene-placement) .pl-global {
+  fill: var(--warning-soft);
+  stroke: var(--global-link);
+  stroke-width: 2;
+}
+
+:where(.scene-placement) .pl-global-label {
+  fill: var(--global-link);
+  font: 700 11px var(--mono);
+  text-anchor: middle;
+}
+
+:where(.scene-placement) .pl-pub {
+  fill: none;
+  stroke: var(--global-link);
+  stroke-width: 1.8;
+}
+
+:where(.scene-placement) .pl-read {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-placement) .pl-edge-label {
+  fill: var(--global-link);
+  font: 10px var(--mono);
+}
+
+:where(.scene-placement) .pl-read-label {
+  fill: var(--text-muted);
+  font: 10px var(--mono);
+}
+
+:where(.scene-placement) .pl-verdict {
+  font: 700 12px var(--mono);
+}
+
+:where(.scene-placement) .pl-verdict.proved {
+  fill: var(--success);
+}
+
+:where(.scene-placement) .pl-verdict.unknown {
+  fill: var(--warning);
+}
+
+:where(.scene-placement) .pl-divider {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+:where(.scene-placement) .pl-head-flow {
+  fill: var(--border-strong);
+}
+
+:where(.scene-placement) .pl-head-pub {
+  fill: var(--global-link);
+}
+
+:where(.scene-placement) .pl-head-read {
+  fill: var(--text-muted);
+}

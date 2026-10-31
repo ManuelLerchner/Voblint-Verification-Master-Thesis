@@ -1,0 +1,147 @@
+/* From traces to one answer per node: the reshaping soundness is stated across. */
+:where(.scene-collect) .cl-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) 18px minmax(0, 1fr) 18px minmax(0, 0.95fr);
+  gap: 10px 6px;
+  align-items: center;
+}
+
+:where(.scene-collect) .cl-head {
+  margin: 0;
+  color: var(--text-faint);
+  font: 700 0.66rem var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:where(.scene-collect) .cl-arrow {
+  margin: 0;
+  color: var(--border-strong);
+  text-align: center;
+}
+
+:where(.scene-collect) .cl-from,
+:where(.scene-collect) .cl-bucket {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+:where(.scene-collect) .cl-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+:where(.scene-collect) .cl-act {
+  padding: 1px 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  font: 700 0.7rem var(--mono);
+}
+
+:where(.scene-collect) .cl-store {
+  margin: 0;
+  font: 0.72rem var(--mono);
+  color: var(--text-muted);
+}
+
+:where(.scene-collect) .cl-bucket {
+  padding: 8px 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-collect) .cl-node {
+  margin: 0 0 2px;
+  font: 700 0.72rem var(--mono);
+  color: var(--text);
+}
+
+:where(.scene-collect) .cl-answer {
+  padding: 8px 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font: 0.72rem var(--mono);
+  color: var(--text);
+}
+
+:where(.scene-collect) .cl-answer div + div {
+  margin-top: 2px;
+}
+
+@media (width <= 760px) {
+  :where(.scene-collect) .cl-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(.scene-collect) .cl-arrow {
+    display: none;
+  }
+}
+
+/* Why one node holds several stores: more than one edge in, more than one activation on them. */
+:where(.scene-collect) .cl-inset {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scene.scene-collect .cl-inset svg {
+  width: 100%;
+  max-width: 300px;
+  margin: 0;
+}
+
+:where(.scene-collect) .cl-inset p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+:where(.scene-collect) .cl-edges line {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-collect) .cl-edges text {
+  fill: var(--text-faint);
+  font: 10px var(--mono);
+}
+
+:where(.scene-collect) .cl-nodes rect {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+:where(.scene-collect) .cl-nodes .is-v rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.scene-collect .cl-nodes text {
+  fill: var(--text);
+  font: 700 11px var(--mono);
+  text-anchor: middle;
+}
+
+.scene-collect .cl-note {
+  fill: var(--text-faint);
+  font: 10px var(--mono);
+}
+
+@media (width <= 760px) {
+  :where(.scene-collect) .cl-inset {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

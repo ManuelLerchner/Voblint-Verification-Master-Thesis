@@ -1,0 +1,13 @@
+{
+  "sources": {
+    "pages/proof-map.js": "b8d60ba6dc61e76a045389262c79bc9638b6a8ea263497607c55c0d27634258f",
+    "pages/proof-map.css": "93631343b04a3559f3c29e02b76d23fc18db99c41d1e32045f76642766c47377",
+    "pages/figures/strata.css": "148c57d331096c3d523dad4232cc8a4f85b69282de8c041160f4a011e6c5af1f",
+    "pages/style.css": "d236de73754e441b7580a506beab9df7950e502ec53ce6566d97a5813eb3408c",
+    "scripts/pages_proof_map.py": "78aaa751551afab0110ab0b1a139dcc3eb5a1e9cc2e7bad9dc31660b8f5a6dfc",
+    "scripts/capture_proof_map.mjs": "a28ff7db4e12f37322d2a0bb43827a0fa3bd7bdc08e5503561b6ae5662071314"
+  },
+  "image": "0d2a4a230d92feef807f9c8bc3cb500c6aad6c3c53000b1b5681487874308add",
+  "exported": "2026-10-28",
+  "data": "de8764284487fee81e24648b466a8bbd7266ec778de26ab2241c11287d12bace"
+}

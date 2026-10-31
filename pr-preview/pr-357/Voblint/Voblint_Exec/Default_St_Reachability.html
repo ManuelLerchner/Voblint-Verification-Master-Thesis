@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Default_St_Reachability</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Default_St_Reachability</h1>
+</div>
+
+<pre class="source"><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Default_St_Reachability.html"><span>Default_St_Reachability</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><a href="Default_St_Transfer.html"><span>Default_St_Transfer</span></a><span> </span><span class="quoted"><span>"</span><a href="../Voblint_Framework/Voblint_Domain.Nonrelational_Reachability.html"><span>Voblint_Domain.Nonrelational_Reachability</span></a><span>"</span></span><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>unbundle</span></span></span><span> </span><a class="entity_ref" href="Default_St_Transfer.html#Default_St_Transfer.default_st_syntax|bundle"><span>default_st_syntax</span></a><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  A lifted state reads back pointwise under the lift: </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.lifted.Bot|const"><span class="const"><span>Bot</span></span></a><span>›</span></span><span> stays
+  </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.lifted.Bot|const"><span class="const"><span>Bot</span></span></a><span>›</span></span><span>, and a </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.lifted.Lifted|const"><span class="const"><span>Lifted</span></span></a><span>›</span></span><span> state becomes </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.lifted.Lifted|const"><span class="const"><span>Lifted</span></span></a><span>›</span></span><span> of the
+  function it represents. This is how a solved local unknown, stored as an
+  </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">typ</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><span class="main"><span>(</span></span><span class="tfree"><span>'k</span></span><span class="main"><span>,</span></span><span> </span><span class="tfree"><span>'a</span></span><span class="main"><span>)</span></span><span> </span><a class="entity_ref" href="Default_St_Base.html#Default_St_Base.gdefault_st|type"><span class="tconst"><span>gdefault_st</span></span></a><span> </span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.lifted|type"><span class="tconst"><span>lifted</span></span></a><span>›</span></span></span><span>, enters the result boundary. The readback
+  performs no bottom test. </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.canonicalize_lift|const"><span class="const"><span>canonicalize_lift</span></span></a><span>›</span></span><span> collapses a
+  witness-bottom payload to </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.lifted.Bot|const"><span class="const"><span>Bot</span></span></a><span>›</span></span><span> before it, and coverage stays a
+  property of the solve: a covered key whose value is </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.lifted.Bot|const"><span class="const"><span>Bot</span></span></a><span>›</span></span><span> remains a
+  key.
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>adhoc_overloading</span></span></span><span> </span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.State_Concretization.html#State_Concretization.readback|const"><span class="const"><span>readback</span></span></a><span> </span><span class="main"><span>==</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="main"><span>λ</span></span><span class="bound"><span>𝒢</span></span><span class="main"><span>.</span></span><span> </span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Reachability_Lift.html#Reachability_Lift.map_lift|const"><span class="const"><span>map_lift</span></span></a><span> </span><span class="main"><span>(</span></span><a class="entity_ref" href="Default_St_Transfer.html#Default_St_Transfer.default_st_to_fun|const"><span class="const"><span>default_st_to_fun</span></span></a><span> </span><span class="bound"><span>𝒢</span></span><span class="main"><span>)</span></span><span>"</span></span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>

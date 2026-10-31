@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory TD.TD_side_Interface</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory TD.TD_side_Interface</h1>
+</div>
+
+<pre class="source"><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="TD.TD_side_Interface.html"><span>TD_side_Interface</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><a href="TD.TD_side_upd_rule.html"><span>TD_side_upd_rule</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Entry point for theories building on the side-effecting solvers;
+  </span><span class="antiquoted"><span class="operator"><span>🗏</span></span><span>‹TD_Interface.thy›</span></span><span> is the counterpart for the others. Record fields are global
+  constants, so a field named like a common variable would capture every downstream variable
+  of that name. The fields below keep their paper names inside this session; importing this
+  theory hides the short names, and the qualified names (e.g.\ </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>TD_side.state.σ›</span></span></span><span>,
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>ug_state.ρ›</span></span></span><span>) remain.›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>hide_const</span></span></span><span> </span><span class="main"><span>(</span></span><span class="keyword2"><span class="keyword"><span>open</span></span></span><span class="main"><span>)</span></span><span>
+  </span><a class="entity_ref" href="TD.TD_side.html#TD_side.state.\&lt;sigma&gt;|const"><span class="const"><span>TD_side.state.σ</span></span></a><span> </span><a class="entity_ref" href="TD.TD_side.html#TD_side.state.\&lt;sigma&gt;_update|const"><span class="const"><span>TD_side.state.σ_update</span></span></a><span>
+  </span><a class="entity_ref" href="TD.Update_rules.html#Update_rules.ug_state.\&lt;rho&gt;|const"><span class="const"><span>Update_rules.ug_state.ρ</span></span></a><span> </span><a class="entity_ref" href="TD.Update_rules.html#Update_rules.ug_state.\&lt;rho&gt;_update|const"><span class="const"><span>Update_rules.ug_state.ρ_update</span></span></a><span>
+  </span><a class="entity_ref" href="TD.Update_rules.html#Update_rules.ug_state_with_gas.gas|const"><span class="const"><span>Update_rules.ug_state_with_gas.gas</span></span></a><span> </span><a class="entity_ref" href="TD.Update_rules.html#Update_rules.ug_state_with_gas.gas_update|const"><span class="const"><span>Update_rules.ug_state_with_gas.gas_update</span></span></a><span>
+  </span><a class="entity_ref" href="TD.TD_side_upd_rule.html#TD_side_upd_rule.state.point|const"><span class="const"><span>TD_side_upd_rule.state.point</span></span></a><span> </span><a class="entity_ref" href="TD.TD_side_upd_rule.html#TD_side_upd_rule.state.point_update|const"><span class="const"><span>TD_side_upd_rule.state.point_update</span></span></a><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>
