@@ -1,23 +1,26 @@
 \begin{abstract}
 Goblint-style analyzers solve side-effecting equations, where evaluating one
-unknown can contribute to other unknowns. An existing Isabelle/HOL proof establishes solver partial correctness
-without connecting the equations to execution. We mechanize this connection
-for an integer language with recursive procedures, without pointers or heap.
+unknown can contribute to other unknowns. An existing Isabelle/HOL proof
+establishes solver partial correctness without connecting the equations to
+execution. We mechanize this connection for a scalar imperative language
+with recursive procedures but no pointers or heap memory.
 
 We adapt the local traces of Schwarz et al.\ to record procedure activations
 and the callers resumed by returns. A context policy relates concrete calls
-to possibly several analysis contexts. A cover assigns candidate sets of reachable stores to program points and contexts.
+to one or more analysis contexts. A cover assigns sets of stores to program
+points and contexts as candidate overapproximations of reachability.
 We prove that five local obligations suffice for a cover to contain every
-valid trace's final store in every admitted context, for any control-flow
-graph. With sound abstract operations and compatible context routing,
-post-solutions (assignments of abstract values satisfying the inequalities,
-including side effects) yield such covers. The verified solver supplies them.
+valid trace's final store in every admitted context, on any control-flow
+graph. A post-solution assigns abstract values that bound each equation's
+result and side effects. When the abstract operations are sound and the
+routing agrees with the context policy, every post-solution induces a
+cover. The verified solver computes a post-solution when it returns.
 
-For every accepted configuration, when the analyzer function exported to
-OCaml returns a report, it overapproximates the stores reached by finite
-source executions from the prescribed initial states. The report's definite verdicts
-correctly classify check conditions as true or false whenever reached;
-neither verdict asserts reachability. The theorem establishes partial correctness of the
-Isabelle function; solver termination is not proved, and parsing and the
-code-generation toolchain remain outside the proof.
+For every accepted configuration, whenever the Isabelle-defined analyzer
+returns a report, it overapproximates the stores reached by finite
+source executions from the prescribed initial states. Whenever execution
+reaches a check, \verdict{PROVED} guarantees that its condition holds,
+and \verdict{REFUTED} guarantees that it fails. Neither verdict
+establishes reachability. This source-level guarantee applies to the Isabelle-defined analyzer; solver termination, parsing, and correctness of generated code
+are not established.
 \end{abstract}
