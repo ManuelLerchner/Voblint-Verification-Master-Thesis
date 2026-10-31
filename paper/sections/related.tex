@@ -2,9 +2,9 @@
 \label{sec:related}
 
 \subparagraph*{Concrete semantics of calling contexts.}
-Sharir and Pnueli distinguish the functional approach,
-which computes input--output relations of procedures, from the call-string
-approach, which tags information with the history of calls~\cite{sharir81}.
+Sharir and Pnueli distinguish two approaches~\cite{sharir81}. The functional
+approach computes input--output relations of procedures; the call-string
+approach tags information with the history of calls.
 Voblint's call-string policy follows the second, and its entry-state policy,
 which indexes a callee's exit states by its entry state, resembles a
 functional approach tabulated per input. Knoop and Steffen handle the locals of recursive procedures with
@@ -44,9 +44,9 @@ et al.\ compute a context-insensitive dataflow analysis with a verified solver
 for ordinary inequations~\cite{cachera05}.
 
 \subparagraph*{Contexts in mechanized semantics.}
-Dabrowski and Pichardie instrument a concrete semantics with contexts through
-a module type whose call-context function computes a callee's context, and
-prove a context-sensitive points-to analysis sound in Coq~\cite{dabrowski09}.
+Dabrowski and Pichardie prove a context-sensitive points-to analysis sound
+in Coq~\cite{dabrowski09}. Their concrete semantics carries contexts through
+a module type whose call-context function computes a callee's context.
 This is the closest precedent for Voblint's context-indexed semantics. Their
 development specifies the analyses as constraints but does not provide an
 executable implementation~\cite[§7]{dabrowski09}. Voblint's
@@ -60,7 +60,8 @@ Isabelle developments, Lammich and Müller-Olm verify the soundness and
 precision of a conflict analysis for programs with procedures and
 threads~\cite{lammich07afp}, and Breitner formalizes Shivers' control-flow
 analysis for functional programs~\cite{breitner10afp}. Wasserrab proves
-correctness of HRB interprocedural slicing by weak simulation~\cite{wasserrab09afp}.
+correctness of interprocedural slicing, which removes statements irrelevant
+to selected observations, by weak simulation~\cite{wasserrab09afp}.
 This preserves slicing observations; Voblint instead bounds reachable stores.
 
 \subparagraph*{Verified solvers.}

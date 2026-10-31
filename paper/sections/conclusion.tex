@@ -3,17 +3,12 @@
 
 We have connected the source semantics of VIMP to a Goblint-style analyzer
 based on context-sensitive, side-effecting equations and a verified solver.
-Activation traces provide the concrete execution histories used to interpret
-calling contexts. Whenever the analyzer returns a report for an accepted
-configuration and a scalar VIMP program, the report covers reached stores
-at every program point, and its definite verdicts hold for those stores. Precision improvements have
-been demonstrated for individual programs, but no general precision guarantee
+A returned report for an accepted configuration and a scalar VIMP program
+covers reached stores at every program point. The report's definite verdicts hold
+for those stores. Precision improvements have been shown for individual programs, but no general precision guarantee
 is proved.
 
-The report also provides a context-specific coverage guarantee. If
-\isaname{run_voblint} returns a report, \isaname{run_voblint_context_covers}
-shows that $\ActColl(v,c)$, defined using the run's context policy, is covered
-by the abstract states reported for context $c$ at node $v$
+The report also preserves coverage within each context
 (\cref{sec:theorem}).
 
 \subparagraph*{Language extensions.}

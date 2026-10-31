@@ -68,18 +68,22 @@ fun main() {
 \caption{The running example. Left: the VIMP program. Right: its graph as the
 analyzer solves it with intervals and entry-state contexts. Each frame is one
 procedure in one context; \texttt{bump} gets one copy per entry state. Solid
-violet arrows are calls (enter), dashed blue arrows are returns (combine), and
+violet arrows enter callees; dashed blue arrows combine caller and callee
+states on return, and
 dashed gray arrows link a call site to its continuation. Both checks are
 \verdict{PROVED}. Without contexts, the single copy of \texttt{bump} joins both
-calls and both checks are \verdict{UNKNOWN}. The states shown are analyzer
-output using the warrowing update rule for global unknowns
-(\cref{sec:equations}). The drawing omits the intermediate node of
+calls and both checks are \verdict{UNKNOWN}: the analysis cannot establish
+whether their conditions hold or fail. The states shown are analyzer
+output using warrowing, an update rule combining widening and narrowing
+for global unknowns (\cref{sec:equations}). Here $\top$ allows any integer.
+The drawing omits the intermediate node of
 \texttt{bump}'s body and the unreachable node after \texttt{return}.}
 \label{fig:running}
 \end{figure}
 
 We follow the program of \cref{fig:running} through the analyzer, with
-intervals and entry-state contexts. The source program is compiled to a
+intervals and entry-state contexts: calls are grouped by the abstract values
+of the callee's parameters at entry. The source program is compiled to a
 procedure-aware control-flow graph (CFG). Each procedure $p$ has an entry node
 $\ctor{FunctionEntry}\;p$ and a result node $\ctor{FunctionResult}\;p$. The
 graph $g$ has two kinds of edges. An \emph{intraprocedural} edge
@@ -87,13 +91,16 @@ $(u, a, v) \in \mathit{intra}\;g$ carries an action $a$, such as an
 assignment or a guard. A \emph{call} edge
 $(u, e, \ctor{FunctionEntry}\;p, k) \in \mathit{calls}\;g$ leads from the call
 site $u$ into $p$ and names the continuation $k$ at which the caller resumes.
+Here $e$ describes the call, including its arguments and result destination.
 A predicate $\Glob$ tells which variables are global. A proved forward
 simulation relates every source execution to a graph execution with the same
 store (\cref{sec:theorem}).
 
 From the graph, the analyzer generates inequations over \emph{local unknowns}
 $(v, c)$ for a node $v$ and a context $c$, and over \emph{global unknowns}
-without a program point. At \texttt{a = bump(5)}, the analysis's \emph{enter}
+without a program point. These global unknowns hold shared analysis
+information, including callee entry states; they are distinct from program
+global variables. At \texttt{a = bump(5)}, the analysis's \emph{enter}
 operation binds \texttt{n} to $[5,5]$, and this entry state is \emph{routed}
 to the callee context $c_1 = [5,5]$; the second call routes to
 $c_2 = [4,4]$. \Cref{sec:equations} gives the equations of a call. For these
@@ -124,6 +131,4 @@ inclusions at every node:
 \;\subseteq\; \Verd_{\mathit{res}}(v).
 \end{equation}
 Each inclusion may add unreached stores, which costs precision, but none may
-lose a reached store. The main end-to-end theorem
-(\cref{sec:theorem}) states the outer inclusions, combining all contexts at
-each node.
+lose a reached store. \Cref{sec:theorem} proves the outer inclusions.

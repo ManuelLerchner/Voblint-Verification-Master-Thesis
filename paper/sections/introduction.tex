@@ -2,61 +2,60 @@
 \label{sec:intro}
 
 A context-sensitive static analyzer can distinguish abstract states for
-different calling contexts at the same program point. In the program of \cref{fig:running},
+different calling contexts at the same program point. A context groups calls,
+for example by their call sites or abstract argument values. In the program of \cref{fig:running},
 \texttt{main} calls \texttt{bump(5)} and \texttt{bump(4)}, and \texttt{bump}
 returns its argument plus one. An interval analysis without calling contexts must describe both calls at
-the return of \texttt{bump} and therefore cannot prove either check. With
-contexts that distinguish the arguments, it analyzes \texttt{bump} separately
-for each argument and proves both. Goblint, an abstract
-interpreter for C~\cite{vojdani16,seidl26}, supports this form of context sensitivity through a \emph{side-effecting constraint
-system}~\cite{seidl03,apinis12}. Its inequations relate unknowns
+the return of \texttt{bump} and therefore cannot prove either check. With contexts distinguishing the arguments, the analysis handles each call
+separately and proves both checks. Goblint analyzes C~\cite{vojdani16,seidl26} using such contexts through a
+\emph{side-effecting constraint system}~\cite{seidl03,apinis12}. Its inequations relate unknowns
 indexed by program point and context, and the right-hand side of one unknown
-may also contribute to other unknowns. A generic top-down solver then solves the
-system. A defect in any of these layers can produce an unsound verdict.
+may also contribute to other unknowns. A generic top-down solver starts from
+a queried unknown and discovers dependencies as it evaluates right-hand sides.
+A defect in any of these layers can produce an unsound verdict.
 \Cref{sec:evaluation} examines one such defect in Goblint's remainder operation.
 
 Stade et al.\ proved the solver partially correct in
 Isabelle/HOL~\cite{stade24}, and Tilscher et al.\ extended the proof to side
-effects~\cite{tilscher26}. When the solver terminates, its valuation satisfies
-the inequations for all solved unknowns: it is a \emph{post-solution} on that
-set. The solved set is closed under right-hand-side reads of local unknowns.
-To derive program correctness from this certificate, we must prove that the
+effects~\cite{tilscher26}. A valuation assigns an abstract value to each unknown.
+When the solver terminates, its valuation satisfies
+the inequations for all solved unknowns. It is a \emph{post-solution} on that set. The solved set is closed under right-hand-side reads of local unknowns:
+reading a local unknown requires it to be solved too. These properties form
+the solver's certificate. To derive program correctness from it, we must prove that the
 equations soundly approximate execution and that the report preserves their
-guarantee. This requires a concrete semantics associating reachable stores
-with calling contexts. Such semantics are established in the
+guarantee. The semantic connection requires associating reachable stores
+(assignments of integer values to variables) with calling contexts. Such semantics are established in the
 literature~\cite{sharir81,knoop92,jeannet04,vanhorn10} (\cref{sec:related}). To
 our knowledge, no mechanization connects a source semantics through such a context-indexed
 semantics to a side-effecting constraint system and its verified solver.
 
 We mechanize this connection in Voblint (verified Goblint), an Isabelle/HOL
-formalization with the following contributions:
+formalization.
 \begin{itemize}
   \item We adapt the local traces of Schwarz et al.~\cite{schwarz21} to
-    procedure activations. A context policy, which may admit several contexts
-    for one call, relates these activation traces to contexts. For an arbitrary
-    control-flow graph, we give five local obligations on a cover and prove
-    that any cover satisfying them bounds the final store of every valid trace
+    procedure activations, each representing one invocation of a procedure. A context policy, which may admit several contexts
+    for one call, relates these activation traces to contexts. A candidate overapproximation, or \emph{cover}, assigns sets of stores to
+    nodes and contexts. We give five local obligations on covers for arbitrary
+    control-flow graphs. We prove that any cover satisfying them contains the final store of every valid trace
     in every admitted context (\cref{sec:traces}).
   \item We prove that every post-solution of the generated, context-routed
-    equations meets these obligations, provided the context policy agrees with
-    the routing of the equations. The verified solver enters only through its
+    equations meets these obligations, assuming sound abstract operations and
+    agreement between the context policy and the routing that selects callee contexts. The verified solver enters only through its
     certificate (\cref{sec:equations}).
   \item We prove an end-to-end theorem about the analyzer function that
     Isabelle exports to OCaml. For every accepted configuration, whenever the
     analyzer returns a report, the report covers every store reached by a finite source
-    execution at its program point. Every definite verdict there holds for
-    those stores (\cref{sec:theorem}).
-  \item We demonstrate concrete instances of the theorem, show that the faulty
+    execution at its program point. Every definite verdict correctly classifies
+    a check as true or false whenever execution reaches it (\cref{sec:theorem}).
+  \item We exhibit concrete instances of the theorem, show that the faulty
     remainder operation behind a Goblint defect violates a domain obligation,
     and compare the verdicts obtained with different calling contexts on
     recursive programs (\cref{sec:evaluation}).
 \end{itemize}
-The solver, side-effecting constraint systems, local traces, and Goblint's
-separation of analyses and solvers are prior work. Our proof uses
-context-indexed collecting semantics. The main end-to-end theorem combines
-the reported states across contexts at each program point. A companion
-theorem also establishes coverage by the reported states for each individual
-context (\cref{sec:theorem}).
+The solver, constraint systems, local traces, and separation of analyses and
+solvers are inherited. Our context-indexed collecting semantics groups
+reachable stores by node and context. The report guarantees cover both
+individual contexts and their union at each node (\cref{sec:theorem}).
 
 VIMP supports local and global integer variables and recursive procedures with
 parameters and return values, but no pointers, arrays, or heap. The correctness

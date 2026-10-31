@@ -1,15 +1,15 @@
 \section{The End-to-End Theorem}
 \label{sec:theorem}
 
-The solved valuation now bounds the context-indexed collecting semantics of
-the CFG\@. To obtain a guarantee for source programs, we connect source and
-graph executions by a forward simulation following the CompCert
-methodology~\cite{leroy09}, then prove that report construction preserves
+The solved valuation bounds the context-indexed collecting semantics of the
+CFG\@. A forward simulation connects source and graph executions, following
+the CompCert methodology~\cite{leroy09}. Report construction then preserves
 coverage and gives sound verdicts.
 
 \subparagraph*{From source to graph.}
 VIMP has a small-step semantics \isaname{pstep} over configurations
-$(r, s, \mathit{frs})$ of a residual command, a store, and a frame stack. A
+$(r, s, \mathit{frs})$ of a residual command (the code left to execute), a
+store, and a frame stack. A
 call pushes a frame holding the caller's store and destination and continues
 with the callee's body followed by a $\mathit{Restore}$ marker; the marker pops
 the frame and combines the stores as in \cref{sec:traces}
@@ -21,8 +21,7 @@ The compiler uses continuations to translate each procedure body into a
 procedure-aware CFG\@. A forward simulation matches each source step with graph
 steps that reach the same store (\isaname{csim_star}).
 
-A source configuration does not determine a graph node,
-since its residual command can occur at several places, as in
+A source configuration does not determine a graph node. The residual command can occur in both branches of
 \texttt{if (b) \{x = 1;\} else \{x = 1;\}}. The proof therefore annotates every
 command of the program with its nodes. The relation
 $p, s_0 \vdash (r, s, \mathit{frs}) \rhd v$ (\isaname{at_node}) holds when some
@@ -46,15 +45,15 @@ program globals. The function rejects an invalid
 configuration or an ill-formed program, and otherwise runs the executable
 solver and returns $\ctor{Analysed}~\mathit{res}$ when the solver returns a
 result (\isaname{run_voblint}). At each node, the report lists the states
-computed for its solved contexts
-and classifies each check \texttt{\_\_voblint\_check(b)} as \verdict{PROVED},
-\verdict{REFUTED}, \verdict{UNKNOWN}, or \verdict{DEAD}. As in
-\cref{sec:overview}, $\Report_{\mathit{res}}(v)$ is the set of stores that
-some state at $v$ describes, in any context, and $\Verd_{\mathit{res}}(v)$ the
-set of stores in which every \verdict{PROVED} check at $v$ holds and every
-\verdict{REFUTED} check fails.
+computed for its solved contexts and classifies each check as
+\verdict{PROVED}, \verdict{REFUTED}, \verdict{UNKNOWN} (undetermined), or
+\verdict{DEAD} (unreachable). The sets $\Report_{\mathit{res}}(v)$ and
+$\Verd_{\mathit{res}}(v)$ interpret these states and verdicts as in
+\cref{sec:overview}.
 
-In the statement below, $\Pi$ is the procedure table of $p$, and
+In the Isabelle statement below, \texttt{fixes} declares typed parameters,
+\texttt{defines} introduces abbreviations, \texttt{assumes} lists premises,
+and \texttt{shows} gives the conclusion. Here $\Pi$ is the procedure table of $p$, and
 $\Glob, \Pi \vdash (c, s, \mathit{frs}) \rightarrow_p^* (c', s', \mathit{frs}')$
 is a finite execution of \isaname{pstep} from residual command $c$, store $s$
 and frame stack $\mathit{frs}$. $\NodeColl_{\Glob,g,S}\,v$ is the node
@@ -68,27 +67,20 @@ collecting semantics of the compiled graph $g$ from the initial stores $S$.
 
 The theorem assumes an initial store with zero-valued globals and
 unconstrained locals, a finite execution from the body of \texttt{main}, and a
-returned analyzer report. The execution may stop at any point, so the theorem
-also covers finite prefixes of nonterminating executions. The conclusion has
-two halves: the reached configuration is observed
-at some node, and at every node where it is observed, its store is collected,
-covered by the report, and consistent with every definite verdict there. The
-proof uses contexts through $\NodeColl(v) = \bigcup_c \ActColl(v, c)$ and
-\cref{thm:routed}, but the report guarantee combines all contexts at each
-program point.
+returned analyzer report. This includes finite prefixes of nonterminating executions. The reached
+configuration is observed at some node; at every such node, its store is
+collected, covered by the report, and consistent with every definite verdict.
+The proof combines contexts using $\NodeColl(v) = \bigcup_c \ActColl(v, c)$
+and \cref{thm:routed}.
 
-The report also preserves coverage within each context. Under the policy
-selected by the configuration, $\ActColl(v, c)$ is contained in the stores
-represented by the report's states for $c$ at $v$
-(\isaname{run_voblint_context_covers}). This result follows from
-\isaname{run_voblint_contexts}, whose predicate \isaname{context_sound}
-also ensures that every valid activation trace has an admitted context.
-The node-level guarantee above follows by taking the union over contexts.
+Under the configured policy, the report's states for $c$ at $v$ also cover
+$\ActColl(v,c)$ (\isaname{run_voblint_context_covers}). The underlying
+\isaname{run_voblint_contexts} theorem additionally ensures that every valid
+activation trace has an admitted context.
 
-A returned report entails solver termination and program well-formedness.
-The completed solver run also provides coverage through
-\isaname{live_unknowns_cover}, so these properties require no separate
-premises. The statement holds for every configuration the function accepts.
+A returned report entails solver termination, program well-formedness, and
+coverage via \isaname{live_unknowns_cover}. No separate premises
+restrict the accepted configurations.
 
 \subparagraph*{Meaning of verdicts.}
 \verdict{PROVED} states that whenever a covered execution reaches the check,
@@ -108,7 +100,7 @@ about the constant that Isabelle's code generator~\cite{haftmann10} exports to
 OCaml and that the command-line tool calls. The lexer and parser, which
 construct the program, and the handwritten OCaml that prints the report lie
 outside the proof. The Isabelle kernel, the code generator, the OCaml
-toolchain, and the arbitrary-precision integer library are trusted.
+toolchain, and the arbitrary-precision integer library Zarith are trusted.
 When tracing is requested, the command-line tool calls
 \isaname{run_voblint_traced}, which is equal to \isaname{run_voblint} in
 Isabelle (\isaname{run_voblint_traced_eq}). Its exported code maps
