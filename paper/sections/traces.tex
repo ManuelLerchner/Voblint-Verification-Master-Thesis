@@ -1,18 +1,15 @@
 \section{Activation Traces and the Coverage Contract}
 \label{sec:traces}
 
-A context-sensitive soundness proof must identify the concrete stores that
-an abstract state at node $v$ in context $c$ is meant to cover. We adapt the
-local traces of Schwarz et al.~\cite{schwarz21} to retain procedure
-activations and their callers. A separate relational policy associates
-concrete calls with contexts, including call histories in the sense of
-Sharir and Pnueli~\cite{sharir81}. Five local obligations then suffice to
-prove coverage of the resulting context-indexed collecting semantics,
-independently of abstract domains, equations, and solvers.
+An abstract state at node $v$ in context $c$ needs a concrete interpretation.
+We adapt local traces~\cite{schwarz21} to retain activations and callers, then
+relate them to contexts, including call histories~\cite{sharir81}. The
+coverage contract is independent of abstract domains, equations, and solvers.
 
 A graph execution with a
-plain frame stack does not record contexts: a frame holds only what is needed
-to resume the caller and disappears at the return. Frames could carry a ghost context
+plain frame stack does not record contexts. A frame holds only what is
+needed to resume the caller and disappears at the return. Frames could carry a
+ghost context, an annotation used only in the proof
 (\cref{sec:mechanization}). We keep contexts out of the base trace semantics
 and relate them to traces separately. Each call starts a new activation linked
 to its caller; a return combines the completed callee trace with the caller
@@ -21,8 +18,8 @@ trace and resumes the caller.
 \subsection{Activation traces}
 
 An \emph{activation path} is the list of node--store pairs visited by one
-activation. An activation trace has one constructor for each way an activation
-begins or continues (\isaname{activation_trace}). $\ctor{Root}~\pi$ records
+activation. The constructors of an activation trace describe how an activation begins
+or continues (\isaname{activation_trace}). $\ctor{Root}~\pi$ records
 the activation of \texttt{main}. $\ctor{Call}~t'~\pi$ records a callee
 activation and retains the caller trace $t'$ at the call site.
 $\ctor{Resume}~t'~t''~\pi$ records the caller's continuation after the callee
@@ -33,11 +30,12 @@ returns the creating caller trace wrapped in $\mathit{Some}$, or
 $\mathit{None}$ for the main activation. The operation
 $\mathit{extend}\;t\;(v, s)$ appends a step to the path.
 
-The datatype admits terms that no execution produces. The set
-$\Traces_{\Glob,g,S}$ of \emph{valid} traces of a graph $g$ with initial stores
-$S$, where $\mathit{entry}_g$ is the entry node of \texttt{main}, is defined
-by four rules that mirror the rules of graph execution
-(\isaname{valid_activation_trace}):
+The datatype admits terms that no execution produces. Let $\mathit{entry}_g$ be the entry node of \texttt{main}. The set
+$\Traces_{\Glob,g,S}$ of \emph{valid} traces of graph $g$ from initial stores
+$S$ is defined by four rules mirroring graph execution
+(\isaname{valid_activation_trace}). We omit the fixed subscripts below;
+$@$ concatenates lists and $\#$ prepends an element. A rule derives the
+conclusion below its line from the premises above it:
 \begin{gather*}
 \frac{s \in S}{\ctor{Root}\,[(\mathit{entry}_g, s)] \in \Traces}
 \\[1ex]
@@ -90,7 +88,7 @@ For a call edge $e$ into $p$, we write $\adm_{u,c}(e, s, s')$ for the set the
 policy returns for the call described by $e$ and $p$, caller store $s$ and
 entered store $s'$. We write $c' \in \adm^{\exists}_{u,c}(p, s, s')$ when some call edge from $u$
 into $p$ maps $s$ to the entered store $s'$ and the policy admits $c'$ for it
-(\isaname{admits_call_context}). The contexts a trace carries are then defined
+(\isaname{admits_call_context}). For a fixed initial context $c_0$, the contexts a trace carries are defined
 inductively (\isaname{activation_context_rel}):
 \begin{gather*}
 \frac{}{\ctor{Root}\;\pi \text{ carries } c_0}
@@ -120,7 +118,7 @@ rules for valid traces give rise to four preservation obligations on a cover.
 A fifth obligation ensures that each call from a covered store is admitted in
 at least one context. We express this contract in the locale
 \isaname{activation_coverage}; an Isabelle locale packages named parameters and
-assumptions~\cite{ballarin14}. The obligations are as follows, with the call obligations
+assumptions~\cite{ballarin14}. Write $\cover(v,c)$ for the assigned set. The obligations are as follows, with the call obligations
 quantified over every call edge $(u, e, \ctor{FunctionEntry}\;p, k)$:
 \begin{align*}
   &\oblig{Init} && s \in S \implies s \in \cover(\mathit{entry}_g, c_0)\\
@@ -155,9 +153,8 @@ $\ActColl(v, c) \subseteq \cover(v, c)$ for every node $v$ and context $c$.
 \end{theorem}
 
 \subparagraph*{Proof idea.}
-The proof is an induction over valid traces with the invariant that a trace
-carries some context and that its final store is covered in every context it
-carries. A single-trace invariant does not suffice for the return rule, which
+The proof inducts over valid traces. The invariant states that a trace
+carries some context and its final store is covered in every context it carries. A single-trace invariant does not suffice for the return rule, which
 needs the invariant for the caller recovered through $\mathit{caller\_of}$.
 The induction therefore carries the invariant along the whole chain of
 callers (\isaname{caller_chain_covered}, an instance of the induction

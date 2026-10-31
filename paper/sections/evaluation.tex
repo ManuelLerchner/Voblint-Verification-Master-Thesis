@@ -7,8 +7,8 @@ We therefore exhibit programs for which the theorem applies and the analyzer
 proves checks, and show that a domain obligation rejects a known defect.
 We then compare the precision of context policies on a recursive program.
 Facts about one fixed program are proved by \texttt{eval}, which runs
-generated code and therefore also trusts the code generator. Analyzer outputs
-are registered claims that \texttt{pixi run thesis-claims} re-checks;
+generated code and therefore also trusts the code generator. Recorded analyzer outputs
+are checked against fresh runs by \texttt{pixi run thesis-claims};
 \cref{tab:contexts} is generated from these claims.
 
 \subparagraph*{Non-vacuity (machine-checked, one program each).}
@@ -28,7 +28,7 @@ other four coverage obligations but omits a reachable store, showing why
 A separate example tests a domain obligation against a real Goblint defect.
 Goblint once claimed \texttt{c \% 2 == 1} for $c \in \{-5, -7\}$,
 although C's truncating remainder gives $-1$ (issue 1156, fixed
-in~\cite{goblint1161}). The defect is in a domain, not in contexts. Each domain's
+in~\cite{goblint1161}). The defect concerns the domain's arithmetic operation. Each domain's
 abstract remainder operation must satisfy \isaname{mod_sound} in the locale
 \isaname{sound_arith_ops}: the concretization of its result must contain the truncating remainders
 of all concrete operands represented by its arguments.
@@ -50,10 +50,10 @@ depths share a state and both results widen to $[1,12]$. With call strings of le
 entry-state contexts, activations at different depths have separate abstract
 states, and both checks are proved. The
 loop adds no contexts, because the callee contexts do not depend on the loop
-counter. For a related program, the theories prove that the solution of the
-routed equation system at call-string length 2 is strictly more precise at the
-entry of a callee than at length 1
-(\isaname{sign_k2_strictly_more_precise_than_k1_at_g}). That theorem compares
+counter. A related program has a machine-checked precision comparison
+(\isaname{sign_k2_strictly_more_precise_than_k1_at_g}). At one callee entry,
+the routed solution for call-string length 2 is strictly more precise than
+for length 1. That theorem compares
 two equation-system solutions computed by \texttt{eval} for this program.
 It establishes neither a corresponding result about \isaname{run_voblint}
 nor a general precision ordering between call-string lengths.
@@ -80,12 +80,12 @@ A proved code equation, \isaname{init_publications_code}, avoids recompiling
 the program during equation evaluation.
 The profiling run at repository revision
 \texttt{17fcb363d} analyzed the 380 regression fixtures that set no timeout of
-their own under 15 configurations: five domains times three context
-policies (none, call strings of length 1, entry states). Eleven fixtures are
-ill-formed programs and are excluded, which leaves \stat{prof.fixtures}
+their own. The 15 configurations combine five domains with three context policies
+(none, call strings of length 1, entry states). Excluding the eleven
+ill-formed programs leaves \stat{prof.fixtures}
 fixtures and \stat{prof.cases} cases. A case's time is the median of three repetitions on an
 Apple M4 Pro; a case that times out (30\,s) or fails in any repetition counts
-as failed. Most fixtures are tiny regression programs, so low solve times
+as failed. Most fixtures are small regression programs, so low solve times
 on this corpus do not establish performance on larger programs. All \stat{prof.timeouts} timeouts are entry-state cases with
 Interval, Int or Congruence on seven recursive fixtures, where each recursion
 level creates a new context. One is
@@ -95,16 +95,15 @@ per procedure, the analyzer proves the check; with entry-state contexts, the
 analysis exceeds the 30\,s timeout. Call strings of length 2 were not profiled.
 
 A separate scaling sweep uses Interval on eight generated program families.
-For each family, we fit solve time $t$ against its size parameter $n$ as $t = a n^b$ by least
-squares on logarithmic axes, using successful
-timings from $n=100$ to the largest completed size (500--2000, depending on
-the family). The fitted exponents range from \stat{prof.scaling.time_min} to
+For each family, we fit solve time $t$ against its size parameter $n$ as
+$t = a n^b$ by least squares on logarithmic axes. We use successful timings
+from $n=100$ to the largest completed size (500--2000, depending on the family). The fitted exponents range from \stat{prof.scaling.time_min} to
 \stat{prof.scaling.time_max}. The
 \href{https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/pages/data/profiling/2026-10-21-17fcb363d.json}{profiling snapshot}
-records the measurements, and
-\href{https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/scripts/profile_corpus.py}{the profiling script}
+records the measurements. The
+\href{https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/scripts/profile_corpus.py}{profiling script}
 defines the families. The
 \href{https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/profiling.html}{profiling page}
 shows the runtime distributions and scaling curves. The scaling sweep exposes
-costs hidden by the tiny regression fixtures; it establishes neither an
+costs hidden by the small regression fixtures; it establishes neither an
 asymptotic bound nor performance on realistic large programs.

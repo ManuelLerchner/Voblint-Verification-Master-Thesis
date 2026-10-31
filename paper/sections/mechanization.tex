@@ -5,14 +5,14 @@
 solver of Tilscher et al.~\cite{tilscher26}. The solver is vendored with four
 changes made for this work and proposed upstream. They restore the build
 under Isabelle2025-2, remove from the widening and narrowing classes the
-stabilization assumptions that only termination proofs use, rename clashing
+stabilization assumptions, which require update sequences to stop changing
+and are used only in termination proofs, rename clashing
 names, and add facts such as \isaname{solve_dom_of_solve_c}. None changes the
 algorithm.
 Neither Voblint nor the imported solver theories contain \texttt{sorry} or
-\texttt{oops}. Code generation emits \stat{generated_ocaml} lines of OCaml. The handwritten
+\texttt{oops}, commands that admit or abandon a proof. Code generation emits \stat{generated_ocaml} lines of OCaml. The handwritten
 OCaml implementation contains \stat{handwritten_ocaml} lines for parsing,
-report printing, and the trace hook. A full build takes several minutes on
-an Apple M4 Pro laptop.
+report printing, and the trace hook.
 
 \begin{table}[t]
 \centering
@@ -30,7 +30,7 @@ Besides the relational context policy (\cref{sec:traces}) and the solver
 as a parameter (\cref{sec:equations}), two choices shaped the proof.
 \begin{itemize}
   \item \emph{Activation traces as the soundness target.} A first prototype
-    used whole-program executions with calls inlined. Its proof spliced
+    used whole-program executions with calls inlined. The prototype's proof spliced
     a callee execution into the caller's run, which was hard to extend to
     recursion. An unimplemented alternative would annotate graph-semantics
     stack frames with ghost contexts and maintain an invariant over the stack.
@@ -39,8 +39,10 @@ as a parameter (\cref{sec:equations}), two choices shaped the proof.
   \item \emph{Two-default executable states.} Soundness is stated over total
     functions on variable names; the solver runs on a quotient
     type~\cite{huffman13} of a finite override list with separate defaults
-    for locals and zero-initialized globals (\isaname{exec_local_spec_sound}),
-    refining the single default of Concrete Semantics~\cite[§13.6]{nipkow14}.
+    for locals and zero-initialized globals. The list stores exceptions to
+    the defaults; the quotient identifies representations of the same function
+    (\isaname{exec_local_spec_sound}). Separate defaults refine the single
+    default of Concrete Semantics~\cite[§13.6]{nipkow14}.
 \end{itemize}
 
 \subparagraph*{Feedback on the proof assistant.}

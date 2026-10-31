@@ -1,22 +1,20 @@
 \section{From Equations to a Cover}
 \label{sec:equations}
 
-We interpret a solved valuation as a cover of the concrete stores defined
-in \cref{sec:traces}. The equations follow Goblint's \texttt{Spec}
-interface~\cite{vojdani16,seidl26} and side-effecting constraint
-systems~\cite{seidl03,apinis12}. For suitable post-solutions, sound abstract
-operations and agreement between routing and the context policy establish
-the five coverage obligations. We then use the verified solver's
-certificate~\cite{tilscher26} to obtain a valuation satisfying these obligations.
+The equations follow Goblint's \texttt{Spec} interface~\cite{vojdani16,seidl26}
+and side-effecting constraint systems~\cite{seidl03,apinis12}. We show how
+sound abstract operations, context routing, and the solver
+certificate~\cite{tilscher26} establish the five coverage obligations.
 
 \subsection{The analysis interface}
 
-An analysis describes the stores at a node by an abstract state $d$. Its
-meaning $\conc(d, \rho)$ also depends on $\rho$, the solved values of the
-analysis's global unknowns. We suppress $\rho$ when it plays no role. The
+An analysis describes the stores at a node by an abstract state $d$. The
+concretization $\conc(d, \rho)$ is the set of stores it represents,
+parameterized by $\rho$, the solved values of the analysis's global unknowns.
+We suppress $\rho$ when it plays no role. The
 analysis supplies the record \isaname{dg_spec}, the counterpart of Goblint's
 \texttt{Spec}: one transfer per kind of edge action, an enter operation, and
-two combine operations. A call transfer retains the caller's state alongside
+two combine operations. A transfer computes an abstract successor state. A call transfer retains the caller's state alongside
 the callee's entry state. After the return, the
 caller's locals come from before the call, while the globals and the result
 come from the callee. Enter therefore returns a list of entry pairs $(q, d)$:
@@ -26,7 +24,7 @@ describing the store in which the callee starts. After the return,
 callee's globals, and \emph{combine\_assign} then writes the return value to
 the call's destination. Together they mirror the concrete
 $\mathit{combine}_e$ of \cref{sec:traces}. A transfer may also publish
-contributions to
+contributions, meaning abstract values that must be included in
 the analysis's global unknowns. We interpret its output using the join of the
 previous global values and these contributions.
 
@@ -41,12 +39,13 @@ conditions, which are separate from \isaname{analysis_contract}. A numeric
 domain proves only its abstract operations sound. The framework derives the
 transfers once for all domains, following Nipkow and Klein's generic
 interpreter~\cite[Sect.~13.5]{nipkow14}. The implemented domains are Sign,
-Interval, Parity, Congruence, and Int, the reduced product of all four.
+Interval, Parity, Congruence, and Int, a reduced product that combines all four
+and propagates information between them.
 
 \subsection{Context-indexed equations and routing}
 
-For every node $v$ and context $c$ there is a local unknown $(v, c)$. Its
-right-hand side joins four sources (\isaname{routed_node_rhs_parts}):
+Write $\sol(v,c)$ for the value assigned to local unknown $(v,c)$ by the
+solved valuation. The unknown's right-hand side joins four sources (\isaname{routed_node_rhs_parts}):
 \begin{itemize}
   \item the initial state at the program entry;
   \item the transfer along each intraprocedural edge into $v$, in the same
@@ -59,7 +58,8 @@ context from the call site, the caller context, the entry state and the call.
 Consider a call edge $(u, e, \ctor{FunctionEntry}\;p, k)$ in caller context
 $c$. For each entry pair $(q, d)$ returned by enter for $\sol(u, c)$, the
 continuation's right-hand side includes a contribution
-(\isaname{routed_call_alternative_program}). If $d$ is bottom, the
+(\isaname{routed_call_alternative_program}). If $d$ is bottom
+($\bot$, representing no stores), the
 contribution is $\mathit{combine}(q, \bot)$. Otherwise, let
 $c' = \mathit{route}(u, c, d, e)$; the contribution is the program
 \[
@@ -67,17 +67,17 @@ $c' = \mathit{route}(u, c, d, e)$; the contribution is the program
 r \leftarrow \text{read } (\ctor{FunctionResult}\;p, c');\quad
 \mathit{combine}(q, r).
 \]
-The entry equation of $(\ctor{FunctionEntry}\;p, c')$ reads the global unknown
-$\mathit{seed}(p, c')$. In the running example, the call \texttt{bump(5)} in
+This program is a sequence of solver operations, not source-language code.
+Here $\mathit{seed}(p,c')$ is a global unknown accumulating entry states for
+$p$ in $c'$. The entry equation of $(\ctor{FunctionEntry}\;p, c')$ reads it.
+In the running example, the call \texttt{bump(5)} in
 $c_0$ publishes $n \in [5,5]$ to $\mathit{seed}(\texttt{bump}, [5,5])$, reads
 the result of \texttt{bump} in $[5,5]$, and combines it with the resume state
 of \texttt{main}. The same equation construction handles recursive calls,
-which can introduce cyclic dependencies as loops do.
+which can introduce cyclic dependencies.
 
-The equations route an abstract entry state to a callee context. The policy
-$\adm$ relates the corresponding concrete call to its admissible contexts.
-Two conditions connect the routing and the policy. Both are assumptions of the
-locale \isaname{routed_context}.
+The locale \isaname{routed_context} connects abstract routing to the concrete
+policy $\adm$ through adequacy and totality.
 \begin{description}
   \item[Adequacy] (\isaname{routing_adequate}). If $\adm$ admits $c'$ for a call
     from a store that the caller's solved state describes, then enter produces
@@ -146,25 +146,21 @@ and $\emptyset$ elsewhere.
 
 The proof checks the five obligations of \cref{thm:contract} for this cover.
 The initial state and $\rho_0 \leq \rho$ give \oblig{Init}. The edge
-transfers and \texttt{fwd} give \oblig{Intra}. Adequacy with entry coverage
-gives \oblig{Call}, adequacy with combine soundness gives \oblig{Return}, and
-totality gives \oblig{Total}. Both bounds of \texttt{pp} are used: a value
-reaches its target unknown either as an answer or as a published side effect,
+transfers and \texttt{fwd} give \oblig{Intra}. \oblig{Call} follows from adequacy and entry coverage.
+\oblig{Return} follows from adequacy and combine soundness.
+\oblig{Total} follows from totality. Both bounds of \texttt{pp} are needed because a
+value reaches its target unknown as an answer or as a published side effect,
 such as an entry state published to a seed.
-\oblig{Return} is quantified over every admitted call edge from the call site
-(\cref{sec:traces}), and \texttt{calls\_unique} reduces it to the edge being
-returned through.
+Here \texttt{calls\_unique} identifies the admitted and returning call edges.
 
 \subsection{The solver certificate}
 
-\Cref{thm:routed} requires a set $W$ of unknowns that contains the program
-entry and is closed under execution steps. On $W$, $\sol$ must bound the
-right-hand sides and their side effects. The verified top-down
-solver~\cite{tilscher26} provides a different certificate,
-\isaname{part_post_solution}, for the query $x$ it started on, its solved set
-$V$, and its result $\sol$: the query is in $V$, $V$ is closed under
-right-hand-side reads of local unknowns, and $\sol$ bounds
-both the right-hand side and every side effect of each solved unknown.
+\Cref{thm:routed} requires closure under execution steps. The verified
+top-down solver~\cite{tilscher26} instead provides \isaname{part_post_solution}
+for its query $x$, solved set $V$, and result $\sol$. This certificate states
+that $x \in V$ and $V$ is closed under right-hand-side reads of local unknowns.
+The result $\sol$ bounds the right-hand side and every side effect of each
+solved unknown.
 
 The solver works backward from its query, the result of
 \texttt{main}, while \cref{thm:routed} follows executions forward from the
@@ -177,30 +173,25 @@ call-to-continuation steps. The result's right-hand side reads its
 predecessors, so closure under reads puts all nodes of a procedure into $V$
 once its result is in $V$ in that context.
 
-The same closure argument applies to callees. A continuation $(k, c)$ in $V$
-reads the callee's result
-$(\ctor{FunctionResult}\;p, c')$ whenever the routed entry state is not bottom
-(\isaname{sol_vars_callee_result}), so the callee's nodes are live in $c'$,
-including its entry. If the entry state is bottom, no concrete store enters
+The same closure argument applies to callees. For a non-bottom routed entry state, $(k,c) \in V$ reads
+$(\ctor{FunctionResult}\;p,c')$ (\isaname{sol_vars_callee_result}). The callee's nodes are therefore live in
+$c'$, including its entry. If the entry state is bottom, no concrete store enters
 the callee, so this case requires no callee coverage.
 \isaname{live_unknowns_cover} proves, from a well-formed
 program and a completed solver run, that the live set contains the program entry
 and satisfies the closure hypotheses of \cref{tab:hypotheses}.
 
-This is structural reachability in the graph. It also holds for an activation
-that
-never returns, because the argument follows the equations, not executions.
+Structural reachability also holds for an activation that never returns, because the argument follows the equations, not executions.
 \Cref{thm:routed} applies to the live subset $W$ of the solved unknowns $V$.
 The report publishes the states associated with all unknowns in $V$, so it
 can include more states than the proof requires. This preserves soundness
 because the report only has to contain the cover.
 
-The rest of the proof never inspects the solver. The analysis locale takes the
-solver as a parameter and assumes four facts about it
-(\isaname{certified_solver}): a run in its domain yields
-\isaname{part_post_solution} and a finite solved set, and a run of its
-executable form that returns lies in the domain and agrees with the logical
-solver. These facts are proved for the vendored solver under each of its five
+The rest of the proof never inspects the solver. The analysis locale takes it
+as a parameter with four assumptions (\isaname{certified_solver}). A run
+satisfying its domain predicate, which identifies terminating inputs, yields
+\isaname{part_post_solution} and a finite solved set. A returned executable
+run lies in that domain and agrees with the logical solver. These facts are proved for the vendored solver under each of its five
 update rules for global unknowns (\isaname{td_certified_solver}). An update
 rule decides how contributions to a global unknown accumulate: by join, by
 join per contributing right-hand side, or by \emph{warrowing}, which combines
