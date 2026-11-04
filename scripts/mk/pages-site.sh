@@ -49,6 +49,7 @@ find "$SITE_DIR" -name '.DS_Store' -type f -delete
 python3 "$REPO_ROOT/scripts/pages_stats.py" --out "$SITE_DIR/assets/site-stats.js" \
   --fill "$SITE_DIR"/*.html
 python3 "$REPO_ROOT/scripts/pages_examples.py" --out "$SITE_DIR/assets/regression-examples.json"
+python3 "$REPO_ROOT/scripts/pages_profiling.py" --fill "$SITE_DIR/profiling.html"
 
 # List search entry points; ordinary links expose the generated theory tree.
 # In production, SITE_URL matches the canonical links in pages/*.html.

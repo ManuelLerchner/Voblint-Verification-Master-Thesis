@@ -20,8 +20,8 @@ const state = {
   theories: [],
   selected: -1,
   hover: -1,
-  mode: 0,
-  target: 0,
+  mode: new URLSearchParams(location.search).get("view") === "wheel" ? 0 : 1,
+  target: new URLSearchParams(location.search).get("view") === "wheel" ? 0 : 1,
   zoom: 1,
   x: 0,
   y: 0,
@@ -948,12 +948,12 @@ async function start() {
     );
     $("snapshot").textContent =
       `Isabelle export: ${data.exported}. Library declarations outside the exported sessions are not included. Source links without an individual anchor open the containing theory.`;
-    if (new URLSearchParams(location.search).get("view") === "treemap") {
-      state.mode = 1;
-      state.target = 1;
-      $("view-wheel").setAttribute("aria-pressed", "false");
-      $("view-tree").setAttribute("aria-pressed", "true");
-    }
+    $("view-wheel").setAttribute("aria-pressed", String(!state.mode));
+    $("view-tree").setAttribute("aria-pressed", String(!!state.mode));
+    canvas.setAttribute(
+      "aria-label",
+      `${state.mode ? "Treemap" : "Declaration wheel"}. Drag to pan, scroll to zoom. Search and results provide keyboard access to declarations.`,
+    );
     $("map-status").hidden = true;
     filter();
     resize();

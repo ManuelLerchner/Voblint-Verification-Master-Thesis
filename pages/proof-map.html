@@ -53,8 +53,8 @@
   <main class="proof-layout">
     <aside class="proof-sidebar" aria-label="Explore the formalization">
       <p class="proof-eyebrow">THE FORMALIZATION / ISABELLE · HOL</p>
-      <h1>Voblint proof map</h1>
-      <p class="proof-intro">Every exported fact, constant, type and locale. Explore the declarations behind Voblint’s soundness argument.</p>
+      <h1>Proof map</h1>
+      <p class="proof-intro">Every exported fact, constant, type and locale. Links show declaration references in statements, not which lemmas a proof uses.</p>
       <div class="proof-stats" id="stats" aria-live="polite">Loading Isabelle declarations…</div>
       <label class="proof-search-label" for="search">Find a declaration</label>
       <input id="search" type="search" placeholder="Try run_voblint or activation…" autocomplete="off" spellcheck="false" aria-controls="results">
@@ -68,16 +68,16 @@
       <section id="selection" class="proof-selection" aria-live="polite" hidden></section>
       <details class="proof-about">
         <summary>How to read this map</summary>
-        <p>Sectors group declarations by Isabelle session; smaller wedges group theories. Each mark represents one exported entity, including automatically generated facts. Session colors follow the dependency layers of the site’s strata figure; each theory forms a streak. Ordinary declarations appear progressively as you zoom. Radial layers follow statement-reference distances from the main results; disconnected declarations occupy the outer band. These distances are not proof depth. Main results, thesis citations and filter matches remain visible at every scale. At close range, highlighted declarations and treemap cells become readable cards. Circles are facts, squares constants, triangles types and outlined diamonds locales. Shape becomes clearer as you zoom.</p>
+        <p>The treemap groups declarations into session and theory rectangles; each cell is one exported entity. In the corpus wheel, sectors group declarations by Isabelle session; smaller wedges group theories. Each mark represents one exported entity, including automatically generated facts. Session colors follow the dependency layers of the site’s strata figure; each theory forms a streak. Ordinary declarations appear progressively as you zoom. Radial layers follow statement-reference distances from the main results; disconnected declarations occupy the outer band. These distances are not proof depth. Main results, thesis citations and filter matches remain visible at every scale. At close range, highlighted declarations and treemap cells become readable cards. Circles are facts, squares constants, triangles types and outlined diamonds locales. Shape becomes clearer as you zoom.</p>
         <p>Select a declaration to see the project entities mentioned in its statement or specification. These lines do not track lemmas used inside proofs. Library entities outside the project are counted but not drawn.</p>
         <p>Red stars mark selected source-level soundness results; gold diamonds mark facts cited in the thesis. A fact may be a theorem, lemma, definition equation, or generated rule; the export does not distinguish them.</p>
         <p id="snapshot"></p>
         <p>Visual design inspired by the <a href="https://cfsg.axiommath.ai/proof-map" target="_blank" rel="noreferrer">CFSG proof map</a>.</p>
       </details>
     </aside>
-    <section class="proof-stage" aria-label="Interactive declaration wheel">
-      <div class="proof-stage-heading"><div class="proof-view-tabs" role="group" aria-label="Map layout"><button type="button" id="view-wheel" aria-pressed="true">Corpus wheel</button><button type="button" id="view-tree" aria-pressed="false">Treemap</button></div><span id="visible-count">Isabelle declarations</span></div>
-      <canvas id="wheel" tabindex="0" aria-label="Declaration wheel. Drag to pan, scroll to zoom. Use the search and results list to select declarations with the keyboard."></canvas>
+    <section class="proof-stage" aria-label="Interactive declaration map">
+      <div class="proof-stage-heading"><div class="proof-view-tabs" role="group" aria-label="Map layout"><button type="button" id="view-tree" aria-pressed="true">Treemap</button><button type="button" id="view-wheel" aria-pressed="false">Corpus wheel</button></div><span id="visible-count">Isabelle declarations</span></div>
+      <canvas id="wheel" tabindex="0" aria-label="Treemap. Drag to pan, scroll to zoom. Use the search and results list to select declarations with the keyboard."></canvas>
       <div id="tooltip" class="proof-tooltip" hidden></div>
       <div class="proof-legend"><span>Color = dependency layer</span><span><i class="fact-dot"></i> Fact</span><span><i class="constant-dot"></i> Constant</span><span><i class="type-dot"></i> Type</span><span><i class="locale-dot"></i> Locale</span><span><i class="cited-dot"></i> Thesis citation</span><span><i class="main-dot">★</i> Main result</span></div>
       <div class="proof-controls"><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="reset" type="button">Reset view</button><button id="grow" type="button">Replay</button></div>
