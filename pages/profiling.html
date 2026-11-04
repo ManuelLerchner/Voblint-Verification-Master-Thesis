@@ -162,7 +162,8 @@
         A domain that distinguishes the arguments, such as Interval, therefore creates
         <em>n</em>&nbsp;+&nbsp;1 contexts of <code>h</code>. A finite domain such as Sign creates the same small number at every depth. Growing <em>n</em> measures how the
         solver scales in the number of contexts, the case that overflowed the playground's stack
-        before the CPS build.
+        before the CPS build. The benchmark generator substitutes a concrete integer literal
+        for <em>n</em>; the example below shows depth 100.
       </p>
       <pre class="mock-editor snippet" data-lang="vimp"><span class="ml">fun h(i) {</span>
 <span class="ml">  if (i == 0) { return 3; }</span>
@@ -170,7 +171,7 @@
 <span class="ml">  return r;</span>
 <span class="ml">}</span>
 <span class="ml">fun main() {</span>
-<span class="ml">  x = h(n); __voblint_check(x == 3);</span>
+<span class="ml">  x = h(100); __voblint_check(x == 3);</span>
 <span class="ml">}</span></pre>
       <div class="chart-pair">
         <figure class="chart-card">
@@ -350,7 +351,8 @@
       <p class="section-intro">
         The playground runs the same generated OCaml, compiled to WebAssembly in
         continuation-passing style so deep solver recursion fits a worker's stack. Both builds time
-        the same solve, so their ratio measures the overhead of the WebAssembly build. The first plot gives
+        the same solve. Here the WebAssembly bundle runs under Node.js, so the ratio measures
+        its overhead under Node.js and only approximates browser performance. The first plot gives
         it for every configuration, the second fixture by fixture for the one you pick.
       </p>
       <figure class="chart-card">
@@ -370,8 +372,8 @@
         <div id="chart-browser" class="chart"></div>
         <figcaption>
           Each dot represents a fixture, with native time on the horizontal axis and WebAssembly time on the vertical axis. Both axes use logarithmic scales.
-          Dashed lines mark equal time, twice and ten times as slow in the browser. Dots above the
-          1× line are slower in the browser.
+          Dashed lines mark equal time, twice and ten times as slow in the WebAssembly build
+          under Node.js. Dots above the 1× line are slower under Node.js than in the native build.
         </figcaption>
       </figure>
       <p class="reading" id="reading-browser"></p>
