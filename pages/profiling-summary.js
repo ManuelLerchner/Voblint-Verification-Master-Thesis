@@ -51,7 +51,7 @@ async function summarize() {
   if (ratios.length) {
     fill(
       "browser",
-      `On the corpus runs long enough to time, the browser takes ${median(ratios).toFixed(1)} times as long as the native command line on the median run.`,
+      `On measured fixture/configuration pairs taking at least 1 ms natively, the WebAssembly build under Node.js takes ${median(ratios).toFixed(1)} times as long as the native command line on the median pair. Browser performance may differ.`,
     );
   }
 }

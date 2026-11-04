@@ -185,7 +185,7 @@
         <li><a href="profiling.html">Profiling</a></li>
         <li><a href="proof-map.html">Proof map</a></li>
         <li><a href="formalization.pdf">Formalization</a></li>
-        <li><a href="thesis.pdf">Thesis (draft)</a></li>
+        <li><a href="thesis.pdf">Thesis</a></li>
         <li><a href="paper.pdf">Paper</a></li>
         <li class="site-actions">
           <a class="nav-icon" href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis" target="_blank" rel="noreferrer" title="GitHub">
@@ -200,12 +200,12 @@
   </nav>
   <header class="explainer-hero">
     <div class="page-shell">
-      <h1>Voblint: verified static analysis in Isabelle/HOL</h1>
+      <p class="eyebrow">How it works</p>
+      <h1 class="hero-title">Voblint: <span class="hero-title-topic">verified static analysis</span> in Isabelle/HOL</h1>
       <p class="hero-byline">
         <span>Manuel Lerchner</span>
-        <span>Master's thesis (draft), Technical University of Munich</span>
+        <span>Master's thesis, Technical University of Munich</span>
         <span>Supervised by <a href="https://www.cs.cit.tum.de/pl/personen/alexandra-grass/" target="_blank" rel="noreferrer">Alexandra Gra&szlig;</a> and <a href="https://www.cs.cit.tum.de/pl/personen/helmut-seidl/" target="_blank" rel="noreferrer">Helmut Seidl</a></span>
-        <span>Overview with optional technical deep dives</span>
       </p>
       <p class="hero-lead">
         A static analyzer examines a program and establishes properties of its executions
@@ -213,9 +213,11 @@
         <a href="#stakes">error in the analyzer</a> could cause it to declare unsafe code safe.
       </p>
       <p class="hero-claim">
-        Voblint is an executable static analyzer inspired by Goblint, a static analyzer for C.
+        Voblint stands for “verified Goblint”. It is an executable static analyzer inspired by
+        Goblint, a static analyzer for C.
         It analyzes VIMP, a small language with integer variables and recursive procedures,
-        using abstract interpretation and an existing, verified <a href="#solver">top-down (TD) solver</a>.
+        using abstract interpretation and an existing, verified
+        <a href="https://doi.org/10.1007/978-3-032-28079-4_3" target="_blank" rel="noreferrer">top-down (TD) solver</a>.
         In Isabelle/HOL, we prove that whenever the analyzer returns a report under a
         supported configuration, every check marked <code>PROVED</code> holds whenever a
         VIMP execution reaches it. At a program point with no arithmetic diagnostic,
@@ -224,7 +226,7 @@
         The proof does not establish solver termination.
       </p>
       <p class="hero-claim">
-        The reused solver supplies a sound solution to the equations it is given.
+        The <a href="#solver">reused solver</a> supplies a sound solution to the equations it is given.
         Voblint's contribution is the machine-checked connection from source execution
         through compilation and analysis equations to that solution and its
         <a href="#theorems">source-level verdicts</a>.
@@ -415,7 +417,7 @@
         <p class="section-intro">
           Analyzers are programs, and programs have bugs. Many of them make the analyzer too
           cautious. An affected analyzer answers <code>UNKNOWN</code> where it could have said more. That costs
-          precision, but the answer is still right. An unsound analyzer can report <code>PROVED</code> for a check violated by real executions, or <code>DEAD</code> for code that does run, and nobody looks at that line again.
+          precision, but the answer is still right. An unsound analyzer can report <code>PROVED</code> for a check violated by real executions, or <code>DEAD</code> for code that does run.
         </p>
         <p class="section-intro">
           Goblint, a mature analyzer for C, files these bugs under
@@ -560,7 +562,7 @@
       <h3 class="setting-title">Concrete executions and interval states</h3>
       <p class="setting-copy">The figure applies this to a real program. It shows part of the program's control-flow graph, starting at the first branch. It has one node per program point and one edge per step. Each run appears as a dot at every node it reaches, placed at the value <code>x</code> has there. The abstract view replaces the dots with the one interval the analysis keeps per node. Soundness means that no interval leaves out a dot.</p>
         <p class="setting-copy">The intervals are not exact, though. The runs only ever reach multiples of three, and an interval cannot express that, so every band also covers integers no run has. On the left this makes a node look reachable although no run reaches it. On the right the guard rules out every value in the interval, and the analysis marks the check <code>DEAD</code>.</p>
-        <p class="setting-copy">Each check gets one of four verdicts, and each states what the analysis established. <code>PROVED</code>: the check holds in every run that reaches it. <code>REFUTED</code>: it fails in every run that reaches it. <code>DEAD</code>: no run reaches it. <code>UNKNOWN</code>: the intervals are too coarse to decide. A check that no run reaches can still come out <code>UNKNOWN</code>, as <code>pp4</code> does here, because <code>DEAD</code> means the analysis <em>proved</em> the point unreachable, not merely that it happens to be.</p>
+        <p class="setting-copy">Each check gets one of four verdicts, and each states what the analysis established. <code>PROVED</code>: the check holds in every run that reaches it. <code>REFUTED</code>: it fails in every run that reaches it. <code>DEAD</code>: no run reaches it. <code>UNKNOWN</code>: the intervals are too coarse to decide. A <code>REFUTED</code> verdict does not establish that any run reaches the check. A check that no run reaches can still come out <code>UNKNOWN</code>, as <code>pp4</code> does here, because <code>DEAD</code> means the analysis <em>proved</em> the point unreachable, not merely that it happens to be.</p>
 
       <figure class="scene scene-particles" data-mode="both">
         <div class="call-modes pt-modes" role="tablist" aria-label="View" hidden>
@@ -5381,8 +5383,8 @@ qed</code></pre>
       </div>
 
       <p class="setting-copy">
-        Most programs in the regression corpus are quick to analyze. The median one solves in
-        <strong data-profile="median">a few milliseconds</strong> natively. A proof says nothing
+        Across successful measured fixture/configuration runs, the median native solve time is
+        <strong data-profile="median">reported on the profiling page</strong>. A proof says nothing
         about speed, though, and some settings are expensive. The numbers here come from the
         recorded measurement, <span data-profile="when">on one machine</span>.
       </p>
@@ -5399,11 +5401,11 @@ qed</code></pre>
 
       <p class="setting-copy">
         The playground runs the same generated code compiled to WebAssembly.
-        <span data-profile="browser">It is slower than the native command line.</span>
+        <span data-profile="browser">The profiling page compares this build under Node.js with the native command line.</span>
       </p>
 
       <p class="setting-copy">
-        The <a href="profiling.html">profiling page</a> documents the measurements and methods. It includes results for each domain and context policy across the corpus, scaling curves, and an interactive CPU profile. These measurements do not establish bounds for arbitrary programs. Whether the solver finishes at all is a premise checked per program, as
+        The <a href="profiling.html">profiling page</a> documents the measurements and methods. It includes results for each domain and context policy across the corpus, scaling curves, and an interactive CPU profile. These measurements do not establish bounds for arbitrary programs. The guarantee applies only when the analyzer returns a report; termination is not proved in general, as
         <a href="#limits">the next section</a> explains.
       </p>
     </section>
@@ -5469,7 +5471,7 @@ qed</code></pre>
       <div class="guide-grid">
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Solver termination</h4>
-          <p>Every soundness guarantee assumes the solve terminates. Proving that in general is out of scope; for intervals, the join-based rules give no answer within a time limit on some programs, and so do entry-state contexts. We expect these solves to diverge, but a timeout does not prove it.</p>
+          <p>The end-to-end soundness guarantees apply when the analyzer returns a report. Proving that in general is out of scope; for intervals, the join-based rules give no answer within a time limit on some programs, and so do entry-state contexts. We expect these solves to diverge, but a timeout does not prove it.</p>
         </article>
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-door-closed" aria-hidden="true"></i> Rejected programs</h4>
@@ -5967,10 +5969,12 @@ qed</code></pre>
               <i class="fa-solid fa-graduation-cap"></i>
             </span>
             <span class="resource-content">
-              <span class="resource-title">Master’s thesis (draft)</span>
+              <span class="resource-title">Master’s thesis</span>
               <span class="resource-description">
                 The written thesis, with design rationale, proof architecture, and
-                references back into the Isabelle development.
+                references back into the Isabelle development. The conference paper gives a
+                condensed account; the formalization PDF prints the Isabelle theories.
+                Their different titles describe artifacts of the same project.
               </span>
             </span>
             <span class="resource-arrow" aria-hidden="true">→</span>
@@ -5983,9 +5987,9 @@ qed</code></pre>
               <i class="fa-solid fa-file-lines"></i>
             </span>
             <span class="resource-content">
-              <span class="resource-title">Conference paper draft</span>
+              <span class="resource-title">Conference paper</span>
               <span class="resource-description">
-                A 16-page condensed account of the end-to-end soundness argument,
+                A condensed account of the end-to-end soundness argument,
                 drafted for ITP 2027 and not yet submitted.
               </span>
             </span>

@@ -6,7 +6,7 @@
  * nothing moves.
  */
 .explainer-hero {
-  padding-block: 64px 48px;
+  padding-block: 12px 48px;
   background: var(--paper);
   border-bottom: 1px solid var(--border);
 }
@@ -44,8 +44,12 @@
 
 .explainer-hero h1 {
   max-width: var(--prose);
-  margin-top: 12px;
-  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  margin-top: 0;
+  font-size: clamp(1.5rem, 7.3vw, 3.8rem);
+}
+
+.hero-title-topic {
+  white-space: nowrap;
 }
 
 .explainer-toc {

@@ -352,7 +352,7 @@ function slope(points, x, y) {
   return d3.sum(pts, ([a, b]) => (a - mx) * (b - my)) / d3.sum(pts, ([a]) => (a - mx) ** 2);
 }
 
-/* Below this the native solve is too short for a browser/native ratio to mean much. */
+/* Below this the native solve is too short for a WebAssembly/native ratio to mean much. */
 const DEPTH_RATIO_FLOOR_MS = 100;
 /* A fitted exponent this close to 0 is a flat line, not a power law. */
 const FLAT_EXPONENT = 0.2;
@@ -898,11 +898,11 @@ function browser(data, domain, context) {
   const slowest = d3.greatest(configs, (c) => c.ratio);
   reading("reading-browser", [
     configs.length
-      ? `Across the ${configs.length} configurations, the browser build's median run takes <strong>${times(lo)}–${times(hi)}</strong> the native solve time; the gap is widest for ${domChip(slowest.domain)} with ${ctxChip(slowest.context)}.`
+      ? `Across the ${configs.length} configurations, median WebAssembly/native solve-time ratios under Node.js range from <strong>${times(lo)} to ${times(hi)}</strong>; the gap is widest for ${domChip(slowest.domain)} with ${ctxChip(slowest.context)}.`
       : null,
     measured.length
-      ? `For ${domChip(domain)} with ${ctxChip(context)}, ${measured.length} fixtures solve in at least ${RATIO_FLOOR_MS}&nbsp;ms natively; the median takes ${times(d3.median(r))} as long in the browser, and ${pct(r.filter((x) => x > 2).length / r.length)} of them more than twice as long.`
-      : `For ${domChip(domain)} with ${ctxChip(context)}, no fixture solves in ${RATIO_FLOOR_MS}&nbsp;ms natively, too fast for a ratio to mean much.`,
+      ? `For ${domChip(domain)} with ${ctxChip(context)}, ${measured.length} fixtures solve in at least ${RATIO_FLOOR_MS}&nbsp;ms natively; the median takes ${times(d3.median(r))} as long in the WebAssembly build under Node.js, and ${pct(r.filter((x) => x > 2).length / r.length)} of them more than twice as long.`
+      : `For ${domChip(domain)} with ${ctxChip(context)}, no comparable fixture meets the native ${RATIO_FLOOR_MS}&nbsp;ms threshold for a meaningful ratio.`,
   ]);
   if (!pts.length) {
     $("chart-browser").replaceChildren();
@@ -1216,7 +1216,8 @@ async function load(entry) {
   table(data);
   method(data.meta);
   for (const el of document.querySelectorAll("[data-meta]"))
-    el.textContent = data.meta[el.dataset.meta];
+    el.textContent =
+      el.dataset.meta === "timeout_s" ? `${data.meta.timeout_s} s` : data.meta[el.dataset.meta];
   let resizeTimer;
   window.onresize = () => {
     clearTimeout(resizeTimer);
@@ -1266,7 +1267,7 @@ try {
 }
 if (!index?.snapshots?.length) {
   showUnavailable(
-    "No profiling snapshot has been recorded yet. Run `pixi run profile` to measure one; it lands in pages/data/profiling/.",
+    "No profiling snapshot is available. Measurements will appear here when a snapshot is published.",
   );
 } else {
   const select = $("snapshot-select");

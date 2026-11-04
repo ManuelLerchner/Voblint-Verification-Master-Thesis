@@ -22,6 +22,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+from pages_profiling import fill_profiling
+
 REPO = Path(__file__).resolve().parent.parent
 RELOAD = "/__reload"
 RELOAD_SCRIPT = (
@@ -130,6 +132,8 @@ class Handler(SimpleHTTPRequestHandler):
             return super().do_GET()
 
         body = found.read_bytes()
+        if found == REPO / "pages/profiling.html":
+            body = fill_profiling(body.decode(), REPO / "pages").encode()
         at = body.rfind(b"</body>")
         body = (
             body[:at] + RELOAD_SCRIPT + body[at:] if at >= 0 else body + RELOAD_SCRIPT

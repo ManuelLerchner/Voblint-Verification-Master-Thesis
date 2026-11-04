@@ -60,8 +60,8 @@
       <p class="eyebrow">Profiling</p>
       <h1>Voblint analyzer performance and precision</h1>
       <p class="hero-lead">
-        Every regression fixture, run under every abstract domain and context policy, natively
-        and in the browser's WebAssembly build. The numbers are measurements on one machine. They show
+        Eligible regression fixtures, run under the snapshot's selected analyses and context
+        policies, natively and in the playground's WebAssembly build under Node.js. The numbers are measurements on one machine. They show
         where time and memory go, and they prove nothing about programs outside the corpus.
       </p>
       <div class="snapshot-bar" id="snapshot-bar">
@@ -73,6 +73,9 @@
   </header>
 
   <main class="page-shell profiling">
+    <noscript><p>Charts, snapshot selection and sortable tables require JavaScript.
+      The measurement method below remains readable. Raw measurements and their metadata
+      are available through the <a href="data/profiling/index.json">snapshot index</a>.</p></noscript>
     <section class="kpis" id="kpis" aria-label="Headline numbers"></section>
 
     <section class="section" aria-labelledby="h-tradeoff">
@@ -81,9 +84,9 @@
         <h2 id="h-tradeoff">Precision and cost by configuration</h2>
       </div>
       <p class="section-intro">
-        Every domain can run under different context policies. None analyses each procedure once for
-        all its calls; entry-state analyses it once per distinct entry state; call strings with
-        <em>k</em>&nbsp;=&nbsp;1 once per calling site. Additional contexts can improve precision and increase running time.
+        Every domain can run under different context policies. The None policy shares one context per procedure across
+        all its calls; entry-state keeps a context per distinct abstract entry state; call strings with
+        <em>k</em>&nbsp;=&nbsp;1 keep one per calling site. Additional contexts can improve precision and increase running time.
         The plot compares precision and running time for every combination the snapshot measured.
       </p>
       <figure class="chart-card">
@@ -105,12 +108,12 @@
             fixture's own <code>PARAM</code> header is ignored, so every configuration analyzes the same
             programs.</li>
           <li>Time is the CLI's own measurement around the solve (<code>--timing</code>), the median
-            of <span data-meta="reps"></span> runs. Process start-up, parsing and printing are not in
+            of <span data-meta="reps">the snapshot’s recorded number of</span> runs. Process start-up, parsing and printing are not in
             it, so a sum over the corpus is solving alone.</li>
           <li>A check counts as proved when the CLI prints PROVED for it. The denominator is every
             check in the corpus once, taken as the most checks any configuration reported for a
             fixture. A configuration the CLI rejects for a fixture, or one that runs past
-            <span data-meta="timeout_s"></span>&nbsp;s, proves nothing there.</li>
+            <span data-meta="timeout_s">the snapshot’s recorded time limit</span>, proves nothing there.</li>
         </ul>
       </details>
     </section>
@@ -192,16 +195,16 @@
         <summary>Measurement method</summary>
         <ul>
           <li>Every domain under entry-state contexts. Each point is the median of
-            <span data-meta="reps"></span> runs of the CLI's own solve timing; peak RSS, in the
+            <span data-meta="reps">the snapshot’s recorded number of</span> runs of the CLI's own solve timing; peak RSS, in the
             tooltip, is the whole process's, from the system's <code>time</code> command. A domain's
-            sweep stops at the first <em>n</em> whose run passes <span data-meta="timeout_s"></span>&nbsp;s
+            sweep stops at the first <em>n</em> whose run passes <span data-meta="timeout_s">the snapshot’s recorded time limit</span>
             or fails; the reading names where.</li>
           <li>Evaluations: the number of <code>eq</code> events in a separate traced run's JSON Lines
             trace, one per evaluation of an unknown's right-hand side. Tracing slows the run; the
             repository's tracer gate checks that a traced run gives the same answer as an untraced
             one.</li>
           <li>WebAssembly: the playground's bundle under Node with a 512&nbsp;KiB stack and no trace,
-            timed by the analyzer around the same solve, median of <span data-meta="reps"></span>
+            timed by the analyzer around the same solve, median of <span data-meta="reps">the snapshot’s recorded number of</span>
             runs.</li>
         </ul>
       </details>
@@ -236,7 +239,7 @@
               <th class="num">Gap</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody><tr><td colspan="7">Enable JavaScript to explore the measurements, or read the <a href="data/profiling/index.json">raw snapshots</a>.</td></tr></tbody>
         </table>
       </div>
       <p class="reading" id="reading-scaling"></p>
@@ -258,7 +261,7 @@
           <li>Call sites run twice. Call strings with <em>k</em>&nbsp;=&nbsp;1 give every site
             its own context. Entry-state contexts merge identical calls into one context. Comparing the runs separates context costs from call-site costs.</li>
           <li>Times are the CLI's own solve timing, the median of
-            <span data-meta="reps"></span> runs; evaluations come from a traced run, as in the
+            <span data-meta="reps">the snapshot’s recorded number of</span> runs; evaluations come from a traced run, as in the
             recursion plot. Exponents are least-squares fits on log–log axes. Timing fits start at <em>n</em>&nbsp;=&nbsp;100, where start-up no longer dominates. Evaluation fits start at <em>n</em>&nbsp;=&nbsp;20 because counts are exact and tracing reaches the time limit sooner. A gap of about 1 or more means each evaluation gets
             roughly <em>n</em> times more expensive, the signature of a linear scan inside the
             solver's loop.</li>
@@ -383,7 +386,7 @@
           <li>The WebAssembly measurement runs the playground's bundle under Node with 40 fixtures per process, approximating worker reuse in a page session. The stack is 512&nbsp;KiB, approximately Chrome's worker stack. Time is the analyzer's own measurement around the solve, without parsing or
             rendering.</li>
           <li>Native: the CLI's own solve timing, as in the first plot. Both sides are medians of
-            <span data-meta="reps"></span> runs. Below about 1&nbsp;ms both clocks are close to their
+            <span data-meta="reps">the snapshot’s recorded number of</span> runs. Below about 1&nbsp;ms both clocks are close to their
             resolution, so ratios use only runs above that.</li>
           <li>Node, not a browser, runs the WebAssembly side. Chrome's engine is the same V8, but its
             worker may schedule and collect garbage differently; the playground's own timing shows
@@ -421,7 +424,7 @@
               <th data-key="proved" class="num">Proved</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody><tr><td colspan="7">Enable JavaScript to explore the measurements, or read the <a href="data/profiling/index.json">raw snapshots</a>.</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -431,7 +434,13 @@
         <p class="eyebrow">Method</p>
         <h2 id="h-method">Setup and limits</h2>
       </div>
-      <ul id="method-list"></ul>
+      <ul id="method-list">
+        <li data-snapshot-summary>Snapshot metadata is available through the snapshot index below.</li>
+        <li>Native timings measure solving only, excluding parsing, printing and process startup.</li>
+        <li>WebAssembly timings use the playground bundle under Node.js; actual browser timings may differ.</li>
+        <li>Fixtures with an explicit timeout header are excluded. Rejected and timed-out runs count as no proof.</li>
+        <li>Repetition counts, time limits, machine details and measured revisions are recorded in each <a href="data/profiling/index.json">snapshot</a>.</li>
+      </ul>
     </section>
   </main>
 
