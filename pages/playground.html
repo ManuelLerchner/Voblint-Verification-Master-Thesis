@@ -4,36 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta
-    name="description"
-    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser. Pick one or more analyses, a globals rule and a context sensitivity, then inspect every state."
-  >
-  <meta property="og:title" content="Voblint Playground">
-  <meta
-    property="og:description"
-    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser."
-  >
+  <meta name="description" content="Run Voblint in your browser: explore abstract interpretation, context-sensitive analysis, and TD solver replay on VIMP programs.">
+  <meta property="og:title" content="Voblint Playground: Static Analyzer and TD Solver Replay">
+  <meta property="og:description" content="Run Voblint in your browser: explore abstract interpretation, context-sensitive analysis, and TD solver replay on VIMP programs.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Voblint">
   <meta property="og:url" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html">
   <meta property="og:image" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/playground-overview.png">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Voblint Playground">
-  <meta
-    name="twitter:description"
-    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser."
-  >
+  <meta name="twitter:title" content="Voblint Playground: Static Analyzer and TD Solver Replay">
+  <meta name="twitter:description" content="Run Voblint in your browser: explore abstract interpretation, context-sensitive analysis, and TD solver replay on VIMP programs.">
   <meta name="twitter:image" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/playground-overview.png">
   <meta name="author" content="Manuel Lerchner">
-  <meta
-    name="keywords"
-    content="static analysis playground, abstract interpretation online, verified static analyzer, Isabelle/HOL, Goblint, interval domain, congruence domain, sign domain, parity domain, context sensitivity, call strings, widening and narrowing, control-flow graph viewer, WebAssembly, VIMP"
-  >
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#f4f7f6">
 
-  <title>Voblint Playground: verified abstract interpretation</title>
+  <title>Voblint Playground: Static Analyzer and TD Solver Replay</title>
 
   <link rel="canonical" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html">
   <link rel="sitemap" type="application/xml" href="sitemap.xml">
@@ -114,8 +101,9 @@
   <header class="explainer-hero">
     <div class="page-shell">
       <p class="eyebrow">Playground</p>
-      <h1 id="analyzer-heading">Analyze VIMP in your browser</h1>
+      <h1 id="analyzer-heading">Voblint static analyzer playground</h1>
       <p class="hero-lead">
+        Explore abstract interpretation and replay the TD solver on VIMP programs.
         VIMP is a small IMP-style language with <code>__voblint_check(cond)</code> assertions.
         The analysis runs locally, in WebAssembly compiled from
         <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/codegen/generated/ml/Voblint_Generated.ml" target="_blank" rel="noreferrer"><code>Voblint_Generated.ml</code></a>,
