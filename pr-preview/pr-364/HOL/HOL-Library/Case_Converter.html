@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Case_Converter</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Case_Converter</h1>
+</div>
+
+<pre class="source"><span class="comment1"><span>(* Author: Pascal Stoop, ETH Zurich
+   Author: Andreas Lochbihler, Digital Asset *)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Eliminating pattern matches›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Case_Converter.html"><span>Case_Converter</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><a href="../HOL/Main.html"><span>Main</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span class="entity_def" id="Case_Converter.missing_pattern_match_def|fact"><span class="entity_def" id="Case_Converter.missing_pattern_match_def|thm"><span class="entity_def" id="Case_Converter.missing_pattern_match_def_raw|axiom"><span>definition</span></span></span></span></span></span><span> </span><span class="entity"><span class="entity_def" id="Case_Converter.missing_pattern_match|const"><span>missing_pattern_match</span></span></span><span> </span><span class="main"><span>::</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><a class="entity_ref" href="../HOL/String.html#String.literal|type"><span class="tconst"><span>String.literal</span></span></a><span> </span><span class="main"><span>⇒</span></span><span> </span><span class="main"><span>(</span></span><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.unit|type"><span class="tconst"><span>unit</span></span></a><span> </span><span class="main"><span>⇒</span></span><span> </span><span class="tfree"><span>'a</span></span><span class="main"><span>)</span></span><span> </span><span class="main"><span>⇒</span></span><span> </span><span class="tfree"><span>'a</span></span><span>"</span></span></span><span> </span><span class="keyword2"><span class="keyword"><span>where</span></span></span><span>
+  </span><span class="main"><span>[</span></span><span class="operator"><span>code</span></span><span> </span><span class="quasi_keyword"><span class="quasi_keyword"><span class="quasi_keyword"><span>del</span></span></span></span><span class="main"><span>]</span></span><span class="main"><span>:</span></span><span> </span><span class="quoted"><span class="quoted"><span>"</span><span class="free"><span>missing_pattern_match</span></span><span> </span><span class="free"><span class="bound"><span class="entity"><span>m</span></span></span></span><span> </span><span class="free"><span class="bound"><span class="entity"><span>f</span></span></span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.eq|const"><span>=</span></a></span><span> </span><span class="free"><span class="bound"><span class="entity"><span>f</span></span></span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/Product_Type.html#Product_Type.Unity|const"><span>()</span></a></span><span>"</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>lemma</span></span></span><span> </span><span class="entity_def" id="Case_Converter.missing_pattern_match_cong|fact"><span class="entity_def" id="Case_Converter.missing_pattern_match_cong|thm"><span>missing_pattern_match_cong</span></span></span><span> </span><span class="main"><span>[</span></span><span class="operator"><span>cong</span></span><span class="main"><span>]</span></span><span class="main"><span>:</span></span><span>
+  </span><span class="quoted"><span class="quoted"><span>"</span><span class="free"><span>m</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.eq|const"><span>=</span></a></span><span> </span><span class="free"><span>m'</span></span><span> </span><span class="main"><span>⟹</span></span><span> </span><a class="entity_ref" href="Case_Converter.html#Case_Converter.missing_pattern_match|const"><span class="const"><span>missing_pattern_match</span></span></a><span> </span><span class="free"><span>m</span></span><span> </span><span class="free"><span>f</span></span><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.eq|const"><span>=</span></a></span><span> </span><a class="entity_ref" href="Case_Converter.html#Case_Converter.missing_pattern_match|const"><span class="const"><span>missing_pattern_match</span></span></a><span> </span><span class="free"><span>m'</span></span><span> </span><span class="free"><span>f</span></span><span>"</span></span></span><span>
+  </span><span class="keyword1"><span class="command"><span>by</span></span></span><span class="main"><span>(</span></span><a class="entity_ref" href="../HOL/ISABELLE_HOME/src/Provers/classical.ML.html#HOL.rule|method"><span class="operator"><span>rule</span></span></a><span> </span><a class="entity_ref" href="../HOL/HOL.html#HOL.arg_cong|fact"><span>arg_cong</span></a><span class="main"><span>)</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>lemma</span></span></span><span> </span><span class="entity_def" id="Case_Converter.missing_pattern_match_code|fact"><span class="entity_def" id="Case_Converter.missing_pattern_match_code|thm"><span>missing_pattern_match_code</span></span></span><span> </span><span class="main"><span>[</span></span><a class="entity_ref" href="../HOL/ISABELLE_HOME/src/Tools/Code/code_preproc.ML.html#Code_Generator.code_unfold|attribute"><span class="operator"><span>code_unfold</span></span></a><span class="main"><span>]</span></span><span class="main"><span>:</span></span><span>
+  </span><span class="quoted"><span class="quoted"><span>"</span><a class="entity_ref" href="Case_Converter.html#Case_Converter.missing_pattern_match|const"><span class="const"><span>missing_pattern_match</span></span></a><span> </span><span class="main"><a class="entity_ref" href="../HOL/HOL.html#HOL.eq|const"><span>=</span></a></span><span> </span><a class="entity_ref" href="../HOL/String.html#String.Code.abort|const"><span class="const"><span>Code.abort</span></span></a><span>"</span></span></span><span>
+  </span><span class="keyword1"><span class="command"><span>unfolding</span></span></span><span> </span><a class="entity_ref" href="Case_Converter.html#Case_Converter.missing_pattern_match_def|fact"><span>missing_pattern_match_def</span></a><span> </span><a class="entity_ref" href="../HOL/String.html#String.Code.abort_def|fact"><span>Code.abort_def</span></a><span> </span><span class="keyword1"><span class="command"><span>..</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>ML_file</span></span></span><span> </span><span class="quoted"><a href="ISABELLE_HOME/src/HOL/Library/case_converter.ML.html"><span>‹case_converter.ML›</span></a></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>

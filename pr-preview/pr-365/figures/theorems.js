@@ -1,0 +1,277 @@
+{
+  /*
+   * The theorem explorer. A tab picks the theorem; hovering or focusing one of its
+   * premises or conclusions lights the graph elements whose data-refs name it.
+   */
+  for (const figure of document.querySelectorAll(".scene-theorems")) {
+    const svg = figure.querySelector(".cfg-svg");
+
+    const highlight = (ref) => {
+      for (const element of svg.querySelectorAll(".is-hl")) {
+        element.classList.remove("is-hl");
+      }
+
+      svg.classList.toggle("has-hl", ref !== null);
+
+      if (ref !== null) {
+        for (const element of svg.querySelectorAll(`[data-refs~="${ref}"]`)) {
+          element.classList.add("is-hl");
+        }
+      }
+    };
+
+    for (const item of figure.querySelectorAll(".rule-item[data-ref]")) {
+      const panel = item.closest(".thm-panel");
+      const explain = () => renderRuleExplanation(panel, item.dataset.ref);
+
+      item.addEventListener("pointerenter", () => {
+        highlight(item.dataset.ref);
+        explain();
+      });
+      item.addEventListener("focus", () => {
+        highlight(item.dataset.ref);
+        explain();
+      });
+      item.addEventListener("pointerleave", () => highlight(null));
+      item.addEventListener("blur", () => highlight(null));
+    }
+  }
+
+  /*
+   * What each premise and conclusion says, with the formal clause and the definition it
+   * rests on. The panel keeps the last item shown, so its link stays reachable.
+   */
+  const ISA = "Voblint";
+  const isaConst = (session, theory, name) =>
+    `${ISA}/${session}/${theory}.html#${theory}.${name}%7Cconst`;
+
+  const RULE_EXPLANATIONS = {
+    run: {
+      clause: "s0 ∈ cinit_stores 𝒢  ∧  𝒢, Π ⊢ (main_body Π, s0, []) →p* (residual, s, frs)",
+      text: "Start from an initial store (declared globals are `0`, locals arbitrary) with an empty call stack, and let the source semantics take any number of steps. It arrives at the rest of the program `residual`, the store `s` and the call frames `frs`. The run may stop anywhere, even inside a call.",
+      link: isaConst("Voblint_VIMP", "VIMP_Proc", "pstep"),
+      linkText: "pstep",
+    },
+    ans: {
+      clause: "run_voblint config p = Analysed res",
+      text: "The exported analyzer, the function the playground calls, accepted the program as well-formed, its solve finished, and it returned the report `res`. Its checks and diagnostics are exactly what the page draws.",
+      link: isaConst("Voblint_CLI", "Analysis_Run", "run_voblint"),
+      linkText: "run_voblint",
+    },
+    v: {
+      clause: "∃v. p, s0 ⊢ (residual, s, frs) ⊳ v",
+      text: "The reached configuration is observed at some CFG node `v`: a run of the program's elaboration, which annotates every statement with the nodes the compiler emits for it, reaches an annotated command that names `v`, and the compiler's simulation relates it to `v` with the same store `s`. A configuration reachable along two paths can be observed at two nodes, and the remaining conclusions hold at every one of them.",
+      link: isaConst("Voblint_Compile", "Elaborated_Compilation", "at_node"),
+      linkText: "at_node",
+    },
+    coll: {
+      clause: "s ∈ 𝒞 v",
+      text: "The graph's collecting semantics reaches node `v` with store `s`: some valid activation trace from an initial store ends there. Every analysis result is judged against this set.",
+      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
+      linkText: "node_collect",
+    },
+    coll2: {
+      clause: "s ∈ 𝒞 v",
+      text: "The graph's collecting semantics reaches node `v` with store `s`. Here it is a premise: the theorem speaks about every store the program can really have at `v`.",
+      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
+      linkText: "node_collect",
+    },
+    cover: {
+      clause: "s ∈ ℛ⇘res⇙ v",
+      text: "Some state the report holds at `v`, under one of the contexts solved there, describes `s`. Not every context has to: another activation's state need not describe this store.",
+      link: isaConst("Voblint_CLI", "Analysis_Report", "report_sem"),
+      linkText: "report_sem",
+    },
+    checks: {
+      clause: "s ∈ 𝒱ᵣₑₛ v",
+      text: "Every definite verdict the report gives at `v` is valid in `s`: `PROVED` means the condition is true in `s`, `REFUTED` that it is false. `UNKNOWN` claims nothing.",
+      link: isaConst("Voblint_CLI", "Analysis_Report", "verdict_stores"),
+      linkText: "verdict_stores",
+    },
+    notdead: {
+      clause: "check_verdict c ≠ Dead",
+      text: "The check is not DEAD: the store `s` lies in the report's semantics at its node, and a DEAD node has none.",
+      link: isaConst("Voblint_CLI", "Analysis_Report", "DEAD"),
+      linkText: "DEAD",
+    },
+    next: {
+      clause: "next_check residual = Some (l, e)",
+      text: "The next command the source program will execute is `__voblint_check(e)`, labelled `l`. The parser writes the check's own line and column into `l`.",
+      link: isaConst("Voblint_Compile", "Residual_Edges", "next_check"),
+      linkText: "next_check",
+    },
+    listed: {
+      clause:
+        "∃c ∈ set (report_checks res). check_label c = l ∧ check_exp c = e ∧ s ∈ node_collect … (check_point c)",
+      text: "The report lists a check `c` under the label `l`, with condition `e`, at a node the store `s` really reaches. The report prints each row at its own label, so the verdict shown at a check's line is this row's.",
+      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
+      linkText: "check_sites",
+    },
+    holds: {
+      clause:
+        "(check_verdict c = Decided Check_Proved ⟶ truthy (aval e s)) ∧ (… Check_Refuted ⟶ ¬ truthy (aval e s))",
+      text: "Evaluating `e` in the store `s` agrees with the verdict: true for `PROVED`, false for `REFUTED`.",
+      link: isaConst("Voblint_CLI", "Analysis_Report", "verdict_stores"),
+      linkText: "verdict_stores",
+    },
+    listed2: {
+      clause: "chk ∈ set (report_checks res)",
+      text: "`chk` is one of the checks the report lists.",
+      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
+      linkText: "check_sites",
+    },
+    deadv: {
+      clause: "check_verdict chk = Dead",
+      text: "The report marks that check DEAD: every state it holds at the check's node is ⊥.",
+      link: isaConst("Voblint_CLI", "Analysis_Report", "DEAD"),
+      linkText: "DEAD",
+    },
+    empty: {
+      clause:
+        "node_collect (declared_global p) (prog_cfg p) (cinit_stores …) (check_point chk) = {}",
+      text: "The collecting semantics has no store at the check's node: no run, starting with its globals at zero, ever gets there.",
+      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
+      linkText: "node_collect",
+    },
+    nodiag: {
+      clause: "∀d ∈ set (report_diagnostics res). diagnostic_point d ≠ v",
+      text: "The report lists no arithmetic diagnostic, neither a warning nor an error, at node `v`.",
+      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "arithmetic_safe_at"),
+      linkText: "arithmetic_safe_at",
+    },
+    div: {
+      clause: "arithmetic_safe_at (prog_cfg p) v s",
+      text: "For every arithmetic expression on the graph's edges at `v`, every divisor evaluates to a non-zero value in `s`. The corollary `run_voblint_arithmetic_intra_safe` states it for one edge at a time.",
+      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "arithmetic_safe_at"),
+      linkText: "arithmetic_safe_at",
+    },
+    sites: {
+      clause:
+        "map (λchk. (check_point chk, check_label chk, check_exp chk)) (report_checks res) = check_sites (prog_cfg p)",
+      text: "Read as (node, label, condition) triples, the result's checks are exactly the check edges of the compiled graph, in the graph's edge order. Nothing is dropped or invented, and each keeps the label of the source check it came from.",
+      link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
+      linkText: "check_sites",
+    },
+  };
+
+  function renderRuleExplanation(panel, ref) {
+    const entry = RULE_EXPLANATIONS[ref];
+    const target = panel.querySelector(".rule-explain");
+
+    if (!entry || !target) {
+      return;
+    }
+
+    const clause = document.createElement("pre");
+    clause.className = "rule-clause";
+    clause.innerHTML = highlightInner(entry.clause);
+
+    const text = document.createElement("p");
+    text.innerHTML = withCode(entry.text);
+
+    const link = document.createElement("a");
+    link.className = "isa-link";
+    link.href = entry.link;
+    link.textContent = `Definition of ${entry.linkText} ↗`;
+
+    target.replaceChildren(clause, text, link);
+  }
+
+  /* Theorem tabs. */
+  for (const figure of document.querySelectorAll(".scene-theorems")) {
+    const tabs = figure.querySelectorAll("[role=tab]");
+
+    for (const tab of tabs) {
+      tab.addEventListener("click", () => {
+        figure.dataset.theorem = tab.dataset.theorem;
+
+        for (const other of tabs) {
+          other.setAttribute("aria-selected", String(other === tab));
+        }
+      });
+    }
+  }
+
+  /*
+   * Colors the theorem statements the way Isabelle/jEdit distinguishes them: outer
+   * keywords, the theorem name, free variables and variables bound by a quantifier
+   * or lambda. Names that are constants of the development stay plain.
+   */
+  const ISABELLE_CONSTANTS = new Set([
+    "star",
+    "pstep",
+    "declared_global",
+    "prog_table",
+    "main_body",
+    "run_voblint",
+    "csim",
+    "at_node",
+    "prog_main_name",
+    "prog_cfg",
+    "node_collect",
+    "cinit_stores",
+    "report_sem",
+    "verdict_stores",
+    "next_check",
+    "set",
+    "report_checks",
+    "check_exp",
+    "check_point",
+    "check_verdict",
+    "truthy",
+    "aval",
+    "report_diagnostics",
+    "diagnostic_point",
+    "arithmetic_safe_at",
+    "map",
+    "check_sites",
+  ]);
+
+  const span = (kind, text) => `<span class="isa-${kind}">${escapeText(text)}</span>`;
+
+  function highlightInner(term) {
+    const bound = new Set();
+
+    for (const match of term.matchAll(/[∀∃λ]\s*([A-Za-z_][\w\s]*?)\s*(?:\.|∈)/g)) {
+      for (const name of match[1].split(/\s+/)) {
+        bound.add(name);
+      }
+    }
+
+    return term.replace(
+      /([A-Za-z_][\w']*)|([∀∃λ∈∧∨⟶¬≠=.])|([^A-Za-z_∀∃λ∈∧∨⟶¬≠=.]+)/g,
+      (_whole, word, symbol, rest) => {
+        if (word) {
+          if (bound.has(word)) return span("bound", word);
+          if (/^[A-Z][\w']+$/.test(word)) return span("ctor", word);
+          if (ISABELLE_CONSTANTS.has(word)) return escapeText(word);
+          return span("free", word);
+        }
+
+        return symbol ? span("op", symbol) : escapeText(rest);
+      },
+    );
+  }
+
+  function highlightIsabelle(source) {
+    return source
+      .split(/("[^"]*")/)
+      .map((part, i) => {
+        if (i % 2 === 1) {
+          return span("quote", '"') + highlightInner(part.slice(1, -1)) + span("quote", '"');
+        }
+
+        return escapeText(part)
+          .replace(
+            /^(theorem|corollary|lemma)(\s+)([\w']+)/m,
+            '<span class="isa-keyword">$1</span>$2<span class="isa-name">$3</span>',
+          )
+          .replace(/\b(assumes|shows|and|fixes|obtains)\b/g, '<span class="isa-sub">$1</span>');
+      })
+      .join("");
+  }
+
+  for (const pre of document.querySelectorAll(".thm-panel pre")) {
+    pre.innerHTML = highlightIsabelle(pre.textContent);
+  }
+}

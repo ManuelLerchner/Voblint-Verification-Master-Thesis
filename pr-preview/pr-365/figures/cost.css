@@ -1,0 +1,158 @@
+/* Wall clock as a second series against its own axis on the right. Accent is
+   free here: the bars are primary, and the verdict marks success and warning. */
+:where(.scene-cost) .cost-time path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+:where(.scene-cost) .cost-time circle {
+  fill: var(--accent);
+}
+
+/* The count sits under its label, not over the bar: the time series runs through
+   the plot area and used to cross the taller bars' numbers. */
+:where(.scene-cost) .bar-value {
+  font-size: 11px;
+}
+
+/* Entry state is a different strategy, not a longer call string, so the time
+   series stops before it. The rule says the break is meant. */
+:where(.scene-cost) .cost-divider {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+:where(.scene-cost) .cost-divider-note {
+  fill: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 8.5px;
+}
+
+:where(.scene-cost) .axis-unit {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+:where(.scene-cost) .axis-unit.nodes {
+  fill: var(--primary);
+}
+
+:where(.scene-cost) .axis-unit.ms,
+:where(.scene-cost) .axis-label.ms {
+  fill: var(--accent) !important;
+}
+
+/* The recursion card has room the fan-out card does not, so it spends it on
+   why every depth but one proves the check. */
+:where(.scene-cost) .cost-explain {
+  max-width: none;
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+/* The program each chart was measured on, so the counts can be read against
+   the calls that produce them. Both are pinned by fixtures under
+   tests/regression/24-site-figures. */
+:where(.scene-cost) .cost-code {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+/* The price of precision */
+
+:where(.scene-cost) .cost-title {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+:where(.scene-cost) .cost-sub {
+  margin: 2px 0 10px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+:where(.scene-cost) .cost-chart {
+  max-width: 560px !important;
+}
+
+:where(.scene-cost) .cost-grid-lines line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+:where(.scene-cost) .cost-axis text,
+:where(.scene-cost) .bar-label {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+}
+
+:where(.scene-cost) .bar-label,
+:where(.scene-cost) .bar-value,
+:where(.scene-cost) .bar-verdict {
+  text-anchor: middle;
+}
+
+:where(.scene-cost) .bar rect {
+  fill: var(--primary);
+  transition: fill 150ms ease;
+}
+
+:where(.scene-cost) .bar.alt rect {
+  fill: #4f7c85;
+}
+
+:where(.scene-cost) .bar.dip rect {
+  fill: #7fa3aa;
+}
+
+:where(.scene-cost) .bar:hover rect {
+  fill: var(--accent);
+}
+
+:where(.scene-cost) .bar-value {
+  fill: var(--text) !important;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+:where(.scene-cost) .bar-verdict {
+  font-size: 16px !important;
+  font-weight: 700;
+}
+
+:where(.scene-cost) .bar-verdict.ok {
+  fill: var(--success) !important;
+}
+
+:where(.scene-cost) .bar-verdict.meh {
+  fill: var(--warning) !important;
+}
+
+:where(.scene-cost) .cost-note {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+  font-style: italic;
+}
+
+:where(.scene-cost) .cost-note.meh {
+  fill: var(--warning) !important;
+  font-style: normal;
+  font-weight: 700;
+}
+
+:where(.scene-cost) .cost-note-line {
+  stroke: var(--border-strong);
+}

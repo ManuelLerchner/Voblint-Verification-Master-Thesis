@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Voblint_Analysis_Parity.Parity_Classify</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Voblint_Analysis_Parity.Parity_Classify</h1>
+</div>
+
+<pre class="source"><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Voblint_Analysis_Parity.Parity_Classify.html"><span>Parity_Classify</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span>
+    </span><a href="Voblint_Analysis_Parity.Parity_Exec.html"><span>Parity_Exec</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Parity instance of the generic check-discharge interface›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  The check classifier is derived from Parity's bundle, exactly as in
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>Voblint_Analysis_Sign.Sign_Classify›</span></span></span><span>: the Boolean recursion over </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">typ</span><span class="hidden">&gt;</span></span></span><span class="quoted"><span>‹</span><a class="entity_ref" href="../Voblint_VIMP/VIMP_Syntax.html#VIMP_Syntax.exp|type"><span class="tconst"><span>exp</span></span></a><span>›</span></span></span><span>,
+  the three-way classification, and the node-indexed bridge to
+  </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Framework/Checks.html#Checks.checks_proven|const"><span class="const"><span>checks_proven</span></span></a><span>›</span></span><span> come from the comparison queries
+  </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Analysis_Int/Voblint_Analysis_Parity.Parity_Numeric_Queries.html#Parity_Numeric_Queries.parity_less|const"><span class="const"><span>parity_less</span></span></a><span>›</span></span><span>/</span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Analysis_Int/Voblint_Analysis_Parity.Parity_Numeric_Queries.html#Parity_Numeric_Queries.parity_eq|const"><span class="const"><span>parity_eq</span></span></a><span>›</span></span><span> and the evaluator, through the
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>parity_tf›</span></span></span><span> interpretation in </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">theory</span><span class="hidden">&gt;</span></span></span><span>‹</span><a href="Voblint_Analysis_Parity.Parity_Transfer.html"><span>Voblint_Analysis_Parity.Parity_Transfer</span></a><span>›</span></span><span>.
+  Their facts stay under </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>parity_tf.check.›</span></span></span><span>.
+›</span></span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>

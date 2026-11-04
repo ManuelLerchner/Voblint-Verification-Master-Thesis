@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Run time, solver work and memory of Voblint's verified analyzer over its regression corpus, natively and in the browser.">
+  <meta name="theme-color" content="#f4f7f6">
+  <title>Voblint Profiling</title>
+  <link rel="canonical" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/profiling.html">
+  <meta property="og:title" content="Voblint Profiling">
+  <meta property="og:description" content="Run time, solver work, memory and CPU profiles of Voblint's verified analyzer over its regression corpus, natively and in the browser.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Voblint">
+  <meta name="author" content="Manuel Lerchner">
+  <link rel="icon" type="image/png" sizes="256x256" href="assets/favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="explainer.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/d3-flame-graph@4.1.3/dist/d3-flamegraph.css">
+  <link rel="stylesheet" href="profiling.css">
+  <script src="https://cdn.jsdelivr.net/npm/d3-flame-graph@4.1.3/dist/d3-flamegraph.min.js"></script>
+</head>
+
+<body>
+  <nav class="site-nav" aria-label="Site">
+    <div class="page-shell site-nav-inner">
+      <a class="site-brand" href="index.html">
+        <img src="assets/favicon.png" alt="" width="28" height="28">
+        <span>Voblint</span>
+      </a>
+      <ul class="site-links">
+        <li><a href="index.html">How it works</a></li>
+        <li><a href="profiling.html" aria-current="page">Profiling</a></li>
+        <li><a href="formalization.pdf">Formalization</a></li>
+        <li><a href="thesis.pdf">Thesis</a></li>
+        <li><a href="paper.pdf">Paper</a></li>
+        <li>
+          <a class="nav-icon" href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis" target="_blank" rel="noreferrer" title="GitHub">
+            <i class="fa-brands fa-github" aria-hidden="true"></i><span class="visually-hidden">GitHub</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-cta" href="playground.html">
+            <i class="fa-solid fa-play" aria-hidden="true"></i> Playground
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="explainer-hero">
+    <div class="page-shell">
+      <p class="eyebrow">Profiling</p>
+      <h1>What the verified analyzer costs</h1>
+      <p class="hero-lead">
+        Every regression fixture, run under every abstract domain and context policy, natively
+        and in the browser's WebAssembly build. The numbers are measurements on one machine: they show
+        where time and memory go, and they prove nothing about programs outside the corpus.
+      </p>
+      <div class="snapshot-bar" id="snapshot-bar">
+        <label for="snapshot-select">Snapshot</label>
+        <select id="snapshot-select"></select>
+        <span id="snapshot-meta" class="snapshot-meta"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell profiling">
+    <section class="kpis" id="kpis" aria-label="Headline numbers"></section>
+
+    <section class="section" aria-labelledby="h-tradeoff">
+      <div class="section-heading">
+        <p class="eyebrow">Cost and precision</p>
+        <h2 id="h-tradeoff">Which configuration pays for its precision?</h2>
+      </div>
+      <p class="section-intro">
+        Every domain can run under several context policies. None analyses each procedure once for
+        all its calls; entry-state analyses it once per distinct entry state; call strings with
+        <em>k</em>&nbsp;=&nbsp;1 once per calling site. More contexts can prove more, and cost more.
+        This plot puts the two side by side for every combination the snapshot measured.
+      </p>
+      <figure class="chart-card">
+        <div class="chart-pair">
+          <div id="chart-tradeoff-time" class="chart"></div>
+          <div id="chart-tradeoff-proved" class="chart"></div>
+        </div>
+        <figcaption>
+          One row per domain, one dot per context policy. Left: native solve time summed over the
+          corpus. Right: the share of all checks in the corpus the configuration proves. The grey
+          bar spans a domain's policies, so a long bar on the left and a short one on the right
+          means contexts cost much and buy little.
+        </figcaption>
+      </figure>
+      <p class="reading" id="reading-tradeoff"></p>
+      <details class="method">
+        <summary>How this was measured</summary>
+        <ul>
+          <li>Each fixture runs under every configuration with the CLI's other defaults
+            (globals warrow, Int refinement to a fixpoint, flow-sensitive program globals). A
+            fixture's own <code>PARAM</code> header is ignored, so every configuration sees the same
+            programs.</li>
+          <li>Time is the CLI's own measurement around the solve (<code>--timing</code>), the median
+            of <span data-meta="reps"></span> runs. Process start-up, parsing and printing are not in
+            it, so a sum over the corpus is solving alone.</li>
+          <li>A check counts as proved when the CLI prints PROVED for it. The denominator is every
+            check in the corpus once, taken as the most checks any configuration reported for a
+            fixture. A configuration the CLI rejects for a fixture, or one that runs past
+            <span data-meta="timeout_s"></span>&nbsp;s, proves nothing there.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section class="section" aria-labelledby="h-quantile">
+      <div class="section-heading">
+        <p class="eyebrow">Corpus profile</p>
+        <h2 id="h-quantile">How fast is a typical fixture?</h2>
+      </div>
+      <p class="section-intro">
+        Totals hide whether one fixture or all of them are slow. A quantile plot, as SV-COMP uses
+        for verifiers, sorts the fixtures by run time: the curve's height at <em>x</em> is the
+        run time of the <em>x</em>-th fastest fixture. A flat curve means uniform cost; a sharp
+        rise at the right end means a few fixtures dominate.
+      </p>
+      <div class="chart-controls" role="group" aria-label="Quantile plot domain">
+        <span>Domain</span>
+        <div id="quantile-domains" class="segmented"></div>
+      </div>
+      <figure class="chart-card">
+        <div id="chart-quantile" class="chart"></div>
+        <figcaption>
+          Native solve time per fixture for the selected domain on a log scale, one line per context
+          policy, each sorted on its own. The lines end where a policy's fixtures run out: a line
+          shorter than the others lost fixtures to rejection or timeout.
+        </figcaption>
+      </figure>
+      <p class="reading" id="reading-quantile"></p>
+      <details class="method">
+        <summary>How this was measured</summary>
+        <ul>
+          <li>The same runs and the same solve times as the plot above. Times below about
+            0.01&nbsp;ms are at the clock's resolution; the left end of the curves is programs that
+            need almost no solving.</li>
+          <li>Each line is sorted separately, so the <em>x</em>-th point of two lines can be different
+            fixtures. To compare one fixture across policies, use the table at the bottom.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section class="section" aria-labelledby="h-depth">
+      <div class="section-heading">
+        <p class="eyebrow">Scaling</p>
+        <h2 id="h-depth">How does recursion depth scale under entry-state contexts?</h2>
+      </div>
+      <p class="section-intro">
+        Under entry-state contexts, every distinct abstract argument a recursive procedure is
+        entered with becomes its own context. The program below recurses <em>n</em> levels deep.
+        A domain that tells the arguments apart, such as Interval, therefore creates
+        <em>n</em>&nbsp;+&nbsp;1 contexts of <code>h</code>, while one with few abstract values,
+        such as Sign, creates the same few at every depth. Growing <em>n</em> measures how the
+        solver scales in the number of contexts, the case that overflowed the playground's stack
+        before the CPS build.
+      </p>
+      <pre class="mock-editor snippet" data-lang="vimp"><span class="ml">fun h(i) {</span>
+<span class="ml">  if (i == 0) { return 3; }</span>
+<span class="ml">  r = h(i - 1);</span>
+<span class="ml">  return r;</span>
+<span class="ml">}</span>
+<span class="ml">fun main() {</span>
+<span class="ml">  x = h(n); __voblint_check(x == 3);</span>
+<span class="ml">}</span></pre>
+      <div class="chart-pair">
+        <figure class="chart-card">
+          <div id="chart-depth-time" class="chart"></div>
+          <figcaption>Solve time against <em>n</em> for every domain, native as solid lines and the
+            WebAssembly build dashed, log–log. A straight line of slope <em>k</em> means time grows
+            like <em>n<sup>k</sup></em>.</figcaption>
+        </figure>
+        <figure class="chart-card">
+          <div id="chart-depth-work" class="chart"></div>
+          <figcaption>Right-hand-side evaluations the solver performs, log–log. This counts work
+            independently of the machine: if it grows more slowly than time, each evaluation is
+            getting more expensive.</figcaption>
+        </figure>
+      </div>
+      <p class="reading" id="reading-depth"></p>
+      <details class="method">
+        <summary>How this was measured</summary>
+        <ul>
+          <li>Every domain under entry-state contexts. Each point is the median of
+            <span data-meta="reps"></span> runs of the CLI's own solve timing; peak RSS, in the
+            tooltip, is the whole process's, from the system's <code>time</code> command. A domain's
+            sweep stops at the first <em>n</em> whose run passes <span data-meta="timeout_s"></span>&nbsp;s
+            or fails; the reading names where.</li>
+          <li>Evaluations: the number of <code>eq</code> events in a separate traced run's JSON Lines
+            trace, one per evaluation of an unknown's right-hand side. Tracing slows the run; the
+            repository's tracer gate checks that a traced run gives the same answer as an untraced
+            one.</li>
+          <li>WebAssembly: the playground's bundle under Node with a 512&nbsp;KiB stack and no trace,
+            timed by the analyzer around the same solve, median of <span data-meta="reps"></span>
+            runs.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section class="section" id="scaling-section" aria-labelledby="h-scaling">
+      <div class="section-heading">
+        <p class="eyebrow">Data structures</p>
+        <h2 id="h-scaling">Which program size breaks the generated data structures?</h2>
+      </div>
+      <p class="section-intro">
+        The generated code keeps sets and maps as lists. A membership test scans the list, a
+        union inserts element by element, and removing duplicates compares every pair. Each of
+        the families below grows one size of a program and keeps the rest small, so the
+        dimension that drives one of these lists shows up as solve time that grows faster than
+        the solver's work.
+      </p>
+      <figure class="chart-card">
+        <div id="chart-scaling" class="chart"></div>
+        <figcaption>
+          Native solve time against the size <em>n</em> of each family's program, log–log, under
+          Interval. A line ends at the first <em>n</em> whose run passed the time limit. Click a family in the table below to see the program it generates.
+        </figcaption>
+      </figure>
+      <div class="table-wrap">
+        <table class="fixture-table" id="scaling-table">
+          <thead>
+            <tr>
+              <th>Family</th>
+              <th>What grows</th>
+              <th>Context policy</th>
+              <th class="num">Largest <em>n</em></th>
+              <th class="num">Time exponent</th>
+              <th class="num">Evaluation exponent</th>
+              <th class="num">Gap</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="reading" id="reading-scaling"></p>
+      <p class="reading">
+        Isabelle has libraries for faster sets and maps. The
+        <a href="https://isa-afp.org/entries/Collections.html">Collections Framework</a>
+        (Lammich and Lochbihler) refines abstract sets and maps into verified balanced trees and
+        hash tables, and
+        <a href="https://isa-afp.org/entries/Containers.html">Light-weight Containers</a>
+        (Lochbihler) replaces the list-based default of code generation with such structures.
+        Either needs only targeted replacements in the code setup and no change to the
+        soundness proofs.
+      </p>
+      <details class="method">
+        <summary>How this was measured</summary>
+        <ul>
+          <li>Each family is a generated VIMP program with one size parameter <em>n</em>: as many
+            variables, straight-line statements, globals, call sites, procedures in a chain,
+            sequential loops, or recursion levels. Every program ends in a check the analyzer
+            proves, so each run does the full work of a real analysis.</li>
+          <li>Call sites run twice. Call strings with <em>k</em>&nbsp;=&nbsp;1 give every site
+            its own context, while entry-state contexts merge the identical calls into one,
+            which separates the cost of contexts from the cost of call sites.</li>
+          <li>Times are the CLI's own solve timing, the median of
+            <span data-meta="reps"></span> runs; evaluations come from a traced run, as in the
+            recursion plot. Exponents are least-squares fits on log–log axes, for time from
+            <em>n</em>&nbsp;=&nbsp;100 up, where start-up no longer dominates, and for
+            evaluations from <em>n</em>&nbsp;=&nbsp;20 up, since they are exact counts and
+            tracing reaches the time limit sooner. A gap of about 1 or more means each evaluation gets
+            roughly <em>n</em> times more expensive, the signature of a linear scan inside the
+            solver's loop.</li>
+          <li>The family with the largest gap also gets a CPU profile, listed with the others in
+            the section below.</li>
+        </ul>
+      </details>
+    </section>
+
+    <dialog id="family-dialog" class="examples-dialog family-dialog" aria-labelledby="family-heading">
+      <div class="examples-panel">
+        <div class="examples-header">
+          <div>
+            <p class="eyebrow">Scaling family</p>
+            <h2 id="family-heading"></h2>
+          </div>
+          <button id="family-close" class="examples-close" type="button" aria-label="Close">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+        <p class="examples-note" id="family-note"></p>
+        <div class="examples-body">
+          <pre class="mock-editor snippet" id="family-program" data-lang="vimp"></pre>
+          <a class="family-open" id="family-open" target="_blank" rel="noopener">
+            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            Open this program in the playground
+          </a>
+        </div>
+      </div>
+    </dialog>
+
+    <section class="section" aria-labelledby="h-flame">
+      <div class="section-heading">
+        <p class="eyebrow">CPU profile</p>
+        <h2 id="h-flame">Where does the time go?</h2>
+      </div>
+      <p class="section-intro">
+        The plots above say how much a run costs; a CPU profile says which functions spend it. A
+        sampling profiler interrupts the native analyzer every millisecond and records its call
+        stack. In the flame graph below, each bar is a function, stacked on the function that
+        called it, and its width is the share of samples taken while it was on the stack. Wide bars
+        near the top are where the time is actually spent.
+      </p>
+      <div class="chart-controls" role="group" aria-label="CPU profile">
+        <span>Program</span>
+        <div id="flame-targets" class="segmented"></div>
+        <label for="flame-search">Search</label>
+        <input id="flame-search" type="search" placeholder="e.g. membera">
+        <button type="button" id="flame-reset" class="flame-reset">Reset zoom</button>
+        <a id="flame-open" class="flame-open" hidden target="_blank" rel="noreferrer">
+          <i class="fa-solid fa-play" aria-hidden="true"></i> Open this program in the playground
+        </a>
+      </div>
+      <figure class="chart-card">
+        <div class="flame-legend" id="flame-legend"></div>
+        <div id="chart-flame" class="flame"></div>
+        <p class="flame-details" id="flame-details">Hover a bar for its samples; click to zoom in.</p>
+        <p class="flame-source" id="flame-source"></p>
+        <figcaption id="flame-caption">
+          Width: samples with the function on the stack. Colour: who wrote the code. Recursive calls
+          of a function are merged into one bar, and its tooltip says how deep the recursion went.
+        </figcaption>
+      </figure>
+      <p class="reading" id="reading-flame"></p>
+      <details class="method">
+        <summary>How this was measured</summary>
+        <ul>
+          <li>The sampling profiler <a href="https://github.com/mstange/samply" target="_blank" rel="noreferrer">samply</a>
+            attached to the native CLI's analysis
+            process, which the CLI forks so it can enforce its timeout, at a 1&nbsp;ms interval until the
+            run ends. Function names are the OCaml symbols of the native binary, with the module prefix
+            kept and the compiler's numeric suffix dropped. Attaching on macOS needs
+            <code>samply setup</code> once; without samply, the script falls back to macOS's
+            <code>sample</code>, which keeps only the innermost 512 frames of a stack.</li>
+          <li>A stack is complete when it reaches <code>caml_start_program</code>, where OCaml code
+            begins. Some samples lose their callers, mostly ones taken inside the garbage collector,
+            which the unwinder cannot walk back out of into OCaml frames. They are grouped under
+            <em>[callers not recorded]</em>, still attributed to the right innermost functions.
+            Frames below 0.2% of the samples are folded into their caller.</li>
+          <li>One run per program, on the same machine as the rest of the snapshot. Sample counts
+            vary from run to run by a few percent; the shape is what is stable.</li>
+          <li>This profiles the native build. The browser build runs the same OCaml functions, but
+            WebAssembly and the CPS translation change their relative cost.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section class="section" aria-labelledby="h-browser">
+      <div class="section-heading">
+        <p class="eyebrow">Browser</p>
+        <h2 id="h-browser">What does running in the browser cost?</h2>
+      </div>
+      <p class="section-intro">
+        The playground runs the same generated OCaml, compiled to WebAssembly in
+        continuation-passing style so deep solver recursion fits a worker's stack. Both builds time
+        the same solve, so their ratio is the price of running in the browser. The first plot gives
+        it for every configuration, the second fixture by fixture for the one you pick.
+      </p>
+      <figure class="chart-card">
+        <div id="chart-browser-overview" class="chart"></div>
+        <figcaption>
+          Median WebAssembly / native solve time per configuration, over the runs that take at
+          least 1&nbsp;ms natively, log scale. The dashed line is equal time.
+        </figcaption>
+      </figure>
+      <div class="chart-controls" role="group" aria-label="Browser comparison configuration">
+        <span>Domain</span>
+        <div id="browser-domains" class="segmented"></div>
+        <span>Context</span>
+        <div id="browser-contexts" class="segmented"></div>
+      </div>
+      <figure class="chart-card">
+        <div id="chart-browser" class="chart"></div>
+        <figcaption>
+          One dot per fixture: native solve time across, WebAssembly solve time up, log–log.
+          Dashed lines mark equal time, twice and ten times as slow in the browser. Dots above the
+          1× line are slower in the browser.
+        </figcaption>
+      </figure>
+      <p class="reading" id="reading-browser"></p>
+      <details class="method">
+        <summary>How this was measured</summary>
+        <ul>
+          <li>WebAssembly: the playground's bundle under Node, 40 fixtures per process in order, as a
+            page session reuses its worker, with a 512&nbsp;KiB stack, about what Chrome gives a
+            worker. Time is the analyzer's own measurement around the solve, without parsing or
+            rendering.</li>
+          <li>Native: the CLI's own solve timing, as in the first plot. Both sides are medians of
+            <span data-meta="reps"></span> runs. Below about 1&nbsp;ms both clocks are close to their
+            resolution, so ratios use only runs above that.</li>
+          <li>Node, not a browser, runs the WebAssembly side. Chrome's engine is the same V8, but its
+            worker may schedule and collect garbage differently; the playground's own timing shows
+            the number for a real page.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section class="section" aria-labelledby="h-fixtures">
+      <div class="section-heading">
+        <p class="eyebrow">Fixtures</p>
+        <h2 id="h-fixtures">Which fixtures are expensive?</h2>
+      </div>
+      <p class="section-intro">
+        Every measured run, for one configuration at a time. Sort by a column to find the fixtures
+        that drive the plots above; Unknowns and Contexts come from the solver trace and explain
+        most of the differences in time.
+      </p>
+      <div class="chart-controls">
+        <label for="fixture-filter">Filter</label>
+        <input id="fixture-filter" type="search" placeholder="fixture path, e.g. 21-context">
+        <label for="fixture-config">Configuration</label>
+        <select id="fixture-config"></select>
+      </div>
+      <div class="table-wrap">
+        <table class="fixture-table" id="fixture-table">
+          <thead>
+            <tr>
+              <th data-key="fixture">Fixture</th>
+              <th data-key="ms" class="num">Time (ms)</th>
+              <th data-key="evals" class="num">Evaluations</th>
+              <th data-key="unknowns" class="num">Unknowns</th>
+              <th data-key="contexts" class="num">Contexts</th>
+              <th data-key="rss" class="num">Peak RSS (MB)</th>
+              <th data-key="proved" class="num">Proved</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section methodology" aria-labelledby="h-method">
+      <div class="section-heading">
+        <p class="eyebrow">Method</p>
+        <h2 id="h-method">Setup and limits</h2>
+      </div>
+      <ul id="method-list"></ul>
+    </section>
+  </main>
+
+  <script src="highlight.js" type="module"></script>
+  <script type="module" src="profiling.js"></script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+/* What each observer reads off one activation, shown on the run it reads it from. */
+:where(.scene-obs) .obs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+:where(.scene-obs) .obs-layout > div {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-obs) .obs-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+:where(.scene-obs) .obs-terms button {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+:where(.scene-obs) .obs-sig {
+  display: block;
+  color: var(--text-muted);
+  font: 0.76rem var(--mono);
+}
+
+:where(.scene-obs) .obs-terms button code {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+:where(.scene-obs) .obs-gloss {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+:where(.scene-obs) .obs-terms button:is(:hover, :focus-visible, .is-on) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* The activation the observers are read from, and what the hovered one touches. */
+/* Which activation is `t`, and the fact that another can be chosen. */
+:where(.scene-obs) .nest-act {
+  cursor: pointer;
+}
+
+:where(.scene-obs) .nest-act.is-subject {
+  box-shadow: 0 0 0 2px var(--border-strong);
+}
+
+:where(.scene-obs) .obs-subject {
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+:where(.scene-obs) .td-panel-title small {
+  margin-left: 6px;
+  color: var(--text-faint);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+:where(.scene-obs) .nest-chips span:not(.nest-callmark),
+:where(.scene-obs) .nest-act {
+  transition:
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+:where(.scene-obs) .obs-layout.is-lighting .nest-chips span:not(.is-lit, .nest-callmark),
+:where(.scene-obs) .obs-layout.is-lighting .nest-act:not(.is-lit) > .nest-name {
+  opacity: 0.35;
+}
+
+:where(.scene-obs) .nest-chips span.is-lit {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+:where(.scene-obs) .nest-act.is-lit {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+:where(.scene-obs) .obs-answer {
+  min-height: 4.6em;
+}
+
+/* The defining equation, beside what it answers on this run. */
+:where(.scene-obs) .obs-def {
+  display: block;
+  margin-top: 4px;
+}
+
+:where(.scene-obs) .obs-def code {
+  font-size: 0.72rem;
+}
+
+@media (width <= 900px) {
+  :where(.scene-obs) .obs-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Where each observer would have to come from, if not from a field. Lives in prose,
+   not in a figure, because it is an argument rather than a picture. */
+.table-wrap {
+  max-width: var(--prose);
+  margin: 18px 0;
+  overflow-x: auto;
+}
+
+.obs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.obs-table :is(th, td) {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.obs-table thead th {
+  color: var(--text-faint);
+  font: 700 0.7rem var(--mono);
+  white-space: nowrap;
+}
+
+.obs-table tbody th {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.obs-table tbody td {
+  color: var(--text-muted);
+}
+
+.obs-table tr.is-good :is(th, td) {
+  background: var(--accent-soft);
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}

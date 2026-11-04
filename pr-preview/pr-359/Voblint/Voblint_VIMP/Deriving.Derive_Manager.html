@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Deriving.Derive_Manager</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Deriving.Derive_Manager</h1>
+</div>
+
+<pre class="source"><span class="comment1"><span>(*  Title:       Deriving class instances for datatypes
+    Author:      Christian Sternagel and René Thiemann  &lt;christian.sternagel|rene.thiemann@uibk.ac.at&gt;
+    Maintainer:  Christian Sternagel and René Thiemann 
+    License:     LGPL
+*)</span></span><span>
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Derive Manager›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Deriving.Derive_Manager.html"><span>Derive_Manager</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><a href="../../HOL/HOL/Main.html"><span>Main</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>keywords</span></span></span><span> </span><span class="quoted"><span>"print_derives"</span></span><span> </span><span class="main"><span>::</span></span><span> diag </span><span class="keyword2"><span class="keyword"><span>and</span></span></span><span> </span><span class="quoted"><span>"derive"</span></span><span> </span><span class="main"><span>::</span></span><span> thy_decl
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  The derive manager allows the user to register various derive-hooks, e.g., for orders,
+  pretty-printers, hash-functions, etc. All registered hooks are accessible via the derive command.
+
+  </span><span class="antiquoted"><span class="antiquote"><span>@{</span></span><span class="operator"><span>rail</span></span><span> </span><span>‹
+    </span><span class="keyword1"><span>@</span></span><span class="inner_quoted"><span>'derive'</span></span><span> (</span><span class="inner_quoted"><span>'('</span></span><span> param </span><span class="inner_quoted"><span>')'</span></span><span>)</span><span class="keyword3"><span>?</span></span><span> sort (datatype</span><span class="keyword3"><span>+</span></span><span>)
+  ›</span><span class="antiquote"><span>}</span></span></span><span>
+
+  \begin{description}
+  \item </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span><span class="hidden">❙</span><b>d</b><span class="hidden">❙</span><b>e</b><span class="hidden">❙</span><b>r</b><span class="hidden">❙</span><b>i</b><span class="hidden">❙</span><b>v</b><span class="hidden">❙</span><b>e</b> (param) sort datatype›</span></span></span><span> calls the hook for deriving </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>sort›</span></span></span><span> (that
+  may depend on the optional </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>param›</span></span></span><span>) on </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>datatype›</span></span></span><span> (if such a hook is registered).
+
+  E.g., </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span><span class="hidden">❙</span><b>d</b><span class="hidden">❙</span><b>e</b><span class="hidden">❙</span><b>r</b><span class="hidden">❙</span><b>i</b><span class="hidden">❙</span><b>v</b><span class="hidden">❙</span><b>e</b> compare_order list›</span></span></span><span> will derive a comparator for datatype </span><span class="antiquoted"><span class="antiquote"><span>@{</span></span><span class="operator"><span>type</span></span><span> </span><a class="entity_ref" href="../../HOL/HOL/List.html#List.list|type"><span class="tconst"><span>list</span></span></a><span class="antiquote"><span>}</span></span></span><span>
+  which is also used to define a linear order on </span><span class="antiquoted"><span class="antiquote"><span>@{</span></span><span class="operator"><span>type</span></span><span> </span><a class="entity_ref" href="../../HOL/HOL/List.html#List.list|type"><span class="tconst"><span>list</span></span></a><span class="antiquote"><span>}</span></span></span><span>s.
+  \end{description}
+
+  There is also the diagnostic command </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span><span class="hidden">❙</span><b>p</b><span class="hidden">❙</span><b>r</b><span class="hidden">❙</span><b>i</b><span class="hidden">❙</span><b>n</b><span class="hidden">❙</span><b>t</b><span class="hidden">❙</span><b>_</b><span class="hidden">❙</span><b>d</b><span class="hidden">❙</span><b>e</b><span class="hidden">❙</span><b>r</b><span class="hidden">❙</span><b>i</b><span class="hidden">❙</span><b>v</b><span class="hidden">❙</span><b>e</b><span class="hidden">❙</span><b>s</b>›</span></span></span><span> that shows the list of currently
+  registered hooks.
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>ML_file</span></span></span><span> </span><span class="quoted"><a href="ROOT/__w/Voblint-Verification-Master-Thesis/Voblint-Verification-Master-Thesis/afp/thys/Deriving/derive_manager.ML.html"><span>‹derive_manager.ML›</span></a></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>
