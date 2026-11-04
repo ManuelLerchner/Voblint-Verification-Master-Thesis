@@ -7,8 +7,9 @@
 # keep working; scripts/check_pages_links.py mirrors this layering.
 #
 # That whole-directory copy is also what publishes pages/robots.txt and the
-# Google Search Console token pages/google*.html at the site root, which is the
-# only place either is looked for. .nojekyll below keeps them served verbatim.
+# Google Search Console token pages/google*.html at the project root. Crawlers
+# only read robots.txt at the host root; submit this project's sitemap through
+# Search Console. .nojekyll below keeps these files served verbatim.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -49,18 +50,17 @@ python3 "$REPO_ROOT/scripts/pages_stats.py" --out "$SITE_DIR/assets/site-stats.j
   --fill "$SITE_DIR"/*.html
 python3 "$REPO_ROOT/scripts/pages_examples.py" --out "$SITE_DIR/assets/regression-examples.json"
 
-# The sitemap is derived too, so its lastmod cannot go stale. Only the pages a
-# reader would search for are listed; the generated theory tree is reachable
-# from them and is left to ordinary crawling. SITE_URL must match the canonical
-# links in pages/*.html and the Sitemap line in pages/robots.txt.
+# List search entry points; ordinary links expose the generated theory tree.
+# In production, SITE_URL matches the canonical links in pages/*.html.
+# Preview builds supply their own base URL.
 SITE_URL="${SITE_URL:-https://manuellerchner.github.io/Voblint-Verification-Master-Thesis}"
-BUILD_DATE="$(date -u +%Y-%m-%d)"
+# Build time is not a content modification date; omit optional lastmod values.
+SITE_URL="${SITE_URL%/}"
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'
   echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-  for entry in "/:1.0" "/playground.html:0.9" "/proof-map.html:0.8" "/Voblint/index.html:0.7" "/profiling.html:0.7" "/thesis.pdf:0.6" "/paper.pdf:0.6" "/formalization.pdf:0.5"; do
-    printf '  <url><loc>%s%s</loc><lastmod>%s</lastmod><priority>%s</priority></url>\n' \
-      "$SITE_URL" "${entry%%:*}" "$BUILD_DATE" "${entry##*:}"
+  for entry in "/" "/playground.html" "/proof-map.html" "/Voblint/index.html" "/profiling.html" "/thesis.pdf" "/paper.pdf" "/formalization.pdf"; do
+    printf '  <url><loc>%s%s</loc></url>\n' "$SITE_URL" "$entry"
   done
   echo '</urlset>'
 } > "$SITE_DIR/sitemap.xml"

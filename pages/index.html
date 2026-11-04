@@ -3,30 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voblint: Verified Static Analysis in Isabelle/HOL</title>
-  <meta
-    name="description"
-    content="Abstract interpretation, what a machine-checked soundness proof covers, and how to read Voblint's settings and results."
-  >
+  <title>Voblint: Goblint-Style Static Analyzer in Isabelle/HOL</title>
+  <meta name="description" content="Voblint is a Goblint-style static analyzer for VIMP, with abstract interpretation, a verified TD solver, and soundness proofs in Isabelle/HOL.">
   <meta name="author" content="Manuel Lerchner">
   <link rel="canonical" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Voblint">
-  <meta property="og:title" content="Verified static analysis in Isabelle/HOL">
-  <meta
-    property="og:description"
-    content="How an abstract interpreter modeled on Goblint computes its answers, and how Isabelle/HOL proves those answers cover every run."
-  >
+  <meta property="og:title" content="Voblint: Goblint-Style Static Analyzer in Isabelle/HOL">
+  <meta property="og:description" content="Voblint is a Goblint-style static analyzer for VIMP, with abstract interpretation, a verified TD solver, and soundness proofs in Isabelle/HOL.">
   <meta property="og:url" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/">
   <meta property="og:image" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/banner.png">
   <meta property="og:image:width" content="1792">
   <meta property="og:image:height" content="592">
   <meta property="article:author" content="Manuel Lerchner">
   <meta name="twitter:card" content="summary_large_image">
-  <meta
-    name="keywords"
-    content="static analysis, abstract interpretation, formal verification, verified static analyzer, Isabelle/HOL, machine-checked proof, soundness proof, program analysis, program verification, Goblint, interprocedural analysis, context sensitivity, call strings, entry state contexts, widening and narrowing, top-down solver, constraint system, fixpoint, control-flow graph, data flow analysis, collecting semantics, interval domain, congruence domain, sign domain, reduced product, code generation, OCaml, WebAssembly, master's thesis, TU Munich"
-  >
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <meta name="theme-color" content="#f4f7f6">
   <meta property="og:locale" content="en_US">
@@ -34,11 +24,8 @@
     property="og:image:alt"
     content="Voblint: a static analyzer whose soundness is proved in Isabelle/HOL."
   >
-  <meta name="twitter:title" content="Verified static analysis in Isabelle/HOL">
-  <meta
-    name="twitter:description"
-    content="How an abstract interpreter modeled on Goblint computes its answers, and how Isabelle/HOL proves those answers cover every run."
-  >
+  <meta name="twitter:title" content="Voblint: Goblint-Style Static Analyzer in Isabelle/HOL">
+  <meta name="twitter:description" content="Voblint is a Goblint-style static analyzer for VIMP, with abstract interpretation, a verified TD solver, and soundness proofs in Isabelle/HOL.">
   <meta name="twitter:image" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/banner.png">
   <meta
     name="twitter:image:alt"
@@ -130,9 +117,9 @@
         "@type": "TechArticle",
         "@id": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#article",
         "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/",
-        "name": "Static analysis you can trust, and why",
-        "headline": "Static analysis you can trust, and why",
-        "description": "How an abstract interpreter modeled on Goblint computes its answers, and how Isabelle/HOL proves those answers cover every run.",
+        "name": "Voblint: Goblint-Style Static Analyzer in Isabelle/HOL",
+        "headline": "Voblint: Goblint-Style Static Analyzer in Isabelle/HOL",
+        "description": "Voblint is a Goblint-style static analyzer for VIMP, with abstract interpretation, a verified TD solver, and soundness proofs in Isabelle/HOL.",
         "inLanguage": "en",
         "image": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/banner.png",
         "author": {
@@ -147,7 +134,7 @@
           "Interprocedural analysis",
           "Fixpoint computation"
         ],
-        "keywords": "static analysis, abstract interpretation, formal verification, Isabelle/HOL, machine-checked proof, soundness, Goblint, interprocedural analysis, context sensitivity, widening and narrowing, top-down solver, interval domain, congruence domain",
+        "keywords": "Voblint, TD solver, static analyzer, static analysis, abstract interpretation, formal verification, Isabelle/HOL, machine-checked proof, soundness, Goblint, interprocedural analysis, context sensitivity, widening and narrowing, top-down solver, interval domain, congruence domain",
         "isBasedOn": {
           "@type": "Thesis",
           "name": "Voblint: Towards a Verified Goblint-Style Analysis Pipeline in Isabelle/HOL",
@@ -213,7 +200,7 @@
   </nav>
   <header class="explainer-hero">
     <div class="page-shell">
-      <h1>Verified static analysis in Isabelle/HOL</h1>
+      <h1>Voblint: verified static analysis in Isabelle/HOL</h1>
       <p class="hero-byline">
         <span>Manuel Lerchner</span>
         <span>Master's thesis, Technical University of Munich</span>
@@ -226,8 +213,10 @@
         line. An <a href="#stakes">error in the analyzer</a> can invalidate that conclusion.
       </p>
       <p class="hero-claim">
-        Voblint addresses this problem through a soundness proof
-        in Isabelle/HOL, from source semantics to analyzer verdicts. The result holds whenever the solver finishes.
+        Voblint is a Goblint-style static analyzer for VIMP, a small language with
+        integer variables and recursive procedures. It uses abstract interpretation
+        and a verified <a href="#solver">top-down (TD) solver</a>. Its soundness proof
+        in Isabelle/HOL connects source semantics to analyzer verdicts. The result holds whenever the solver finishes.
         The analyzer in the playground runs the code Isabelle generated from those same
         definitions. This page explains the analyzer, its results, and what the proofs
         do and do not cover.
@@ -1716,7 +1705,7 @@ datatype activation_trace =
     <section class="section" id="solver" aria-labelledby="solver-heading">
       <div class="section-heading">
         <p class="eyebrow">Equation construction</p>
-        <h2 id="solver-heading">Analysis equations and solving</h2>
+        <h2 id="solver-heading">Analysis equations and the TD solver</h2>
         <p class="section-intro">The compiler turns a program into a control-flow graph, and the analysis turns that graph into equations. In this single-procedure example, there is one unknown per node and one term per incoming edge. Each term applies the edge's action to its source value. With procedures, unknowns will be keyed by node and context. Starting from the requested result, the solver computes values for the unknowns that result depends on. To the rest of the pipeline the solver has an abstract interface. It accepts equations and a query, then returns an abstract value for each unknown it reached.</p>
       </div>
 
