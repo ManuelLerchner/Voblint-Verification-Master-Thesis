@@ -22,8 +22,8 @@ existing type.
 A #isai("definition") gives a new constant by one equation whose
 right-hand side does not mention the constant, so it only names an existing
 term and needs no proof. The right-hand side may be any term, for instance, a
-set comprehension ${s. P med s}$ over an infinite type, so a definition need
-not be computable. Below, $forall x$ ranges over all variables:
+set comprehension ${s. P med s}$ over an infinite type, so a definition does
+not need to be computable. Below, $forall x$ ranges over all variables:
 // deps: preview -- shown for its syntax; @sec:nonrel-state introduces abstract states.
 #thy("gamma_state")
 A #isai("fun") may instead give one equation per constructor pattern and may
