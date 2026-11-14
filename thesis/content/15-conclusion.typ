@@ -8,7 +8,7 @@ Voblint shows that the soundness of a Goblint-style analyzer with calling
 contexts, side effects, and a verified TD solver can be machine-checked from
 source executions to the verdicts of the analysis function. The result covers
 VIMP, a scalar language with recursive procedures. It is a partial-correctness
-result, so its guarantee holds whenever the analyzer returns an answer. For a
+result, so the soundness guarantee holds whenever the analyzer returns a report. For a
 user, a #verdict("PROVED") verdict therefore establishes the reported property
 for every covered execution that reaches the check, instead of resting on the
 tests the analyzer has passed.
@@ -49,7 +49,7 @@ precise verdicts it computes on further programs (@sec:eval-corpus). The analyze
 acceptable time on that corpus, although its list-based sets and maps limit how far it
 scales (@sec:eval-runtime).
 
-== Recommendations for similar formalizations <sec:lessons>
+== Recommendations for analyzer formalizations <sec:lessons>
 
 Much of the work on Voblint went into finding definitions and interfaces that
 let the component proofs compose, and into checking that the theorems describe
@@ -65,9 +65,7 @@ with calls inlined. To account for one call, the soundness proof built a
 separate execution starting at the callee's entry and spliced it into the
 caller's trace. This handled individual calls, but it did not reflect the
 program's call stack and was hard to extend to recursion. Activation traces
-replaced it after two weeks (@ch:traces). Each procedure activation is its own
-trace, a call starts a nested one, and a return resumes exactly the suspended
-caller, as a
+replaced it after two weeks (@ch:traces), as a
 #link(repo-blob + "docs/ACTIVATION_LOCAL_TRACE_CONVERGENCE.md")[design record]
 explains. The idea came from the local traces of Schwarz et al. @schwarz21,
 against which Goblint's thread-modular analyses are proved sound, and not from
@@ -92,9 +90,7 @@ policy, or cooperating analysis needed proofs of its own obligations but reused
 the generic soundness arguments unchanged. Revising the concrete semantics, by contrast, affected every layer whose
 obligations depend on it.
 
-*Validate the executable analyzer.* The main theorem concerns the exported
-function #isaconst("run_voblint"), and the command-line tool, the playground, and
-the regression tests all run code generated from this function. Regression tests committed to the repository
+*Validate the executable analyzer.* Regression tests committed to the repository
 record the expected verdicts on representative programs and detect changes in
 the analyzer's observed precision. Generated theorem statements, analyzer
 output that every build recomputes, and repository checks keep the thesis and
@@ -104,9 +100,7 @@ documentation consistent with the theories (@sec:voblint-repo).
 #link(repo-blob + "cli")[command-line tool] prints a solver trace, and the browser
 #link(site("playground.html"))[playground] renders the graph and replays the
 trace (@sec:tracing). Both show where an analysis loses precision or where the
-solver does needless work. The trace hook lies outside the proof. Only traced runs execute it, and
-for them the trusted base assumes that it leaves the analysis results unchanged
-(@sec:tracing). Because the analyzer is exported to OCaml, standard profiling and
+solver does needless work. Because the analyzer is exported to OCaml, standard profiling and
 debugging tools also remain available. The author used them to profile the
 generated code and to attach a debugger to solves that did not terminate. The trace of
 #link("https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/issues/251")[issue 251],

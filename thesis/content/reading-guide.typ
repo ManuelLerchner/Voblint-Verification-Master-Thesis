@@ -88,8 +88,7 @@ mathematical notation shared by the theories and the text.
       output. The name links to the file in the repository.],
     [#signval("+"), $absval(ivl(1, 9))$, #absval(raw("1+2ℤ"))],
     [A light purple background marks an abstract value, which describes a
-      set of concrete integers or of _stores_, the maps from variables to
-      their integer values.],
+      set of concrete integers or of stores (@sec:intro-static).],
     table.hline(),
   )
 }

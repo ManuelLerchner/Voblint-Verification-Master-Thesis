@@ -79,7 +79,7 @@ The chapters define execution relations such as #isaconst("pstep") and
 #isaconst("cstep") by rules and write the reflexive–transitive closure of a
 step relation $->$ as $scripts(->)^*$.
 
-_Code equations_ determine what code generation emits @haftmann10. One #isacmd("export_code") declaration emits OCaml from them, and the
+Code equations determine what code generation emits @haftmann10. One #isacmd("export_code") declaration emits OCaml from them, and the
 generated code is trusted, not proved (@fig:intro-trust). Theories are grouped into _sessions_, which
 Isabelle builds and checks as units, and which the chapters cite as the home
 of a construction. The control-flow graph, for instance, lives in

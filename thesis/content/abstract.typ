@@ -13,12 +13,14 @@ soundness proofs drastically reduce the likelihood of such bugs.
 
 This thesis presents Voblint, short for verified Goblint, a static analyzer
 modeled on the Goblint analyzer for C programs. Like Goblint, Voblint translates the program into a
-control-flow graph, derives a system of equations from the graph, and solves
+control-flow graph whose nodes are program points and whose edges describe possible steps,
+derives a system of equations from the graph, and solves
 the system with a generic solver. Previous work proved a formalization of the solver algorithm
 partially correct @stade24 @tilscher26, so whenever it terminates, its result
 satisfies the equations. This alone does not make the analyzer sound. The graph
 also has to cover every execution of the program, and the equations have to
-account for these executions in every calling context. Finally, the reported
+account for these executions in every calling context, a description of how a
+procedure was called. Finally, the reported
 answers have to follow from the solver's result. Voblint proves all of these
 properties together for VIMP, a small C-like language with integer variables and
 recursive procedures, defined for this work. The proof, developed in the proof assistant
@@ -33,12 +35,12 @@ termination of the solver is not proved for every program.
 Voblint distinguishes calls to the same procedure by their calling contexts,
 avoiding the loss of precision that would result from merging their values. To prove
 these per-context results sound, Voblint introduces _activation traces_, a
-semantics that distinguishes individual procedure activations and relates them
+semantics that distinguishes individual procedure invocations and relates them
 to their calling contexts. This
 construction fits into a modular soundness proof that follows Goblint's
-architecture. Abstract domains, analyses,
-and context policies each prove their own soundness properties, and a single
-theorem combines them with the solver's correctness. The resulting guarantee
+architecture. Abstract domains, which describe sets of values or states, analyses,
+and policies for choosing calling contexts have separate soundness proofs.
+A single theorem combines them with the solver's correctness. The resulting guarantee
 holds for every analysis configuration that Voblint offers. To our knowledge, no
 earlier mechanized analyzer combines recursive procedures, calling contexts,
 and a verified solver in one soundness proof.

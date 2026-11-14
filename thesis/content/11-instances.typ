@@ -89,13 +89,15 @@ value of each and the integers it stands for.
 
 Each of these domains enters Voblint through the interface of
 @sec:domain-contract. It instantiates the order classes for its carrier,
-supplies its operations as the record #isatype("nonrelational_ops"), and proves
-them sound once
+supplies its operations as one record, and proves them sound once
 (#isalocale("sound_nonrelational_ops")). From this proof, a generic construction
 derives the transfer functions of @ch:analysis-interface together with their
 executable versions, and makes the domain a sound component of the product
 state of @ch:cooperation
-(#isathm("sound_nonrelational_ops.dg_analysis_execI")). The only further
+(#isathm("sound_nonrelational_ops.dg_analysis_execI")). Its procedure entry
+reuses the entry operation of the source semantics (@sec:pstep), which is
+polymorphic in the value type, at the abstract state with $ltop$ in place of
+the reset value $0$ (#isaconst("enter_binding")). The only further
 obligation concerns the initial state, which must describe the initial stores.
 
 We compare the four domains on one loop, the fixture #fixture("12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp", label: "05-mine_ex410_stride2_parity.vimp"),
@@ -173,7 +175,7 @@ but nothing about its size, and Sign knows only that $v$ is positive. Every
 answer is sound, yet none of the four proves `v == 51`. Only Int, which puts
 the bound and the oddness together, does (@sec:reduced-product).
 
-== The reduced product of the domains #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
+== Reduced product of the numeric domains #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
 
 An Int value (#isatype("int_dom")) holds one value of each base domain and
 stands for the integers that all four allow. Running the four side by side
@@ -239,9 +241,7 @@ option `ana.int.refinement` offers the same three modes, but Goblint defaults
 to no reduction, whereas Voblint defaults to repeating rounds until nothing
 changes.
 
-Int reduces the result of every arithmetic operation and of the guard filter,
-but not the result of a join, a widening, or a narrowing, which all work
-componentwise. For join and widening, Goblint makes the same choice. After a
+Joins, widenings, and narrowings work componentwise, without reduction. For join and widening, Goblint makes the same choice. After a
 narrowing, however, Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5503dec/src/cdomain/value/cdomains/int/intDomTuple.ml#L421-L431",
@@ -253,7 +253,7 @@ $b$ and break this law
 (#isathm("post_narrow_refinement_would_violate_narrow_ge")). Goblint is not bound by the law, because no proof constrains its lattices,
 and its answers may thus be more precise.
 
-== Order constraints as a relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
+== The relational order domain #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
 
 #let _order = 0.7pt + vb.neutral
 None of the earlier domains can express that $x <= y$, because each describes the
@@ -341,23 +341,26 @@ A relational state stores no value per variable, so it cannot evaluate an
 expression to an abstract value, and its transfers work on the pairs
 directly. An assignment to $x$ invalidates every relation that involves $x$,
 so it forgets every pair that mentions $x$. New relations come from guards. On
-the true arm of `if (x < y)`, the analysis knows that $x$ is smaller than $y$
-and records this by meeting its state with $absval(ctor("RelC"){x <= y})$
+the true arm of `if (x < y)`, $x$ is smaller than $y$, and the analysis
+records this by meeting its state with $absval(ctor("RelC"){x <= y})$
 (#isaconst("assume_step")). Since the carrier stores only non-strict pairs, it
 keeps $x <= y$ and loses the strictness, which costs precision but not
 soundness. This guard filter meets the same soundness statement as the
 numeric guard filter of @sec:branches (#isathm("relc_branch_step_sound")).
 
-Since pairs enter only at guards and assignments remove them, $P$ is finite in
-every value the analysis constructs, and generated code can store it as a
-list. The emptiness test only compares with #ctor("RelBot")
+The transfers above add pairs only at guards, one or two per guard, and
+assignments remove pairs. The order analysis of @sec:relational adds further
+pairs after an assignment, but only with partners from a fixed finite list of
+variables. The join intersects the sets of pairs. Starting from the empty set
+of $ltop$, every operation therefore yields a finite $P$, and generated code
+can store it as a list. The emptiness test only compares with #ctor("RelBot")
 (#isathm("is_empty_relc_gamma")). The carrier has a single representation of
 unreachability, so it needs no lifting by a bottom element as the pointwise
 state of @sec:nonrel-state does. The type instantiates the solver's classes and
 #isalocale("executable_domain") of @fig:domain-carrier, but it is not a numeric
 domain.
 
-== Order relations between variables #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
+== The order analysis #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
 
 The order analysis runs on the relational state of @sec:rel-state and proves
 order checks that Interval cannot decide. Its guard and assignment transfers
@@ -400,12 +403,6 @@ both, because it treats a variable as ordered with itself, so it records
 #state("order-alone-order", "20:3") and proves `w == x`, where Interval
 answers #verdict("order-alone-interval", "20:3").
 
-The base domains record different properties, Int lets them share these
-facts, and the order analysis proves relations that no non-relational
-domain can express. A user does not have to choose between them. The
-product state and the channel of @ch:cooperation let Int and the order
-analysis run together. They exchange facts
-through queries, and every check is decided by the meet of their answers.
-Selecting both thus lets a check use the facts of either analysis, although no
-theorem guarantees that a combination is more precise than its parts
-(@sec:coop-mcp).
+Selecting both Int and the order analysis lets a check use the facts of either
+through the query mechanism of @ch:cooperation. No theorem guarantees that a
+combination is more precise than its parts (@sec:coop-mcp).

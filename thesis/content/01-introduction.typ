@@ -23,7 +23,8 @@ that have been opened since 2021. In
 #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156], for
 instance, Goblint claimed that `c % 2 == 1` holds for $c in {-5, -7}$, although
 the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$ for both values.
-Goblint's congruence domain had ignored the sign of the dividend, and
+Goblint's congruence domain, which groups integers whose differences are
+multiples of a fixed number, had ignored the sign of the dividend, and
 #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] fixed
 it. An error of this kind is worse than imprecision. An imprecise
 answer leaves the question undecided, whereas a wrong answer gives a developer
@@ -39,17 +40,19 @@ theorem is never established.
 
 This thesis presents Voblint, short for verified Goblint. Voblint is an
 analyzer modeled on Goblint's architecture and formalized in Isabelle/HOL,
-together with a machine-checked proof that its answers hold for every execution
-of the analyzed program. It analyzes VIMP, a small C-like language with integer
+together with a machine-checked soundness proof for well-formed VIMP programs
+whose analysis terminates. It analyzes VIMP, a small C-like language with integer
 variables and recursive procedures. Isabelle's code generator exports the
 proved analysis function to OCaml, where a command-line tool runs it. The same
 code runs in a #link(site("playground.html"))[browser playground], a web page
 that analyzes a program the reader enters. The soundness theorem starts from
-_source executions_, the executions of a program under the small-step semantics #isaconst("pstep")
-of VIMP. Every later representation, from the control-flow graph to the
-solver's result, is connected to source executions by proof. The kernel,
+_source executions_, the executions described by VIMP's rules for individual
+computation steps (#isaconst("pstep")). The analyzer computes on a control-flow
+graph (CFG), whose nodes are program points and whose edges are possible steps
+between them. Every later representation, from this graph to the solver's
+result, is connected to source executions by proof. The kernel,
 however, checks proofs only against the definitions it is given. Whether
-#isaconst("pstep") describes the intended language, its _adequacy_, therefore
+these rules describe the intended language, their _adequacy_, therefore
 lies outside the proof. @sec:vimp-vs-c argues it by comparing VIMP with C11.
 
 == Sound static analysis and its verdicts <sec:intro-static>
@@ -57,16 +60,15 @@ lies outside the proof. @sec:vimp-vs-c argues it by comparing VIMP with C11.
 Software is usually checked by testing. A failing test shows a bug, but
 a passing test suite has observed only finitely many executions
 @rival20[§1.4.1]. A static analysis reasons about all
-executions instead. At each program point, it computes an _abstract state_. An
-abstract state is a finite representation of a set of program states, for
-instance, an interval
-that contains every value a variable takes whenever execution reaches the
-point. The analysis is _sound_ if the abstract state contains every state that
-occurs in a real run, although it may contain more. Such a result is an
-_over-approximation_. If a sound abstract state
-contains no state that violates a condition, no execution violates it, tested or
-not (@fig:intro-runs). The converse does not hold.
-An abstract state can contain violating states that no execution reaches, and
+executions instead. At each program point, it computes an _abstract state_, a
+finite representation of a set of _stores_. A store maps each program variable
+to its current value. For instance, an interval can contain every value a
+variable takes whenever execution reaches the point. The analysis is _sound_ if
+the abstract state contains every store that occurs in a real run, although it
+may contain more. Such a result is an _over-approximation_. If a sound abstract
+state contains no store that violates a condition, no execution violates it,
+tested or not (@fig:intro-runs). The converse does not hold.
+An abstract state can contain violating stores that no execution reaches, and
 the analysis then cannot decide the condition, even when every execution satisfies
 it.
 
@@ -100,8 +102,10 @@ useful as long as it decides the questions of interest often enough
 @rival20[§1.3.5]. Since every sound analysis over-approximates the same
 executions, analyses can specialize. One tracks intervals, another parities, and
 another relations between variables. If any one of them, or their combination,
-proves a condition, the condition holds in every run that reaches it. An analysis can also separate the
-activations of a procedure by their _calling context_, an abstraction of how
+proves a condition, the condition holds in every run that reaches it.
+Procedures add a further choice. Each call starts an _activation_, one
+invocation of a procedure including any calls it makes @aho06[§7.2.1], and an analysis can
+separate activations by their _calling context_, an abstraction of how
 the call was reached, such as the call site or the abstract state at entry. It
 then keeps one abstract state per program point and context, and it may analyze
 one call in several contexts, for instance, one per abstract state that reaches
@@ -216,8 +220,8 @@ happen, for instance, that `eval` does nothing, so its result can miss
 executions. The authors call such analyses _soundy_. They treat this as an
 engineering choice for precision and scalability, and they ask the authors of
 such analyses to state explicitly
-the nature and extent of the unsoundness @livshits15[p. 45]. Goblint,
-for instance, documents such assumptions. It assumes that pointer arithmetic
+the nature and extent of the unsoundness @livshits15[p. 45]. Goblint
+documents such assumptions. It assumes that pointer arithmetic
 does not overflow and, by default, that array reads stay in bounds, and calls this list likely incomplete @goblint-assumptions.
 
 A documented assumption tells the user where a soundness claim ends. Within
@@ -229,28 +233,13 @@ analyzer is incomplete in the same way as testing any other program
 participation in SV-COMP in 2021, a competition on benchmark programs with
 known verdicts, Goblint has never produced a false negative on the
 competition's benchmark suite @seidl26, although its unsoundness issues were
-opened during the same years. A test finds an error only when someone thinks
-of exactly the scenario that triggers it, and every other error waits until it
-misleads a user who then reports it. The remainder defect of issue 1156
-needed a negative dividend and was reported only after Goblint had claimed a
-false result. A proof covers every input instead. If every abstract operation
-is proved sound, a congruence remainder that ignores the sign of the dividend
-cannot pass, and errors of this kind are ruled out completely.
+opened during the same years.
 
 A proof about single operations, on paper or in a proof assistant, however, protects the
 user only if a theorem connects these operations to the tool the user runs. Between the operations and the
 reported verdict, the analyzer compiles the program, assigns calling contexts,
-and solves equations, and each of these steps could lose executions. CompCert
-shows that such a theorem is possible for a realistic tool. It proves that its
-compiled code behaves as the source semantics specifies, and it lists the
-components that remain trusted @leroy09. Verasco carries the approach to a
-static analyzer for C @jourdan15, and several other abstract interpreters have
-machine-checked soundness proofs as well. None of these approaches
-(@sec:rel-mechanized), however, combines recursive procedures, calling
-contexts, and a verified solver. Goblint's architecture uses the first
-two and a generic solver, whose top-down algorithm has since been verified. It
-analyzes recursive programs and keeps one abstract state per program point and
-calling context.
+and solves equations. Each step must preserve the concrete executions that
+the reported verdict is meant to cover.
 
 Goblint defines its analyses independently of the solvers that compute their
 results, and Voblint follows this architecture @vojdani16 @seidl26. The
@@ -273,8 +262,7 @@ local unknown and of every local unknown it transitively reads
 (#isaconst("part_post_solution", thy: "Basics_side")). Whether the equation
 system describes the program, and whether the verdicts computed from its solution hold, lies outside that theorem.
 
-The solver theorem, however, says nothing about programs. To connect a program
-to its equation system, every abstract state must be compared with the
+To establish this connection, every abstract state must be compared with the
 concrete stores it describes. Calling contexts make this comparison hardest,
 since the per-context abstract states of an analyzer have no counterpart in an
 ordinary concrete semantics.
@@ -286,7 +274,7 @@ results at the point where `bump` returns. It forgets how each store
 was reached, so it does not say which store belongs to which context, and the
 claim for one context cannot be checked against it. To state such claims, the
 concrete semantics must be strengthened so that it records the contexts of every
-_activation_, one execution of a procedure from its call to its return.
+activation (@sec:intro-static).
 Voblint's activation traces record each activation together with the activation
 that called it, and a context policy reads the contexts off this chain. With
 such a semantics, every step from source executions to the verdicts becomes an
@@ -371,7 +359,7 @@ The chain combines existing ideas, some of them already formalized and others
 so far only described on paper or implemented. Voblint follows Goblint's
 architecture, and it formalizes neither Goblint's implementation nor C
 (@sec:rel-goblint). To the author's knowledge, no prior mechanized analyzer
-connects a source semantics, through an activation collecting semantics indexed
+connects the semantics of source programs, through an activation collecting semantics indexed
 by context, to a side-effecting constraint system and its verified solver
 (@sec:rel-summary). The formalization makes five contributions.
 
@@ -508,25 +496,21 @@ The list after the figure collects the limits of the theorem.
 == Structure of the proof <sec:roadmap>
 
 @fig:intro-nest states what the end-to-end soundness theorem claims, and
-@fig:metro draws its proof as a metro map. A line collects the results of one
-layer of the development, for example the compiler and its simulation proof.
-Where several lines meet, a theorem combines their results, and the label at
-the interchange names that theorem. The result line leaves the central
-interchange and splits into one branch for policies that choose the context
-without reading abstract states and one for entry-state policies. The branches
-rejoin at one common theorem. From there, the coverage of the stores joined
-over all contexts leads directly to the terminals for #verdict("DEAD")
-(#isathm("run_voblint_dead_check_unreached")) and for SAFE, which says that a
-division without a #verdict("WARNING") never divides by zero
-(#isathm("run_voblint_arithmetic_safe")). The terminal for #verdict("PROVED")
-(#isathm("run_voblint_check_sound")) goes through the end-to-end soundness
-theorem #isathm("run_voblint_source_sound"), which also uses the compiler line
-to place a source execution at a graph node. A second branch uses the compiler
-line in the same way for the chain that keeps the contexts apart.
+@fig:metro draws how its proof is assembled. Each line of the map is one layer
+of the development, such as the compiler and its simulation proof, and where
+lines meet, a theorem combines their results. The compiler line places every
+source execution at a node of the graph. The framework line shows that the
+stores reaching a node in a context lie in the analyzer's state for that node
+and context, once for policies that choose contexts without reading abstract
+states and once for entry-state policies. The solver line contributes that a
+returned solve is a post-solution, meaning that its values satisfy the system's
+inequalities. Together, these results establish the
+verdict guarantees of @sec:intro-static
+(#isathm("run_voblint_source_sound"), @ch:results).
 
 #figure(
   image("/shared/generated/svg/metro.svg", width: 100%),
-  placement: auto,
+  placement: none,
   caption: [A map of the proof with its interior definitions omitted. The
     #link(
       site("index.html#proof-map"),
@@ -553,7 +537,7 @@ of its proofs. The interactive view links each declaration to its documentation.
 
 #figure(
   link(site("proof-map.html?view=treemap"), image("/assets/proof-map-treemap.png", width: 90%)),
-  placement: auto,
+  placement: none,
   caption: [The formalization's exported declarations, captured from the
     #link(site("proof-map.html?view=treemap"))[interactive treemap].
     Blocks group sessions and theories; their areas follow entity counts.
@@ -562,23 +546,23 @@ of its proofs. The interactive view links each declaration to its documentation.
     This is a corpus overview; it does not depict proof dependencies.],
 ) <fig:intro-corpus>
 
-#partref(<part:problem>) introduces the problem and recalls abstract interpretation,
-constraint systems, and the verified TD solver (@ch:background).
+The thesis is organized along the soundness chain, from source executions to
+the reported verdicts. #partref(<part:problem>) introduces the problem and
+recalls abstract interpretation, constraint systems, and the verified TD
+solver, on which the chain relies (@ch:background).
 
-#partref(<part:over-approx>) defines source programs and their graphs
-(@ch:program-model), then activation traces and the coverage contract
-(@ch:traces). The later parts establish this contract.
+#partref(<part:over-approx>) fixes the concrete side of the chain. It defines
+source programs and their graphs (@ch:program-model), then activation traces
+and the coverage contract (@ch:traces). The next two parts establish this
+contract. #partref(<part:analyses>) states what domains (@ch:domains),
+analyses (@ch:analysis-interface), and their cooperation (@ch:cooperation)
+must prove. #partref(<part:verdicts>) combines these obligations. It builds
+the equations (@ch:equations), solves them (@ch:solving), and derives sound
+source-level verdicts (@ch:results).
 
-#partref(<part:analyses>) develops the soundness obligations for domains
-(@ch:domains), analyses (@ch:analysis-interface), and their cooperation
-(@ch:cooperation).
-
-#partref(<part:verdicts>) builds the equations (@ch:equations), solves them
-(@ch:solving), and derives sound source-level verdicts (@ch:results).
-
-#partref(<part:instances>) presents the analysis instances (@ch:instances),
-the executable and its trust boundary (@ch:executable), and the evaluation
-(@ch:evaluation).
+#partref(<part:instances>) turns the framework into a working analyzer. It
+presents the analysis instances (@ch:instances), the executable and its trust
+boundary (@ch:executable), and the evaluation (@ch:evaluation).
 
 #partref(<part:assessment>) discusses related work (@ch:related) and concludes
 (@ch:conclusion). @sec:isabelle explains the Isabelle listings, @app:notation

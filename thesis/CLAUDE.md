@@ -32,7 +32,7 @@ clean. The checks that keep the text honest, and what each one reads:
 | `thesis-stats` | `scripts/pages_stats.py` cannot measure the repository (every build writes the uncommitted `shared/generated/stats.json` from it), or a line of `content/` naming lines, theories, files, sessions, fixtures, cases or lemmas carries a number outside `stat()` and outside the commented `ALLOW` list in `tools/stats.py` |
 | `thesis-alignment` | the `align-list` rows of `pages/index.html`, which the evaluation counts, do not parse (every build and the refs and links checks write the uncommitted `shared/generated/goblint-alignment.json` from them; edit the page) |
 | `thesis-notation` | `shared/generated/notation.json`, the README's Notation block or the explainer's legend no longer matches the declarations in the theories, a declaration changed shape, or a symbol's anchor is missing from the rendered theories (`thesis-notation-write` refreshes all three; edit `shared/notation.toml` or the theories, never the output) |
-| `thesis-prose-structure` | never fails; warns about a prose paragraph with more than three `isa*` citations, a caption over 60 words, a `thy`/`proved` listing inside `#figure`, and an `@ch`/`@sec` reference from outside the front matter and introduction to a later chapter other than an appendix |
+| `thesis-prose-structure` | never fails; warns about a prose paragraph with more than three `isa*` citations outside its formulas, a caption over 60 words, a `thy`/`proved` listing inside `#figure`, an `@ch`/`@sec` reference from outside the front matter and introduction to a later chapter or section other than an appendix, and a term emphasized as a definition (`_store_`) in two sections or used in a section before the one defining it |
 | `prose-lint`, `prose-rules-test` | a Vale rule at level error matches (`.vale.ini`; warnings and suggestions are for review), or a project rule's inline `tests:` no longer produce the alerts they list |
 | `thesis-vimp` | a VIMP listing's playground link does not decode to the program it shows, names a setting the playground lacks, is missing from the PDF's link annotations, or runs a claimed or fixture program at other settings; or VIMP code reaches the document outside `listing(lang: "c")` (`thesis-vimp-source` is the no-build part; `thesis-vimp-write` refreshes `shared/generated/vimp-claims.json`) |
 
@@ -55,10 +55,11 @@ checked, coloured and linked:
 A formal citation whose link the map cannot resolve fails the build. Regenerate
 the map and run `pixi run thesis-links`; do not replace it with plain text.
 This includes generated snippets/statements and session/theory references.
-Theorem environments take `isa: "name"` and print it,
-linked, in the header. A `definition` also takes the declaring command,
-`cmd: "datatype"`, and prints `Definition 3.1 (Expressions, datatype exp).`;
-`thesis-refs` fails when it is missing or differs from the sources.
+Theorem environments take `isa: "name"` and print it, linked and in
+parentheses, after their descriptive title: `Definition 3.1: Expressions (exp).`
+A `definition` also takes the declaring command, `cmd: "datatype"`,
+as checked metadata; `thesis-refs` fails when it is missing or differs from the
+sources. The declaring command remains metadata and is not printed.
 
 ## Scope: an overview of the formalization
 
@@ -73,22 +74,31 @@ choices and why they were made, and the results with their exact boundary.
   Supporting lemmas stay in the theories.
 - Prefer a design choice with its rejected alternative over a description of
   the construction's internals.
-- When in doubt, shorten and link.
+- The PDF must explain the construction and soundness argument without opening
+  a link or reading theory files. Links provide traceability and optional detail.
+- Prefer mathematical definitions and inference rules for semantic objects.
+  Keep Isabelle listings when their encoding or an Isabelle mechanism matters.
+  Do not print a listing that merely repeats a complete adjacent definition.
+- Avoid footnotes when possible. Put necessary explanations in the main text.
+  Inline source references go in round parentheses, `(#isathm("…"))`, after
+  the claim they support and before its full stop. Square brackets belong to
+  bibliography citations (`[46]`), so no Isabelle name is printed in them.
+  Keep checked entity metadata even when the full name is not printed inline.
 
-## Notation is frozen
+## Mathematical notation and formal correspondence
 
-One notation serves the theories and the thesis; it is declared in the
-theories and rendered from `shared/generated/notation.json`. Global notation
-covers semantic concepts only (execution, simulation, concretization,
-evaluation, the trace and collecting sets); locale-local abbreviations cover
-repeated proof plumbing and introduce no constants. Add new notation only for a
-central semantic concept that occurs prominently in theorem statements and
-reads clearly better as a symbol. Never add a thesis-only symbol for an
-Isabelle object; write its name with the checked helpers.
-HOL-style big operators over lists, such as the list join `⨆x←xs. f x`
-modelled on `∑x←xs. f x`, count as library syntax rather than project
-notation. They need no `notation.toml` entry, and the prose explains them
-where they first appear.
+Use the established semantic notation where it is readable. A chapter may define
+short mathematical names for existing formal objects and suppress fixed
+parameters after stating their scope. State the mapping to the Isabelle entities
+with checked references in parentheses beside the relevant explanation. Preserve all quantifiers,
+side conditions, and distinctions between objects. Preserve option values
+explicitly: `None` is a defined value, not an undefined function result, and
+`Some t` must not silently become `t`. Do not change the theories
+merely to obtain shorter thesis notation.
+
+Generated declarations and theorem statements remain verbatim when used. A
+mathematical restatement must be checked against its source; reference and drift
+checks do not establish that two differently written statements are equivalent.
 
 ## Motivated exposition
 
@@ -109,6 +119,11 @@ definition is needed (Tao's "digestion", Sanderson's "motivated explanation").
 - State each limitation once, where it bites. Do not attach a "this does not
   establish ..." sentence to every paragraph; collect scope qualifications in
   the trust-boundary and limitations sections and reference them.
+- Give each argument and definition one main home. Later uses should add a
+  consequence, an application, or a brief reminder with a backward reference,
+  rather than repeat the explanation. Keep self-contained abstract and
+  introduction summaries, necessary notation scopes, theorem assumptions, and
+  captions; do not remove these merely because the same fact appears elsewhere.
 - Acceptance test for every section: the author could explain it at the
   defense without notes or AI assistance. If a passage only restates an
   Isabelle name, it is not finished.
@@ -151,13 +166,10 @@ Consequences:
   diagrams with Isabelle names on arrows do not qualify.
 - A section earns its heading with its own question. Merge sections under
   ~200 words into a neighbour, and do not leave a lone subsection.
-- Early chapters (introduction, background, chapter openings) may state
-  results as plain mathematics. Each such statement still cites, in brackets
-  right after it, the Isabelle theorem or definition that establishes it, even
-  when that is a forward reference (`(#isathm("..."))`). Readers can click
-  through, and the citation is where we check that the prose formula says what
-  the formal statement says. If the prose simplifies notation, the simplification
-  must preserve the meaning; otherwise fix the prose.
+- State results as mathematics with explicit assumptions. Attach the checked
+  formal source through a theorem header or a parenthesized inline reference. A reference to a
+  later section may supply detail, but must not supply a missing definition
+  needed to understand the current argument.
 - The same order holds inside a paragraph: state the goal (the property we
   want, as a formula or a sentence) before the result that achieves it and its
   assumptions. "The goal is a σ with 𝒜 v c ⊆ γ(σ(v, c)). The main result shows
@@ -228,7 +240,10 @@ Rules the author set while reviewing drafts. They refine the sections above.
   limit it only approaches.
 - Define every term before its first use, including the ones that feel
   obvious (loop head, control-flow graph, carrier, key set, shared key). When a
-  later section defines it, say so at the first use.
+  later section gives the full definition, explain the meaning needed here at
+  first use and point there for detail. A forward reference or glossary entry
+  alone does not introduce a concept. Check prose, formulas, table labels, and
+  captions in reading order; the introduction must not rely on the abstract.
 - Keep one running example per chapter and derive from it (the counting loop in
   @ch:background: its graph, its inequalities, its solutions).
 
@@ -286,9 +301,9 @@ handing a section over.
   fields, how a concretization is lifted. If the reader needs it at all, one
   clause with the citation is enough.
 - Spend space where the formalization contributes. Textbook material (the
-  standard domains, classical fixpoint theory) gets a sentence, a citation and,
-  where it exists, a link to the interactive explainer; the depth goes to what
-  only this development has.
+  standard domains, classical fixpoint theory) gets a citation and
+  enough explanation for the argument in the PDF; the depth goes to what
+  only this development has. An interactive explainer is optional enrichment.
 - Chain paragraphs into a story. Each paragraph answers the question the
   previous one raised and ends on the question the next one answers (wrong
   answers harm users -> a proof rules them out, but who checks the proof? ->
@@ -311,9 +326,8 @@ handing a section over.
   phrase followed by a list in subject position ("Following Goblint's
   architecture, domains, context policies, analyses, and the solver discharge
   …"), and do not chain clauses with commas where two sentences would do.
-- Use the theories' names for their concepts. Do not invent prose names such
-  as "eval" or "sides" for `eq` and `sides_of_rhs`, and do not introduce a
-  synonym for a concept that already has a name.
+- Keep terminology stable. Short mathematical notation must have an explicit
+  scope and a checked mapping to the formal object it denotes.
 - Leave out deliberately broken variants, earlier versions and the history of
   a design unless the argument needs the contrast, and do not reuse the
   introduction's motivating bug as the conclusion's example.
@@ -345,17 +359,11 @@ handing a section over.
   concepts such as `order`, `complete_lattice`, `lfp` and `mono` link to HOL.
 - Show real declarations with `thy(...)` rather than paraphrasing them when the
   text teaches an Isabelle mechanism.
-- Use no notation in prose that the theories lack. A formula names the Isabelle
-  constants or their declared notation (`report_states_at res v`, `γ⇘res⇙`), not
-  an ad hoc symbol such as $"states"_"res"(v)$ or "(v, c, d) ∈ res". If the
-  prose needs a shorter name, add it to the theory (an abbreviation or a
-  rename) first. A short definition may be written as a formula with its
-  constant cited; a mechanical case split is better shown with `thy(...)`.
-- When a definition reads differently from the prose that explains it (a
-  quantified set where the prose says intersection), generalize the theory
-  definition in place so the two match, and keep the old form as a lemma for
-  existing proofs. Do not change a definition only to ease the prose when it
-  would alter what is proved.
+- Mathematical notation may abstract from encoding details under the notation
+  rules above. Explain any omitted parameters and preserve the formal meaning.
+  Prefer a mathematical case distinction when the encoding adds no insight.
+- If prose and a formal definition disagree, correct the prose or its notation.
+  A change to the formal definition requires an independent semantic reason.
 - Introduce every Isabelle object before the first section that uses it. If a
   later chapter owns the definition, move its introduction forward instead of
   citing ahead.

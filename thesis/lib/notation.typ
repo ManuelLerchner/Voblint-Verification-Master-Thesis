@@ -66,7 +66,9 @@
   )
 }
 
-#let notation-table() = {
+// The thesis omits source-only forms that its mathematical presentation does not use.
+#let notation-table(omit: ("abs_step", "activation_coverage.carries")) = {
+  let entries = notation.entries.filter(e => e.id not in omit)
   set text(size: 8pt)
   set par(first-line-indent: 0pt, justify: false)
   show raw: set text(size: 7.5pt)
@@ -86,15 +88,17 @@
       table.hline(stroke: 0.4pt),
     ),
     ..for (key, g) in notation.groups {
-      let rows = notation.entries.filter(e => e.group == key)
-      (
-        // A subheader: Typst keeps it with the first row of its group.
-        table.header(level: 2, repeat: false, table.cell(
-          colspan: 4,
-          inset: (x: 4pt, top: 7pt, bottom: 3pt),
-        )[*#g.title*#if "note" in g [ #h(0.3em) #_small(g.note)]]),
-        ..rows.map(_cells).flatten(),
-      )
+      let rows = entries.filter(e => e.group == key)
+      if rows.len() > 0 {
+        (
+          // A subheader: Typst keeps it with the first row of its group.
+          table.header(level: 2, repeat: false, table.cell(
+            colspan: 4,
+            inset: (x: 4pt, top: 7pt, bottom: 3pt),
+          )[*#g.title*#if "note" in g [ #h(0.3em) #_small(g.note)]]),
+          ..rows.map(_cells).flatten(),
+        )
+      }
     },
     table.hline(stroke: 0.5pt),
   )

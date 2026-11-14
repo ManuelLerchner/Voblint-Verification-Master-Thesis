@@ -419,6 +419,7 @@
   // Latin Modern's small capitals are a face of their own, as cmcsc10 is.
   let body = text(
     font: "Latin Modern Roman Caps",
+    style: "normal",
     fill: if href == none { vb.plain } else { vb.locale },
     lower(name),
   )

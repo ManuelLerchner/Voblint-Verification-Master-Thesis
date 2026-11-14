@@ -1,6 +1,6 @@
 #import "theme.typ": vb
 #import "tum.typ": thm-rich
-#import "code.typ": isacmd, isaname
+#import "code.typ": isaname
 
 // Minimal theorem environments, numbered per chapter. Kept local rather than
 // pulled from a package so the numbering scheme matches the LaTeX side
@@ -10,22 +10,13 @@
 // rich-counter in tum.typ, which restarts at each chapter without a reset rule.
 #let thm-counter = counter("theorem")
 
-// The header names the result twice: by its number and title, and by the
-// Isabelle name it is stated under, which links to the rendered theory. A
-// definition also names its declaring command (`datatype exp`), which
-// thesis-refs checks against the sources.
+// `Definition 3.1: Expressions (exp).` The formal source takes the round
+// parentheses of inline references. `cmd` remains checked source metadata.
 #let _thm-block(kind, name, isa-name, body, italic: true, cmd: none) = {
   (thm-rich.step)()
   block(above: 1.1em, below: 1.1em, width: 100%, {
-    strong[#kind #context (thm-rich.display)("1.1")]
-    if name != none or isa-name != none {
-      [ (]
-      if name != none { name }
-      if name != none and isa-name != none { [, ] }
-      if cmd != none { [#isacmd(cmd) ] }
-      if isa-name != none { isaname(isa-name) }
-      [)]
-    }
+    strong[#kind #context (thm-rich.display)("1.1")#if name != none [: #name]]
+    if isa-name != none { [ (#isaname(isa-name))] }
     strong[.]
     h(0.4em)
     if italic { emph(body) } else { body }

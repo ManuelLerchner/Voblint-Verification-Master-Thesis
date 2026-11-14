@@ -52,15 +52,9 @@
 sound. Someone who analyzes a VIMP program, however, writes source text and
 reads a report in a terminal or a browser tab. This chapter asks how the
 proved HOL function becomes a program between the two, and which components the
-soundness guarantee for that program rests on. The proved function's abstract states are
-mathematical functions, which code cannot compute with, so they are first
-replaced by finite representations (@sec:represented-function). Isabelle's
-code generator then exports #isaconst("run_voblint") to OCaml
-(@sec:codegen), and an unverified shell of handwritten OCaml parses the source text and displays
-the report (@sec:ocaml-boundary). The change of representation is proved
-to preserve the theorem. The code generator and the shell are not proved
-correct, so the soundness guarantee for the running tool also rests on them, as
-@fig:intro-trust shows.
+soundness guarantee for that program rests on. The change to finite state
+representations is proved correct; code generation and the handwritten shell
+remain outside the proof (@fig:intro-trust).
 
 == Finite representations of abstract states <sec:represented-function>
 
@@ -76,8 +70,10 @@ generation exports the executable part together with each domain's operation
 record. The concretizations and their laws serve only the proofs.
 
 The pointwise states of @ch:domains are total functions on
-infinitely many variable names, so the solver could not even test whether two
-of them are equal. Following Concrete Semantics @nipkow14[§13.6], an
+infinitely many variable names. Generated code could apply such a function,
+but the solver also compares states for equality to detect that an unknown has
+stabilized, and equality of two functions on an infinite domain is not
+computable. Following Concrete Semantics @nipkow14[§13.6], an
 _executable state_ (#isatype("default_st")) instead stores a default value and
 a finite list of overrides. Voblint keeps two such pairs, one for locals with
 default #ltop and one for globals with default $0^sharp$, because VIMP
@@ -101,8 +97,9 @@ states of the order analysis (@sec:rel-state) are finite data.
 == Export to OCaml and WebAssembly #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 With these replacements, every function that #isaconst("run_voblint") uses
-has code equations, and Isabelle's
-code generator @haftmann10 can export it. One #isacmd("export_code")
+has _code equations_, the executable equations from which Isabelle's code
+generator @haftmann10 produces code (@sec:isabelle), so the generator can
+export it. One #isacmd("export_code")
 declaration emits #isaconst("run_voblint"), #isaconst("render_report"), and the
 constructors and selectors a caller needs into one OCaml file,
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
@@ -125,10 +122,7 @@ the solver keeps its valuation as a chain of closures, one per update.
 The code that runs is a small part of the development (@tab:sizes). Code
 generation keeps only the definitions that #isaconst("run_voblint") depends on and
 drops every proof, so the theories and the imported part of the vendored TD solver shrink
-to the generated module. The handwritten OCaml around this module is smaller
-still. Together with the playground's JavaScript, which draws the answer, it is the
-code that has to be checked by hand, while Zarith, the code generator, the compilers
-and the browser are trusted (@sec:ocaml-boundary).
+to the generated module. @sec:ocaml-boundary describes the handwritten code around this module.
 
 #figure(
   {
@@ -180,16 +174,18 @@ Finding further inefficiencies and improving the generated code is future work.
 
 The command-line tool links the module with the handwritten OCaml into a native
 program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the same code to
-WebAssembly, which a web worker in the reader's browser calls (@fig:build). Both tools
-thus run the generated code of #isaconst("run_voblint") up to the code generator and the
-compilers (@fig:intro-trust).
+WebAssembly, which a web worker in the reader's browser calls (@fig:build).
 
 A browser worker, however, has a much smaller stack than a native program. Deep
 recursions such as the one in #fixture(
   "21-context-sensitivity/precision/04-function_chain_self_recursive_tail.vimp",
   label: "04-function_chain_self_recursive_tail",
-) can therefore overflow it. The bundle attempts to avoid this with the continuation-passing
-translation of #raw("wasm_of_ocaml", lang: "sh") (#raw("--effects=cps", lang: "sh")).
+) can therefore overflow it. The bundle attempts to avoid this with the
+#link("https://ocsigen.org/js_of_ocaml/latest/js_of_ocaml/effects.html")[continuation-passing
+  translation] of #raw("wasm_of_ocaml", lang: "sh") (#raw("--effects=cps", lang: "sh")).
+In the transformed code, a function receives the computation to perform after
+it returns as an explicit continuation. Calls can then pass control to that
+continuation instead of retaining a return frame on the browser's stack.
 With it, the browser build needs #prof-times("browser_ratio_median") the native solve
 time on the median run (@sec:eval-runtime, #link(site("profiling.html"))[profiling page]).
 
@@ -204,7 +200,7 @@ time on the median run (@sec:eval-runtime, #link(site("profiling.html"))[profili
     project site.],
 ) <fig:build>
 
-== Traced solver runs #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
+== Tracing the solver #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 To explain a run, the command-line tool and the playground can trace the
 solver's steps. The solver trace records when each unknown is queried, which update
@@ -222,21 +218,19 @@ equals #isaconst("run_voblint") in the logic
 (#isathm("run_voblint_traced_eq")). Code generation exports both. A
 #isacmd("code_printing") declaration then tells the code generator to emit, in
 place of #isaconst("trace_event"), a call to the handwritten OCaml function
-`Solver_trace_hook.emit`. The hook receives a suspended event and builds it
-only when tracing is on. Only the traced entry point calls the hook, so an
+`Solver_trace_hook.emit`. The hook receives a function that constructs an event
+and calls it only when tracing is on. Only the traced entry point calls the hook, so an
 untraced run executes no handwritten code inside the analysis. For a traced run, the hook joins the trusted base and must
 return, raise nothing, and leave the solver's values alone.
 
 The command-line tool prints the events with `--trace`, and the playground
 replays them step by step on the solved graph (@fig:replay-still). The replay
 shows the order of the solve, which the solved values alone hide, such as when
-a call creates a new callee context. The solver trace itself is unverified, but
-a traced run returns the same report as an untraced one, provided the hook
-meets its obligations.
+a call creates a new callee context.
 
 
 #pagebreak(weak: true)
-== Unverified parser, rendering, and playground <sec:ocaml-boundary>
+== Unverified parser, renderer, and playground <sec:ocaml-boundary>
 
 The generated #isaconst("run_voblint") works on a syntax tree and returns a
 typed answer, whereas a user writes source text and reads a report.

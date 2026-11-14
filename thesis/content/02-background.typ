@@ -168,8 +168,8 @@ its _loop head_ $h$ is the node through which control enters and exits the cycle
     next. The edge from $t$ back to $h$ has no effect.],
 ) <fig:counting-loop>
 
-The state of an execution is a _store_, which maps each variable to its
-value, here the value of $i$. An execution starts at the entry of the graph in
+The state of an execution is a store (@sec:intro-static), which here records
+only the value of $i$. An execution starts at the entry of the graph in
 an initial store and follows a path, updating the store at every edge. The
 counting loop reaches $h$ once before the first iteration and again after each
 run of the body, so $i$ takes exactly the values $0, 1, dots, 5$ there.
@@ -214,18 +214,18 @@ every subset $X$ @nipkow14[Def. 13.1] @mine17[Def. 2.5].
 
 Voblint's solver requires less than a complete lattice, namely a join
 semilattice with a least element (#isalocale("bounded_semilattice_sup_bot"))
-that carries the widening and narrowing operators of @sec:widening. The solver
+that carries operators for extrapolating and refining approximations, called
+widening and narrowing (@sec:widening). The solver
 joins two values at a time, whenever a new value reaches an unknown, so
 joins need to exist only for pairs. Joins of infinite sets would not help an
 executable analyzer anyway, since it computes only with finite representations.
 
 A numeric domain adds a top element and an intersection to this structure. The
 top element describes a variable about which nothing is known, for instance, a
-value read from input. Refinement at a branch uses the intersection, which does not have to
-be the exact meet. It must keep every value that both operands admit, and its
-result must lie below both operands (#isalocale("sound_intersection"),
-@sec:branches). An intersection that admits more values than both operands
-share loses precision, but not soundness.
+value read from input. Refinement at a branch uses the intersection. It must keep every value that
+both operands admit, and its result must lie below both operands
+(#isalocale("sound_intersection"), @sec:branches). The intersection does
+not have to be the greatest lower bound in the abstract order.
 
 An analysis computes the description at a point from the descriptions at its
 predecessors, by a function $f$ on $lat(D)$, and its result must be stable
@@ -237,7 +237,8 @@ _monotone_ (#isaconst("mono")): $a lle b$ implies $f(a) lle f(b)$
 less precise output. By the Knaster–Tarski theorem, a monotone $f$ on a
 complete lattice has a least fixpoint $lfp f$, the meet of all post-fixpoints
 @tarski55[Thm. 1] (#isaconst("lfp"), #isathm("lfp_unfold")). On an order of
-finite height, the _Kleene iterates_ $lbot, f(lbot), f(f(lbot)), dots$
+finite height, meaning that strictly increasing chains have a common finite
+length bound, the _Kleene iterates_ $lbot, f(lbot), f(f(lbot)), dots$
 stabilize at $lfp f$ after finitely many steps @seidl12compiler[§1.5]
 (#isathm("lfp_Kleene_iter")). An analysis, however, does not have to compute
 $lfp f$. As long as $f$ is sound, every post-fixpoint that includes the initial
@@ -262,6 +263,13 @@ store that executions reach at $v$, that is, if
 $ cal(C)(v) subset.eq conc(a). $
 This inclusion is the consistency requirement between an abstract and a
 concrete interpretation @cousot77[§6] @mine17[Def. 2.11].
+
+Monotone concretization also explains what the intersection laws of
+@sec:lattices imply. Since the result lies below both operands and keeps every
+value they share,
+$conc(op("intersect")(a, b)) = conc(a) inter conc(b)$.
+Any abstract element below both operands that represents exactly these shared
+values meets the laws, even if it is not their greatest lower bound.
 
 The running example uses the _interval domain_ @cousot77[§9.2] @mine17[§4.5].
 Its elements are $lbot$ and the intervals $[l, u]$ with
@@ -323,7 +331,7 @@ $absval(ivl(0, 5))$ proves `i <= 5` at the loop head, and $absval(ivl(0, 10))$ d
 ) <fig:concretization>
 
 Much of abstract interpretation also assumes an abstraction function
-$abstr : cal(P)(U) -> A$ that forms a _Galois connection_ with $conc$ and gives
+that forms a _Galois connection_ with $conc$ and gives
 every set of states a best abstraction @cousot79[§5.3], the most precise
 domain element whose concretization contains the set. Not every useful domain
 has such best abstractions, and Cousot and Cousot treat a Galois connection as
@@ -467,8 +475,8 @@ requires inequalities.
   align: auto,
   placement: bottom,
   caption: [The counting loop's inequalities, solved by hand. (a) The least
-    solution at each node of @fig:counting-loop and, in orange where it
-    differs, a less precise solution. (b) Post-fixpoints of the loop-head
+    solution beside each node of @fig:counting-loop and, below it in orange
+    where it differs, a less precise one. (b) Post-fixpoints of the loop-head
     constraint (schematic, shaded), its least fixpoint $absval(ivl(0, 5))$, and the
     Kleene iterates.],
   label: <fig:loop-constraints>,
@@ -521,7 +529,7 @@ narrows when the candidate lies below the current value and widens otherwise
   ),
   <fig:widening-warrow>,
   columns: (1fr, 1fr),
-  placement: none,
+  placement: auto,
   caption: [Extrapolation on the lattice of @fig:lattice-fixpoints. (a) Widening
     jumps from $absval(ivl(0, 0))$ to the post-fixpoint $absval(ivl(0, +infinity))$, and narrowing then
     recovers the least fixpoint $absval(ivl(0, 5))$. (b) Warrowing takes the same two
@@ -560,9 +568,11 @@ $v$ and a context $c$ @apinis12[§3], so every context of a procedure gets its
 own copy of the procedure's unknowns.
 
 Sharir and Pnueli describe two classical choices of what a context records
-@sharir81. The call-string approach records calling histories; bounded variants keep
-the most recent sites. Since `bump(5)` and `bump(4)` are
-called from different sites, each gets its own copy. The functional approach
+@sharir81. A _call string_ is the sequence of call sites along the active chain
+of procedure calls. The call-string approach uses this sequence as the context.
+A bound $k$ keeps only the $k$ most recent call sites. With $k = 1$, `bump(5)`
+and `bump(4)` get distinct contexts because they are called from different sites.
+The functional approach
 summarizes a procedure's effect on entry states. Demand tabulation computes
 only entries encountered during analysis. With the entry state as context, `bump`
 gets one copy for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the
@@ -633,10 +643,7 @@ unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a post-solution
 must bound both, $d lle sol(x)$ and $rho(g) lle sol(g)$ for every
 $g in op("dom")(rho)$. If the assignments
 `g = 5` and `g = 4` publish $absval(ivl(5, 5))$ and $absval(ivl(4, 4))$ to the unknown of a
-flow-insensitive global `g`, that unknown must bound their join $absval(ivl(4, 5))$. This
-describes what a right-hand side computes. The verified solver represents its
-evaluation by a strategy tree (@sec:td), so that it discovers reads and side
-effects while it solves.
+flow-insensitive global `g`, that unknown must bound their join $absval(ivl(4, 5))$.
 
 With contexts as indices, a system can have infinitely many unknowns. Only those that influence the _query_, the unknown whose value is asked for, matter. A _local_ solver therefore explores the system from the query and
 solves only the unknowns that it meets @seidl21. Its result comes with a
@@ -644,17 +651,16 @@ _certificate_, the property #isaconst("part_post_solution", thy: "Basics_side"),
 which requires the bounds above only on a set of unknowns that contains the
 query and is closed under the local reads of its right-hand sides.
 
-== The verified top-down solver and its guarantee <sec:td>
+== The verified top-down solver and its certificate <sec:td>
 
 // The counting loop of fig:counting-loop, for the playground link below.
 #let _counting-loop = "i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
 
-Plain Kleene iteration recomputes every unknown in every round, although most
-values no longer change, so practical solvers update one unknown at a time. They
-work in rounds or with a worklist of unknowns whose inequalities may be violated
-@seidl12compiler[§§1.5, 1.12], in orders chosen for widening @bourdoncle93, or
-locally, on demand from a query, as the solver RLD does @hofmann10. Voblint
-reuses the verified local top-down solver (TD) of @stade24 @tilscher26.
+Practical solvers avoid recomputing unchanged unknowns in every Kleene round.
+They use worklists of potentially violated inequalities
+@seidl12compiler[§§1.5, 1.12], orders chosen for widening @bourdoncle93, or
+demand-driven evaluation, as RLD does @hofmann10. Voblint reuses the verified
+local top-down solver (TD) of @stade24 @tilscher26.
 
 TD starts from the query and evaluates right-hand sides on demand. When the
 right-hand side of $x$ reads a local unknown $y$, TD first solves $y$ and records
@@ -672,12 +678,9 @@ _origin_, the local unknown publishing them (@sec:update-rules). The run ends
 once every local unknown the query transitively reads is stable, and it returns this
 _stable set_ $V$ together with the valuation $sol$.
 
-To solve on demand, TD has to discover which unknowns a right-hand side reads.
-In the counting loop, these reads are fixed. In general, a
-right-hand side may choose the next unknown from a value it has already read.
-At a procedure call, for instance, the callee context to read is known only
-once the caller's value has been read. The verified TD solver therefore receives
-every right-hand side as a _strategy tree_
+A right-hand side may choose its next read from a value already read. A call,
+for example, determines the callee context from
+the caller's state. TD therefore receives each right-hand side as a _strategy tree_
 (#isatype("strategy_tree", thy: "Basics_side")), a small program that reads
 one unknown at a time and makes every read and every side effect explicit:
 $
@@ -729,11 +732,9 @@ loop and of a flow-insensitive assignment.
   ),
   kind: image,
   placement: none,
-  caption: [Right-hand sides as strategy trees. The first four are the
-    right-hand sides of the inequalities of the counting loop (@sec:constraints): each reads one
-    unknown, passes its value $v$ on, and answers. The last publishes the
-    value of a flow-insensitive global `g` (@sec:side-effects) before
-    answering.],
+  caption: [Strategy trees for the counting loop (@sec:constraints) and a
+    flow-insensitive assignment. Each reads an unknown and passes its value $v$
+    on. The last publishes to global `g` (@sec:side-effects) before answering.],
 ) <fig:strategy-trees>
 
 The solver's main theorem, #isathm("partial_post_solution"), establishes the

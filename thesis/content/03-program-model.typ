@@ -14,17 +14,17 @@
 Voblint's soundness theorem speaks about executions of a VIMP program, while
 its analysis computes on a control-flow graph. This chapter connects the two.
 Its result is the first inclusion of the chain of @fig:intro-nest. Every
-source execution of a well-formed program (@sec:vimp) is matched by a graph execution that
-holds the same store (@sec:csim).
+source execution of a well-formed program is matched by a graph execution that
+holds the same store.
 
 @ch:background analyzed a single loop through its control-flow graph. VIMP
 programs also have procedures and recursion, and their meaning is given by a
-source semantics that executes the program text directly (@sec:pstep). To
+source semantics that executes the program text directly. To
 generate its equations, however, an analysis needs a fixed,
 finite set of program points, because its constraint system attaches one
 abstract state to each of them. The source semantics provides no such set. It
 locates an execution only by the command that still has to run, and under
-recursion these commands nest arbitrarily deep (@sec:why-graph). Voblint therefore compiles a
+recursion these commands nest arbitrarily deep. Voblint therefore compiles a
 program to a procedure-aware control-flow graph, whose nodes serve as the
 program points, and generates its equations from the graph
 (@fig:program-to-equations). The compilation step must then be part of the
@@ -171,9 +171,8 @@ heap, arrays and structs, indirect calls, threads, floating point, `goto`,
 ) <fig:vimp-island>
 
 One of these omissions matters in later chapters. Without pointers, concrete
-memory is a store from variable names to integers. The non-relational analyses
-of @ch:domains lift it pointwise to one abstract value per variable.
-@sec:rel-state gives a carrier that is not pointwise.
+memory is a store from variable names to integers, which an analysis can
+describe pointwise, by one abstract value per variable.
 
 Expressions are integer-valued. As in C11, comparisons and logical operators
 yield $0$ or $1$ (#c11("6.5.8p6"), #c11("6.5.9p3"), #c11("6.5.3.3p5"), #c11("6.5.13p3"), #c11("6.5.14p3")), and a
@@ -207,10 +206,9 @@ and sets of states. Both languages target program verification, where such
 semantic objects are convenient. VIMP is therefore defined from scratch, with
 a syntax that the analyzer can inspect and that code generation can export.
 
-An expression is evaluated in a _store_ $s$ of type #isatype("store"), a total
-function #isai("vname \<Rightarrow> int") from variable names to integers.
-Evaluation #isaconst("aval"), written #isai("\<lbrakk>e\<rbrakk>\<^sub>e s"), is
-a function defined by one equation per constructor, for example
+VIMP represents a store $s$ as a total function from variable names to
+integers (#isatype("store")). Evaluation $sem(e)_e thin s$ (#isaconst("aval"))
+is a function defined by one equation per constructor, for example
 $
   sem(n)_e thin s = n, quad
   sem(x)_e thin s = s(x), quad
@@ -220,7 +218,7 @@ $
 Every expression has a value, because VIMP fixes the results of division and
 remainder by zero (#isaconst("c_div"), #isaconst("c_mod"), @sec:vimp-vs-c). It also has no
 effects, so a transfer function may evaluate a guard again, as the backward
-filtering of @ch:domains does. Input enters only through the statement
+filtering of guards in an analysis does. Input enters only through the statement
 `x = __voblint_nondet_int();` and never inside an expression. Restricting input to this statement keeps #isaconst("aval") a function.
 
 Commands are built from expressions. Besides the structured statements, there
@@ -236,7 +234,8 @@ execution.
 ]
 
 Every constructor except sequencing also carries an _annotation_, whose type is
-a parameter of #isatype("gcom"). The commands of a parsed program carry the unit annotation and have type
+a parameter of #isatype("gcom"). The commands of a parsed program carry the unit
+annotation, a single dummy value that records no information, and have type
 #isatype("com"). The grammar above omits
 annotations, which the rules of @sec:pstep write as $i$. @sec:at-node explains why they
 are needed.
@@ -244,7 +243,7 @@ are needed.
 In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
 expression grammar above. As in @sec:intro-static, a check states a condition
-for the analyzer to decide (@sec:verdicts). It does not influence the
+for the analyzer to decide. It does not influence the
 execution. It behaves like
 #skipC whatever value $e$ has, so it neither stops the execution nor refines the
 store. Its constructor also carries the source position, which only the report
@@ -252,23 +251,22 @@ uses, to name the check.
 
 Calls come in two kinds. A call of a declared procedure starts an activation
 of that procedure (@sec:interproc).
-VIMP also has three built-in _library calls_, `__voblint_nondet_int`, `min`, and `max`, which a program calls but does not declare. The fixed table
-#isaconst("special_table") recognizes their names, and
-#isaconst("special_result") gives the values they may return: any integer for
-`__voblint_nondet_int`, and the minimum or maximum of the arguments for `min`
-and `max`. A library call finishes in one step and stores its value, without
-an activation or a frame (@sec:pstep). The
+VIMP also has three built-in _library calls_, `__voblint_nondet_int`, `min`,
+and `max`, which a program calls but does not declare. A fixed table recognizes
+their names, and a result relation gives the values they may return, any
+integer for `__voblint_nondet_int` and the minimum or maximum of the arguments
+for `min` and `max` (#isaconst("special_table"), #isaconst("special_result")).
+A library call finishes in one step and stores its value without starting an
+activation. The
 remaining constructors, #ctor("Restore") and #ctor("Unwind"), are not source
 syntax (#isaconst("source_com") excludes them). They appear only during
 execution, where @sec:pstep uses them for calls and returns.
 
-A program (#isatype("imp_prog")) is a list of procedure declarations
-(#isaconst("proc_rep")), each with formal parameters and a body, plus a list of
-global variables (#isaconst("declared_global_vars")). Its procedure table
-(#isatype("proc_table")) looks up a name in that list, and the classifier
-#isaconst("declared_global") tests membership in the globals. The entry
-procedure is the declaration named `main`, and #isaconst("main_body") is its
-body. @fig:vimp-ast shows the running example in this form. The formal
+A program is a list of procedure declarations, each with formal parameters and
+a body, plus a list of global variables (#isatype("imp_prog")). Its procedure
+table $Pi$ looks up a name in that list, and the classifier $cal(G)$ tests
+membership in the globals (#isaconst("declared_global")). The entry procedure
+is the declaration named `main`, and #isaconst("main_body") $Pi$ is its body. @fig:vimp-ast shows the running example in this form. The formal
 development starts from this parsed program, and the parser lies outside the
 theorem (@fig:intro-trust).
 
@@ -319,14 +317,10 @@ theorem (@fig:intro-trust).
   },
   kind: image,
   placement: none,
-  caption: [The running example as the parser returns it. It consists of the
-    `main` body and the one callee declaration (#isaconst("proc_rep")) and
-    declares no globals. The playground passes this value to
-    #isaconst("run_voblint") and shows it in the panel for the call and answer
-    of #isaconst("run_voblint"). For
-    this program the panel is reached via the `VIMP` link of
-    @fig:program-to-equations. A #ctor("Call", thy: "VIMP_Proc") names its destination and
-    callee, and a #ctor("Check") names its source position.],
+  caption: [The running example as the parser returns it, with the `main` body,
+    the one callee declaration, and no globals. A
+    #ctor("Call", thy: "VIMP_Proc") names its destination and callee, and a
+    #ctor("Check") names its source position.],
 ) <fig:vimp-ast>
 
 Not every parsed program can run meaningfully. The theorems therefore
@@ -348,7 +342,7 @@ that
 A body _falls through_ when execution reaches its end without a
 #keyw("return"). Value-providing is a syntactic condition
 (#isaconst("value_providing")). It requires that the body cannot fall through,
-that it cannot reach a #keyw("return") without a value, and that it contains a
+that it cannot reach a #keyw("return") without a value, and that it can reach a
 #keyw("return") with a value. So every path through the callee that completes returns a value,
 although the callee may still diverge. C11 makes using the value of a call that
 falls through undefined (#c11("6.9.1p12")). Without the condition, VIMP would
@@ -390,30 +384,90 @@ call. Each suspended activation keeps its data in a _frame_.
   step relation #isaconst("pstep") relates a configuration to its successor.
 ]
 
-#{
-  show raw.where(block: true): set text(size: 6.2pt)
-  thy("pstep")
-}
+Fix the global-variable classifier $cal(G)$ and procedure table $Pi$.
+Write $kappa ->_p kappa'$ for one step and $->_p^*$ for its reflexive
+transitive closure. The following rules define the least such relation.
+We write an annotated command's annotation as a subscript $i$, write
+$c_1 ; c_2$ for sequencing, and write $(s_c,italic("dst")) :: F$ for pushing a frame.
+The optional destination $italic("dst")$ is either $"None"$ or $"Some"(x)$.
+The lowercase command names denote their annotated syntax constructors
+(#isatype("acom")). Annotations are copied exactly as shown.
 
-A classifier #isai("\<G> :: vname \<Rightarrow> bool"), separate from the
-store, says which names are global, because a call resets only the locals. For
-a program, it is #isaconst("declared_global"). The relation is written
-#isai("\<G>, \<Pi> \<turnstile> \<kappa> \<rightarrow>\<^sub>p \<kappa>'") for
-configurations $kappa$, $kappa'$, and a procedure table #isai("\<Pi>"). Its
-closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and its rules are
-listed below. No rule inspects an annotation. The rules only copy annotations, from
-the rewritten command or from the procedure table. The interactive
-#link(site("index.html#semantics"))[explainer page] of the project website
-animates these steps.
+*Local commands.* Assignment updates one variable; a check records no runtime
+failure and leaves the store unchanged:
+$
+  ("assign"_i (x,e),s,F) & ->_p ("skip"_i,s[x mapsto sem(e)_e s],F), \
+   ("check"_i (l,e),s,F) & ->_p ("skip"_i,s,F), \
+      ("skip"_i ; c,s,F) & ->_p (c,s,F).
+$
+A sequence propagates a step of its first command:
+$
+  frac(
+    (c_1,s,F) ->_p (c_1',s',F'),
+    (c_1 ; c_2,s,F) ->_p (c_1' ; c_2,s',F')
+  ).
+$
+A conditional $"if"_i (b,c_1,c_2)$ steps to $(c_1,s,F)$ if
+$sem(b)_e s != 0$, and to $(c_2,s,F)$ otherwise. A loop unfolds as
+$
+  ("while"_i (b,c),s,F) ->_p
+  ("if"_i (b,c ; "while"_i (b,c),"skip"_i),s,F).
+$
 
-A call evaluates the actuals in the caller's store, resets the locals, binds
-the formals (#isaconst("enter_state"), #isaconst("bind_formals")), and pushes a
-frame. A `return e` writes the value of $e$ to #isaconst("ret_var"), and
-popping the frame merges the caller's locals, the callee's globals, and the
-result. These operations select by name and are polymorphic in the value type (#isaconst("enter_binding"),
-#isaconst("combine_env"), #isaconst("combine_assign")). Therefore, the
-non-relational analyses reuse the concrete definitions at their abstract state types, with $top$ in place of the reset
-value $0$.
+*Procedure calls.* Suppose $Pi(p)="Some"(d)$, the actual-argument list
+$italic("es")$ has the same length as the formal-parameter list $italic("xs")$ of $d$, and $italic("xs")$
+contains no duplicate. Let $s_e$ reset the caller's local variables to zero,
+retain its globals, and then bind $italic("xs")$ to the values of $italic("es")$ evaluated in $s$
+(#isaconst("enter_state"), #isaconst("bind_formals")). Then
+$
+  ("call"_i (italic("dst"),p,italic("es")),s,F) ->_p
+  ("body"(d) ; "restore"_i,s_e,(s,italic("dst")) :: F).
+$
+The frame retains the caller's store even while the callee changes its own.
+#block(breakable: false, width: 100%)[
+  Library calls (@sec:vimp) need a rule of their own. A program does not
+  declare them, so the procedure table has no body for them and the rule above
+  does not apply. A fixed library table gives their meaning instead. Since no
+  body runs, the call finishes in one step and pushes no frame. The result
+  relation can admit more than one value, which is how `__voblint_nondet_int`
+  supplies an arbitrary input. Formally, if the library table maps $p$ to
+  $"Some"(italic("desc"))$, classifying the arguments $italic("es")$ against
+  $italic("desc")$ yields $"Some"(italic("sc"))$, and $italic("sc")$ can return
+  $z$ in $s$, then
+  $
+    ("call"_i ("Some"(x),p,italic("es")),s,F) ->_p ("skip"_i,s[x mapsto z],F).
+  $
+  The classification fails when the number of arguments does not match
+  (#isaconst("special_table"), #isaconst("classify_special"),
+  #isaconst("special_result")). The rule requires a destination $x$.
+]
+
+*Returns and restoration.* Let $r_v$ be the reserved return variable
+(#isaconst("ret_var")). The returned store $#isaconst("combine_collect") _(italic("dst")) (s_c,s_r)$
+takes locals from $s_c$ and globals from $s_r$, and then, when
+$italic("dst")="Some"(x)$, assigns $s_r (r_v)$ to $x$. For $italic("dst")="None"$, this
+final assignment is omitted. Then
+$
+  ("return"_i ("Some"(e)),s,F) & ->_p ("unwind"_i,s[r_v mapsto sem(e)_e s],F), \
+  ("return"_i ("None"),s,F) & ->_p ("unwind"_i,s,F), \
+  ("restore"_i,s_r,(s_c,italic("dst")) :: F) & ->_p ("skip"_i,#isaconst("combine_collect") _(italic("dst")) (s_c,s_r),F).
+$
+When $c$ is not a restoration marker,
+$ ("unwind"_i ; c,s,F) ->_p ("unwind"_i,s,F). $
+At the restoration marker, unwinding instead pops the caller's frame:
+$
+  ("unwind"_j ; "restore"_i,s_r,(s_c,italic("dst")) :: F)
+  ->_p ("skip"_i,#isaconst("combine_collect") _(italic("dst")) (s_c,s_r),F).
+$
+The annotation of the resulting skip is $i$, the annotation of the call's
+restoration marker, even when the return has a different annotation $j$.
+
+In Isabelle, these rules form one inductive definition, with one named
+introduction rule per case above. There the commands are capitalized
+constructors, a frame is written #ctor("Frame") $s_c$ $italic("dst")$, and
+$#isaconst("combine_collect") _(italic("dst")) (s_c,s_r)$ appears unfolded into
+#isaconst("combine_env") and #isaconst("combine_assign")
+(#isaconst("pstep")).
 
 The root activation is modeled without a #ctor("Restore"), since `main` has no
 caller to return to, and a bare #ctor("Unwind") has no step
@@ -428,10 +482,16 @@ claims about the points after a stuck execution would hold vacuously. For a prog
 #isaconst("wf_source_program"), every reachable configuration has either
 finished, as #skipC with an empty frame stack, or can step:
 
-#proved("source_progress")
+#theorem(name: [Progress of source execution], isa: "source_progress")[
+  Assume the source program is well formed. Every configuration $kappa=(c,s,F)$
+  reached by finitely many source steps from the main body and an empty stack,
+  starting in any store, satisfies
+  $ (c "is a skip" and F=[]) or exists kappa'. kappa ->_p kappa'. $
+]
 
-The source contract rules out every reason a call could fail to step, and every
-library call has a result (#isathm("special_result_ex")).
+The proof relies on the source contract of @sec:vimp, whose conditions on
+calls exclude every call that could not step, and on the existence of a result
+for every library call (#isathm("special_result_ex")).
 
 == The procedure-aware control-flow graph <sec:graph>
 
@@ -468,31 +528,31 @@ Introducing a graph is a design choice. A _syntax-directed_ analyzer, such as
 that of Nipkow and Klein @nipkow14[Ch. 13], computes its result by recursion
 over the command structure and needs no graph. Voblint instead follows Goblint
 and is _constraint-based_ @apinis12: it turns the program into a system of
-inequalities over unknowns indexed by the graph's nodes. A generic solver
-that knows nothing about programs then solves this system. The solver
-needs no knowledge of calls, because a call contributes right-hand sides and
-side effects to the same system (@ch:equations). The approach requires two extra proof layers. This chapter must prove by a simulation that the compiler
+inequalities over unknowns indexed by the graph's nodes. A generic solver,
+independent of the programming language, then solves this system. Calls need
+no support in the solver, because a call contributes right-hand sides and side
+effects to the same system. The approach requires two extra proof layers. This chapter must prove by a simulation that the compiler
 preserves the program's executions, and @ch:traces must say what the inequalities
 mean for those executions. In return, the argument about programs
-ends at a solver-independent certificate, a post-solution on the solved set
-(@sec:certificate).
+ends at a solver-independent certificate, a post-solution on the solved set.
 
 === Nodes, local edges, and call edges #thy-badge("Voblint_CFG", "CFG_Def") <sec:cfg>
 
 #definition(name: [Control-flow graph], isa: "cfg", cmd: "record")[
-  A graph $g$ is a record of type #isatype("cfg"):
+  A graph consists of a local-edge relation, a call-edge relation, and an entry
+  node. Its Isabelle representation is a record of type #isatype("cfg"):
   #{
     show raw.where(block: true): set text(size: 6.5pt)
     thy("cfg")
   }
-  The field #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labeled by an
-  #isatype("edge_action") $a$. The field #isaconst("calls") holds the _call edges_
-  $(u, italic("ca"), ctor("FunctionEntry") thin q, k)$. Such an edge consists
-  of the call site $u$, the call information $italic("ca")$, the entry node of
-  the callee (by #isaconst("wf_cfg")), and the node $k$ where the caller
-  resumes. Nodes (#isatype("cfg_node")) are $ctor("Statement") thin n$,
-  $ctor("FunctionEntry") thin p$, or $ctor("FunctionResult") thin p$.
-  The field #isaconst("cfg_entry") holds the entry node.
+  The field #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labeled
+  by an action $a$. The field #isaconst("calls") holds the _call edges_
+  $(u, italic("ca"), w, k)$. Such an edge consists of the call site $u$, the
+  call information $italic("ca")$, a node $w$, which in a well-formed graph is
+  the callee's entry $ctor("FunctionEntry") thin q$ (#isaconst("wf_cfg")), and
+  the node $k$ where the caller resumes. Nodes are
+  $ctor("Statement") thin n$, $ctor("FunctionEntry") thin p$, or
+  $ctor("FunctionResult") thin p$, and the third field holds the entry node.
 ]
 
 The call information $ctor("CallEdge") thin italic("dst") thin
@@ -619,28 +679,22 @@ executable analyzer.
   kind: image,
   placement: none,
   caption: [A recursive program and its compiled graph, labeled as
-    `voblint --dot` prints it. Here $sans("pp") thin n$ is
-    $ctor("Statement") thin n$, and $sans("entry")_p$, $sans("exit")_p$ are
-    $ctor("FunctionEntry") thin p$, $ctor("FunctionResult") thin p$. As in
-    @fig:program-to-equations, solid gray arrows are #isaconst("intra") edges,
-    and dashed purple arrows are #isaconst("calls") edges. Dotted connectors
-    and thin blue arrows are not edges. Dotted connectors show the continuation
-    of a call edge. Thin blue arrows show where execution continues after a
-    result node. Each procedure has one copy of its nodes, whatever the
-    recursion depth. Reserved node numbers without edges,
-    such as $sans("pp") thin 4$, are not nodes of the graph.],
+    `voblint --dot` prints it, where $sans("pp") thin n$ is
+    $ctor("Statement") thin n$. Solid arrows are local edges and dashed arrows
+    call edges. Dotted connectors mark the continuation of a call, and thin
+    arrows the return to it. Each procedure has one copy of its nodes,
+    whatever the recursion depth.],
 ) <fig:cfgmap>
 
 
 A whole program is compiled one procedure after another, each over a fresh
-block of node numbers, with `main` last (#isaconst("compile_prog")). The
-compiler therefore needs the procedures in some order. The procedure table
+block of node numbers, with `main` last. The compiler therefore needs the
+procedures in some order. The procedure table
 $Pi$ cannot provide one, because it is a function from names to declarations,
 and neither the logic nor generated code can enumerate its domain.
-Instead, #isaconst("compile_prog") takes, besides $Pi$, a list
-$italic("ps")$ of the procedures to compile, while `main` is compiled
-separately from #isaconst("main_body"). The executable analyzer reads this
-list off the parsed declarations (#isaconst("prog_procs")). The list must
+Instead, the compiler takes, besides $Pi$, a list $italic("ps")$ of the
+procedures to compile, while `main` is compiled separately from its body. The
+executable analyzer reads this list off the parsed declarations. The list must
 agree with the table. If it misses a declared procedure, a call to it reaches
 an entry node that no edge leaves, and the graph execution stops where the source
 execution continues. If it names a procedure twice, the procedure is compiled into
@@ -666,20 +720,38 @@ call edge, the variable that receives the result, and the caller's store,
 whose local variables the return restores. A return pops the frame and
 continues at $k$.
 
-#block(breakable: false)[
+#block[
   #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[
-    A graph configuration (#isatype("cconf")) is a triple of a node, a store,
-    and a stack of frames (#isatype("cframe")), each a triple of a continuation
-    node, an optional destination, and the caller's store.
-    The step relation #isaconst("cstep") is written
-    #isai("\<G>, g \<turnstile> \<kappa> \<rightarrow>\<^sub>c \<kappa>'"), and
-    #isai("\<rightarrow>\<^sub>c\<^sup>*") is its closure.
+    A graph configuration $(v,s,K)$ (#isatype("cconf")) consists of a node
+    $v$, a store $s$, and a frame stack $K$. Each frame $(k,italic("dst"),s_c)$
+    (#isatype("cframe")) records the continuation node $k$, the optional
+    destination $italic("dst")$, and the caller's store $s_c$. The step
+    relation $kappa ->_c kappa'$ (#isaconst("cstep")) is defined by the rules
+    below, and $->_c^*$ is its reflexive transitive closure.
   ]
 
-  #{
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("cstep")
-  }
+  Fix $cal(G)$ and $g$.
+  For a call edge $e=(u,a,#ctor("FunctionEntry") thin p,k)$ with destination $italic("dst")$,
+  $#isaconst("call_enter") _e (s)$ is its entered store, and $#isaconst("combine_collect") _(italic("dst")) (s,t)$
+  the returned store. The rules are
+  $
+    frac(
+      (u,a,v) in "intra"(g) quad s' in sem(a)(s),
+      (u,s,K) ->_c (v,s',K)
+    ),
+  $
+  $
+    frac(
+      e=(u,a,#ctor("FunctionEntry") thin p,k) in "calls"(g),
+      (u,s,K) ->_c (#ctor("FunctionEntry") thin p,#isaconst("call_enter") _e (s),(k,italic("dst"),s) :: K)
+    ),
+  $
+  $
+    (#ctor("FunctionResult") thin p,t,(k,italic("dst"),s) :: K) ->_c (k,#isaconst("combine_collect") _(italic("dst")) (s,t),K).
+  $
+  Here $sem(a)(s)$ is the set of local successors (#isaconst("edge_step")).
+  A return uses the top frame; it does not require an additional graph edge.
+
 ]
 
 The three rules above follow a local edge, a call edge, or a return.
@@ -707,8 +779,8 @@ The relation cannot simply pair each command with a node. When one procedure
 calls another, the source keeps the caller's remaining work inside the running
 command, behind a #ctor("Restore") marker, while the graph keeps it on the frame
 stack as the continuation node $k$. The relation therefore has to match a
-nested command against a stack of frames. The two executions also do not step
-in lockstep. Some source steps only rearrange the command, such as unfolding a
+nested command against a stack of frames. A source step also does not
+always match exactly one graph step. Some source steps only rearrange the command, such as unfolding a
 loop into a conditional, discarding a finished #skipC, or propagating
 #ctor("Unwind") past the commands it skips. They have no graph counterpart, so
 the graph answers one source step with zero or more steps. Only this direction
@@ -718,65 +790,108 @@ then also covers every source execution, so soundness needs no converse.
 === Simulation relation and step matching <sec:csim-step>
 
 #definition(name: [Simulation relation], isa: "csim", cmd: "inductive")[
-  #isaconst("csim"), written
-  #isai("\<Pi>, g, p \<turnstile> (c, s, frs) \<approx> (v, s, stk)"), relates a
-  source configuration to a graph configuration holding the same store, where
-  $p$ is the procedure of the outermost activation, `main` for a program run.
+  A _block_ $B=(p,b,k,n)$ consists of a procedure $p$, a body $b$, the number
+  $n$ of the body's first node, and its exit node $k$. The predicate $#isaconst("compiled_at") (B)$ holds if
+  $b$ is the body of $p$ in $Pi$, the edges of $b$ compiled from node $n$
+  against continuation $k$ lie in $g$, together with the entry edge from
+  $ctor("FunctionEntry") thin p$ to node $n$ and the fall-through return edge
+  from $k$ to $ctor("FunctionResult") thin p$, and $k$ is the node directly
+  after the body. The predicate $#isaconst("control_at") _B (c,v)$ holds
+  if the command $c$ is what remains of $b$ and the compiler placed it at node
+  $v$. Write $c ; A$ for a command $c$ followed by the
+  list $A$ of commands after it, and $F dot.op F'$ for the concatenation of
+  frame stacks. The predicate $#isaconst("pop_ready") (w)$ says that the source
+  command $w$ is ready to pop its frame; $#isaconst("pop_ann") (w)$ gives the
+  annotation of the marker it pops as an option value.
+  The relation $kappa approx_p lambda$ relates a
+  source configuration to a graph configuration with the same store, where $p$
+  is the procedure of the outermost activation, `main` for a program run. It is
+  the least relation closed under the following rules, where $B=(p,b,k,n)$ is
+  a block of $p$, and $u$ and $italic("es")$ are arbitrary.
+
+  $
+    sans("Base") quad frac(
+      #isaconst("control_at") _B (c,v) quad #isaconst("compiled_at") (B),
+      (c,s,[]) approx_p (v,s,[])
+    )
+  $
+  $
+    sans("Nested") quad frac(
+      display(
+        mat(
+          delim: #none,
+          (c,s,F) approx_q (v,s,K) quad #isaconst("compiled_at") (B);
+          #isaconst("control_at") _B ("skip"_i ; A, k') quad
+          #isaconst("control_at") _B ("call"_i (italic("dst"),q,italic("es")) ; A, u),
+        )
+      ),
+      ((c ; "restore"_i) ; A, s, F dot.op [(s_c,italic("dst"))])
+      approx_p (v,s,K dot.op [(k',italic("dst"),s_c)])
+    )
+  $
+  $
+    sans("Returning") quad frac(
+      display(
+        mat(
+          delim: #none,
+          #isaconst("pop_ready") (w) quad #isaconst("pop_ann") (w)="Some"(i) quad #isaconst("compiled_at") (B);
+          #isaconst("control_at") _B ("skip"_i ; A, k') quad
+          #isaconst("control_at") _B ("call"_i (italic("dst"),q,italic("es")) ; A, u),
+        )
+      ),
+      (w ; A, s, [(s_c,italic("dst"))])
+      approx_p (#ctor("FunctionResult") thin q, s, [(k',italic("dst"),s_c)])
+    )
+  $
 ]
 
-#{
-  show raw.where(block: true): set text(size: 6.2pt)
-  thy("csim")
-}
+Each rule relates one activation at a time. $sans("Base")$ covers an execution
+without suspended callers, where both stacks are empty. $sans("Nested")$ wraps
+one suspended caller around an activation that is already related. In the
+source, the caller's remaining work $A$ follows the restoration marker. In the
+graph, it starts at the continuation node $k'$ of the new frame. The premise
+about the call locates the call $"call"_i (italic("dst"),q,italic("es"))$ in
+the caller. The inner activation therefore runs the body of the procedure $q$
+it names. Because each rule adds the caller outside the activations related so
+far, the new frame is appended at the end of both stacks. $sans("Returning")$
+covers the moment after a callee finishes. The graph is already at the
+callee's result node, while the source command $w$ is ready to pop its frame.
+The marker it pops carries the annotation $i$ of the call.
 
-The relation has three rules. Each rule relates one activation at a time.
-Its residual command must be what remains of a procedure body, and the graph
-node must be where the compiler placed that residual
-(#isaconst("control_at"), #isaconst("compiled_at")). $sans("Base")$ covers an
-execution without suspended callers, where both stacks are empty. $sans("Nested")$
-adds one suspended caller to both sides. In the source, the caller's remaining
-work follows the #ctor("Restore") marker in the residual command. In the graph,
-it lies at the continuation node of the new frame. A further premise locates
-the call that suspended the caller, so that the inner activation runs the body
-of the procedure this call names. $sans("Returning")$ covers the moment after a
-callee finishes. The graph is already at the callee's result node, while the
-source still has to reach the #ctor("Restore") marker (#isaconst("pop_ready")).
+The relation is useful only if every source step preserves it. Suppose a
+source configuration $kappa$ and a graph configuration $lambda$ are related,
+and the source steps to $kappa'$. The graph must then reach some $lambda'$
+related to $kappa'$, which therefore holds the same store. The graph may need zero, one, or several
+steps per source step.
 
-The relation is useful only if it still holds after every step of the source
-execution. Suppose the source is about to run `x = x + 1;` and the relation places it
-at node $v$. The source executes the assignment and continues with the rest of
-its command. The graph follows the assignment edge out of $v$ to the node where
-the compiler placed that rest, and both now hold the same new store. When the
-source only unfolds a loop into a conditional, the graph takes no step at all.
-The following theorem states that the graph can always follow in this way.
-
-#block(breakable: false)[
-  #theorem(name: [One step is matched], isa: "csim_step")[
-    If a source configuration and a graph configuration are related by
-    #isaconst("csim") and the source takes one step, the graph takes zero or more
-    steps to a configuration related to the new source configuration.
+#block(breakable: false, width: 100%)[
+  #theorem(name: [Graph executions simulate source steps], isa: "csim_step")[
+    Assume that the body of every declared procedure is compiled into $g$
+    (#isaconst("procs_embedded")), and that the command of $kappa$ returns only
+    inside an activation that a call opened (#isaconst("return_safe")). If
+    $kappa approx_p lambda$ and $kappa ->_p kappa'$, then
+    $ exists lambda'. lambda ->_c^* lambda' and kappa' approx_p lambda'. $
   ]
-
-  #proved("csim_step")
 ]
 
-The theorem has two premises beyond the related pair and the source step.
-#isaconst("procs_embedded") $Pi$ $g$ says that the body of every declared
-procedure lies in $g$ with its entry and return edges. #isaconst("return_safe")
-$c$ says that the residual command returns only inside an activation that a
-call opened, the runtime form of the rule that `main` contains no
-#keyw("return") (@sec:pstep). Both premises hold for every well-formed program
-(#isathm("procs_embedded_compile_prog"),
-#isathm("wf_compile_input_return_safe")), and every source step preserves the
-second (#isathm("return_safe_pstep")). By induction on the run,
-#isathm("csim_star") extends the theorem to finite source executions, as in
-CompCert's simulation diagrams @leroy09[§4.3].
+The proof distinguishes the kind of source step. A local step, such as
+`x = x + 1;`, is matched by the edge the compiler emitted for it, and a step
+that only rearranges the command, such as unfolding a loop, by no graph step at
+all. A call is matched by the call edge and the callee's entry edge, after which
+$sans("Nested")$ relates the callee's body to the graph inside the callee. A
+#keyw("return") is matched by the edge to the callee's result node, where
+$sans("Returning")$ holds while the source discards the rest of the body. The
+final pop of the source frame is matched by the graph's return step to the
+continuation.
 
-The initial source configuration is related to the node after the
-#isaconst("EA_Body") edge of `main` (#isathm("compile_prog_main_base")).
-Every finite source execution of a well-formed program is therefore matched by a
-graph execution from the entry that reaches corresponding nodes with the same store. This matching gives the first inclusion of the soundness chain of
-@fig:intro-nest.
+Both premises hold for every well-formed program, and every source step
+preserves the second, so induction extends the theorem to finite source
+executions (#isathm("csim_star")), as in CompCert's simulation diagrams
+@leroy09[§4.3]. The initial source configuration is related to the start of
+`main`'s body (#isathm("compile_prog_main_base")). Every finite source
+execution of a well-formed program is therefore matched by a graph execution
+from the entry that holds the same store at corresponding nodes. This matching
+gives the first inclusion of the soundness chain of @fig:intro-nest.
 
 === Source configurations at graph nodes #thy-badge("Voblint_Compile", "Elaborated_Compilation") <sec:at-node>
 
@@ -789,22 +904,39 @@ at different places. In `if (b) { x = 1; } else { x = 1; }`, the residual
 the run.
 
 Every command therefore carries an annotation (@sec:vimp). A parsed program
-leaves it empty, and the proof fills it in. The program's _annotated copy_
-(#isaconst("elab_pt")) annotates each statement with the nodes the compiler
-emits for it. The annotated copy compiles to the same graph
-(#isathm("compile_prog_elab_pt")), and on it,
-#isaconst("point", thy: "Elaborated_Compilation") takes the related node from
-the residual's annotation (#isathm("csim_point_compile_prog")). Every source execution of a
-well-formed program is the _erasure_ (#isaconst("erase")) of a run of its
-annotated copy (#isathm("psteps_lift")), so the annotated run determines the node.
+leaves it empty, and the proof fills it in. The _annotated copy_ $E$ of a
+program labels each statement with the node the compiler emits for it. For a
+well-formed program (#isaconst("wf_compile_input")), $E$ compiles to the same
+graph as the program
+(#isathm("compile_prog_elab_pt")). For an annotated command $c$, let
+$"point"(c)$ be the node in its annotation. Whenever the simulation
+relates an annotated configuration with command $c$ to a node $v$, then
+$v = "point"(c)$ (#isathm("csim_point_compile_prog")). The annotation thus
+records which occurrence of a command a run is executing. We write
+$"erase"(c)$ for $c$ with its annotations removed. Every run of a well-formed program lifts
+to a run of $E$ whose commands erase to the program's commands
+(#isathm("psteps_lift")).
 
-#definition(name: [Observed at a node], isa: "at_node", cmd: "fun")[
-  A configuration $(r, s, "frs")$ is _observed_ at $v$, written
-  $p, s_0 tack.r (r, s, "frs") gt.closed v$, if a run of the annotated copy of
-  $p$ from $s_0$ reaches an annotated configuration that erases to it, names
-  $v$, and is related to $v$ by the simulation. A configuration reachable
-  along two paths can be observed at two nodes.
+#definition(name: [Graph nodes of a source configuration], isa: "at_node", cmd: "fun")[
+  Let $E$ be the annotated copy of a program $p$ and $s_0$ an initial store. A
+  source configuration $(r,s,F)$ of $p$ is _observed_ at node $v$, written
+  $p, s_0 tack.r (r,s,F) gt.closed v$, if some annotated command $c$ and graph
+  stack $K$ satisfy
+  $
+    "erase"(c) = r, quad "point"(c) = v, \
+    (#isaconst("main_body") thin E, s_0, []) ->_p^* (c,s,F) "in" E, quad
+    (c,s,F) approx_(#raw("main")) (v,s,K).
+  $
 ]
+
+The run of $E$ supplies the occurrence that the plain configuration lacks. In
+the example above, a run through the then-branch reaches `x = 1` annotated
+with the then-branch node, so the configuration is observed there and not at
+the else-branch node. The relation is still not a function. If two runs
+from $s_0$ reach the same plain configuration through different occurrences,
+the configuration is observed at both nodes. @ch:results states the
+end-to-end theorem for every node at which a reached configuration is observed,
+and shows that there is at least one.
 
 == Comparison of VIMP with C <sec:vimp-vs-c>
 
@@ -813,7 +945,7 @@ Every source-level guarantee in this thesis is stated over the executions of
 its adequacy, therefore lies outside the proof (@ch:intro). This section
 argues adequacy by comparing VIMP with C11 @iso-c11 (committee draft N1570).
 @tab:vimp-vs-c lists the constructs that both languages have but model
-differently. The comparison
+differently. The paragraphs after it name those they model alike. The comparison
 is not complete, so C may differ from VIMP in further places.
 
 #figure(
@@ -871,7 +1003,28 @@ model C's indeterminate values, some reads of which are undefined
 prune executions, so the verdict for one check does not depend on an earlier
 one.
 
-*A fragment of Goblint's input.* Goblint analyzes C after its CIL front end
+*Calls and storage.* A VIMP call evaluates its arguments in the caller's
+store and assigns each value to the corresponding parameter, as in C
+(#c11("6.5.2.2p4")). C requires the number of arguments to match the number of
+parameters when a prototype is visible (#c11("6.5.2.2p2")), and the source
+contract of @sec:vimp requires the same of every call. Both languages permit
+recursion (#c11("6.5.2.2p11")). In C, each recursive activation has its own
+instance of every automatic object (#c11("6.2.4p6")). In VIMP, the frame saves
+the caller's locals and the callee starts with its own, so no activation can
+change the locals of another. Globals correspond to C's objects of static
+storage duration, which keep their stored value for the entire execution
+(#c11("6.2.4p3")). A callee therefore reads the globals its caller wrote, and
+after the return the caller reads the globals the callee wrote.
+
+In C, reaching the closing brace of a function whose value the caller uses is
+undefined (#c11("6.9.1p12")). The source contract rejects such programs,
+since a call that stores a result must name a value-providing callee. A
+#keyw("return") with a value hands that value to the caller, as in C
+(#c11("6.8.6.4p3")). C leaves the evaluation of subexpressions unsequenced
+(#c11("6.5p3")). For VIMP programs the order has no effect, because
+expressions have no side effects and calls are statements.
+
+*VIMP as a fragment of Goblint's input.* Goblint analyzes C after its CIL front end
 @necula02 has normalized it, so that expressions have no side effects and a
 call is a separate instruction with an optional destination
 (#link("https://github.com/goblint/cil/blob/d97418f2e8d2aa88a36c22397c38ccf4d3ffbcde/src/cil.mli")[`cil.mli`]
@@ -880,13 +1033,29 @@ of Goblint's CFG, except inline assembly and in-place declarations, has a VIMP
 counterpart
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/framework/edge.ml")[`edge.ml`]).
 
-*No second semantics.* No external semantics cross-checks #isaconst("pstep"),
+*Differences from Goblint.* Goblint's integer domains carry the C integer kind
+of each value. They wrap unsigned values, and signed values only when the
+option `sem.int.signed_overflow` requests it
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/intDomain0.ml#L67")[`intDomain0.ml`]).
+VIMP integers are unbounded, so no Voblint theorem covers a wrapping integer.
+A Goblint call edge carries the callee as an expression, which the analysis
+resolves from the abstract state
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L294")[`constraints.ml`]).
+VIMP has no indirect calls, so every call edge names its callee. Goblint
+dispatches library functions during the analysis through an open table of
+known functions
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml")[`libraryFunctions.ml`]).
+VIMP fixes its three library calls and compiles them into local edges.
+Goblint's `__goblint_check`, like a VIMP check, tests its condition without
+refining the abstract state
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml#L872")[`libraryFunctions.ml`]).
+Goblint analyzes every program that CIL produces, whereas Voblint's theorems
+assume the source contract. Some of its conditions exclude programs that C
+defines, such as a `main` with an explicit #keyw("return").
+
+*No cross-check against another semantics.* No external semantics cross-checks #isaconst("pstep"),
 such as the Simpl programs that the C parser of AutoCorres2
 @brecknell24autocorres2 produces @schirmer08simpl or CompCert's Clight
 @leroy09. Relating VIMP to them would need a translation with its own adequacy
-argument.
-
-VIMP supplies the features needed to study this analyzer architecture:
-procedures, recursion, locals, globals, and calls with results. A C front end
-could reuse the framework through a verified translation, with a preservation
-argument for each additional feature.
+argument. A C front end would need such a translation as well, with a
+preservation argument for each feature that VIMP lacks.

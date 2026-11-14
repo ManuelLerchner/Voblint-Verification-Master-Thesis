@@ -5,8 +5,7 @@
 
 = Repository and Tooling <sec:voblint-repo>
 
-The theories, the exported analyzer, the project site, and this thesis quote
-one another. The analyzer is exported from the theories, the thesis cites
+The analyzer is exported from the theories, the thesis cites
 their names and statements, and both the site and the thesis quote the
 analyzer's output. Every change to the theories can therefore make another
 part stale, and keeping them consistent is engineering work outside the proof.
@@ -176,8 +175,8 @@ so a stale analyzer is noticed before it reaches the continuous integration.
   },
   kind: image,
   placement: auto,
-  caption: [The sources of the repository (blue) and the files derived from
-    them. Each box links to its file. Each derived file is generated during the build or committed with a
+  caption: [The sources of the repository (left column, shaded) and the files
+    derived from them. Each box links to its file. Each derived file is generated during the build or committed with a
     check that regenerates it. The link map is also checked against the
     published site.],
 ) <fig:pipeline>
@@ -192,7 +191,7 @@ a changed statement, or a changed result therefore fails the build instead of
 reaching the reader.
 
 #pagebreak(weak: true)
-== Maintaining the formalization: `isar-tools` <sec:isar-tools>
+== Formalization maintenance with `isar-tools` <sec:isar-tools>
 
 Isabelle checks that every proof goes through, but a successful build says
 little about how well a development is maintained. The build stays green with a lemma no proof cites, an import that another import already brings in, a constant written out next to the notation the project gave it, or a locale assumption no proof uses. Documentation that quotes formal statements or
@@ -216,13 +215,12 @@ about fifty checks in groups. Checks for unfinished proofs and unreached
 theories run by default, and checks for unused or duplicated lemmas, unused
 locale assumptions, or terms written out next to their notation run when
 named. This repository runs the default groups and several named ones, among
-them documentation coverage and the locale check below. `isar project`, the
-part that matters most for this thesis, exposes sessions, theories, and
+them documentation coverage and the locale check below. `isar project`, which
+this thesis uses most, exposes sessions, theories, and
 declarations to other tools. `isar project extract` keeps the quoted theorem
 statements in sync with their sources, `isar project notation` generates the
 notation tables of the thesis and the explainer, and `isar project anchors`
-resolves the links into the rendered theories. A change that would leave the
-thesis inconsistent with the formalization therefore fails the build.
+resolves the links into the rendered theories.
 
 Some findings concern mistakes that Isabelle accepts. Inside a locale header,
 Isabelle reads an unknown identifier as a free variable and generalizes it. An
@@ -253,8 +251,11 @@ A test reruns the check on this
 approximates Isabelle's inner syntax lexically, so its report is a warning to
 inspect and does not prove an error.
 
-A second kind of finding concerns build time. A session inherits the heaps of
-its parent sessions, but a library theory outside that ancestry is processed again in every session that imports it. `isar stats build` reads the time each
+A second kind of finding concerns build time. Isabelle saves a built session's
+prover state in a _heap image_, which its descendants reuse
+(#link("https://isabelle.in.tum.de/library/Doc/System/Sessions.html")[system manual]).
+A library theory outside that ancestry is processed again in every session
+that imports it. `isar stats build` reads the time each
 theory took from a verbose build log and reports such repetitions, and
 continuous integration enforces a budget per library session. In this
 repository, repeated processing once took 19% of a clean build.
