@@ -21,6 +21,25 @@ mkdir -p "$WORK" "$(dirname "$OUT")"
 # The working tree, generated data included, so the copy builds like thesis/.
 rsync -a --exclude '*.pdf' thesis/ "$WORK/"
 
+# Struck-out text still cites the entities it named at the base, so the copy
+# resolves links from both revisions, the current one winning.
+links=shared/generated/links.json
+if git show "$BASE:thesis/$links" > "$WORK/$links.base" 2> /dev/null; then
+  python3 - "$WORK/$links.base" "$WORK/$links" << 'EOF'
+import json, sys
+base_path, head_path = sys.argv[1:]
+with open(base_path) as f:
+    base = json.load(f)
+with open(head_path) as f:
+    head = json.load(f)
+for key in ("links", "names"):
+    head[key] = {**base.get(key, {}), **head.get(key, {})}
+with open(head_path, "w") as f:
+    json.dump(head, f)
+EOF
+  rm -f "$WORK/$links.base"
+fi
+
 count=0
 while IFS= read -r file; do
   rel="${file#thesis/}"
