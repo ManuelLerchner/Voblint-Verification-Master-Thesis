@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Voblint_Analysis_Interval.Interval_Sound</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Voblint_Analysis_Interval.Interval_Sound</h1>
+</div>
+
+<pre class="source"><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Voblint_Analysis_Interval.Interval_Sound.html"><span>Interval_Sound</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span>
+    </span><a href="Voblint_Analysis_Interval.Interval_Exec.html"><span>Interval_Exec</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>section</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹What the initial abstract state describes›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  Interval's specification and its soundness are not restated here:
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>ivl_tf.spec_exec›</span></span></span><span> is sound against </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>λd g. γ (ρ<span class="hidden">⇘</span><sub>𝒢</sub><span class="hidden">⇙</span> d)›</span></span></span><span> by
+  </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>ivl_tf.sound_exec›</span></span></span><span> and </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>ivl_tf.entry_cover_exec›</span></span></span><span>, which every non-relational
+  bundle gets from </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">locale</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="../Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops|locale"><span>sound_nonrelational_ops</span></a><span>›</span></span><span>.
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹
+  The initial-state contract, owned here rather than reproved at each of the four
+  assembly instances: every concrete store a run may start in is described by
+  </span><span class="antiquoted"><span class="operator"><span><span class="hidden">\&lt;^</span><span class="control">const</span><span class="hidden">&gt;</span></span></span><span>‹</span><a class="entity_ref" href="Voblint_Analysis_Interval.Interval_Exec.html#Interval_Exec.cinit_ivl_st|const"><span class="const"><span>cinit_ivl_st</span></span></a><span>›</span></span><span>. A declared global starts at zero, which the singleton
+  interval describes exactly; a local starts unconstrained, which the unbounded
+  interval describes trivially. The solver discipline does not enter into it, which
+  is why one lemma serves all four.
+›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>lemma</span></span></span><span> </span><span class="entity_def" id="Interval_Sound.interval_cinit_gamma|fact"><span class="entity_def" id="Interval_Sound.interval_cinit_gamma|thm"><span>interval_cinit_gamma</span></span></span><span class="main"><span>:</span></span><span>
+  </span><span class="quoted"><span class="quoted"><span>"</span><a class="entity_ref" href="../Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.cinit_stores|const"><span class="const"><span>cinit_stores</span></span></a><span> </span><span class="free"><span>𝒢</span></span><span> </span><span class="main"><a class="entity_ref" href="../../HOL/HOL/Set.html#Set.subset_eq|const"><span>⊆</span></a></span><span> </span><a class="entity_ref" href="../Voblint_Exec/Default_St_Transfer.html#Default_St_Transfer.default_st_gamma|const"><span class="const"><span>default_st_gamma</span></span></a><span> </span><span class="free"><span>𝒢</span></span><span> </span><a class="entity_ref" href="Voblint_Analysis_Interval.Interval_Exec.html#Interval_Exec.cinit_ivl_st|const"><span class="const"><span>cinit_ivl_st</span></span></a><span>"</span></span></span><span>
+  </span><span class="keyword1"><span class="command"><span>by</span></span></span><span> </span><span class="main"><span>(</span></span><a class="entity_ref" href="../../HOL/HOL/ISABELLE_HOME/src/Provers/clasimp.ML.html#HOL.auto|method"><span class="operator"><span>auto</span></span></a><span> </span><span class="quasi_keyword"><span>simp</span></span><span class="main"><span class="main"><span>:</span></span></span><span> </span><a class="entity_ref" href="../Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.cinit_stores_def|fact"><span>cinit_stores_def</span></a><span> </span><a class="entity_ref" href="../Voblint_Framework/Voblint_Domain.Nonrelational_State.html#Nonrelational_State.gamma_state_def|fact"><span>gamma_state_def</span></a><span> </span><a class="entity_ref" href="../Voblint_Exec/Default_St_Transfer.html#Default_St_Transfer.default_st_gamma_initial|fact"><span>default_st_gamma_initial</span></a><span class="main"><span>)</span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>

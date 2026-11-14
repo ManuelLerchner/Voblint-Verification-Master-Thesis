@@ -1,0 +1,214 @@
+/* One node's equation, built edge by edge */
+
+:where(.scene-gen) .gen-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.5fr) minmax(0, 1.5fr);
+  gap: 16px;
+}
+
+:where(.scene-gen) .gen-panel {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+/* Capped like every other figure's graph: the generic `.scene svg` cap is 1000px,
+   which for a 210-unit viewBox is a fivefold blow-up on a phone, where the panel
+   also has the column to itself. */
+:where(.scene-gen) .gen-cfg svg {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  margin-inline: auto;
+}
+
+/* An edge this step is not about stays legible but recedes. */
+:where(.scene-gen) .gen-edge line,
+:where(.scene-gen) .gen-edge path {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  transition:
+    stroke 200ms ease,
+    stroke-width 200ms ease;
+}
+
+:where(.scene-gen) .gen-edge text {
+  fill: var(--text-muted);
+  font: 0.52rem var(--mono);
+  transition: fill 200ms ease;
+}
+
+/* The head is a separate marker rather than the same one recoloured: a marker
+   does not inherit the stroke of the edge that placed it. */
+:where(.scene-gen) .gen-arrow-hl {
+  fill: var(--accent);
+}
+
+:where(.scene-gen) .gen-edge.is-hl line,
+:where(.scene-gen) .gen-edge.is-hl path {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  marker-end: url("#gen-arrow-hl");
+}
+
+:where(.scene-gen) .gen-edge.is-hl text {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+:where(.scene-gen) .gen-node circle {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+/* The node whose equation the panel is showing. */
+:where(.scene-gen) .gen-node {
+  cursor: pointer;
+}
+
+:where(.scene-gen) .gen-node circle {
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease;
+}
+
+:where(.scene-gen) .gen-node.is-hl circle {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+:where(.scene-gen) .gen-node:focus-visible {
+  outline: none;
+}
+
+:where(.scene-gen) .gen-node:focus-visible circle {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+:where(.scene-gen) .gen-node text {
+  fill: var(--text);
+  font: 700 0.6rem var(--mono);
+  text-anchor: middle;
+}
+
+/* One cell for every derivation: the panel is as tall as the tallest, so
+   switching between them cannot move the graph the cursor is hovering. */
+:where(.scene-gen) .gen-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+:where(.scene-gen) .gen-stack .gen-build {
+  grid-column: 1;
+  grid-row: 2;
+  visibility: hidden;
+}
+
+:where(.scene-gen) .gen-stack .gen-build.is-shown {
+  visibility: visible;
+}
+
+:where(.scene-gen) .gen-code {
+  margin: 4px 0 0;
+  overflow-x: auto;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+:where(.scene-gen) .gen-hint {
+  margin: 10px 0 0;
+  color: var(--text-faint);
+  font-size: 0.78rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* The derivation: numbered steps, with the per-edge contributions nested under
+   the step that makes them, so the indentation is the containment. */
+:where(.scene-gen) .gen-head {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+:where(.scene-gen) .gen-head small {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+:where(.scene-gen) .gen-list,
+:where(.scene-gen) .gen-list ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+:where(.scene-gen) .gen-list > li {
+  margin-bottom: 10px;
+}
+
+:where(.scene-gen) .gen-list ul {
+  margin-top: 6px;
+  padding-left: 14px;
+  list-style: none;
+}
+
+:where(.scene-gen) .gen-list ul > li {
+  margin-bottom: 6px;
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+}
+
+:where(.scene-gen) .gen-tag {
+  font: 700 0.74rem var(--mono);
+  color: var(--accent);
+}
+
+:where(.scene-gen) .gen-act {
+  margin-left: 6px;
+  font: 0.74rem var(--mono);
+}
+
+@media (max-width: 860px) {
+  :where(.scene-gen) .gen-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A second graph, whose nodes carry names rather than single letters. */
+:where(.scene-gen) .gen-node rect {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease;
+}
+
+:where(.scene-gen) .gen-node.is-hl rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+:where(.scene-gen) .gen-node:focus-visible rect {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+:where(.scene-gen) .gen-node rect + text {
+  font-size: 0.52rem;
+}
+
+:where(.scene-gen, .scene-walk, .scene-ctxkey) .gen-cluster {
+  fill: var(--text-faint);
+  font: 700 0.56rem var(--mono);
+  letter-spacing: 0.06em;
+}

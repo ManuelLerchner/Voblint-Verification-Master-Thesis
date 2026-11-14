@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory Try0_HOL</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory Try0_HOL</h1>
+</div>
+
+<pre class="source"><span class="comment1"><span>(* Title:      HOL/Try0_HOL.thy
+   Author:     Jasmin Blanchette, LMU Muenchen
+   Author:     Martin Desharnais, LMU Muenchen
+   Author:     Fabian Huch, TU Muenchen
+*)</span></span><span>
+</span><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="Try0_HOL.html"><span>Try0_HOL</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span> </span><a href="Try0.html"><span>Try0</span></a><span> </span><a href="Presburger.html"><span>Presburger</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>ML</span></span></span><span> </span><span class="quoted"><span>‹
+</span><span class="keyword1"><span class="keyword"><span>signature</span></span></span><span> </span><span class="entity"><span>TRY0_HOL</span></span><span> </span><span class="main"><span>=</span></span><span>
+</span><span class="keyword2"><span class="keyword"><span>sig</span></span></span><span>
+  </span><span class="keyword1"><span class="keyword"><span>val</span></span></span><span> silence_methods </span><span class="main"><span>:</span></span><span> </span><span class="entity"><span>Proof.context</span></span><span> </span><span class="main"><span>-&gt;</span></span><span> </span><span class="entity"><span>Proof.context</span></span><span>
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+
+</span><span class="keyword1"><span class="keyword"><span>structure</span></span></span><span> </span><span class="entity"><span>Try0_HOL</span></span><span> </span><span class="main"><span>:</span></span><span> </span><span class="entity"><span>TRY0_HOL</span></span><span> </span><span class="main"><span>=</span></span><span> </span><span class="keyword2"><span class="keyword"><span>struct</span></span></span><span>
+
+</span><span class="comment1"><span>(* Makes reconstructor tools as silent as possible. The "set_visible" calls suppresses "Unification
+   bound exceeded" warnings and the like. *)</span></span><span>
+</span><span class="keyword1"><span class="keyword"><span>fun</span></span></span><span> </span><span class="entity"><span>silence_methods</span></span><span> </span><span class="entity"><span>ctxt</span></span><span> </span><span class="main"><span>=</span></span><span>
+  </span><span class="entity"><span>ctxt</span></span><span>
+  </span><span>|&gt;</span><span> </span><span>Config.put</span><span> </span><span class="entity"><span>Metis_Tactic.verbose</span></span><span> </span><span>false</span><span>
+  </span><span>|&gt;</span><span> </span><span class="entity"><span>Simplifier_Trace.disable</span></span><span>
+  </span><span>|&gt;</span><span> </span><span>Context_Position.set_visible</span><span> </span><span>false</span><span>
+  </span><span>|&gt;</span><span> </span><span>Config.put</span><span> </span><span>Unify.unify_trace</span><span> </span><span>false</span><span>
+  </span><span>|&gt;</span><span> </span><span>Config.put</span><span> </span><span class="entity"><span>Argo_Tactic.trace</span></span><span> </span><span class="inner_quoted"><span>"none"</span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>local</span></span></span><span>
+
+</span><span class="keyword3"><span class="keyword"><span>open</span></span></span><span> </span><span>Try0_Util</span><span>
+
+</span><span class="comment1"><span>(* name * (run_if_auto_try * (all_goals * tags)) *)</span></span><span>
+</span><span class="keyword1"><span class="keyword"><span>val</span></span></span><span> </span><span class="entity"><span>raw_named_methods</span></span><span> </span><span class="main"><span>=</span></span><span>
+  </span><span class="main"><span>[</span></span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"auto"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>full_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"blast"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>clas_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"metis"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>metis_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"argo"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>no_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"linarith"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>no_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"presburger"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>no_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"algebra"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>no_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"fast"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>clas_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"fastforce"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>full_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"force"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>full_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"meson"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>metis_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"satx"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>no_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>,</span></span><span>
+   </span><span class="main"><span>(</span></span><span class="inner_quoted"><span>"order"</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>true</span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span>false</span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>no_attrs</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>]</span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>in</span></span></span><span>
+
+</span><span class="keyword1"><span class="keyword"><span>val</span></span></span><span> </span><span class="main"><span>(</span></span><span class="main"><span>)</span></span><span> </span><span class="main"><span>=</span></span><span> </span><span class="entity"><span>raw_named_methods</span></span><span>
+  </span><span>|&gt;</span><span> </span><span>List.app</span><span> </span><span class="main"><span>(</span></span><span class="keyword1"><span class="keyword"><span>fn</span></span></span><span> </span><span class="main"><span>(</span></span><span class="entity"><span>name</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span class="entity"><span>run_if_auto_try</span></span><span class="main"><span>,</span></span><span> </span><span class="main"><span>(</span></span><span class="entity"><span>all_goals</span></span><span class="main"><span>,</span></span><span> </span><span class="entity"><span>tags</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span class="main"><span>)</span></span><span> </span><span class="main"><span>=&gt;</span></span><span>
+    </span><span class="keyword2"><span class="keyword"><span>let</span></span></span><span>
+      </span><span class="keyword1"><span class="keyword"><span>val</span></span></span><span> </span><span class="entity"><span>meth</span></span><span> </span><span class="main"><span>:</span></span><span> </span><span class="entity"><span>Try0.proof_method</span></span><span> </span><span class="main"><span>=</span></span><span>
+        </span><span class="entity"><span>Try0_Util.apply_raw_named_method</span></span><span> </span><span class="entity"><span>name</span></span><span> </span><span class="entity"><span>all_goals</span></span><span> </span><span class="entity"><span>tags</span></span><span> </span><span class="entity"><span>silence_methods</span></span><span>
+    </span><span class="keyword2"><span class="keyword"><span>in</span></span></span><span>
+      </span><span class="entity"><span>Try0.register_proof_method</span></span><span> </span><span class="entity"><span>name</span></span><span> </span><span class="main"><span>{</span></span><span>run_if_auto_try </span><span class="main"><span>=</span></span><span> </span><span class="entity"><span>run_if_auto_try</span></span><span class="main"><span>}</span></span><span> </span><span class="entity"><span>meth</span></span><span>
+      </span><span class="keyword3"><span class="keyword"><span>handle</span></span></span><span> </span><span>Symtab.DUP</span><span> </span><span class="main"><span>_</span></span><span> </span><span class="main"><span>=&gt;</span></span><span> </span><span class="main"><span>(</span></span><span class="main"><span>)</span></span><span>
+    </span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span class="main"><span>)</span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+›</span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>declare</span></span></span><span> </span><span class="main"><span>[</span></span><span class="main"><span>[</span></span><a class="entity_ref" href="ISABELLE_HOME/src/HOL/Tools/try0.ML.html#Try0.try0_schedule|attribute"><span class="operator"><span>try0_schedule</span></span></a><span> </span><span class="main"><span class="main"><span>=</span></span></span><span> </span><span class="quoted"><span>"
+  satx metis
+  order presburger linarith algebra argo
+  simp auto blast fast fastforce force meson
+"</span></span><span class="main"><span>]</span></span><span class="main"><span>]</span></span><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span></pre>
+</body>
+
+</html>

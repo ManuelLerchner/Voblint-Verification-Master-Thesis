@@ -1,0 +1,7 @@
+# Voblint. Everything here is public; the site root also carries the generated
+# Isabelle theory pages, which are worth indexing because the explainer and the
+# thesis deep-link into them.
+User-agent: *
+Allow: /
+
+Sitemap: https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/sitemap.xml

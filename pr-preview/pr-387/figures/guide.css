@@ -1,0 +1,71 @@
+/* Which Globals setting should you pick? */
+
+:where(.scene-guide) .guide-table {
+  min-width: 760px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-guide) .guide-table th[scope="row"] {
+  color: var(--text-muted);
+  background: var(--surface);
+  font-size: 0.84rem;
+  font-weight: 400;
+}
+
+:where(.scene-guide) .guide-table .guide-name {
+  display: block;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+:where(.scene-guide) .guide-table td {
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+:where(.scene-guide) .guide-table td code {
+  margin-left: 4px;
+  background: transparent;
+  font-weight: 600;
+}
+
+:where(.scene-guide) .guide-table td.ok {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+:where(.scene-guide) .guide-table td.meh {
+  color: var(--warning);
+  background: rgb(240 198 116 / 0.18);
+}
+
+:where(.scene-guide) .guide-table td.bad {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+:where(.scene-guide) .guide-table td {
+  padding: 0;
+}
+
+:where(.scene-guide) .cell-link {
+  display: block;
+  padding: 14px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+
+:where(.scene-guide) .cell-link:hover,
+:where(.scene-guide) .cell-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+:where(.scene-guide) .guide-table td code {
+  padding: 0;
+  border: 0;
+}

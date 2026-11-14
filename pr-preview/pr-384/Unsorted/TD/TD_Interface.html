@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><link rel="stylesheet" type="text/css" href="isabelle.css"/>
+<title>Theory TD_Interface</title>
+</head>
+
+
+<body>
+<div class="head">
+<h1>Theory TD_Interface</h1>
+</div>
+
+<pre class="source"><span class="keyword1"><span class="command"><span>theory</span></span></span><span> </span><a href="TD_Interface.html"><span>TD_Interface</span></a><span>
+  </span><span class="keyword2"><span class="keyword"><span>imports</span></span></span><span>
+    </span><a href="TD0.html"><span>TD0</span></a><span>
+    </span><a href="TD_plain.html"><span>TD_plain</span></a><span>
+    </span><a href="TD_plain_s.html"><span>TD_plain_s</span></a><span>
+    </span><a href="TD_plain_s_warrow.html"><span>TD_plain_s_warrow</span></a><span>
+    </span><a href="TD_plain_widen.html"><span>TD_plain_widen</span></a><span>
+    </span><a href="TD.html"><span>TD</span></a><span>
+    </span><a href="TD_widen.html"><span>TD_widen</span></a><span>
+    </span><a href="TD_warrow.html"><span>TD_warrow</span></a><span>
+    </span><a href="TD_wn_phases.html"><span>TD_wn_phases</span></a><span>
+    </span><a href="TD_wn_post.html"><span>TD_wn_post</span></a><span>
+    </span><a href="TD_wn_wo_opt.html"><span>TD_wn_wo_opt</span></a><span>
+    </span><a href="TD_wn_post_wo_opt.html"><span>TD_wn_post_wo_opt</span></a><span>
+    </span><a href="Worklist.html"><span>Worklist</span></a><span>
+</span><span class="keyword2"><span class="keyword"><span>begin</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>text</span></span></span><span> </span><span class="quoted"><span class="plain_text"><span>‹Entry point for theories building on the solvers without side effects;
+  </span><span class="antiquoted"><span class="operator"><span>🗏</span></span><a href="TD_side_Interface.html"><span>‹TD_side_Interface.thy›</span></a></span><span> is the counterpart for the side-effecting ones. Record fields
+  are global constants, so a field named like a common variable would capture every
+  downstream variable of that name. The fields below keep their paper names inside this
+  session; importing this theory hides the short names, and the qualified names
+  (e.g.\ </span><span class="antiquoted"><span class="raw_text"><span class="operator"><span>‹</span></span><span>TD_plain.state.σ›</span></span></span><span>) remain.›</span></span></span><span>
+
+</span><span class="keyword1"><span class="command"><span>hide_const</span></span></span><span> </span><span class="main"><span>(</span></span><span class="keyword2"><span class="keyword"><span>open</span></span></span><span class="main"><span>)</span></span><span>
+  </span><a class="entity_ref" href="TD_plain.html#TD_plain.state.\&lt;sigma&gt;|const"><span class="const"><span>TD_plain.state.σ</span></span></a><span> </span><a class="entity_ref" href="TD_plain.html#TD_plain.state.\&lt;sigma&gt;_update|const"><span class="const"><span>TD_plain.state.σ_update</span></span></a><span>
+  </span><a class="entity_ref" href="TD_wn_phases.html#TD_wn_phases.state.point|const"><span class="const"><span>TD_wn_phases.state.point</span></span></a><span> </span><a class="entity_ref" href="TD_wn_phases.html#TD_wn_phases.state.point_update|const"><span class="const"><span>TD_wn_phases.state.point_update</span></span></a><span>
+  </span><a class="entity_ref" href="TD_warrow.html#TD_warrow.post_state.post|const"><span class="const"><span>TD_warrow.post_state.post</span></span></a><span> </span><a class="entity_ref" href="TD_warrow.html#TD_warrow.post_state.post_update|const"><span class="const"><span>TD_warrow.post_state.post_update</span></span></a><span>
+  </span><a class="entity_ref" href="Worklist.html#Worklist.W|const"><span class="const"><span>Worklist.W</span></span></a><span>
+
+</span><span class="keyword2"><span class="keyword"><span>end</span></span></span><span>
+</span></pre>
+</body>
+
+</html>
