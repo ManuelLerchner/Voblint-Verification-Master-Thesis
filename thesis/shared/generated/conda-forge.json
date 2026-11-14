@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-25",
+  "date": "2026-11-14",
   "platforms": [
     "osx-arm64",
     "osx-64",
@@ -61,7 +61,7 @@
       ],
       "via": null,
       "available": true,
-      "newest": "3.24.2",
+      "newest": "3.25.0",
       "missing": []
     },
     "ocaml-findlib": {
