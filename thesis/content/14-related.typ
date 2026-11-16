@@ -1,6 +1,6 @@
 #import "../lib/code.typ": *
 #import "../lib/theme.typ": vb
-#import "../lib/math.typ": ctor
+#import "../lib/math.typ": ctor, keyw
 #import "../lib/alignment.typ": alignment
 
 
@@ -308,6 +308,36 @@ no such bound, which is one reason the termination of the solve is not proved
 
 Voblint follows Goblint's architecture and adapts the local traces of Schwarz
 et al. to activations.
+
+=== VIMP and Goblint's input <sec:rel-goblint-input>
+
+Goblint analyzes C after its CIL front end @necula02 has normalized it, so that
+expressions have no side effects and a call is a separate instruction with an
+optional destination
+(#link("https://github.com/goblint/cil/blob/d97418f2e8d2aa88a36c22397c38ccf4d3ffbcde/src/cil.mli")[`cil.mli`]
+at the revision Goblint pins). VIMP makes the same choice (@sec:vimp), and
+every edge kind of Goblint's CFG, except inline assembly and in-place
+declarations, has a VIMP counterpart
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/framework/edge.ml")[`edge.ml`]).
+Goblint's `__goblint_check`, like a VIMP check, tests its condition without
+refining the abstract state
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml#L872")[`libraryFunctions.ml`]).
+
+The two differ in integers, calls, and the programs they accept. Goblint's
+integer domains carry the C integer kind of each value. They wrap unsigned
+values, and signed values only when the option `sem.int.signed_overflow`
+requests it
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/intDomain0.ml#L67")[`intDomain0.ml`]).
+VIMP integers are unbounded, so no Voblint theorem covers a wrapping integer.
+A Goblint call edge carries the callee as an expression, which the analysis
+resolves from the abstract state
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L294")[`constraints.ml`]),
+while every VIMP call edge names its callee. Goblint dispatches library
+functions during the analysis through an open table of known functions
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml")[`libraryFunctions.ml`]),
+while VIMP fixes its three library calls and compiles them into local edges.
+Goblint analyzes every program that CIL produces. Voblint's theorems assume
+the source contract, which excludes some programs that C defines, such as a `main` with an explicit #keyw("return").
 
 === Correspondence with Goblint's architecture
 

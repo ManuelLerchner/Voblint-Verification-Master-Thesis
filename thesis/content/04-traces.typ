@@ -339,7 +339,7 @@ simulation of @sec:csim relates the execution to.
   table $Pi$ (#isaconst("wf_compile_input")), and let $s_0 in S$. If
   $(#isaconst("main_body") thin Pi, s_0, []) ->_p^* (r,s,F)$, then there are a
   node $v$ and a frame stack $K$ such that
-  $ (r,s,F) approx_(#raw("main")) (v,s,K) quad "and" quad s in cal(C)(v). $
+  $ (r,s,F) approx (v,s,K) quad "and" quad s in cal(C)(v). $
 ]
 
 The proof follows the source execution through the simulation of @sec:csim

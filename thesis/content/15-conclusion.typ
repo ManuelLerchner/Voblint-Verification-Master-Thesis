@@ -158,7 +158,8 @@ pointers, a heap, threads, machine integers, and most of Goblint's analyses
 computes with unbounded integers, a verdict about a VIMP program
 does not carry over to a C program with the same text (@sec:vimp-vs-c). The
 adequacy of #isaconst("pstep") itself is argued rather than proved. Relating VIMP to AutoCorres2 @brecknell24autocorres2, Isabelle/C
-@tuong19isabellec, CH2O @krebbers15phd, or Cerberus @memarian23phd would require
+@tuong19isabellec, CH2O @krebbers15phd, Cerberus @memarian23phd, or CompCert's
+Clight @leroy09 would require
 a verified translation for a common fragment.
 
 A second limitation concerns the evaluation of precision. No general precision or completeness theorem is proved, so the evidence for precision

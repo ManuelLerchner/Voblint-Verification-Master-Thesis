@@ -655,10 +655,10 @@ query and is closed under the local reads of its right-hand sides.
 // The counting loop of fig:counting-loop, for the playground link below.
 #let _counting-loop = "i = 0;\nwhile (i < 5) {\n  i = i + 1;\n}\n"
 
-Practical solvers avoid recomputing unchanged unknowns in every Kleene round.
-They use worklists of potentially violated inequalities
+Kleene iteration over a whole system evaluates every right-hand side in each
+round, even when its inputs have not changed. Practical solvers avoid this. They use worklists of potentially violated inequalities
 @seidl12compiler[§§1.5, 1.12], orders chosen for widening @bourdoncle93, or
-demand-driven evaluation, as RLD does @hofmann10. Voblint reuses the verified
+demand-driven evaluation @hofmann10. Voblint reuses the verified
 local TD solver of @stade24 @tilscher26.
 
 The TD solver starts from the query and evaluates right-hand sides on demand. When the
