@@ -458,7 +458,7 @@ its values, joins them where control flow merges, starts from the least value
 $lbot$, and extrapolates with the widening $widen$ and the narrowing $narrow$
 of @sec:widening. The analysis also needs a greatest value $ltop$ for unknown
 values. A domain further supplies an emptiness test, a printer, and a
-concretization $conc : A -> cal(P)(ZZ)$ with four laws. Such a type is a
+concretization $conc : A -> cal(P)(ZZ)$ with four laws. A type with these operations and laws is a
 _numeric domain_:
 
 #{

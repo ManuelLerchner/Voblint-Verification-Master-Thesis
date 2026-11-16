@@ -1,0 +1,20 @@
+# Author review: "namely" announces an apposition the sentence can state
+# directly ("needs one fact about the solver, namely that ..." -> "needs one
+# fact about the solver: that ..." or a second sentence).
+extends: existence
+message: "Avoid '%s': state the item directly or in its own sentence."
+level: error
+ignorecase: true
+tokens:
+  - namely
+
+tests:
+  - name: fires
+    input: |
+      It requires less, namely a join semilattice.
+    want: |
+      1:19:Voblint.Namely:Avoid 'namely': state the item directly or in its own sentence.
+  - name: clean
+    input: |
+      It requires only a join semilattice.
+    want: ""

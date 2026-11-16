@@ -179,7 +179,7 @@ $cal(R)_("res")(v) subset.eq cal(V)_("res")(v)$
 (#isathm("analysis_report_verdicts_sound")) for every report that
 #isaconst("run_voblint") returns (#isathm("run_voblint_consistent")).
 
-== From reached stores to verdicts <sec:chain>
+== The soundness chain at a program point <sec:chain>
 
 Let $"res"$ be a report #isaconst("run_voblint") returns for a program $p$,
 $g$ = #isaconst("prog_cfg") $p$ its compiled graph, $Pi$ =

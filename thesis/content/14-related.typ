@@ -32,7 +32,7 @@ to a bounded depth, rely on user-written contracts, or assume that a recursive
 call may change any value @blanchet03[§5.4] @eva-manual[§6.3.9]
 @mopsa-manual[Limitations] (#link("https://github.com/NASA-SW-VnV/ikos/blob/ac7f7c1738976cabc58c6a53413df6e458995c38/analyzer/README.md#analysis-assumptions")[IKOS README]). Goblint and
 Voblint, in contrast, keep one abstract state per program point and calling
-context (@sec:state-of-art), and Voblint's theorem covers recursive calls.
+context (@sec:intro-goblint), and Voblint's theorem covers recursive calls.
 
 These tools are tested against independent evidence, such as
 compiled execution, other analyzers, or the known verdicts of benchmark
@@ -65,7 +65,7 @@ seven of the analyzers had soundness issues, MOPSA among them
       [Pulse-X @le22], [C], [bug finding], [summaries], [unrolled], [pure conditions],
       [one domain], [none],
       [Goblint @saan23], [C], [sound], [per context], [analyzed], [Apron], [products, queries],
-      [TD algorithm @stade24 @tilscher26],
+      [TD solver @stade24 @tilscher26],
       table.hline(stroke: 0.4pt),
       [*Voblint*], [VIMP], [proved sound], [per context], [covered], [order analysis],
       [products, queries], [end to end],
@@ -98,7 +98,7 @@ seven of the analyzers had soundness issues, MOPSA among them
 
 == Verified analyzers in the CompCert line
 
-CompCert and Verasco (@sec:state-of-art) state their theorems about the code
+CompCert and Verasco (@ch:intro) state their theorems about the code
 that actually runs, and Voblint follows their pattern for a language with recursive procedures and
 context-sensitive calls. CompCert is a compiler from Clight, a large subset of
 C, to PowerPC assembly, programmed and proved correct in Coq, now Rocq

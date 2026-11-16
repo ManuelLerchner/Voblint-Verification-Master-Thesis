@@ -22,7 +22,7 @@ and raises an alarm at a possible recursive call, and the interpreter of
 Nipkow and Klein analyzes IMP, which has no procedures. Goblint instead solves
 equations over unknowns indexed by program point and calling context, publishes
 side effects to global unknowns, and computes the solution with a top-down
-solver. A formalization of TD has been verified @tilscher26, but no proof connects
+solver. A formalization of the TD solver has been verified @tilscher26, but no proof connects
 Goblint's solved equations to the executions of the program. Voblint keeps Goblint's architecture and
 states a CompCert-style theorem about the analyzer it runs. As far as the author is aware, a proof that connects context-indexed,
 side-effecting equations and their solver to source executions has not been
@@ -154,8 +154,7 @@ OCaml could replace its unverified counterpart in Goblint.
 For Goblint's developers, however, the current formalization is still largely
 a proof of concept. It lacks many concepts that their work depends on, such as
 pointers, a heap, threads, machine integers, and most of Goblint's analyses
-(@sec:outlook-extending). Among the limitations identified in @sec:intro-scope,
-the gap between VIMP and C is the largest. Because VIMP lacks these features and
+(@sec:outlook-extending). Among its limitations, the gap between VIMP and C is the largest. Because VIMP lacks these features and
 computes with unbounded integers, a verdict about a VIMP program
 does not carry over to a C program with the same text (@sec:vimp-vs-c). The
 adequacy of #isaconst("pstep") itself is argued rather than proved. Relating VIMP to AutoCorres2 @brecknell24autocorres2, Isabelle/C

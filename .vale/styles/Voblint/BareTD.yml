@@ -1,0 +1,19 @@
+# Author review: "TD starts ..." -- name the object. The abbreviation stands
+# for the top-down solver, so write "TD solver".
+extends: existence
+message: "Bare '%s': write 'TD solver'."
+level: error
+nonword: true
+tokens:
+  - '\bTD\b(?!\s+solver)(?![_)])'
+
+tests:
+  - name: fires
+    input: |
+      TD starts from the query.
+    want: |
+      1:1:Voblint.BareTD:Bare 'TD': write 'TD solver'.
+  - name: clean
+    input: |
+      The top-down (TD) solver is verified. The TD solver starts from the query.
+    want: ""

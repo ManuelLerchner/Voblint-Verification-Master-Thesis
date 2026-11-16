@@ -11,7 +11,7 @@
 The equations, calling contexts, and solver discharge the obligations of
 @ch:traces in the same way for every analysis. Voblint therefore separates
 each analysis from this framework, as Goblint does @seidl26[§6]
-(@sec:state-of-art). This chapter states the operations and proofs an analysis
+(@sec:intro-goblint). This chapter states the operations and proofs an analysis
 must supply for the framework's argument to apply.
 
 For the non-relational domains of @ch:domains, the domain primitives determine every edge

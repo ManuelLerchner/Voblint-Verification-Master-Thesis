@@ -130,12 +130,14 @@
 
 = Abstract Interpretation and Solvers <ch:background>
 
-@sec:state-of-art ended with a plan. Each step from source executions to the
-verdicts should relate two sets of concrete stores, so that a proof can check
-that the step loses nothing. Stating these steps requires the
-stores a program can actually reach, the coarser descriptions an analysis
-computes for them, and the solver that computes these descriptions. A loop that
-counts from $0$ to $5$ is the running example for all three.
+Soundness compares two objects at every program point, the stores that
+executions actually reach there and the description that the analyzer computes
+for them. Before a proof can relate the two, both need a precise definition,
+and so does the solver that computes the descriptions. Abstract interpretation
+supplies these definitions @cousot77. The running example is a loop that counts
+from $0$ to $5$. The chapter derives the loop's reachable stores, their
+descriptions by intervals, and the equations whose solution yields these
+descriptions.
 
 == Control-flow graphs and the collecting semantics <sec:collecting>
 
@@ -176,9 +178,7 @@ run of the body, so $i$ takes exactly the values $0, 1, dots, 5$ there.
 For every program point, collecting the stores of all executions that reach
 it gives the _collecting semantics_ $cal(C)$ @cousot77[§4] @mine17[§3.4],
 which maps every program point $v$ to the set $cal(C)(v)$ of stores reached
-there. For
-programs with procedures, @ch:traces defines Voblint's version over activation
-traces (#isaconst("node_collect")).
+there.
 
 The collecting semantics is the exact answer an analysis approximates, and it
 makes soundness (@sec:intro-static) precise. An analysis is sound if, at every
@@ -187,9 +187,19 @@ describe more stores, which costs precision.
 
 == Lattices and fixpoints <sec:lattices>
 
-At $h$, the intervals $absval(ivl(0, 5))$ and $absval(ivl(0, 10))$ both contain every value $i$ takes
-there (the collecting semantics ${0, dots, 5}$), but $absval(ivl(0, 10))$ also admits
-$i = 7$, which no execution reaches. A description is _more precise_ than
+An analysis cannot compute the collecting semantics directly. A set of
+reached stores can be infinite, as at the head of a loop that increments a
+variable forever. Computing these sets exactly would also decide the questions
+that Rice's theorem shows undecidable (@sec:intro-static). An analysis
+therefore computes with finite _descriptions_ of such sets, for instance, an
+interval given by its two bounds. In this thesis, a shaded box marks a
+description, such as $absval(ivl(0, 5))$, and a set of concrete values appears
+without one, such as ${0, dots, 5}$. The description $absval(ivl(0, 5))$ is a pair of
+bounds, and the set it stands for, its _concretization_, is written
+$conc(absval(ivl(0, 5))) = {0, dots, 5}$. At $h$, the descriptions $absval(ivl(0, 5))$ and
+$absval(ivl(0, 10))$ both admit every value $i$ takes there (the collecting
+semantics ${0, dots, 5}$), but $absval(ivl(0, 10))$ also admits $i = 7$, which
+no execution reaches. A description is _more precise_ than
 another if it admits fewer states. Ordered sets make this comparison formal.
 In an ordered set $(lat(D), lle)$ (#isalocale("order")),
 $a lle b$ means that $a$ is at least as precise as $b$ @nipkow14[Def. 10.23].
@@ -203,29 +213,27 @@ head, the value before the loop and the value after the body are joined this
 way. Dually, the _meet_ $a lmeet b$ is the greatest lower bound. An analysis
 uses it at a branch to restrict the incoming value to the values the condition
 admits. If the analysis knew only $absval(ivl(0, 10))$ at $h$, entering the body would
-restrict it to $absval(ivl(0, 10)) lmeet absval(ivl(-infinity, 4)) = absval(ivl(0, 4))$. Soundness does not need this
-refinement, since $absval(ivl(0, 10))$ itself is sound at $b$, but it makes the result
-more precise, and Goblint and Voblint both refine at branches. The least
+restrict it to $absval(ivl(0, 10)) lmeet absval(ivl(-infinity, 4)) = absval(ivl(0, 4))$. This refinement is not needed for
+soundness, but it makes the result more precise. The least
 element $lbot$ lies below every element, and a top element $ltop$, if one
 exists, lies above every element. In abstract interpretation, $lbot$ describes
 no states and $ltop$ describes all of them. A _complete lattice_
 (#isalocale("complete_lattice")) has a join $lJoin X$ and a meet $lMeet X$ for
 every subset $X$ @nipkow14[Def. 13.1] @mine17[Def. 2.5].
 
-Voblint's solver requires less than a complete lattice, namely a join
-semilattice with a least element (#isalocale("bounded_semilattice_sup_bot"))
-that carries operators for extrapolating and refining approximations, called
+The top-down (TD) solver @stade24 @tilscher26, which Voblint uses to solve its
+equation systems, requires only a join semilattice with a least element
+(#isalocale("bounded_semilattice_sup_bot")), not a complete lattice. The semilattice
+must carry operators for extrapolating and refining approximations, called
 widening and narrowing (@sec:widening). The solver
 joins two values at a time, whenever a new value reaches an unknown, so
-joins need to exist only for pairs. Joins of infinite sets would not help an
-executable analyzer anyway, since it computes only with finite representations.
+joins need to exist only for pairs.
 
 A numeric domain adds a top element and an intersection to this structure. The
 top element describes a variable about which nothing is known, for instance, a
 value read from input. Refinement at a branch uses the intersection. It must keep every value that
 both operands admit, and its result must lie below both operands
-(#isalocale("sound_intersection"), @sec:branches). The intersection does
-not have to be the greatest lower bound in the abstract order.
+(#isalocale("sound_intersection"), @sec:branches).
 
 An analysis computes the description at a point from the descriptions at its
 predecessors, by a function $f$ on $lat(D)$, and its result must be stable
@@ -264,13 +272,6 @@ $ cal(C)(v) subset.eq conc(a). $
 This inclusion is the consistency requirement between an abstract and a
 concrete interpretation @cousot77[§6] @mine17[Def. 2.11].
 
-Monotone concretization also explains what the intersection laws of
-@sec:lattices imply. Since the result lies below both operands and keeps every
-value they share,
-$conc(op("intersect")(a, b)) = conc(a) inter conc(b)$.
-Any abstract element below both operands that represents exactly these shared
-values meets the laws, even if it is not their greatest lower bound.
-
 The running example uses the _interval domain_ @cousot77[§9.2] @mine17[§4.5].
 Its elements are $lbot$ and the intervals $[l, u]$ with
 $l in ZZ union {-infinity}$, $u in ZZ union {+infinity}$ and $l <= u$, and an
@@ -280,9 +281,7 @@ The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
 when $l' <= l$ and $u <= u'$. The join
 $[l, u] ljoin [l', u'] = [min(l, l'), max(u, u')]$ is the smallest interval
 containing both. An interval cannot have holes, so the join may contain values
-that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet intersects the bounds. These operations form the textbook interval domain. Voblint's representation
-#isatype("ivl") admits every pair of bounds, so $lbot$ is one of several empty
-pairs (@sec:domain-carrier-laws).
+that neither operand contains: $absval(ivl(0, 0)) ljoin absval(ivl(5, 5)) = absval(ivl(0, 5))$. The meet intersects the bounds.
 
 At the loop head, both $absval(ivl(0, 5))$ and $absval(ivl(0, 10))$ are sound (@fig:concretization),
 as is every interval that contains $absval(ivl(0, 5))$. An analysis aims for a precise one,
@@ -550,7 +549,7 @@ uses only this and holds whether the right-hand sides are monotone
 (@sec:td). Termination needs more. A classical widening is chosen so that repeated widening stabilizes
 after finitely many steps @cousot77[§9.1.3] @cousot92plilp[§4], and a classical
 narrowing must also make repeated narrowing stabilize. The solver's classes
-omit these stabilization laws, because termination of the side-effecting TD that
+omit these stabilization laws, because termination of the side-effecting TD solver that
 Voblint uses is not proved (@sec:td). Within these laws, the
 choice of widening and narrowing affects only precision and termination.
 
@@ -562,7 +561,7 @@ which abstract state a callee's body starts from. Take the calls `bump(5)` and
 unknown per program point, the entry of `bump` must cover both arguments, so,
 over intervals, its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
 that the first call returns $6$. A context-sensitive analysis instead
-separates the activations of a procedure (@sec:state-of-art) by their calling
+separates the activations of a procedure by their calling
 contexts (@sec:intro-static) @aho06[§7.2.1]. Its unknowns become pairs $[v, c]$ of a program point
 $v$ and a context $c$ @apinis12[§3], so every context of a procedure gets its
 own copy of the procedure's unknowns.
@@ -660,15 +659,15 @@ Practical solvers avoid recomputing unchanged unknowns in every Kleene round.
 They use worklists of potentially violated inequalities
 @seidl12compiler[§§1.5, 1.12], orders chosen for widening @bourdoncle93, or
 demand-driven evaluation, as RLD does @hofmann10. Voblint reuses the verified
-local top-down solver (TD) of @stade24 @tilscher26.
+local TD solver of @stade24 @tilscher26.
 
-TD starts from the query and evaluates right-hand sides on demand. When the
-right-hand side of $x$ reads a local unknown $y$, TD first solves $y$ and records
-that $x$ depends on $y$. TD provisionally marks an unknown _stable_ before
+The TD solver starts from the query and evaluates right-hand sides on demand. When the
+right-hand side of $x$ reads a local unknown $y$, the TD solver first solves $y$ and records
+that $x$ depends on $y$. It provisionally marks an unknown _stable_ before
 evaluating its right-hand side. A changed dependency removes that mark
 (_destabilizes_ the unknown) and triggers reevaluation. The
 unknowns at which a read closes a cycle are the solver's _widening points_
-@seidl21. TD detects them while it solves @apinis16[§4], so they can
+@seidl21. The TD solver detects them while it solves @apinis16[§4], so they can
 differ from the loop heads of the control-flow graph. At a widening point, it
 updates the old value with the new one by warrowing. The
 #link(playground-link(_counting-loop, trace: "verbose"))[playground] replays this run on the counting loop step by step. Contributions published to a
@@ -680,7 +679,7 @@ _stable set_ $V$ together with the valuation $sol$.
 
 A right-hand side may choose its next read from a value already read. A call,
 for example, determines the callee context from
-the caller's state. TD therefore receives each right-hand side as a _strategy tree_
+the caller's state. The TD solver therefore receives each right-hand side as a _strategy tree_
 (#isatype("strategy_tree", thy: "Basics_side")), a small program that reads
 one unknown at a time and makes every read and every side effect explicit:
 $
@@ -744,6 +743,6 @@ query $x$ and returns its stable set
 $V$ and the valuation $sol$, then $V$ contains $x$, is closed under the local
 reads of its right-hand sides, and, on $V$, the valuation is a post-solution,
 published contributions included. It says nothing about unknowns outside $V$,
-and $V$ is called the _solved set_. Unlike some TD variants without side effects
+and $V$ is called the _solved set_. Unlike some TD solver variants without side effects
 @tilscher26jar, this solver has no termination proof (@sec:isabelle explains
 how Isabelle defines such a function).

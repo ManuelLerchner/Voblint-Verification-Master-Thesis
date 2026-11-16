@@ -310,7 +310,7 @@ It also requires the callee's entry unknown in $c'$ to be in the solved set.
 #oblig("CALL") and #oblig("RETURN") rely on routing adequacy, because the call
 publishes $e$ and its continuation reads the callee's exit state in the same
 context $c'$. Routing adequacy says nothing about a call to which $italic("adm")$
-assigns no context. Such a call would disappear from the activation
+assigns no context. A call without a context would disappear from the activation
 collecting semantics, which #oblig("TOTAL") of @sec:contract rules out. The
 second condition, _routing totality_
 (#isathm("routed_context.routing_total", thy: "Routed_Context", display: "routing_total")),
@@ -470,7 +470,7 @@ entry state that describes the call, which is routing adequacy. Entry coverage
 (@sec:calls) guarantees such an entry pair for every call from a store that the
 caller's solved state describes, which is routing totality.
 
-== Post-solutions cover the collecting semantics #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
+== Soundness of the generated equations #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 
 #figure(
   table(

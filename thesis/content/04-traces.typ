@@ -500,7 +500,7 @@ sets.
 @ch:equations derives these obligations from the parts of an equation's
 right-hand side and the context policy.
 
-The obligations use the objects fixed in @sec:valid, namely the initial stores
+The obligations use the objects fixed in @sec:valid: the initial stores
 $S$, the graph entry $v_0$, the edge sets $"intra"(g)$ and $"calls"(g)$, and the
 entered and returned stores $#isaconst("call_enter") _e$ and
 $#isaconst("combine_collect") _e$, together with the

@@ -547,7 +547,7 @@ ends at a solver-independent certificate, a post-solution on the solved set.
   }
   The field #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labeled
   by an action $a$. The field #isaconst("calls") holds the _call edges_
-  $(u, italic("ca"), w, k)$. Such an edge consists of the call site $u$, the
+  $(u, italic("ca"), w, k)$. A call edge consists of the call site $u$, the
   call information $italic("ca")$, a node $w$, which in a well-formed graph is
   the callee's entry $ctor("FunctionEntry") thin q$ (#isaconst("wf_cfg")), and
   the node $k$ where the caller resumes. Nodes are

@@ -55,7 +55,7 @@ the collecting semantics at that node is empty (#isathm("nv_dead_unreached")). I
 proved by rule application, while `eval` computes the compiled graphs and the
 analyzer's answers.
 
-== A Goblint soundness bug <sec:eval-1161>
+== Replaying a Goblint soundness bug <sec:eval-1161>
 
 Non-vacuity does not show that the obligations are strong enough to reject a
 wrong analysis. One way to test them is to check them against a real error,

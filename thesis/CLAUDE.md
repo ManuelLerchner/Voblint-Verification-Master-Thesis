@@ -234,6 +234,11 @@ Rules the author set while reviewing drafts. They refine the sections above.
 - No modal "need" with a bare infinitive ("need not", "need only"). Write
   "does not have to", "can" or "only has to". Vale's `Voblint.NeedNot` enforces
   it.
+- No "namely". State the item directly or in its own sentence
+  (`Voblint.Namely`).
+- Name the object instead of pointing back at it. Write "TD solver", never a
+  bare "TD" (`Voblint.BareTD`), and "Goblint's architecture" rather than "this
+  architecture". Do not open a sentence with "Such a …" (`Voblint.SuchOpener`).
 - Precise mathematics. Say post-fixpoint when a value only satisfies
   $f(d) lle d$, say inequality when soundness needs only $lle$, write abstract
   operations with a sharp ($sh(+)$), and do not say an iteration "reaches" a
@@ -338,6 +343,23 @@ handing a section over.
   citation at its end ("Agents have formalized … with all 806 results proved
   @bryant26munkres."), not "Bryant et al. @bryant26munkres report …". Name
   authors only when the comparison is about their work.
+- Keep the introduction generic until the contributions. Testing, abstract
+  interpretation, soundness of existing analyzers, modular proofs and Goblint
+  come first; Voblint's checks, verdicts and playground belong to the
+  contributions. Scope and limitations are prose describing the trust figure,
+  not a bullet list of forward references.
+- A contribution is something the formalization provides: a theorem, a
+  semantics, a proof architecture, an executable. Tests and example programs
+  are evidence and go with the non-vacuity results, never in a bullet of
+  their own.
+- Section titles are noun phrases naming the topic. A title must not read as
+  a claim ("Post-solutions cover the collecting semantics") or a question.
+- Give an evaluative word its criterion: "precise enough to prove or refute
+  the checks" rather than "useful".
+- Keep descriptions and concrete sets apart. A shaded value is a finite
+  description; the set it stands for is written $conc(d)$.
+- Cut a fact that nothing in its section uses. If a later chapter needs it,
+  it belongs there.
 
 ### Evidence
 
