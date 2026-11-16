@@ -456,10 +456,6 @@ finished, as #skipC with an empty frame stack, or can step:
   $ (c = #skipC and F=[]) or exists kappa'. kappa ->_p kappa'. $
 ]
 
-The proof relies on the source contract of @sec:vimp, whose conditions on
-calls exclude every call that could not step, and on the existence of a result
-for every library call (#isathm("special_result_ex")).
-
 == The procedure-aware control-flow graph <sec:graph>
 
 The analysis attaches an abstract state to each program point and a transfer
@@ -674,9 +670,21 @@ execution therefore keeps a stack of suspended callers, like the call stack of
 a machine. A call pushes a frame that remembers the continuation $k$ of its
 call edge, the variable that receives the result, and the caller's store,
 whose local variables the return restores. A return pops the frame and
-continues at $k$.
+continues at $k$. In the running example (@fig:program-to-equations), the call
+`bump(5)` pushes a frame, runs the body of `bump` with $n = 5$, and pops the
+frame at the result node, after which `main` continues at the call's
+continuation with `a` holding $6$. The second call `bump(4)` pushes a frame of
+its own, with a different continuation, so the shared result node of `bump`
+returns each activation to the right place.
 
-#block[
+A frame saves the caller's whole store. The return takes the local variables
+from it and the globals from the callee's final store, and then assigns the
+result to the destination (#isaconst("combine_collect")). A source frame
+(@sec:pstep) records the same data except the continuation, which the source
+semantics keeps in the residual command instead, behind the #ctor("Restore")
+marker.
+
+#block(breakable: false)[
   #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[
     A graph configuration $(v,s,K)$ (#isatype("cconf")) consists of a node
     $v$, a store $s$, and a frame stack $K$. Each frame $(k,italic("dst"),s_c)$
@@ -706,14 +714,9 @@ continues at $k$.
     (#ctor("FunctionResult") thin p,t,(k,italic("dst"),s) :: K) ->_c (k,#isaconst("combine_collect") _(italic("dst")) (s,t),K).
   $
   Here $sem(a)(s)$ is the set of local successors (#isaconst("edge_step")).
-  A return uses the top frame; it does not require an additional graph edge.
-
 ]
 
-The three rules above follow a local edge, a call edge, or a return.
-In the running example (@fig:program-to-equations), the call `bump(5)` pushes
-a frame, runs the body of `bump` with $n = 5$, and pops the frame at the result
-node, after which `main` continues with `a` holding $6$. Calls and returns
+Calls and returns
 change the store through #isaconst("call_enter") and
 #isaconst("combine_collect"), which are built from the same functions as
 #isaconst("pstep") (@sec:pstep), so both executions can hold the same store. Like the trace semantics of
@@ -722,9 +725,7 @@ compiled ones.
 
 == Simulation of source executions <sec:csim>
 
-So far, #isaconst("pstep") and #isaconst("cstep") are two separate
-definitions. One describes source programs, the other arbitrary graphs, and
-nothing yet says that a compiled graph behaves like its program. The soundness
+Nothing yet says that a compiled graph behaves like its program. The soundness
 theorem is stated over #isaconst("pstep"), but the analysis solves equations
 generated from the graph, so every source execution must be matched by an execution of the
 compiled graph that holds the same store at corresponding points. The matching is proved with a _forward simulation_, a
@@ -761,7 +762,8 @@ then also covers every source execution, so soundness needs no converse.
   The relation $kappa approx_p lambda$ relates a source configuration
   $kappa = (c,s,F)$ (@sec:pstep) to a graph configuration $lambda = (v,s,K)$
   (@sec:cstep) with the same store $s$, where $p$ is the procedure of the
-  outermost activation, `main` for a program run. It is defined by the
+  outermost activation. For a program run, $p$ is `main`, and we omit the
+  subscript. It is defined by the
   following rules, where $B=(p,b,k,n)$ is
   a block of $p$, and $u$ and $italic("es")$ are arbitrary.
 
@@ -808,8 +810,7 @@ source, the caller's remaining work $A$ follows the restoration marker. In the
 graph, it starts at the continuation node $k'$ of the new frame. The premise
 about the call locates the call $"call" (italic("dst"),q,italic("es"))$ in
 the caller. The inner activation therefore runs the body of the procedure $q$
-it names. Because each rule adds the caller outside the activations related so
-far, the new frame is appended at the end of both stacks. $sans("Returning")$
+it names. $sans("Returning")$
 covers the moment after a callee finishes. The graph is already at the
 callee's result node, while the source command $w$ is ready to pop its frame.
 
@@ -848,12 +849,12 @@ The relation is useful only if every source step preserves it, as drawn in
     several #isaconst("cstep") steps.],
 ) <fig:csim-square>
 
-Both premises hold for every well-formed program, and every source step
-preserves the second. Placing one square of @fig:csim-square after another,
-induction therefore extends the theorem to finite source executions (#isathm("csim_star")), as in CompCert's simulation diagrams
-@leroy09[§4.3]. The initial source configuration is related to the start of
-`main`'s body (#isathm("compile_prog_main_base")). A program run starts in `main`, so
-later sections fix $p = #raw("main")$ and write $approx$ for $approx_(#raw("main"))$. Every finite source
+In a well-formed program, every procedure body is compiled into the graph,
+and a #keyw("return") occurs only inside an activation that a call opened.
+Source steps keep the second condition true, so the theorem applies at every
+step of a run. Induction over the run places one square of @fig:csim-square after another
+and so extends the theorem to finite source executions (#isathm("csim_star")), as in
+CompCert's simulation diagrams @leroy09[§4.3]. Every finite source
 execution of a well-formed program is therefore matched by a graph execution
 from the entry that holds the same store at corresponding nodes. This matching
 gives the first inclusion of the soundness chain of @fig:intro-nest.
@@ -862,9 +863,9 @@ gives the first inclusion of the soundness chain of @fig:intro-nest.
 
 The analyzer states its verdicts per graph node. A #verdict("PROVED") check at
 node $v$ promises that its condition holds whenever an execution is at $v$. To
-prove this, @ch:results must say when a source execution is at $v$, and the
-simulation alone does not settle it, because it may relate one configuration
-to several nodes. Equal commands can occur at different places. In
+prove this, @ch:results must say when a source execution is at $v$. The
+simulation does not answer this, because equal commands can occur at
+different places. In
 `if (b) { x = 1; } else { x = 1; }`, both branches leave the residual `x = 1`,
 so the configuration does not show which branch the run took, and the
 simulation relates it to both branch nodes. A verdict at the else-branch node, however, speaks only about runs that took

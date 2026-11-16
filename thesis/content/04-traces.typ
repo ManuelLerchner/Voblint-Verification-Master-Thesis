@@ -10,17 +10,17 @@
 
 @ch:program-model matched every source execution with a graph execution.
 For an analysis that computes one abstract state per node, this suffices. A
-context-sensitive analysis, however, keeps a separate unknown for each pair of
-a node and a calling context, although different pairs may end up with equal
-states. Justifying the state of each pair requires knowing which executions
-its context stands for.
+context-sensitive analysis, however, keeps a separate abstract state for each
+pair of a node and a calling context. Its soundness argument must say which
+executions each pair describes. The graph execution of @sec:cstep cannot
+answer this, because it records only a node, a store, and a frame stack, and
+no calling context.
 
-_Activation traces_ provide this correspondence. They group the steps of an
-execution by procedure activation (@sec:intro-static) and retain the caller
-that created each activation. A context policy then assigns calling
-contexts to these traces from their calling history. On this basis, the
-coverage contract states the local obligations under which an analysis result
-contains every store that an execution brings to a node in a context.
+This chapter therefore groups each execution into _activation traces_, which
+remember the caller of every activation, and assigns calling contexts to them.
+It then states one condition per kind of execution step under which a
+context-sensitive analysis soundly over-approximates the stores that executions
+reach at each node in each context.
 
 == Calling contexts and the collecting semantics <sec:why-traces>
 
@@ -253,56 +253,66 @@ the parameters are bound, and $#isaconst("combine_collect") _e (s,r)$ combines t
 with the callee's globals and return value. The subscript $e$ stands for the
 call information of $e$, and $cal(G)$ is fixed.
 
-#definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
-  The valid traces $cal(T)=cal(T)_(cal(G),g,S)$ form the least set closed
-  under the following rules. All variables range over the objects introduced
-  above, and $t,t'$ range over traces.
-]
+The rules mirror the graph execution of @sec:cstep. A local step extends the
+current trace along a local edge, as #isaconst("cstep") moves to the next
+node. A call starts a new trace at the callee's entry, as #isaconst("cstep")
+pushes a frame. A return resumes the caller after its callee reaches the result
+node, as #isaconst("cstep") pops one. Validity, however, keeps no frame stack.
+The #ctor("Call", thy: "Activation_Trace_Def") term already retains its
+creating caller, so the return rule finds that caller through
+#isaconst("caller_of") and takes the continuation from the call edge.
 
 #block(breakable: false, width: 100%)[
-  *Root.* Each initial store starts a root trace:
-  $ frac(s in S, ctor("Root")([(v_0,s)]) in cal(T)). $
-]
+  #definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
+    The valid traces $cal(T)=cal(T)_(cal(G),g,S)$ are defined
+    inductively by the following rules. All variables range over the objects introduced
+    above, and $t,t'$ range over traces.
+  ]
 
-#block(breakable: false, width: 100%)[
-  *Local step.* Follow a local edge and append its successor:
-  $
-    frac(
-      t in cal(T) quad (#isaconst("sink_node") (t),a,v) in "intra"(g) quad s' in sem(a)(#isaconst("sink_store") (t)),
-      #isaconst("extend", thy: "Activation_Trace_Def") (t,(v,s')) in cal(T)
-    ).
-  $
-]
+  #block(breakable: false, width: 100%)[
+    *Root.* Each initial store starts a root trace:
+    $ frac(s in S, ctor("Root")([(v_0,s)]) in cal(T)). $
+  ]
 
-#block(breakable: false, width: 100%)[
-  *Call.* Retain the caller and start the callee at its entry:
-  $
-    frac(
-      t in cal(T) quad e=(#isaconst("sink_node") (t),a,#ctor("FunctionEntry") thin p,k) in "calls"(g),
-      ctor("Call", thy: "Activation_Trace_Def")(t,[(#ctor("FunctionEntry") thin p,#isaconst("call_enter") _e (#isaconst("sink_store") (t)))]) in cal(T)
-    ).
-  $
-]
+  #block(breakable: false, width: 100%)[
+    *Local step.* Follow a local edge and append its successor:
+    $
+      frac(
+        t in cal(T) quad (#isaconst("sink_node") (t),a,v) in "intra"(g) quad s' in sem(a)(#isaconst("sink_store") (t)),
+        #isaconst("extend", thy: "Activation_Trace_Def") (t,(v,s')) in cal(T)
+      ).
+    $
+  ]
 
-#block(breakable: false, width: 100%)[
-  *Return.* Resume the callee's creating caller at a matching continuation:
-  $
-    frac(
-      display(
-        mat(
-          delim: #none,
-          t' in cal(T) quad #isaconst("caller_of") (t')="Some"(t) quad #isaconst("sink_node") (t')=#ctor("FunctionResult") thin p;
-          e=(#isaconst("sink_node") (t),a,#ctor("FunctionEntry") thin p,k) in "calls"(g),
-        )
-      ),
-      ctor("Resume")(t,t',#isaconst("path_of") (t) dot.op [(k,#isaconst("combine_collect") _e (#isaconst("sink_store") (t),#isaconst("sink_store") (t')))]) in cal(T)
-    ).
-  $
+  #block(breakable: false, width: 100%)[
+    *Call.* Retain the caller and start the callee at its entry:
+    $
+      frac(
+        t in cal(T) quad e=(#isaconst("sink_node") (t),a,#ctor("FunctionEntry") thin p,k) in "calls"(g),
+        ctor("Call", thy: "Activation_Trace_Def")(t,[(#ctor("FunctionEntry") thin p,#isaconst("call_enter") _e (#isaconst("sink_store") (t)))]) in cal(T)
+      ).
+    $
+  ]
+
+  #block(breakable: false, width: 100%)[
+    *Return.* Resume the callee's creating caller at a matching continuation:
+    $
+      frac(
+        display(
+          mat(
+            delim: #none,
+            t' in cal(T) quad #isaconst("caller_of") (t')="Some"(t) quad #isaconst("sink_node") (t')=#ctor("FunctionResult") thin p;
+            e=(#isaconst("sink_node") (t),a,#ctor("FunctionEntry") thin p,k) in "calls"(g),
+          )
+        ),
+        ctor("Resume")(t,t',#isaconst("path_of") (t) dot.op [(k,#isaconst("combine_collect") _e (#isaconst("sink_store") (t),#isaconst("sink_store") (t')))]) in cal(T)
+      ).
+    $
+  ]
 ]
 
 Every valid path is nonempty, so the node and store observers select an
-actual final node-store pair on valid traces. In the return rule, the caller is recovered from the callee
-itself. Returning from `dec(2)` therefore resumes its creating activation
+actual final node-store pair on valid traces. Returning from `dec(2)` thus resumes its creating activation
 `sum(2)`; an unrelated activation cannot be substituted merely because it
 visits the same call site. The continuation and the combined store come from a
 call edge from the caller's node into the callee's entry, on compiled graphs
@@ -377,40 +387,34 @@ separate from the algorithm that selects contexts while solving the analysis.
   contexts admitted for those arguments.
 ]
 
-For a call edge $e=(u,a,#ctor("FunctionEntry") thin p,k) in "calls"(g)$, write $"adm"_e (c,s)$ for the contexts
-the policy admits when the call along $e$ is made from store $s$ in context
-$c$, that is, $"adm"(u,c,i_e,s,#isaconst("call_enter") _e (s))$, where $i_e$ collects the
-callee $p$ and the destination, formals, and arguments in $a$. A call trace retains its caller and entered store, but does not retain the call edge. Define $"admits"(u,c,p,s,s_e,c')$ to mean
-$
-  exists e=(u,a,#ctor("FunctionEntry") thin p,k) in "calls"(g):
-  s_e=#isaconst("call_enter") _e (s) and c' in "adm"_e (c,s).
-$
-Thus some outgoing call edge must produce exactly this entered store and
-admit $c'$. The existential matters for graphs with several call edges at one
-node. The relation is #isaconst("admits_call_context"), and $i_e$ is
-supplied by #isaconst("call_info_of").
+For a call edge $e$ at call site $u$, write $"adm"_e (c,s)$ for the contexts
+the policy admits when the call along $e$ is made from store $s$ in context $c$.
+A call trace retains its caller and entered store but not the call edge, so
+$"admits"(u,c,p,s,s_e,c')$ states that some call edge from $u$ into $p$ enters
+$s_e$ from $s$ and admits $c'$ (#isaconst("admits_call_context")).
 
 #definition(name: [Contexts carried by a trace], isa: "activation_context_rel", cmd: "inductive")[
-  Fix an initial context $c_0 in C$. Write $t tilde c$ when trace $t$ carries
-  context $c$. This is the least relation closed under the following rules.
+  Fix an initial context $c_0 in C$. The predicate $"carries"(t,c)$
+  states that trace $t$ carries context $c$. It is defined inductively by the
+  following rules.
 
   #block(breakable: false, width: 100%)[
     *Root.* The root activation carries the initial context:
-    $ ctor("Root")(pi) tilde c_0. $
+    $ "carries"(ctor("Root")(pi),c_0). $
   ]
   #block(breakable: false, width: 100%)[
     *Call.* A callee carries every context admitted for its call from a context
     of its caller, at the entered store that starts its path:
     $
       frac(
-        t tilde c quad "admits"(#isaconst("sink_node") (t),c,p,#isaconst("sink_store") (t),s_e,c'),
-        ctor("Call", thy: "Activation_Trace_Def")(t,[(#ctor("FunctionEntry") thin p,s_e)] dot.op pi) tilde c'
+        "carries"(t,c) quad "admits"(#isaconst("sink_node") (t),c,p,#isaconst("sink_store") (t),s_e,c'),
+        "carries"(ctor("Call", thy: "Activation_Trace_Def")(t,[(#ctor("FunctionEntry") thin p,s_e)] dot.op pi),c')
       ).
     $
   ]
   #block(breakable: false, width: 100%)[
     *Resume.* A resumed caller carries the contexts it had before the call:
-    $ frac(t tilde c, ctor("Resume")(t,t',pi) tilde c). $
+    $ frac("carries"(t,c), "carries"(ctor("Resume")(t,t',pi),c)). $
   ]
 ]
 
@@ -438,12 +442,12 @@ this out for calls from covered stores.
 #definition(name: [Activation collecting semantics], isa: "activation_collect", cmd: "definition")[
   The collecting semantics at a node $v$ and context $c$ is
   $
-    cal(A)(v,c) = {#isaconst("sink_store") (t) | t in cal(T) and #isaconst("sink_node") (t)=v and t tilde c}.
+    cal(A)(v,c) = {#isaconst("sink_store") (t) | t in cal(T) and #isaconst("sink_node") (t)=v and "carries"(t,c)}.
   $
   Here $cal(A)$ has the fixed parameters $cal(G),"adm",c_0,g,S$.
 ]
 
-The only difference from $cal(C)(v)$ is the condition $t tilde c$. Consequently,
+The only difference from $cal(C)(v)$ is the condition $"carries"(t,c)$. Consequently,
 $cal(A)(v,c) subset.eq cal(C)(v)$ for every context. If every valid trace
 carries a context, then $cal(C)(v)=union.big_(c in C) cal(A)(v,c)$.
 These sets may overlap: the same trace may carry several contexts, and
@@ -541,11 +545,6 @@ range over $C$.
   $ s in "cover"(u,c) ==> "adm"_e (c,s) != emptyset. $
 ]
 
-The return obligation lets any outgoing call edge at $u$ witness $p'$ and
-$s_e$. This is stronger than admission through $e$ alone and lets the contract
-cover arbitrary graphs. On compiled graphs, which have one call edge per call
-site, the witness is $e$ itself (#isathm("compile_prog_calls_source_unique")).
-
 #oblig("TOTAL") is necessary because #oblig("CALL") and #oblig("RETURN") quantify only over admitted
 contexts. If the policy assigns the call `sum(2)` no context, those
 obligations impose no bound on its result. Yet `main` resumes in its original
@@ -635,7 +634,14 @@ $cal(C)(v) = union.big_(c in C) cal(A)(v,c)$
 (#isathm("node_collect_eq_Union_activation_collect")). The inclusion then
 follows from context-indexed soundness (#isathm("activation_collect_sound")).
 
+This chapter supplies the next links of the soundness chain of
+@fig:intro-nest. @ch:program-model placed every source execution in the graph.
+Here, the stores of those executions are collected at each node and context,
+and the question whether an analysis accounts for all of them becomes a set of
+checks at single edges and calls. From now on, no argument follows a whole
+execution or its call stack. An analysis result is sound for every context
+policy once it meets the coverage contract.
 
-The following chapters build covers that meet this contract from
-abstract domains (@ch:domains), transfer functions (@ch:analysis-interface),
-and a solved equation system (@ch:equations, @ch:solving).
+The following chapters construct such a result. They build it from abstract
+domains (@ch:domains) and transfer functions (@ch:analysis-interface), and
+obtain it as the solution of an equation system (@ch:equations, @ch:solving).
