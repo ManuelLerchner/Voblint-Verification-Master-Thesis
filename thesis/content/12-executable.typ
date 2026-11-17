@@ -284,7 +284,7 @@ the states into text, serialized as for the playground.
 
 The #link(site("playground.html"))[playground] is the browser front end of
 @fig:build. Its toolbar sets the configuration of #isaconst("run_voblint") and
-toggles the tracing of @sec:tracing, and the end-to-end soundness theorem covers every
+toggles the tracing of @sec:tracing, and the end-to-end soundness theorem applies to every
 configuration it can select (#isathm("run_voblint_source_sound")).
 @fig:pg-overview shows one run.
 

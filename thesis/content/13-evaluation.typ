@@ -71,7 +71,7 @@ Congruence remainder must contain the concrete remainder of every pair of
 values represented by its operands (#isathm("congruence_mod_sound")). Since #isaconst("c_mod") truncates
 toward zero, as C11 specifies (@sec:vimp-vs-c), the pre-fix answer, the
 constant $1$ for $absval(1 + 2ZZ) mod 2$, violates the obligation at $-5$
-(#isathm("prefix_congruence_mod_unsound")). This theorem covers every abstract
+(#isathm("prefix_congruence_mod_unsound")). This theorem applies to every abstract
 remainder that returns the constant, so it also rules out Goblint's pre-fix
 operator. @fig:goblint-1161 runs the regression test transliterated into VIMP.
 Congruence alone knows only $c in conc(absval(1 + 2ZZ))$ and decides neither check.
@@ -524,7 +524,7 @@ Int finds this invariant through the reduction of its components. Widening
 drops Interval's lower bound at the loop head, but Sign keeps $i gt.eq 0$. The guard `i != 0` then
 makes the sign positive, and the reduction (@sec:reduced-product) moves the interval to $absval(ivl(1, 4))$ and, since `i`
 is even, to $absval(ivl(2, 4))$. From there, `i - 2` returns to
-$absval(ivl(0, 2))$, which the head value already covers, and the check is
+$absval(ivl(0, 2))$, which the head value already contains, and the check is
 #_vv("flavors-not-inductive-int", "i > 0"). Without the reduction, the check sees $i in absval(ivl(-infinity, 4))$ and is
 #_vv("flavors-not-inductive-int-never", "i > 0") (claims
 #claim-ref("flavors-not-inductive-int") and

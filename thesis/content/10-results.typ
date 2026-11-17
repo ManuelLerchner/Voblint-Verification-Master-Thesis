@@ -23,7 +23,7 @@
 
 = From Post-Solutions to Verdicts <ch:results>
 
-The solution of @ch:solving covers every execution (@sec:certificate).
+The solution of @ch:solving describes every execution (@sec:certificate).
 The analyzer turns it into a report with a verdict for every `__voblint_check`
 and diagnostics wherever division may fail. This chapter proves that every
 store a finite source execution reaches at a check satisfies the report's
@@ -377,7 +377,7 @@ playground, subject to the trusted code generator and target toolchains
 
 The initial stores zero every global and leave
 the locals unconstrained (#isaconst("cinit_stores")). Any stopping point of
-the source execution is allowed, so nonterminating programs are covered
+the source execution is allowed, so nonterminating programs are included
 through their finite prefixes. Input validity and solver termination are not
 separate premises, since the analyzer returned a report (@sec:report). The
 theorem remains a partial-correctness result (@sec:certificate).
@@ -389,15 +389,15 @@ one.
 == Meaning of verdicts and diagnostics #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
 By the theorem of @sec:headline, the four verdicts make the following
-statements about _covered executions_, the finite source executions from an
+statements about _analyzed executions_, the finite source executions from an
 initial store in $S$, stopped at any point:
-- #verdict("PROVED"): whenever a covered execution reaches the check, the condition
+- #verdict("PROVED"): whenever an analyzed execution reaches the check, the condition
   holds.
-- #verdict("REFUTED"): whenever a covered execution reaches the check, the condition
+- #verdict("REFUTED"): whenever an analyzed execution reaches the check, the condition
   fails. It is not a verified
   counterexample, since it establishes no reaching execution.
 - #verdict("UNKNOWN"): the analysis decides neither.
-- #verdict("DEAD"): no covered execution reaches the check, because nothing is
+- #verdict("DEAD"): no analyzed execution reaches the check, because nothing is
   collected at its node (#isathm("run_voblint_dead_check_unreached")).
   Conversely, a check that an execution reaches is never #verdict("DEAD").
 #verdict("PROVED") and #verdict("REFUTED") hold vacuously when no execution
@@ -410,7 +410,7 @@ false in that store (#isathm("run_voblint_check_sound")).
 
 At every division and remainder, the analyzer asks the queries of
 @sec:coop-queries whether the divisor can be zero. It reports an error if the
-divisor is zero whenever a covered execution reaches its node
+divisor is zero whenever an analyzed execution reaches its node
 (#isathm("run_voblint_arithmetic_refuted")), a warning if the analyses cannot
 exclude zero, and nothing otherwise. If the analyzer returned a report, no
 diagnostic has node $v$, and $s in cal(C)(v)$, then for every local edge
@@ -418,4 +418,4 @@ $(v,a,w)$, every expression $e$ evaluated by $a$, and every divisor $d$ in $e$,
 $ sem(d)_e s != 0. $
 This is the intraprocedural guarantee
 (#isathm("run_voblint_arithmetic_intra_safe")); the extended result also
-covers call arguments (#isathm("run_voblint_arithmetic_safe")).
+applies to call arguments (#isathm("run_voblint_arithmetic_safe")).

@@ -1,0 +1,46 @@
+digraph AnalysisCFG {
+  graph [rankdir=TB,ordering=out,splines=polyline,nodesep=0.5,ranksep=0.8,remincross=true,mclimit=4,fontname="Menlo"];
+  node [shape=box,style=filled,fillcolor=lightgreen,fontname="Menlo",id="\N",URL="javascript:show_info('\N');"];
+  edge [fontname="Menlo",fontsize=10,arrowsize=0.8];
+  subgraph cluster_ctx_0 {
+    label="set / unit";
+    style=rounded; color=gray70; penwidth=1;
+    set_pp1_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp1",tooltip="pp1\nsign:"];
+    set_exit_set_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_set",tooltip="exit_set\nsign:"];
+    set_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\nsign:"];
+    set_entry_set_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_set",tooltip="entry_set\nsign:"];
+  }
+  subgraph cluster_ctx_1 {
+    label="get / unit";
+    style=rounded; color=gray70; penwidth=1;
+    get_pp3_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp3\nunreachable",tooltip="pp3\nunreachable"];
+    get_exit_get_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_get",tooltip="exit_get\nsign:"];
+    get_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\nsign:"];
+    get_entry_get_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_get",tooltip="entry_get\nsign:"];
+  }
+  subgraph cluster_ctx_2 {
+    label="main / unit";
+    style=rounded; color=gray70; penwidth=1;
+    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\nsign:\n  x=+\n  y=≥0"];
+    main_pp4_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp4",tooltip="pp4\nsign:\n  x=⊤\n  y=⊤"];
+    main_pp5_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\nsign:\n  x=+\n  y=⊤"];
+    main_pp6_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\nsign:\n  x=+\n  y=⊤"];
+    main_pp7_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp7",tooltip="pp7\nsign:\n  x=+\n  y=≥0"];
+    main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\nsign:\n  x=⊤\n  y=⊤"];
+  }
+  set_pp0_ctx0 -> set_pp1_ctx0 [weight=20,label="Gx := 1"];
+  set_pp1_ctx0 -> set_exit_set_ctx0 [weight=20,label="return"];
+  get_pp2_ctx0 -> get_exit_get_ctx0 [weight=20,label="return Gx"];
+  get_pp3_ctx0 -> get_exit_get_ctx0 [weight=20,label="return"];
+  main_pp4_ctx0 -> main_pp5_ctx0 [weight=20,label="x := 1"];
+  main_pp7_ctx0 -> main_exit_main_ctx0 [weight=20,label="return"];
+  get_entry_get_ctx0 -> get_pp2_ctx0 [weight=20,label="body(get)"];
+  main_entry_main_ctx0 -> main_pp4_ctx0 [weight=20,label="body(main)"];
+  set_entry_set_ctx0 -> set_pp0_ctx0 [weight=20,label="body(set)"];
+  main_pp5_ctx0 -> set_entry_set_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call set()"];
+  set_exit_set_ctx0 -> main_pp6_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume"];
+  main_pp5_ctx0 -> main_pp6_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+  main_pp6_ctx0 -> get_entry_get_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call get()"];
+  get_exit_get_ctx0 -> main_pp7_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / y := get()"];
+  main_pp6_ctx0 -> main_pp7_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+}

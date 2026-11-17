@@ -10,7 +10,7 @@ source executions to the verdicts of the analysis function. The result covers
 VIMP, a scalar language with recursive procedures. It is a partial-correctness
 result, so the soundness guarantee holds whenever the analyzer returns a report. For a
 user, a #verdict("PROVED") verdict therefore establishes the reported property
-for every covered execution that reaches the check, instead of resting on the
+for every analyzed execution that reaches the check, instead of resting on the
 tests the analyzer has passed.
 
 The current implementation of Voblint lies between existing formalized
@@ -30,8 +30,8 @@ mechanized before (@sec:rel-summary).
 
 The end-to-end soundness theorem holds for every report #isaconst("run_voblint") returns,
 under every analysis configuration it offers (@sec:headline). Activation traces give
-contexts a concrete meaning, and splitting the collected stores by context
-loses no execution (@sec:contract). Domains, context policies, cooperating
+contexts a concrete meaning, and every collected store belongs to
+some context (@sec:contract). Domains, context policies, cooperating
 analyses, and the solver each meet their own obligations, and generic theorems
 compose them (@sec:eq-discharge). The command-line tool and the
 playground execute code generated from #isaconst("run_voblint") through an

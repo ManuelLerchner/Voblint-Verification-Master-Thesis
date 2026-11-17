@@ -408,8 +408,8 @@ caller. The proof excludes both errors.
   placement: none,
   caption: [Soundness at a program point $v$ as nested sets. An activation trace
     records, besides the stores of a graph execution, which call created each
-    activation, and every graph execution is represented by one. Splitting the node
-    collecting semantics by context loses no store. The end-to-end soundness
+    activation, and every graph execution is represented by one. Every store of the node
+    collecting semantics belongs to some context. The end-to-end soundness
     theorem chains these inclusions for every report the analyzer returns
     (#isathm("run_voblint_source_sound"), @ch:results).],
 ) <fig:intro-nest>
@@ -431,8 +431,8 @@ five contributions.
 - _A concrete semantics of calling contexts._ Activation traces record how each activation
   was called. They give the per-context states of an analysis a concrete
   counterpart, because the chain of calling activations determines the
-  contexts of a call. Splitting the concrete
-  stores by context loses no execution (@sec:contract), and every report covers
+  contexts of a call. Every concrete store
+  at a node belongs to some context (@sec:contract), and every report covers
   each context separately (#isathm("run_voblint_context_covers")). One call may
   have several contexts, which lets an analysis split it into cases.
 - _Separately verified components._ Each component discharges local soundness

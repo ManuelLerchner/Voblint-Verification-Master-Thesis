@@ -822,6 +822,29 @@ argv = [
 ]
 why = "Flow-insensitive globals: with Gx on the shared channel Sign leaves y at ≥0 at pp7, after both calls."
 
+[claims.mixed-flow-shared-dot]
+argv = [
+  "--analysis",
+  "sign",
+  "--program-globals",
+  "flow-insensitive",
+  "--dot",
+  "thesis/shared/programs/mixed-flow.vimp",
+]
+why = "The compiled graph of the set/get program: node names and edge labels drawn in the flow-insensitive globals figure of Chapter 6."
+
+[claims.mixed-flow-shared-trace]
+argv = [
+  "--analysis",
+  "sign",
+  "--program-globals",
+  "flow-insensitive",
+  "--trace",
+  "--verbose",
+  "thesis/shared/programs/mixed-flow.vimp",
+]
+why = "Flow-insensitive globals: entry_main publishes Gx=0, set's pp1 publishes Gx=+, and the global unknown Gx settles at ≥0, as the Chapter 6 figure draws."
+
 [claims.ast-contexts]
 argv = ["--ast", "docs/readme-figures/contexts.vimp"]
 why = "The parsed imp_prog of the running example, drawn as the abstract-syntax figure of Chapter 3: main's body as nested Seq, bump's declaration in the procedure table."

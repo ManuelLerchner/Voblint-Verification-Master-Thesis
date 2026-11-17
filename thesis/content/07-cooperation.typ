@@ -136,7 +136,7 @@ Goblint's `MCP.query'` combines answers the
 same way, as formalized by Apinis @apinis14[§5.5].
 
 A _channel_ $italic("ch")$ of type #isatype("channel") is a function answering
-every query. The framework passes it to a transfer, so one premise can cover
+every query. The framework passes it to a transfer, so one premise can speak about
 all answers the transfer uses. A channel _holds_ at a store $s$ if every answer it
 gives holds at $s$:
 $
@@ -159,7 +159,7 @@ otherwise, the assignment of $e$.
 The transfer
 $#isaconst("ls_step") thin c thin italic("ch") thin a thin x$ of an analysis $c$
 receives a channel $italic("ch")$, action $a$, and input state $x$. Its
-soundness law requires it to cover every successor of every store in
+soundness law requires it to describe every successor of every store in
 $conc(x)$ at which the channel holds
 (#isathm("ls_step_sound_iff")). @sec:coop-mcp proves the answers true once
 for all analyses.

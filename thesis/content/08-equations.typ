@@ -49,7 +49,7 @@ program point (@sec:side-effects). They hold the analysis globals of @sec:shared
 and the entry states that calls publish to their callees.
 
 The equation of $(v, c)$ has to collect every abstract state that can reach
-$v$ in context $c$, because a post-solution must cover every store that
+$v$ in context $c$, because a post-solution must describe every store that
 reaches $v$ there. Such states come from four sources: the initial state at
 the program entry, the transfer along each local edge into $v$, the result of
 each call that returns to $v$, and, at a procedure entry, the entry states that
@@ -301,7 +301,7 @@ $
     )
   },
   caption: [Routing adequacy. If the concrete semantics assigns a call to $c'$ (left),
-    the equations must route a covering entry pair to the same $c'$ (right).],
+    the equations must route an entry pair that describes the call to the same $c'$ (right).],
 ) <fig:eq-adequacy>
 
 This condition is called _routing adequacy_
@@ -332,7 +332,7 @@ the soundness theorem and are proved once for each context policy.
       [unit], [$c' = ()$], [$()$], [both constant],
       [call strings], [$c' = "take"_k (u dot c)$], [$"take"_k (u dot c)$], [the same term],
       [entry states],
-      [$c' = e|_"formals"$, $(q, e)$ covers $(s, s')$],
+      [$c' = e|_"formals"$, $(q, e)$ describes $(s, s')$],
       [$e|_"formals"$],
       [$italic("adm")$ reads the routing],
       table.hline(),
@@ -480,11 +480,12 @@ caller's solved state describes, which is routing totality.
     table.hline(),
     [*obligation*], [*guarantee of the generated equations*],
     table.hline(stroke: 0.5pt),
-    [#oblig("INIT")], [the initial state at the program entry covers the initial stores],
+    [#oblig("INIT")], [the initial state at the program entry describes the initial stores],
     [#oblig("INTRA")], [the transfer along each local edge is sound],
-    [#oblig("CALL")], [the routed entry state covers the entered store (routing adequacy)],
+    [#oblig("CALL")], [the routed entry state describes the entered store (routing adequacy)],
     [#oblig("RETURN")], [the exit state is combined soundly in the same context (routing adequacy)],
-    [#oblig("TOTAL")], [every covered call is admitted in some context (routing totality)],
+    [#oblig("TOTAL")],
+    [every call from a store in the cover is admitted in some context (routing totality)],
     table.hline(),
   ),
   placement: none,
@@ -518,5 +519,5 @@ environment.
 No execution reaches an unknown outside the solved set, since the set contains the
 program entry and is closed under local edges, call continuations, and routed
 calls. Instantiated for the policies of @tab:eq-policies,
-the theorem covers the analyzer's equations, and @ch:solving computes such a
+the theorem applies to the analyzer's equations, and @ch:solving computes such a
 post-solution.

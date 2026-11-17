@@ -340,8 +340,8 @@ Jourdan et al. and of Nipkow @jourdan15[§2] @nipkow12[§5.2], since its
 soundness theorem claims coverage and nothing about optimal precision.
 
 The analysis replaces each concrete operation by an abstract one, a _transfer
-function_ $sh(f) : A -> A$, which must not lose any state that the concrete
-operation can produce. In general, a program's steps form a relation $->$ on
+function_ $sh(f) : A -> A$, whose result must describe every state that the
+concrete operation can produce. In general, a program's steps form a relation $->$ on
 $U$, and one state may have several successors, even infinitely many, for example, when the next value is read from user input. The _post-image_
 $"post"(X) = setcomp(s', exists s in X. s -> s')$ collects the successors of
 all states in $X$. The transfer function is sound if, for every $a$,

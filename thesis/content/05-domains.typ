@@ -844,7 +844,7 @@ the conjunction (@fig:query-tree).
     #_q.verdict.],
 ) <fig:query-tree>
 
-One proof covers every domain. The answer _true_ certifies that $c$ holds in
+One proof serves every domain. The answer _true_ certifies that $c$ holds in
 every store the state describes, _false_ that it holds in none, and _unknown_
 makes no claim (#isathm("check_query_sound")). A locale combines the queries
 with forward evaluation (#isalocale("sound_check_query")). An analysis later

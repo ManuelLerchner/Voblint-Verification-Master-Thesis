@@ -722,11 +722,11 @@
     reachable state.
   ],
   term("proved", "PROVED", _res, sort: "verdict 1", see: <sec:verdicts>)[
-    Whenever a covered execution reaches the check, its condition holds. The
+    Whenever an analyzed execution reaches the check, its condition holds. The
     verdict does not assert that the check is reached.
   ],
   term("refuted", "REFUTED", _res, sort: "verdict 2", see: <sec:verdicts>)[
-    Whenever a covered execution reaches the check, its condition fails. It is
+    Whenever an analyzed execution reaches the check, its condition fails. It is
     not a verified counterexample.
   ],
   term("unknown-verdict", "UNKNOWN", _res, sort: "verdict 3", see: <sec:verdicts>)[

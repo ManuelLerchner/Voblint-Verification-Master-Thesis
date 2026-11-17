@@ -1121,6 +1121,26 @@
       "placement": "flow-sensitive"
     }
   },
+  "mixed-flow-shared-dot": {
+    "fixture": "thesis/shared/programs/mixed-flow.vimp",
+    "program": "global Gx;\nfun set() { Gx = 1; }\nfun get() { return Gx; }\nfun main() { x = 1; set(); y = get(); }",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "bounded-narrowing",
+      "placement": "flow-insensitive"
+    }
+  },
+  "mixed-flow-shared-trace": {
+    "fixture": "thesis/shared/programs/mixed-flow.vimp",
+    "program": "global Gx;\nfun set() { Gx = 1; }\nfun get() { return Gx; }\nfun main() { x = 1; set(); y = get(); }",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "bounded-narrowing",
+      "placement": "flow-insensitive"
+    }
+  },
   "mixed-flow-sign": {
     "fixture": "thesis/shared/programs/mixed-flow.vimp",
     "program": "global Gx;\nfun set() { Gx = 1; }\nfun get() { return Gx; }\nfun main() { x = 1; set(); y = get(); }",

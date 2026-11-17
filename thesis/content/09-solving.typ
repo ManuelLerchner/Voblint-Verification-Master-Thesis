@@ -321,7 +321,7 @@ This certificate supplies what @sec:eq-discharge assumes about the solve. (C3)
 and (C4) make #sol a post-solution for the local and the global unknowns. (C1)
 and (C2), by the closure argument above, give a solved set that contains the
 program entry and is closed under execution steps. Earlier chapters discharge
-the remaining premises. The states of every returned solve therefore cover the
+the remaining premises. The states of every returned solve therefore describe the
 activation collecting semantics
 (#isathm("entry_state_activation_collect_sound_of_terminates")), and the five
 obligations of @ch:traces hold as @tab:eq-obligations shows. @ch:results turns
