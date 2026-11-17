@@ -1,9 +1,9 @@
 window.VOBLINT_STATS = {
-  "commit": "ff2890a7",
-  "commit_sha": "ff2890a750b74f16d268bbc338ade9f5798fec79",
+  "commit": "71d24a74",
+  "commit_sha": "71d24a74720b2d812bc980565a36661aad9bb93d",
   "date": "2026-11-17",
   "commits": {
-    "total": 2428,
+    "total": 2430,
     "days": {
       "2026-04-27": 7,
       "2026-04-28": 7,
@@ -161,7 +161,7 @@ window.VOBLINT_STATS = {
       "2026-11-10": 1,
       "2026-11-14": 7,
       "2026-11-16": 3,
-      "2026-11-17": 4
+      "2026-11-17": 6
     }
   },
   "isabelle": {
