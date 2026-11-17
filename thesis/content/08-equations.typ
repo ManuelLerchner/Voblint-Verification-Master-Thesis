@@ -488,31 +488,8 @@ describes, which gives routing totality.
 
 == Soundness of the generated equations #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 
-#figure(
-  table(
-    columns: (auto, 1fr),
-    align: (left, left),
-    stroke: none,
-    table.hline(),
-    [*obligation*], [*guarantee of the generated equations*],
-    table.hline(stroke: 0.5pt),
-    [#oblig("INIT")], [the initial state at the program entry describes the initial stores],
-    [#oblig("INTRA")], [the transfer along each local edge is sound],
-    [#oblig("CALL")], [the routed entry state describes the entered store (routing adequacy)],
-    [#oblig("RETURN")], [the exit state is combined soundly in the same context (routing adequacy)],
-    [#oblig("TOTAL")],
-    [every call from a store in the cover is admitted in some context (routing totality)],
-    table.hline(),
-  ),
-  placement: none,
-  caption: [How the generated equations meet the five obligations of
-    @ch:traces, for an arbitrary program.],
-) <tab:eq-obligations>
-
 With the equations and their routing fixed, every post-solution should induce
-a cover that meets the five obligations of @ch:traces. @tab:eq-obligations
-shows which part of the equations meets each obligation, for every domain and
-context policy. The argument assumes the analysis contract of
+a cover that meets the five obligations of @ch:traces. The argument assumes the analysis contract of
 @ch:analysis-interface and the routing adequacy and totality of
 @sec:eq-routing. It also assumes that a state classified as bottom describes
 no store (@sec:eq-call), and that every call resolves to its callee from every
@@ -530,8 +507,25 @@ environment.
   $ cal(A)(v,c) subset.eq "cover"(v,c) $
   for every node $v$ and context $c$.
 ]
-No execution reaches an unknown outside the solved set, since the set contains the
-program entry and is closed under local edges, call continuations, and routed
-calls. Instantiated for the policies of @tab:eq-policies,
-the theorem applies to the analyzer's equations, and @ch:solving computes such a
-post-solution.
+The proof reduces the theorem to the coverage contract of @sec:contract. That
+theorem already shows, by induction over the traces, that a cover meeting the
+five obligations contains $cal(A)(v,c)$ (#isathm("activation_collect_sound")).
+It remains to check the obligations for the cover $conc_(M)(sol(v, c))$, one
+per source of the equations. Each check follows the same
+pattern. A post-solution satisfies $F_(v,c)(sol) lle sol(v, c)$, so every source
+lies below $sol(v, c)$. Since $conc_M$ is monotone, the stores a source
+describes are also described by $sol(v, c)$, and the soundness law of the source
+turns this into its obligation. The edge source, for instance, describes every
+successor of a store that the predecessor's state describes, which is
+#oblig("INTRA"). For calls, routing adequacy places the published entry state
+and the exit state read back in the context that the concrete semantics
+assigns, and routing totality gives #oblig("TOTAL").
+
+Theorem 8.1 is the result of this chapter. Every post-solution $sol$ of the
+equations $F_(v,c)$ of @sec:eq-call meets the goal stated at the start of the
+chapter,
+$ cal(A)(v,c) subset.eq conc_(M)(sol(v, c)), $
+at every $(v, c)$ in its solved set, for every domain and each policy of
+@tab:eq-policies. The theorem does not compute a post-solution, however. Something still has to
+solve the equations. @ch:solving obtains a post-solution from the verified TD
+solver whenever a solve returns.

@@ -14,19 +14,21 @@
 @ch:equations showed that a post-solution of the generated equations is
 sound. At every node and context, its abstract state describes every store that
 an execution reaches there in that context
-(#isathm("activation_collect_dg_sound")). The solver, however, makes the
-valuation a post-solution only on its solved set, so the theorem requires this
+(#isathm("activation_collect_dg_sound")). The TD solver, however, is
+local (@sec:side-effects). It starts from a query and solves only the unknowns
+that the query transitively reads, its solved set (@sec:td). On this set its valuation
+satisfies the inequalities, and about all other unknowns it says nothing. An
+execution that reached an unknown outside the solved set would have no
+abstract state describing its store. The theorem therefore requires the solved
 set to contain the program entry and every unknown that an execution can reach
-from it. This chapter shows that every solve that returns provides such a
-solved set and post-solution. Voblint keeps a copy of the theories of the
-verified TD solver of @sec:td in its repository, called the _vendored_ solver
-below. Voblint first
-brings the equations into the form this solver accepts and then derives the
-premises about the solved set from the solver's partial-correctness theorem.
+from it. This chapter shows that every solve that terminates provides such a
+solved set and post-solution.
 
 == Solver encoding of the equations <sec:eq-encoding>
 
-The vendored solver accepts a right-hand side only as a strategy tree, uses one
+Voblint reuses the verified TD solver of @sec:td unchanged, through a copy of
+its theories in the repository, the _vendored_ solver. This solver accepts a
+right-hand side only as a strategy tree, uses one
 value type for all unknowns, and allows side effects only to global unknowns. A
 direct encoding of the equations, as in Apinis et al. @apinis12 and Goblint,
 needs features this interface lacks. Voblint closes each gap with an
@@ -77,13 +79,9 @@ $
                                & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
                                    #ctor("Answer", thy: "Basics_side") (sh("combine") (q, r)) ) ) ).
 $
-The tree first reads $d$, from which $q$, $e$, and $c'$ follow. It then
-publishes $e$ for the callee's entry in $c'$, reads the callee's exit state
-$r$, and answers $sh("combine")(q, r)$, the abstract state of the caller once
-the call has returned. The general tree (#isaconst("routed_call_program"))
-runs these steps for every callee and entry pair and joins the answers. For a
-bottom entry state, it publishes nothing, reads no callee, and combines $q$
-with bottom.
+The tree performs the steps of @fig:eq-unknowns in order. The general tree
+(#isaconst("routed_call_program")) runs them for every callee and entry pair
+and joins the answers.
 
 === Entry states as global seeds <sec:eq-seed-global>
 
@@ -94,9 +92,8 @@ entry $(ctor("FunctionEntry") thin p, c')$ @apinis12[§6], and Goblint does the
 same with its local side effect `sidel`
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L244")[`constraints.ml`]).
 That entry, however, is a local unknown, and the vendored TD solver's
-#ctor("Side") accepts only global unknowns. Allowing local targets would mean
-changing the solver and redoing its correctness proof, so Voblint adds the seed
-as an intermediate global unknown.
+#ctor("Side") accepts only global unknowns. Rather than change the solver and redo its
+proof, Voblint adds the seed as an intermediate global unknown.
 
 Compared with a side effect into the local entry, a seed can lose precision.
 As global unknowns, seeds are merged by the update rule for globals
@@ -112,7 +109,7 @@ from this widening.
 A local unknown holds an abstract state of the analysis's local domain, and an
 analysis global holds a value of its global domain (@sec:shared-facts). The
 vendored TD solver, however, has a single value type $'d$ for all unknowns, so Voblint
-stores both kinds in their product. Every unknown holds a pair #isatype("dg_state") of
+uses the product type of both domains as that value type. Every unknown holds a pair #isatype("dg_state") of
 a local and a global half, #isaconst("dg_local") and #isaconst("dg_global"),
 uses one half and leaves the other at $lbot$ (@tab:eq-carrier). Order and join
 on pairs work componentwise, so the solver's requirements on the value type
@@ -126,25 +123,20 @@ it, but it stores an entry state and therefore uses the local half.
     align: (left, left, left),
     stroke: none,
     table.hline(),
-    [*solver unknown*], [*role*], [*value*],
+    [*unknown*], [*holds*], [*value*],
     table.hline(stroke: 0.5pt),
-    [$(v, c)$, local], [the state at $v$ in context $c$], [$(d, lbot)$],
-    [#isaconst("Activation_Seed"), global], [an entry state published by a call], [$(e, lbot)$],
-    [#isaconst("Analysis_Global") $v$, global], [the analysis global $v$], [$(lbot, g)$],
+    [local unknown $(v, c)$], [abstract state $d$ at node $v$ in context $c$], [$(d, lbot)$],
+    [seed #isaconst("Activation_Seed") $p$ $c'$],
+    [entry state $e$ published to $p$ in context $c'$],
+    [$(e, lbot)$],
+    [#isaconst("Analysis_Global") $x$], [value $g$ of the analysis global $x$], [$(lbot, g)$],
     table.hline(),
   ),
   placement: auto,
-  caption: [Which half of #isatype("dg_state") each kind of unknown uses. The
-    global unknowns are named by #isatype("global_unknown").],
+  caption: [Which half of the pair #isatype("dg_state") each kind of unknown
+    uses. The other half stays $lbot$. Seeds and analysis globals are the global
+    unknowns, named by #isatype("global_unknown").],
 ) <tab:eq-carrier>
-
-The pair and the seeds belong to the encoding, and the transfers of an analysis
-work on its local and global domains directly. Goblint instead combines the two kinds of value in a
-#link(
-  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/constraint/translators.ml#L30-L32",
-)[lifted sum]
-in which each unknown holds a value of exactly one of the two kinds.
-Voblint uses the product because its componentwise lattice structure keeps the Isabelle proofs simple, although every unknown then carries an unused #lbot half.
 
 == Update rules for global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
 
@@ -209,7 +201,7 @@ contributions. No rule is more precise on every program (@sec:eval-precision).
     )
   },
   kind: table,
-  placement: auto,
+  placement: none,
   caption: [One global unknown under each update rule, from #absval(raw("⊥")), after
     four interval contributions from origins A and B, which separate the rules
     and come from no program. Widened bounds are bold and marked $nabla$. The
@@ -251,78 +243,40 @@ solver extension that would make seeds and buffering unnecessary.
 
 == Solver certificates and partial correctness <sec:certificate>
 
-The soundness theorem of @sec:eq-discharge needs a post-solution on a set of
-unknowns that contains the program entry and is closed under execution steps.
-A solve that returns provides something different. It gives a valuation #sol
-and a set $V$ of local unknowns on which #sol is a post-solution, and $V$ is
-closed under local reads of right-hand sides, starting from the result of
-`main`. The solver thus works backward from that result, whereas the theorem
-follows executions forward from the entry. The two directions meet because
-every node of a procedure reaches the procedure's result, even code after a
-`return`, since the compiler ends every body with a return edge
-(@sec:compile). Seidl and Fecht call this property (R) and show that under it,
-the unknowns on which the query for `main` depends account for every reachable
-state, for every solution, including those that are not least
-@seidl00[§9.1, Thm. 7(2), Thm. 9(2)]. Once a procedure's result is solved in a
-context, closure under reads makes all its nodes solved in that context.
-Executions from the entry of `main` stay among these nodes. Voblint proves this
-from a well-formed program and a returned solve alone
+Theorem 8.1 needs a post-solution on a set of unknowns that contains the
+program entry and is closed under execution steps. A solve that terminates
+provides a valuation #sol and a solved set $V$ on which #sol is a
+post-solution, but $V$ is closed under the reads of right-hand sides, starting
+from the result of `main`. The solver thus works backward from that result,
+whereas executions run forward from the entry.
+
+Backward and forward meet because every node of a procedure reaches the
+procedure's result, since the compiler ends every body with a return edge
+(@sec:compile). Under this property, the unknowns on which the query for
+`main` depends account for every reachable state, for every solution
+@seidl00[§9.1, Thm. 7(2), Thm. 9(2)]. Voblint mechanizes this argument and
+extends it to side effects, seeds, dependences discovered during solving, and
+context policies given as relations
 (#isathm("dg_analysis.live_unknowns_cover", thy: "DG_Live_Unknowns", display: "live_unknowns_cover")).
-The proof mechanizes Seidl and Fecht's argument and extends it to side effects and seed unknowns, to
-dependences that the solver discovers while it solves, and to context policies
-given as relations. The final theorem therefore needs no premise about which
-unknowns the solve visited.
+The final theorem therefore needs no premise about which unknowns the solve
+visited.
 
-This argument applies to a solve that returns, and the vendored solver has no
-termination proof (@sec:td). HOL admits only terminating recursion,
-so Isabelle defines the solver with a domain predicate, the arguments on which
-its recursion terminates, and proves its correctness on that domain
-(@sec:isabelle). The analyzer runs an executable form of the solver that
-returns only when the recursion finishes, and every returned run lies in the
-domain (#isathm("solve_dom_of_solve_c")). The theorems about the analyzer
-therefore have no termination premise. The solve starts from one query, the
-result of `main` in the initial context, as in @apinis12[§3], and evaluates an unknown only when a right-hand side it
-is solving reads it @seidl21 @tilscher26. It thus discovers contexts as it
-goes, and whether it returns depends on how many unknowns it reaches. Under
-entry-state contexts, a recursion can demand unboundedly many
-(@sec:eval-precision); @sec:rel-solvers discusses why the existing termination
-theorems do not apply.
+The argument applies to a solve that terminates, and the solver has no
+termination proof (@sec:td). It discovers contexts as it goes, and under
+entry-state contexts a recursion can demand unboundedly many
+(@sec:eval-precision). Isabelle defines the solver on the arguments for which
+its recursion terminates (@sec:isabelle). Every run of the executable solver
+that returns lies in this domain (#isathm("solve_dom_of_solve_c")), so the
+theorems about the analyzer carry no separate termination premise.
 
-The rest of the soundness proof uses two properties of the solver. The
-returned valuation is a post-solution on the solved set, and the solved set is
-finite, so that @ch:results can join the finitely many contexts solved at a
-node into one verdict. Voblint therefore keeps the solver as a parameter of the
-analysis. A locale states these two requirements, together with the
-requirements that every returned run of the executable code lies in the
-solver's domain and computes the same result as the solver defined in the logic
-(#isalocale("certified_solver")). The verified TD solver
-meets it under every update rule (#isathm("td_certified_solver")).
-
-The first property is the certificate that the verified TD solver returns
-(@sec:td), a partial post-solution in the sense of @sec:side-effects
-(#isaconst("part_post_solution", thy: "Basics_side")). Let $T$ map each local
-unknown $u$ to its strategy tree, and let $V$ be the solved set. For a query
-$x$, the certificate states
-$
-                     & x in V                                                   & wide "(C1)" \
-  forall u in V. med & #isaconst("dep\<^sub>L") (T,sol,u) subset.eq V           & wide "(C2)" \
-  forall u in V. med & #isaconst("eq", thy: "Basics_side") (T,u,sol) lle sol(u) & wide "(C3)" \
-  forall u in V. med & #isaconst("sides_of_rhs") (T(u),sol) lle sol             & wide "(C4)"
-$
-Here #isaconst("eq", thy: "Basics_side") evaluates the strategy tree of $u$ to
-its local value, #isaconst("dep\<^sub>L") collects the local unknowns it reads,
-and #isaconst("sides_of_rhs") collects its published contributions, joined per
-target and #lbot where it publishes nothing. (C1) puts the query into the
-solved set, and (C2) closes the solved set under reading. (C3) is the
-post-solution bound for local unknowns, and (C4) bounds every published
-contribution.
-
-This certificate supplies what @sec:eq-discharge assumes about the solve. (C3)
-and (C4) make #sol a post-solution for the local and the global unknowns. (C1)
-and (C2), by the closure argument above, give a solved set that contains the
-program entry and is closed under execution steps. Earlier chapters discharge
-the remaining premises. The states of every returned solve therefore describe the
-activation collecting semantics
-(#isathm("entry_state_activation_collect_sound_of_terminates")), and the five
-obligations of @ch:traces hold as @tab:eq-obligations shows. @ch:results turns
-these states into verdicts.
+Together, these results close the gap left by Theorem 8.1. The verified TD
+solver solves any equation system given as strategy trees, and whenever a solve
+terminates, its valuation is a post-solution on its solved set
+(#isathm("td_certified_solver")). For the equations of @ch:equations, this
+solved set contains the program entry and every unknown that an execution
+reaches. The returned valuation $sol$ therefore satisfies
+$cal(A)(v,c) subset.eq conc_(M)(sol(v, c))$ at every node $v$ and context $c$,
+and thus forms a valid cover for $cal(A)$
+(#isathm("entry_state_activation_collect_sound_of_terminates")). The inclusion of the collecting semantics in the analyzer's states is the next
+step of the soundness chain in @fig:intro-nest. @ch:results collects these
+states into the report and derives the verdicts from them.

@@ -1026,6 +1026,7 @@ zero, or read an uninitialized local.
 
 This chapter has fixed the program model. A VIMP program has a source
 semantics, compiles to a procedure-aware graph, and every source execution has a
-graph execution with the same store. The remaining chapters reason about the
+graph execution with the same store, the first inclusion of the soundness chain
+in @fig:intro-nest. The remaining chapters reason about the
 graph, and @ch:traces begins by structuring its executions for
 context-sensitive analyses.

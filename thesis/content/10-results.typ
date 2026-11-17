@@ -419,3 +419,8 @@ $ sem(d)_e s != 0. $
 This is the intraprocedural guarantee
 (#isathm("run_voblint_arithmetic_intra_safe")); the extended result also
 applies to call arguments (#isathm("run_voblint_arithmetic_safe")).
+
+These guarantees complete the soundness chain of @fig:intro-nest. The report's states at a
+node describe every store that executions bring there. Every store these
+states describe satisfies the definite verdicts at that node. The end-to-end theorem of @sec:headline composes all inclusions,
+from source executions to verdicts.
