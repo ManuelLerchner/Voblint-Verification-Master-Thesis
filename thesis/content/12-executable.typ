@@ -220,7 +220,7 @@ equals #isaconst("run_voblint") in the logic
 place of #isaconst("trace_event"), a call to the handwritten OCaml function
 `Solver_trace_hook.emit`. The hook receives a function that constructs an event
 and calls it only when tracing is on. Only the traced entry point calls the hook, so an
-untraced run executes no handwritten code inside the analysis. For a traced run, the hook joins the trusted base and must
+untraced run executes no handwritten code inside the analysis. For a traced run, the hook joins the trusted foundation and must
 return, raise nothing, and leave the solver's values alone.
 
 The command-line tool prints the events with `--trace`, and the playground
@@ -317,7 +317,8 @@ configuration it can select (#isathm("run_voblint_source_sound")).
 
 The handwritten OCaml around the generated analyzer (@tab:sizes) is tested.
 A #link(repo-blob + "tests/regression")[regression corpus] of
-#stat("corpus.cases") VIMP programs pins the expected verdicts: a definite one
+#stat("corpus.cases") VIMP programs, the _regression fixtures_, pins the
+expected verdicts: a definite one
 in `precision/`, #verdict("UNKNOWN") in `soundness/`, and a documented loss in
 `known-imprecision/`. Stored expected traces
 (#link(repo-blob + "tests/solver-trace")[golden files]) pin the solver traces of

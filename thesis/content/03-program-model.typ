@@ -144,7 +144,7 @@ the theorem, and a verdict would say nothing about the source program. The runni
   placement: none,
   caption: [The running example and its procedure-aware graph, with node and
     edge labels as `voblint --dot` prints them. Solid arrows are local edges and
-    dashed arrows are call edges. Dotted connectors are not edges. They show the
+    dashed arrows are call edges (@sec:cfg). Dotted connectors are not edges. They show the
     continuation of a call edge, that is, the node where the caller resumes. @fig:eq-unknowns shows the unknowns
     that @ch:equations generates around the first call.],
 ) <fig:program-to-equations>
@@ -759,18 +759,16 @@ then also covers every source execution, so soundness needs no converse.
   list $A$ of commands after it, and $F dot.op F'$ for the concatenation of
   frame stacks. The predicate $#isaconst("pop_ready") (w)$ says that the source
   command $w$ is ready to pop its frame.
-  The relation $kappa approx_p lambda$ relates a source configuration
+  The relation $kappa approx lambda$ relates a source configuration
   $kappa = (c,s,F)$ (@sec:pstep) to a graph configuration $lambda = (v,s,K)$
-  (@sec:cstep) with the same store $s$, where $p$ is the procedure of the
-  outermost activation. For a program run, $p$ is `main`, and we omit the
-  subscript. It is defined by the
+  (@sec:cstep) with the same store $s$. It is defined by the
   following rules, where $B=(p,b,k,n)$ is
-  a block of $p$, and $u$ and $italic("es")$ are arbitrary.
+  a block of a procedure $p$, and $u$ and $italic("es")$ are arbitrary.
 
   $
     sans("Base") quad frac(
       #isaconst("control_at") _B (c,v) quad #isaconst("compiled_at") (B),
-      (c,s,[]) approx_p (v,s,[])
+      (c,s,[]) approx (v,s,[])
     )
   $
   $
@@ -778,13 +776,13 @@ then also covers every source execution, so soundness needs no converse.
       display(
         mat(
           delim: #none,
-          (c,s,F) approx_q (v,s,K) quad #isaconst("compiled_at") (B);
+          (c,s,F) approx (v,s,K) quad #isaconst("compiled_at") (B);
           #isaconst("control_at") _B ("skip" ; A, k') quad
           #isaconst("control_at") _B ("call" (italic("dst"),q,italic("es")) ; A, u),
         )
       ),
       ((c ; "restore") ; A, s, F dot.op [(s_c,italic("dst"))])
-      approx_p (v,s,K dot.op [(k',italic("dst"),s_c)])
+      approx (v,s,K dot.op [(k',italic("dst"),s_c)])
     )
   $
   $
@@ -798,7 +796,7 @@ then also covers every source execution, so soundness needs no converse.
         )
       ),
       (w ; A, s, [(s_c,italic("dst"))])
-      approx_p (#ctor("FunctionResult") thin q, s, [(k',italic("dst"),s_c)])
+      approx (#ctor("FunctionResult") thin q, s, [(k',italic("dst"),s_c)])
     )
   $
 ]
@@ -822,8 +820,8 @@ The relation is useful only if every source step preserves it, as drawn in
     Assume that the body of every declared procedure is compiled into $g$
     (#isaconst("procs_embedded")), and that the command of $kappa$ returns only
     inside an activation that a call opened (#isaconst("return_safe")). If
-    $kappa approx_p lambda$ and $kappa ->_p kappa'$, then
-    $ exists lambda'. lambda ->_c^* lambda' and kappa' approx_p lambda'. $
+    $kappa approx lambda$ and $kappa ->_p kappa'$, then
+    $ exists lambda'. lambda ->_c^* lambda' and kappa' approx lambda'. $
   ]
 ]
 
@@ -838,9 +836,9 @@ The relation is useful only if every source step preserves it, as drawn in
       node((0, 1), $lambda$, name: <l>),
       node((1, 1), $lambda'$, name: <l2>),
       edge(<k>, <k2>, "-|>", isaconst("pstep")),
-      edge(<k>, <l>, "-", $approx_p$, label-side: right),
+      edge(<k>, <l>, "-", $approx$, label-side: right),
       edge(<l>, <l2>, "-|>", [#isaconst("cstep")#super[\*]], label-side: right, stroke: dashed),
-      edge(<k2>, <l2>, "-", $approx_p$, label-side: left, stroke: dashed),
+      edge(<k2>, <l2>, "-", $approx$, label-side: left, stroke: dashed),
     )
   },
   kind: image,
@@ -868,9 +866,9 @@ simulation does not answer this, because equal commands can occur at
 different places. In
 `if (b) { x = 1; } else { x = 1; }`, both branches leave the residual `x = 1`,
 so the configuration does not show which branch the run took, and the
-simulation relates it to both branch nodes. A verdict at the else-branch node, however, speaks only about runs that took
-the else-branch. The node must therefore come from the run, which knows the
-branch it took.
+simulation relates it to both branch nodes. A verdict at the else-branch
+node, however, speaks only about runs that took the else-branch, so the node
+must come from the run.
 
 The proof therefore works on an _annotated copy_ $E$ of the program, which
 labels each command $c$ with the node $"point"(c)$ that the compiler emits for
@@ -914,21 +912,21 @@ node $"point"(c)$ (#isathm("csim_point_compile_prog")).
     $(r,s,F)$ and that the simulation relates to the node $v = "point"(c)$.],
 ) <fig:at-node>
 
-The run of $E$ supplies the occurrence that the plain configuration lacks
-(@fig:at-node). In
-the example above, a run through the then-branch reaches `x = 1` annotated
-with the then-branch node, so the configuration is observed there and not at
-the else-branch node. The relation is still not a function. If two runs
-from $s_0$ reach the same plain configuration through different occurrences,
-the configuration is observed at both nodes. @ch:results states the
-end-to-end theorem for every node at which a reached configuration is observed,
-and shows that there is at least one.
+In the example above, let $v_1$ and $v_2$ be the nodes of `x = 1` in the
+then- and the else-branch (@fig:at-node). If $s_0 (b) != 0$, the run of $E$
+from $s_0$ reaches `x = 1` labeled $v_1$, so
+$p, s_0 tack.r (#raw("x = 1"), s_0, []) gt.closed v_1$ holds and the
+configuration is not observed at $v_2$. If $s_0 (b) = 0$, it is observed at
+$v_2$ only. Two runs from $s_0$ that reach one configuration through different
+occurrences observe it at both nodes. @ch:results states the end-to-end theorem
+for each node at which a reached configuration is observed, and shows that one
+exists.
 
 == Comparison of VIMP with C <sec:vimp-vs-c>
 
 Every source-level guarantee in this thesis is stated over the executions of
 #isaconst("pstep"). Whether #isaconst("pstep") describes the intended language,
-its adequacy, therefore lies outside the proof (@ch:intro). This section
+its _adequacy_, therefore lies outside the proof (@ch:intro). This section
 argues adequacy by comparing VIMP with C11 @iso-c11 (committee draft N1570).
 The comparison is not
 complete.

@@ -15,7 +15,7 @@ each analysis from this framework, as Goblint does @seidl26[§6]
 must supply for the framework's argument to apply.
 
 For the non-relational domains of @ch:domains, the domain primitives determine every edge
-transfer (@sec:domain-contract). Other analyses need more. A relational
+transfer (@sec:instances-supply). Other analyses need more. A relational
 analysis can track relationships between variables, an analysis
 may keep facts that belong to no program point, and analyses may need each
 other's facts to be precise (@ch:cooperation). Calls, moreover, need more than

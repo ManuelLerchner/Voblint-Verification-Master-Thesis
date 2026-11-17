@@ -82,8 +82,8 @@ $x = y$ at that point (@fig:mcp-step).
   kind: image,
   placement: none,
   caption: [One step of Interval and the order analysis at `z = (x == y)`
-    (schematic). Interval asks which values $x == y$ may take, and the channel
-    gives it the meet of all analyses' answers. The final state matches the
+    (schematic). Interval asks which values $x == y$ may take, and the channel of
+    @sec:coop-queries gives it the meet of all analyses' answers. The final state matches the
     analyzer run, #verdict("coop-eq-both", "16:7") with
     #state("coop-eq-both", "16:7").],
 ) <fig:mcp-step>

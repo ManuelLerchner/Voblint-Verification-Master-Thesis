@@ -214,7 +214,7 @@ domain of abstract values. The domain supplies abstract and inverse operations
 with their soundness laws, and the interpreter derives forward evaluation, the
 backward filtering of guards, and the step of each command generically
 @nipkow14[Sects. 13.5, 13.7]. Voblint's non-relational domains follow this
-pattern (@sec:domain-contract). Its collecting semantics, however, ranges over
+pattern (@sec:instances-supply). Its collecting semantics, however, ranges over
 activation traces of a procedure-aware control-flow graph (@ch:traces),
 because a return must know which caller resumes.
 

@@ -533,8 +533,8 @@ proved function (@sec:ocaml-boundary). The only exception is a hook through
 which a traced run records the solver's steps for the replay
 (@sec:tracing). A bug in the parser or the printing code can thus misread a program or
 misdisplay a verdict, but it cannot change what the analysis computes for the
-syntax tree it receives. All components, proved or not, rest on a trusted
-foundation, which consists of the Isabelle kernel, the code generator with its
+syntax tree it receives. All components, proved or not, rest on a _trusted
+foundation_, which consists of the Isabelle kernel, the code generator with its
 target mappings, and the toolchains that compile and run the generated code.
 The theorem is a partial-correctness result, since termination of the solve is
 a premise for each program (@sec:certificate).

@@ -39,6 +39,11 @@ exceeds its upper bound, is such a value. An analyzer that recognizes only the
 bottom element as empty misses it. Missing it is still sound, since the analyzer then assumes more stores than exist, but it loses precision. After the next
 join, the information that a program point is unreachable is gone.
 
+@fig:domain-carrier previews what this chapter builds toward, the operations
+and laws of a domain arranged as a hierarchy of Isabelle classes and locales. A domain such as Interval or Sign
+proves these laws once, and the framework derives every transfer function from
+its operations (@sec:instances-supply).
+
 #let _snode(pos, name, body) = node(pos, text(size: 8pt, body), name: name, inset: 3pt)
 #let _order = 0.7pt + vb.neutral
 #let _hit = 1.1pt + vb.accent
@@ -448,6 +453,19 @@ join, the information that a program point is unreachable is gone.
     )
   })
 }
+
+#figure(
+  domain-tree("carrier"),
+  kind: image,
+  placement: top,
+  caption: [The operations and laws of a non-relational domain over its carrier
+    type #raw("'a"). Classes are solid and locales dashed, and each lists what
+    it declares. Solid arrows point to what a declaration extends, dashed ones
+    to the class that constrains its type variable. Heavier borders mark the
+    interfaces an analysis implements, and #mono-mark a monotone strengthening.
+    Fill gives the origin: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored
+    TD solver, #swatch(vb.voblint) Voblint.],
+) <fig:domain-carrier>
 
 == Numeric domains and their concretization laws #thy-badge("Voblint_Domain", "Abstract_Domain") <sec:domain-carrier-laws>
 
@@ -923,76 +941,75 @@ Interval and Sign, for
 instance, do not invert arithmetic and cannot learn $x < 4$ from `x + 1 < 5`,
 as the interval analysis of Nipkow and Klein does @nipkow14[§13.8.3].
 
-== The domain interface and its derived transfers #thy-badge("Voblint_Nonrelational", "Nonrelational_Transfer") <sec:domain-contract>
-
-A domain provides two groups of operations, which @fig:domain-carrier shows
-with their laws. The _carrier operations_ serve the solver. They are the order,
-the join, bottom and top, widening and narrowing, the emptiness test, and the
-printer, tied to the concretization by the laws of @sec:domain-carrier-laws.
-The primitives mirror the program's own operations. They are evaluation and
-the truth test (@sec:domain-forward), the two comparisons (@sec:queries), and
-the inverse operators and the intersection (@sec:branches). A non-relational domain hands its primitives over as one
-record of type #isatype("nonrelational_ops") and proves them sound once by
-interpreting #isalocale("sound_nonrelational_ops"). For Interval, the record
-is #isaconst("ivl_ops").
-
-These two groups are all a domain supplies. The primitives determine the
-transfer function of every edge (#isaconst("tf_abs"), #isaconst("enter_for")),
-so a domain writes none itself:
-#block(inset: (left: 1.5em, y: 0.3em))[
-  #grid(
-    columns: (auto, 1fr),
-    column-gutter: 1.2em,
-    row-gutter: 0.75em,
-    [assignment `x = e`], $d |-> d[x |-> asem(e) thin d]$,
-    [guard $b$, required value $r$],
-    [the guard filter of @sec:branches for $b$ and $r$, after a feasibility test
-      that returns #ctor("Bot") for an infeasible arm],
-
-    [library call],
-    [the domain's transfer for the library function (#isaconst("special_transfer"))],
-
-    [#keyw("return") $e$], $d |-> d[#isaconst("ret_var") |-> asem(e) thin d]$,
-    [entry with formals $overline(x)$, arguments $overline(e)$],
-    [every local set to $ltop$, globals kept, then $overline(x) |-> asem(overline(e)) thin d$],
-  )
-]
-Skips, procedure bodies, checks, and returns without a value leave the state
-unchanged. With Interval
-and $d(x) = absval(ivl(0, 9))$, for instance, the edge `x = x + 1` yields
-$d[x |-> absval(ivl(1, 10))]$. The interpretation of
-#isalocale("sound_nonrelational_ops") proves all of these transfers sound at
-once, so a new domain mainly defines its values and primitives and proves the
-primitive laws. The analyzer runs the same primitives on a finite
-representation of states. Their soundness carries over to this executable
-specification, from which the analyzer's code is generated, without further
-proof (#isathm("exec_local_spec_sound")).
-
-#figure(
-  domain-tree("carrier"),
-  kind: image,
-  placement: top,
-  caption: [The operations and laws of a non-relational domain over its carrier
-    type #raw("'a"). Classes are solid and locales dashed, and each lists what
-    it declares. Solid arrows point to what a declaration extends, dashed ones
-    to the class that constrains its type variable. Heavier borders mark the
-    interfaces an analysis implements, and #mono-mark a monotone strengthening.
-    Fill gives the origin: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored
-    TD solver, #swatch(vb.voblint) Voblint.],
-) <fig:domain-carrier>
-
 == Carriers without least upper bounds <sec:excluded-carriers>
 
-The verified TD solver requires a #isalocale("bounded_semilattice_sup_bot")
-(#isalocale("TD_side_upd_rule")), whose join is the _least_ upper bound, and
-the framework's proofs use this leastness as well
-(#isathm("sound_refinement.bfilter_reductive")). Goblint's exclusion-set
-domain #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`]
-loses this property once its bit ranges are dropped. It describes an integer by a
-definite value, `Definite n`, or by `Excluded S`, every integer outside a
-finite set $S$, and `Excluded S` lies below `Excluded S'` when $S' subset.eq S$.
-Over mathematical integers, every upper bound of `Definite 1` and `Definite 2`
-is some `Excluded S` with $1, 2 in.not S$, and any $p in.not S union {1, 2}$
-gives the strictly smaller upper bound `Excluded` $(S union {p})$. Admitting
-such a carrier, by bounded integers as in Goblint or by a weaker join, is left
-for future work.
+The verified TD solver requires its values to form a
+#isalocale("bounded_semilattice_sup_bot") (#isalocale("TD_side_upd_rule")),
+whose join is the _least_ upper bound, and the framework's proofs use this
+leastness as well (#isathm("sound_refinement.bfilter_reductive")). This
+excludes every carrier in which two values have upper bounds but no least one.
+
+Goblint's default integer domain,
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`],
+is such a carrier once its bit range is removed. A value is then
+`Definite n`, denoting ${n}$, or `Excluded S`, denoting $ZZ without S$ for a
+finite set $S$ (@fig:defexc). Every `Excluded {p}` with $p in.not {1, 2}$ lies
+above `Definite 1` and `Definite 2`. A least upper bound $u$ of the two would
+lie below each of them, so by monotonicity of $conc$
+$ {1, 2} subset.eq conc(u) subset.eq inter.big_(p in.not {1, 2}) (ZZ without {p}) = {1, 2}. $
+No value denotes exactly ${1, 2}$, since `Definite n` denotes a single integer
+and `Excluded S` all but finitely many.
+
+#let _gnode(pos, name, body) = node(pos, text(size: 7pt, raw(body)), name: name, inset: 3pt)
+#figure(
+  diagram(
+    spacing: (4.5mm, 4.6mm),
+    _gnode((1.5, 0), <x-top>, "Excluded {}"),
+    _gnode((0.6, 1), <x-3>, "Excluded {3}"),
+    _gnode((2.4, 1), <x-4>, "Excluded {4}"),
+    _snode((3.4, 1), <x-more>, $dots.c$),
+    _gnode((1.5, 2), <x-34>, "Excluded {3,4}"),
+    _gnode((1.5, 3), <x-345>, "Excluded {3,4,5}"),
+    _snode((1.5, 3.6), <x-down>, $dots.v$),
+    node(
+      (1.5, 4.4),
+      text(size: 8pt, fill: vb.muted, ${1, 2}$),
+      name: <x-12>,
+      inset: 3pt,
+      stroke: stroke(paint: vb.muted, thickness: 0.6pt, dash: "dashed"),
+      shape: rect,
+      corner-radius: 2pt,
+    ),
+    _gnode((-0.9, 5.3), <x-s0>, "Definite 0"),
+    _gnode((0.4, 5.3), <x-s1>, "Definite 1"),
+    _gnode((2.6, 5.3), <x-s2>, "Definite 2"),
+    _gnode((3.9, 5.3), <x-s3>, "Definite 3"),
+    _snode((4.9, 5.3), <x-smore>, $dots.c$),
+    _gnode((1.5, 6.4), <x-bot>, "Bot"),
+    edge(<x-top>, <x-3>, "-", stroke: _order),
+    edge(<x-top>, <x-4>, "-", stroke: _order),
+    edge(<x-3>, <x-34>, "-", stroke: _hit),
+    edge(<x-4>, <x-34>, "-", stroke: _hit),
+    edge(<x-34>, <x-345>, "-", stroke: _hit),
+    edge(<x-345>, <x-down>, "-", stroke: _hit),
+    edge(<x-345>, <x-s1>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
+    edge(<x-345>, <x-s2>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
+    edge(<x-12>, <x-s1>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
+    edge(<x-12>, <x-s2>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
+    ..("s0", "s1", "s2", "s3").map(n => edge(label("x-" + n), <x-bot>, "-", stroke: _order)),
+  ),
+  kind: image,
+  placement: none,
+  caption: [Goblint's exclusion sets without a bit range, ordered bottom to
+    top. The blue chain of upper bounds of `Definite 1` and `Definite 2`
+    descends forever. A least upper bound would denote ${1, 2}$ (dashed), which
+    no value does. Illustrative, not machine-checked.],
+) <fig:defexc>
+
+The exclusion costs precision. No Voblint domain can record that a variable
+avoids a value inside its range, since Sign has no value for "nonzero" and
+intervals are convex. After the guard `x != 0` with $x$ in $absval(ivl(-5, 5))$, every
+domain still admits $0$, so the check `x != 0` remains unproved there, while
+Goblint's `DefExc` records `Excluded {0}`. Voblint therefore cannot
+replicate every domain that Goblint ships. Admitting such carriers, by bounded
+integers as in Goblint or by a weaker join, is left for future work.

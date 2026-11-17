@@ -88,7 +88,7 @@ value of each and the integers it stands for.
 ) <fig:gamma>
 
 Each of these domains enters Voblint through the interface of
-@sec:domain-contract. It instantiates the order classes for its carrier,
+@fig:domain-carrier. It instantiates the order classes for its carrier,
 supplies its operations as one record, and proves them sound once
 (#isalocale("sound_nonrelational_ops")). From this proof, a generic construction
 derives the transfer functions of @ch:analysis-interface together with their
