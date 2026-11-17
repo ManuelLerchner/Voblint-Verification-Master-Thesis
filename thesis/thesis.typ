@@ -4,8 +4,6 @@
 #import "@preview/codly:1.3.0": codly, codly-init
 #import "lib/theorems.typ": thm-counter
 #import "lib/figures.typ": part, part-outline-entry
-#import "@preview/glossarium:0.5.10": make-glossary, print-glossary, register-glossary
-#import "lib/glossary.typ": entries as glossary-entries, print-thesis-glossary
 #show: thesis.with(
   title: "Voblint: Towards a Verified Goblint-Style Analysis Pipeline in Isabelle/HOL",
   title-de: [Voblint: Auf dem Weg zu einer verifizierten Analysepipeline im Stil von Goblint in #box[Isabelle/HOL]],
@@ -16,8 +14,6 @@
   examiner: "Prof. Dr. Francisco Javier Esparza Estaun",
   date: "01.12.2026",
 )
-#show: make-glossary
-#register-glossary(glossary-entries)
 
 // Listings: codly draws the frame and the line numbers for every raw block,
 // so lib/code.typ hands it bare `raw` content. A language tag names what a
@@ -124,8 +120,4 @@
 #include "content/appendix-isabelle.typ"
 #include "content/appendix-notation.typ"
 #include "content/appendix-tooling.typ"
-
-#pagebreak(weak: true)
-= Glossary <app:glossary>
-#print-thesis-glossary(print-glossary)
 
