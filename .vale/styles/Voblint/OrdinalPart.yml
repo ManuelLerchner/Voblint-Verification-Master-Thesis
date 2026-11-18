@@ -1,0 +1,20 @@
+# Author review: "the first part ... the second part" makes the reader count
+# back through the previous sentences. Name the part instead.
+extends: existence
+message: "'%s': name the part instead of counting it."
+level: warning
+ignorecase: true
+nonword: true
+tokens:
+  - '\bthe (?:first|second|third|former|latter) (?:part|half|clause|conjunct|component)\b'
+
+tests:
+  - name: fires
+    input: |
+      The theorem has two conjuncts. The second part bounds the report.
+    want: |
+      1:32:Voblint.OrdinalPart:'The second part': name the part instead of counting it.
+  - name: clean
+    input: |
+      The theorem has two conjuncts. The verdict conjunct bounds the report.
+    want: ""

@@ -1,0 +1,22 @@
+# AGENTS.md "Goblint comparisons": Voblint shares Goblint's architecture; it is
+# not a formalization of Goblint's implementation.
+extends: existence
+message: "'%s' overstates the correspondence: say Voblint follows Goblint's architecture."
+level: error
+ignorecase: true
+nonword: true
+tokens:
+  - '\bGoblint clone\b'
+  - '\bclone of Goblint\b'
+  - '(?<!not a )\bformali[sz]ation of Goblint\b'
+
+tests:
+  - name: fires
+    input: |
+      Voblint is a Goblint clone in Isabelle.
+    want: |
+      1:14:Voblint.GoblintClone:'Goblint clone' overstates the correspondence: say Voblint follows Goblint's architecture.
+  - name: clean on a negation
+    input: |
+      Voblint is not a formalization of Goblint.
+    want: ""

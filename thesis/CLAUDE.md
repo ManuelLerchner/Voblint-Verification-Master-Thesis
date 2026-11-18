@@ -239,10 +239,12 @@ Rules the author set while reviewing drafts. They refine the sections above.
 - Name the object instead of pointing back at it. Write "TD solver", never a
   bare "TD" (`Voblint.BareTD`), and "Goblint's architecture" rather than "this
   architecture". Do not open a sentence with "Such a …" (`Voblint.SuchOpener`).
+  Drop fillers such as "In words," and "Note that" (`Voblint.CannedPhrases`).
 - Keep "entry state" and "entry-state contexts" apart. An *entry state* is the
   abstract state at a callee's entry, which every call has under every policy.
   *Entry-state contexts* (or the *entry-state policy*) name the context policy
-  that picks contexts from that state. Never call the policy "entry states".
+  that picks contexts from that state. Never call the policy "entry states"
+  (`Voblint.EntryStatesPolicy`).
 - Precise mathematics. Say post-fixpoint when a value only satisfies
   $f(d) lle d$, say inequality when soundness needs only $lle$, write abstract
   operations with a sharp ($sh(+)$), and do not say an iteration "reaches" a
@@ -301,7 +303,8 @@ handing a section over.
 - Verify reviewer suggestions against the theories and the literature before
   applying them, and report where the sources disagree (the soundness square
   commutes only up to ⊆; the solver needs no meet).
-- Open a chapter or section from the reader's question, not with an inventory
+- Open a chapter or section from the reader's problem, stated as a claim and
+  never as a literal question (`Voblint.ProseQuestion`), not with an inventory
   of its contents ("This chapter presents X: a, b and c"). Every sentence must
   connect to its neighbours; a lone declarative such as "The report states its
   guarantee in the control-flow picture." needs the sentence that motivates it.
@@ -364,6 +367,37 @@ handing a section over.
   description; the set it stands for is written $conc(d)$.
 - Cut a fact that nothing in its section uses. If a later chapter needs it,
   it belongs there.
+- Give each idea one home. When two sections explain the same thing (scope
+  bullets and the trust figure, an outro restating the intro, a table that
+  repeats a figure), keep the version where the argument needs it and replace
+  the other with a reference.
+- Follow every theorem or definition the reader must understand with its plain
+  reading: what it quantifies over, what it assumes and what it bounds, with
+  the formula for each part in parentheses. Explain why a proof works (which
+  laws combine, which invariant holds) instead of listing its obligations.
+- Turn a thin definition into prose. A definition environment whose formula
+  introduces symbols that nothing later uses (a classification function, a
+  lens, an auxiliary product) reads better as one sentence. Keep a formula
+  only when a later chapter computes with it.
+- Cite an Isabelle entity where the reader may want to open it: theorem
+  statements, the definitions a section is about, the formal source of a
+  claim. A sentence that only names a constant in passing gets a section
+  reference or plain words. Prefer `@sec:…` over citing the same constant
+  again in a later chapter.
+- End a chapter on its result and the question the next chapter answers, not
+  on a caveat or an implementation remark. In the main chain, say which
+  inclusion of the soundness figure the chapter establishes.
+- Scope claims to the evidence: "follows Goblint's architecture", never a
+  Goblint clone (`Voblint.GoblintClone`); "a solve that terminates" for solver-level
+  results, whose premise is termination (`Voblint.SolveReturns`), but "whenever
+  `run_voblint` returns a report" for the end-to-end theorem, whose premise
+  (`Analysed res`) also requires a valid configuration and program; "precise enough to
+  decide the checks" instead of "useful". Name a part instead of counting it
+  ("the verdict conjunct", not "the second part"; `Voblint.OrdinalPart`).
+- Keep the page count fixed while revising. Pay for added text with cuts in
+  the same chapter (remove a redundant sentence, a decorating citation, a
+  side remark) rather than shrinking fonts or figures, and rerun the page scan
+  of "Checking a page" after every round.
 
 ### Evidence
 
