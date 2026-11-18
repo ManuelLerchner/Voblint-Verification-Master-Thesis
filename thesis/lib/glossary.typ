@@ -607,8 +607,8 @@
   )[
     The run setting that selects callee contexts: the single unit context of
     the context-insensitive analysis; call strings, the most recent call sites
-    cut to a fixed length $k$; or entry states, the abstract values of the
-    callee's formals at entry. Under entry states, overlapping entry pairs can
+    cut to a fixed length $k$; or entry-state contexts, the abstract values of the
+    callee's formals at entry. Under entry-state contexts, overlapping entry pairs can
     place one call in several contexts.
   ],
   term("routing", "routing", _eq, notation: ctxh, see: <sec:eq-routing>)[

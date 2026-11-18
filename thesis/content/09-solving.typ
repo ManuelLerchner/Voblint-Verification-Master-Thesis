@@ -6,6 +6,7 @@
 #import "../lib/theme.typ": vb
 #import "../lib/claims.typ": claim-check, claim-ref, claim-snapshot, claim-text
 #import "../lib/figures.typ": verdict
+#import "../lib/theorems.typ": theorem
 
 #let _b = $italic("bump")$
 
@@ -261,22 +262,35 @@ context policies given as relations
 The final theorem therefore needs no premise about which unknowns the solve
 visited.
 
-The argument applies to a solve that terminates, and the solver has no
-termination proof (@sec:td). It discovers contexts as it goes, and under
+The argument applies to a solve that terminates, a property that is not
+proved for the solver (@sec:td). It discovers contexts as it goes, and under
 entry-state contexts a recursion can demand unboundedly many
 (@sec:eval-precision). Isabelle defines the solver on the arguments for which
 its recursion terminates (@sec:isabelle). Every run of the executable solver
 that returns lies in this domain (#isathm("solve_dom_of_solve_c")), so the
 theorems about the analyzer carry no separate termination premise.
 
+#theorem(
+  name: [States of a terminating solve],
+  isa: "entry_state_activation_collect_sound_of_terminates",
+)[
+  Let $p$ be a well-formed program whose solve terminates under one of the
+  context policies of @tab:eq-policies, and let $sol(v, c)$ be the state the
+  solve returns for $(v, c)$. Then for every node $v$ and context $c$,
+  $ cal(A)(v,c) subset.eq conc_(M)(sol(v, c)). $
+]
+
+The inclusion is proved once per kind of policy. The cited theorem covers
+entry-state contexts. For unit and call strings, whose routing ignores the
+entry state, a companion theorem proves it
+(#isathm("fun_route_activation_collect_sound_of_terminates")).
+
 Together, these results close the gap left by Theorem 8.1. The verified TD
 solver solves any equation system given as strategy trees, and whenever a solve
 terminates, its valuation is a post-solution on its solved set
 (#isathm("td_certified_solver")). For the equations of @ch:equations, this
 solved set contains the program entry and every unknown that an execution
-reaches. The returned valuation $sol$ therefore satisfies
-$cal(A)(v,c) subset.eq conc_(M)(sol(v, c))$ at every node $v$ and context $c$,
-and thus forms a valid cover for $cal(A)$
-(#isathm("entry_state_activation_collect_sound_of_terminates")). The inclusion of the collecting semantics in the analyzer's states is the next
+reaches. The returned valuation therefore forms a valid cover for $cal(A)$
+(Theorem 9.1). The inclusion of the collecting semantics in the analyzer's states is the next
 step of the soundness chain in @fig:intro-nest. @ch:results collects these
 states into the report and derives the verdicts from them.

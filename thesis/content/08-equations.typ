@@ -61,16 +61,23 @@ $
            ljoin & scripts(⨆)_(k in K(v)) #isaconst("rhs_call") (tau,c,k,v) \
            ljoin & #isaconst("rhs_seed") (tau,c,v).
 $
-Here $P(v,c)$ lists the local edges into $v$ selected for context $c$, $K(v)$ the calls returning
-to $v$, and $scripts(⨆)$ joins over a list, with empty join $lbot$. The fixed
-parameters of the generator are omitted (#isathm("routed_node_rhs_parts")). The decomposition assumes that the
-operations of the analysis are well formed in the sense of
-@sec:analysis-globals. A post-solution $sol$ assigns $(v, c)$ a value at least
-as large as this join.
-Since $conc_M$ is monotone, $conc_(M)(sol(v, c))$ therefore contains the stores
-that each source describes. Publications to analysis globals
-(@sec:shared-facts) are side effects of the right-hand side and do not enter
-this join.
+Here $P(v,c)$ lists the local edges into $v$ selected for context $c$, $K(v)$
+the calls returning to $v$, and $scripts(⨆)$ joins over a list, with empty join
+$lbot$. The fixed parameters of the generator are omitted
+(#isathm("routed_node_rhs_parts")), and the decomposition assumes that the
+operations of the analysis are well formed (@sec:analysis-globals). The
+equations that Voblint generates are the inequalities
+$ sol(v, c) lge F_(v,c)(sol) quad "for every local unknown" (v, c), $
+together with the side effects of the right-hand sides, which publish entry
+states to seeds and contributions to analysis globals (@sec:side-effects).
+Since $conc_M$ is monotone, $conc_(M)(sol(v, c))$ of a post-solution contains
+the stores that each source describes.
+
+In the running example, most nodes use only the edge source. The program entry
+of `main` adds #isaconst("rhs_init"), the entry of `bump` in a context $c'$
+reads its seed through #isaconst("rhs_seed"), and the node after a call, such
+as $(italic("pp3"), c_0)$ after `bump(5)`, has only the call source.
+@fig:eq-unknowns follows this last case.
 
 At a call, the analyzer chooses the callee's context with a _routing_ function
 $ctxh(u, c, e)$ of the call site $u$, the caller context $c$, and the entry
@@ -185,8 +192,7 @@ callee as a side effect (@sec:side-effects).
     the continuation and the resume state $q_1$ that skips the callee.],
 ) <fig:eq-unknowns>
 
-@fig:eq-unknowns follows the first call of the running example. `main` runs
-in the root context $c_0$, and its call `bump(5)` sits on the edge from
+In the figure, `main` runs in the root context $c_0$, and its call `bump(5)` sits on the edge from
 $italic("pp2")$ to $italic("pp3")$. The equation of the continuation
 $(italic("pp3"), c_0)$ connects caller and callee. First,
 enter (@sec:calls) turns the caller's value at $(italic("pp2"), c_0)$ into an
@@ -335,7 +341,7 @@ the soundness theorem and are proved once for each context policy.
       table.hline(stroke: 0.5pt),
       [unit], [$c' = ()$], [$()$], [both constant],
       [call strings], [$c' = "take"_k (u dot c)$], [$"take"_k (u dot c)$], [the same term],
-      [entry states],
+      [entry-state contexts],
       [$c' = e|_"formals"$, $(q, e)$ describes $(s, s')$],
       [$e|_"formals"$],
       [$italic("adm")$ reads the routing],
@@ -460,7 +466,7 @@ routing keep them apart.
       _policy("ctx-demo-none", [unit]),
       _policy("ctx-demo-k1", [call strings, $k = 1$]),
       _policy("ctx-demo-k2", [call strings, $k = 2$]),
-      _policy("ctx-demo-entry", [entry states]),
+      _policy("ctx-demo-entry", [entry-state contexts]),
     )
   },
   kind: image,

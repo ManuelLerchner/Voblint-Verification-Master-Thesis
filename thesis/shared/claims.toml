@@ -224,6 +224,14 @@ why = "The compiled graph of the recursive sum/dec program: node names, edge lab
 argv = ["--analysis", "interval", "thesis/shared/programs/callee-uninit.vimp"]
 why = "Chapter 3: the shipped entry resets a callee's locals to top, so a check that an unassigned callee local is 0 stays UNKNOWN although the source semantics starts it at 0."
 
+[claims.arith-diagnostics]
+argv = [
+  "--analysis",
+  "interval",
+  "thesis/shared/programs/arith-diagnostics.vimp",
+]
+why = "Chapter 10: one division by a constant zero (ERROR), one by an unconstrained input (WARNING), and a guarded one without diagnostic."
+
 [claims.and-divisor-warning]
 argv = ["--analysis", "interval", "thesis/shared/programs/and-divisor.vimp"]
 why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns about the divisor in x != 0 && 10 / x > 1."

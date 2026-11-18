@@ -404,11 +404,14 @@
     kind,
     default: vb.plain,
   )
+  // A theorem header has no other break point inside a long name, so the line
+  // above it would stretch. A zero-width space after each underscore lets the
+  // name wrap there.
   link(href, text(
     fill: color,
     font: "DejaVu Sans Mono",
     size: 0.85em,
-    name,
+    name.replace("_", "_\u{200B}"),
   ))
 }
 

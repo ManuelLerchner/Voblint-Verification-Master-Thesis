@@ -239,6 +239,10 @@ Rules the author set while reviewing drafts. They refine the sections above.
 - Name the object instead of pointing back at it. Write "TD solver", never a
   bare "TD" (`Voblint.BareTD`), and "Goblint's architecture" rather than "this
   architecture". Do not open a sentence with "Such a …" (`Voblint.SuchOpener`).
+- Keep "entry state" and "entry-state contexts" apart. An *entry state* is the
+  abstract state at a callee's entry, which every call has under every policy.
+  *Entry-state contexts* (or the *entry-state policy*) name the context policy
+  that picks contexts from that state. Never call the policy "entry states".
 - Precise mathematics. Say post-fixpoint when a value only satisfies
   $f(d) lle d$, say inequality when soundness needs only $lle$, write abstract
   operations with a sharp ($sh(+)$), and do not say an iteration "reaches" a

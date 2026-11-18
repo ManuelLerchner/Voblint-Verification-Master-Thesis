@@ -57,6 +57,8 @@
     UNKNOWN: vb.verdict-unknown,
     DEAD: vb.verdict-dead,
     WARNING: vb.verdict-warning,
+    // The playground draws an arithmetic error in its danger red, as REFUTED.
+    ERROR: vb.verdict-refuted,
   )
   let w = upper(word)
   assert(w in colors, message: "not a verdict: " + word)

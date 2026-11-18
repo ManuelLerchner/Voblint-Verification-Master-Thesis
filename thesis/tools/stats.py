@@ -93,6 +93,10 @@ def strip_line(line: str) -> str:
     line = re.sub(r"\$[^$]*\$", _blank, line)
     line = re.sub(r'"[^"]*"', _blank, line)
     line = re.sub(r"[@<][\w:.-]+>?", _blank, line)
+    # Typst layout arguments such as `width: 100%` are sizes, not counts.
+    line = re.sub(
+        r"\b[\w-]+:\s*-?\d+(?:\.\d+)?(?:%|pt|em|cm|mm|in|fr)(?!\w)", _blank, line
+    )
     return line
 
 

@@ -575,8 +575,8 @@ The functional approach
 summarizes a procedure's effect on entry states. Demand tabulation computes
 only entries encountered during analysis. With the entry state as context, `bump`
 gets one copy for $absval(ivl(5, 5))$ and one for $absval(ivl(4, 4))$, with the
-results $6$ and $5$. Neither choice subsumes the other. Only entry states
-separate two calls from one site with different arguments, and only call
+results $6$ and $5$. Neither choice subsumes the other. Only entry-state
+contexts separate two calls from one site with different arguments, and only call
 strings separate calls from two sites with the same argument. Apinis et al.
 also distinguish calls by only part of the entry state @apinis12[§4], for
 instance by the argument of `bump` alone, ignoring global variables it never
