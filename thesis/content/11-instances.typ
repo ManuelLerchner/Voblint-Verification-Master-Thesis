@@ -12,8 +12,8 @@
 = Numeric and Relational Analyses <ch:instances>
 
 @ch:domains to @ch:results show that every report is sound whichever analyses
-produced it, provided each meets its obligations. A user, however, runs
-concrete analyses, selected for each run. Voblint ships the
+produced it, provided each meets its obligations. A user, however, selects
+concrete analyses for each run. Voblint ships the
 non-relational domains Sign, Interval, Parity, and Congruence, their reduced
 product Int, and a relational order analysis. Each base domain records a
 different property of a variable, and on one loop Int proves a check that none

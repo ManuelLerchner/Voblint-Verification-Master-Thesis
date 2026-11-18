@@ -16,9 +16,8 @@ executions each pair describes. The graph execution of @sec:cstep cannot
 answer this, because it records only a node, a store, and a frame stack, and
 no calling context.
 
-Activation traces close this gap by remembering the caller of every
-activation, and a calling context is
-assigned to each trace. One local
+Activation traces close this gap. They remember the caller of every
+activation, and each trace carries a calling context. One local
 condition per kind of execution step then suffices for a context-sensitive
 analysis to over-approximate the stores at each node and context.
 
