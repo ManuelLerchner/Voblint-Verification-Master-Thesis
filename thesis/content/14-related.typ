@@ -219,19 +219,12 @@ activation traces of a procedure-aware control-flow graph (@ch:traces),
 because a return must know which caller resumes.
 
 Other works derive concrete and abstract interpreters from shared semantic
-definitions @michelland24 @keidel18 @darais15.
-Voblint instead splits analysis, context policy, and solver for a
-constraint-based analyzer. Their composition bounds the stores collected in
-each context by a solved abstract state (#isathm("activation_collect_dg_sound")). Executable verified analyzers are not
-new either. Cachera and Pichardie extract theirs to OCaml @cachera10[§§1, 6],
-and the analyzer of Franceschino et al. runs in a browser @franceschino21.
-Other Isabelle developments verify conflict analysis @lammich07afp,
-Horwitz--Reps--Binkley (HRB) interprocedural slicing @wasserrab09afp, and Shivers'
-control-flow analysis @breitner10afp. A slice retains the parts of a program
-that affect a selected observation. The slicing result uses a _weak simulation_
-between the original and sliced graphs: it matches observable execution steps
-while allowing unobservable steps between them. Voblint instead bounds stores
-in each admitted calling context.
+definitions @michelland24 @keidel18 @darais15. Voblint instead splits analysis,
+context policy, and solver for a constraint-based analyzer, and their
+composition bounds the stores of each context by a solved abstract state
+(@sec:eq-discharge). Executable verified analyzers are not new either. Cachera
+and Pichardie extract theirs to OCaml @cachera10[§§1, 6], and the analyzer of
+Franceschino et al. runs in a browser @franceschino21.
 
 == Verified solvers and termination results <sec:rel-solvers>
 
@@ -243,15 +236,11 @@ al. verify in Iris a local solver that discovers dependencies dynamically
 Isabelle/HOL @stade24. Tilscher et al. @tilscher26 extend this line to
 $"TD"_"side"$, which accepts contributions to global unknowns, verify it
 against a generic interface for update rules, prove five update rules of
-Stemmler et al. @stemmler25 sound, and refine the solver to executable code.
-They also study a variant that aborts and restarts a right-hand-side evaluation
-if an update destabilizes the unknown being evaluated, avoiding an answer
-assembled from inconsistent reads. When global contributions accumulate
+Stemmler et al. @stemmler25 sound, and refine the solver to executable code. When global contributions accumulate
 exactly by join and local unknowns use no widening or
 narrowing, they prove minimality of the returned valuation and solved set.
-This requires three monotonicity properties: increasing the input valuation
-cannot decrease a right-hand side's result or side-effect contributions, or
-remove any of its dependencies @tilscher26[§6]. CompCert similarly hides its
+This requires
+monotone right-hand sides @tilscher26[§6]. CompCert similarly hides its
 intraprocedural dataflow solvers behind a module type whose clients rely only
 on fixpoint properties of the result @compcertKildall @laspina25.
 
@@ -319,25 +308,18 @@ at the revision Goblint pins). VIMP makes the same choice (@sec:vimp), and
 every edge kind of Goblint's CFG, except inline assembly and in-place
 declarations, has a VIMP counterpart
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/framework/edge.ml")[`edge.ml`]).
-Goblint's `__goblint_check`, like a VIMP check, tests its condition without
-refining the abstract state
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml#L872")[`libraryFunctions.ml`]).
 
 The two differ in integers, calls, and the programs they accept. Goblint's
 integer domains carry the C integer kind of each value. They wrap unsigned
 values, and signed values only when the option `sem.int.signed_overflow`
 requests it
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/intDomain0.ml#L67")[`intDomain0.ml`]).
-VIMP integers are unbounded, so no Voblint theorem covers a wrapping integer.
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/intDomain0.ml#L67")[`intDomain0.ml`]). No Voblint theorem covers a wrapping integer.
 A Goblint call edge carries the callee as an expression, which the analysis
 resolves from the abstract state
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L294")[`constraints.ml`]),
-while every VIMP call edge names its callee. Goblint dispatches library
-functions during the analysis through an open table of known functions
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml")[`libraryFunctions.ml`]),
-while VIMP fixes its three library calls and compiles them into local edges.
+while every VIMP call edge names its callee.
 Goblint analyzes every program that CIL produces. Voblint's theorems assume
-the source contract, which excludes some programs that C defines, such as a `main` with an explicit #keyw("return").
+the source contract of @sec:vimp.
 
 === Correspondence with Goblint's architecture
 
@@ -360,7 +342,7 @@ at revision #raw(alignment.revision.slice(0, 8)) by source inspection. There,
 a call runs the analysis's `enter`, selects the callee context from the
 entry state, publishes it, and combines the callee's exit state with
 the caller. Voblint's equations have the same four steps, with enter and
-combine from the analysis (#isatype("dg_spec")) and the context chosen by the context
+combine from the analysis (@sec:calls) and the context chosen by the context
 policy. This correspondence does not establish that the two compute the same
 fixpoint. For instance, Voblint publishes the entry state to a global seed, which the
 entry's local unknown reads back, whereas Goblint publishes it to the local entry
@@ -396,7 +378,7 @@ Schwarz refines the local-trace semantics through digests @schwarz25phd[§2.3].
 The concrete semantics splits each program-point unknown $[u]$ into
 unknowns $[u, A]$, collecting traces separately per digest value $A$.
 Voblint's relation between activations and admitted contexts (@sec:contexts)
-(#isaconst("activation_context_rel")) plays the role of the digest.
+plays the role of the digest.
 A digest assigns each trace exactly one value, yielding disjoint groups
 @schwarz25phd[§2.3, Def. 4, Thm. 4]. Voblint may admit an activation in several
 contexts, so its groups may overlap. Also, a digest is updated at every trace
@@ -408,16 +390,13 @@ Two mechanized analyzers come closest to Voblint's combination of mixed flow
 sensitivity and calling contexts. Cachera et al. @cachera05 combine a flow-insensitive heap with flow-sensitive
 local state for Java Card bytecode, but their analysis is context-insensitive. #cite(<dabrowski09>, form: "prose")
 prove in Coq that a context-sensitive points-to analysis with a
-flow-insensitive heap is sound. Their concrete semantics is parameterized by a module of contexts.
-Its call-context function computes the callee context from the call site,
-caller's context, and receiver. The specification gives constraints without an
-executable solver @dabrowski09[§7]. This context-parameterized semantics is
-the closest precedent for Voblint's, which differs in three respects. Its
-contexts are admitted by a relation; requiring a context for every call from a
-covered store, together with the other coverage obligations, makes the union
-of the context-indexed collecting sets equal the node collecting set (#isaconst("call_context_total_on"),
-#isathm("node_collect_eq_Union_activation_collect")); and the
-indexing is connected to an executable solver.
+flow-insensitive heap is sound. Their concrete semantics is parameterized by a function that computes the
+callee context from the call site, the caller's context, and the receiver, and
+their specification has no executable solver @dabrowski09[§7]. This is the
+closest precedent for Voblint's semantics. Voblint differs in that a relation
+admits its contexts, so one call may have several, that splitting the stores
+by context provably loses none, and that the indexing is connected to an
+executable, verified solver.
 
 Voblint inherits its trust pattern from CompCert and Verasco, domain interface
 from Nipkow and Klein @nipkow14[Sects. 13.5, 13.7], solver from Tilscher et al.

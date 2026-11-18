@@ -361,7 +361,6 @@
     "thm:run_voblint_spine": "Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_spine%7Cfact",
     "thm:run_voblint_traced_eq": "Voblint/Voblint_CLI/Trace_Run.html#Trace_Run.run_voblint_traced_eq%7Cfact",
     "thm:run_voblint_wf": "Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_wf%7Cfact",
-    "thm:sign_k2_strictly_more_precise_than_k1_at_g": "Voblint/Voblint_Examples_Sign/Example_Sign_DG_CallString_K2.html#Example_Sign_DG_CallString_K2.sign_k2_strictly_more_precise_than_k1_at_g%7Cfact",
     "thm:solve_c_run": "Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.solve_c_run%7Cfact",
     "thm:solve_dom_of_solve_c": "Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.solve_dom_of_solve_c%7Cfact",
     "thm:solve_rec_c_traced": "Voblint/Voblint_Solver/Solver_Trace.html#Solver_Trace.solve_rec_c_traced%7Cfact",

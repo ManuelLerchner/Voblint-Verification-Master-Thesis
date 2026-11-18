@@ -5,7 +5,6 @@
 #import "../lib/claims.typ": claim-ref
 #import "../lib/stats.typ": stat
 #import "../lib/sources.typ": thy
-#import "../lib/profiling.typ": prof-times
 
 // The call run_voblint received and the answer it returned (claim shell-json),
 // folded for print: `rule(path)` keeps a value "open" (one key per line),
@@ -186,8 +185,6 @@ recursions such as the one in #fixture(
 In the transformed code, a function receives the computation to perform after
 it returns as an explicit continuation. Calls can then pass control to that
 continuation instead of retaining a return frame on the browser's stack.
-With it, the browser build needs #prof-times("browser_ratio_median") the native solve
-time on the median run (@sec:eval-runtime, #link(site("profiling.html"))[profiling page]).
 
 #figure(
   image("/shared/generated/svg/build.svg", width: 100%),
@@ -223,8 +220,16 @@ and calls it only when tracing is on. Only the traced entry point calls the hook
 untraced run executes no handwritten code inside the analysis. For a traced run, the hook joins the trusted foundation and must
 return, raise nothing, and leave the solver's values alone.
 
-The command-line tool prints the events with `--trace`, and the playground
-replays them step by step on the solved graph (@fig:replay-still). The replay
+// The replay figure's own run, opened with tracing on so the replay is ready.
+#let _replay-run = json("/shared/generated/playground/playground.json").at("solve-replay-still")
+#let _replay-link = playground-link(
+  read("/shared/generated/playground/" + _replay-run.program),
+  ctx: _replay-run.context,
+  trace: "verbose",
+)
+The command-line tool prints the events with `--trace`, and the
+#link(_replay-link)[playground] replays them step by step on the solved graph
+and can animate the whole solve (@fig:replay-still). The replay
 shows the order of the solve, which the solved values alone hide, such as when
 a call creates a new callee context.
 

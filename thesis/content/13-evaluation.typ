@@ -1,6 +1,6 @@
 #import "../lib/code.typ": *
 #import "../lib/stats.typ": stat
-#import "../lib/math.typ": absval, conc, ivl, parity-name, signval
+#import "../lib/math.typ": absval, conc, ivl, signval
 #import "../lib/claims.typ": (
   claim-check, claim-ref, claim-snapshot, claim-text, claim-timed-out, snapshot-verdict,
 )
@@ -88,19 +88,15 @@ check and proves the second.
     // the product's state is broken at its components.
     let cell(name, cond) = {
       let r = claim-check(name, cond)
-      let tone = if r.at(3) == "PROVED" { vb.proved } else if r.at(3) == "REFUTED" {
-        vb.unproved
-      } else { vb.unstable }
       // The abstract value follows the last `=` or `:` of each component.
       let piece(s) = {
         let m = s.match(regex("^(.*[=:])([^=:]*)$"))
         if m == none { raw(s) } else {
           let (key, val) = m.captures
-          if key == "parities:" { val = parity-name(val) }
           [#raw(key)#absval(raw(val))]
         }
       }
-      [#text(fill: tone, weight: "bold", r.at(3)) \ #(
+      [#verdict(r.at(3)) \ #(
           r.at(4).split("; ").map(piece).join(linebreak())
         )]
     }
@@ -130,15 +126,13 @@ check and proves the second.
   kind: image,
   caption: [Goblint's regression test for #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] in VIMP, and the
     verdict and state at each check with Congruence alone and with Int, both
-    under the unit context policy. Concretely, `c % 2` evaluates to $-1$ on
-    both executions.],
+    under the unit context policy.],
 ) <fig:goblint-1161>
 
 == Precision on example programs <sec:eval-precision>
 
 The soundness theorem says nothing about precision, so the examples below
-measure it on single programs whose concrete behavior is known. Each verdict
-and state quoted from Voblint comes from a claim, a recorded run that every build checks (@sec:nonrel-state).
+measure it on single programs whose concrete behavior is known.
 
 #let _k99 = claim-snapshot("cost-down-k99")
 #let _k100 = claim-snapshot("cost-down-k100")
@@ -153,9 +147,7 @@ its call site in `f`, so both activations of `g` share one context. Sign joins
 proved. Call strings of length 2 also record the call in `main`, keep the two
 activations apart, and prove both checks. The separation requires a second copy of `g`.
 The theories prove the same separation for #isaconst("run_voblint") itself
-(#isathm("run_voblint_call_string_2_decides"), #isathm("cs_nest_checks_hold"))
-and at the entry of `g` on hand-built equation systems
-(#isathm("sign_k2_strictly_more_precise_than_k1_at_g")).
+(#isathm("run_voblint_call_string_2_decides"), #isathm("cs_nest_checks_hold")).
 
 #figure(
   {
@@ -464,7 +456,7 @@ calling contexts and update rules for global unknowns (@tab:flavors-ctx).
     )
   },
   kind: table,
-  placement: auto,
+  placement: none,
   caption: [The flavors programs @monniaux24 under each analysis setting of
     Voblint (#link(repo-blob + "tests/regression/28-flavors")[`28-flavors`]) and
     of Goblint (#link(repo-blob + "thesis/shared/code/goblint-flavors")[C
@@ -810,11 +802,9 @@ only #prof-growth("depth_fits.interval.evals").
   #prof-list("scaling.flat") (@fig:runtime-scaling).
 ]
 CPU profiles trace this cost to generated list-based sets and maps (@sec:codegen),
-which membership tests, unions, and duplicate removal scan element by element. The Collections
-Framework @lammich10collections refines abstract sets and maps into balanced trees or hash
-tables, and the Light-weight Containers @lochbihler13containers replace the list-based
-default of code generation. The former requires refinement proofs, the latter a code-generation setup.
-Neither has been evaluated for Voblint.
-
-On this machine, the analyzer handles the small regression programs in acceptable
-time, while its data structures limit scaling.
+which membership tests, unions, and duplicate removal scan element by element. Neither the
+Collections Framework @lammich10collections, which refines sets and maps into
+balanced trees or hash tables, nor the Light-weight Containers
+@lochbihler13containers have been evaluated for Voblint. The analyzer is thus
+fast enough for the regression programs, while its data structures limit
+scaling.

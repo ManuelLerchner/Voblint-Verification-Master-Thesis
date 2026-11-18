@@ -11,11 +11,13 @@
 
 = Numeric and Relational Analyses <ch:instances>
 
-A user of Voblint selects the analyses that run on a program, and the
-selection determines which checks the report proves. The preceding chapters stated what a domain, an analysis, and a combination of
-analyses must prove, and @ch:results showed that every report is sound,
-whichever analyses produced it. Voblint instantiates this contract with the
-non-relational domains Sign, Interval, Parity, and Congruence, their reduced
+Up to now, the thesis has built a generic framework for abstract
+interpretation. @ch:domains to @ch:results state what a domain, an analysis,
+and a combination of analyses must prove, and show that every report is sound,
+whichever analyses produced it. Concrete analyses such as Interval appeared
+only to illustrate and motivate this interface. Voblint ships
+concrete instances of this interface, from which a user selects the analyses
+for a run. They are the non-relational domains Sign, Interval, Parity, and Congruence, their reduced
 product Int, and a relational order analysis. Each base domain records a
 different property of a variable, and on one loop Int proves a check that none
 of them proves alone. The order analysis proves relations between variables, so
@@ -60,7 +62,7 @@ value of each and the integers it stands for.
       table.hline(stroke: 0.4pt),
       ..row([Sign], "≥0"),
       ..row([Interval], "[-2,5]"),
-      ..row([Parity], "1+2ℤ", shown: raw("odd")),
+      ..row([Parity], "1+2ℤ"),
       ..row([Congruence], "2+3ℤ"),
       ..row(
         [Int],
@@ -81,7 +83,7 @@ value of each and the integers it stands for.
   caption: [One value of each non-relational domain, as the analyzer prints it, and
     the integers it denotes between $-6$ and $10$. Congruence values print as
     $c + m ZZ$, the integers congruent to $c$ modulo $m$ ($m ZZ$ when $c = 0$),
-    and the Parity value shown is that of the odd integers. An end cell is filled when
+    and Parity values print the same way modulo $2$. An end cell is filled when
     the set continues beyond the window. The values are illustrative. The Int value,
     the reduced state of $x$ in the program of @sec:reduced-product, denotes the intersection of its
     components' meanings, here ${1, 5, 9}$.],
@@ -131,7 +133,7 @@ $v = 51$, so every check holds.
 #let _v(dom, loc) = verdict("dom-stride2-" + dom, loc)
 #let _s-cell(dom, loc) = {
   let s = claim-row("dom-stride2-" + dom, loc).state
-  absval(raw(if dom == "parity" { parity-name(s) } else { s }))
+  absval(raw(s))
 }
 #let _adds = (
   sign: [sign of a value; finite],

@@ -76,11 +76,13 @@
 
 // Inline Isabelle: `#isai("a \<sqsubseteq> b")`. Sub- and superscripts are set
 // as such, so `\<C>\<^bsub>\<G>,g,S\<^esub>` reads as the theories print it.
-#let isai(s) = text(font: isabelle-font, raw(
-  decode-isabelle(s),
-  lang: "isabelle",
-  syntaxes: isabelle-syntax,
-))
+// `plain: true` keeps the Isabelle symbols but skips keyword highlighting, for
+// notation such as `context♯`, whose name only happens to be an outer keyword.
+#let isai(s, plain: false) = text(font: isabelle-font, if plain {
+  isabelle-scripts(raw(decode-isabelle(s)))
+} else {
+  raw(decode-isabelle(s), lang: "isabelle", syntaxes: isabelle-syntax)
+})
 
 // ------------------------------------------------------- VIMP playground ---
 // Every VIMP listing links to the browser playground, preloaded with the

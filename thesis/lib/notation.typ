@@ -32,14 +32,17 @@
 
 #let _cells(e) = {
   let forms = e.forms
-  let symbol = forms.map(f => f.symbol).dedup().map(isai).join([ \ ])
+  let symbol = forms.map(f => f.symbol).dedup().map(x => isai(x, plain: true)).join([ \ ])
   let decls = forms.map(_decl).join([ \ ])
   if e.local != none {
     let l = e.local
     symbol += if e.kind == "named" {
-      [ \ #isai(l.symbol) #_small[only within #isalocale(l.scope), which fixes its environment]]
+      [ \ #isai(
+          l.symbol,
+          plain: true,
+        ) #_small[only within #isalocale(l.scope), which fixes its environment]]
     } else {
-      [ \ #_small[within #isalocale(l.scope):] #isai(l.symbol)]
+      [ \ #_small[within #isalocale(l.scope):] #isai(l.symbol, plain: true)]
     }
   }
   if e.group == "shorthand" {
