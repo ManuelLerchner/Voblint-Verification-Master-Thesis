@@ -678,7 +678,7 @@ checks ask for exact values. The _two-formal countdown_
       ([bounded narrowing], "none-bn"),
       ([call string, $k = 1$], "cs1"),
       ([call string, $k = 5$], "cs5"),
-      ([entry state], "es"),
+      ([entry-state contexts], "es"),
     )
     let goblint = (
       ([none], "insensitive"),
@@ -767,8 +767,9 @@ then loses the lower bound $0$ of `i` in `h` unless it narrows global unknowns
 ) <fig:runtime-scaling>
 
 Apart from the defect fixed in @sec:codegen, the generated code runs as Isabelle
-emits it. These measurements test whether it handles the regression corpus in
-acceptable time; speed was not a goal.
+emits it. Speed was not a goal, so these measurements only test whether it
+solves the regression corpus within a limit of #prof-int("meta.timeout_s")~s
+per case.
 
 The #link(site("profiling.html"))[profiling page] runs the #prof-int("fixtures")
 well-formed regression fixtures without a timeout of their own under all
@@ -805,6 +806,6 @@ CPU profiles trace this cost to generated list-based sets and maps (@sec:codegen
 which membership tests, unions, and duplicate removal scan element by element. Neither the
 Collections Framework @lammich10collections, which refines sets and maps into
 balanced trees or hash tables, nor the Light-weight Containers
-@lochbihler13containers have been evaluated for Voblint. The analyzer is thus
-fast enough for the regression programs, while its data structures limit
-scaling.
+@lochbihler13containers have been evaluated for Voblint. The analyzer thus
+solves all but #prof-int("timeouts") of the #prof-int("cases") cases within the
+time limit, while its data structures limit scaling.

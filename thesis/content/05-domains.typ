@@ -13,12 +13,10 @@
 
 = Abstract Domains <ch:domains>
 
-This chapter determines what an abstract domain must provide so that the
-abstract values a solver computes over-approximate the stores that executions
-reach. The covers of @ch:traces assign arbitrary, usually infinite sets of
+The covers of @ch:traces assign arbitrary, usually infinite sets of
 stores to nodes and contexts. An analyzer, however, computes with
 finite abstract values, and its solver (@sec:td) compares, joins, widens, and
-narrows them without reference to the stores they describe. A domain therefore supplies
+narrows them without reference to the stores they describe. A domain therefore has to supply
 operations the solver can compute with and laws that let the soundness proof
 turn the solver's inequalities into inclusions between sets of stores.
 
@@ -35,9 +33,9 @@ $ a lle b ==> conc(a) subset.eq conc(b) $
 turns each such inequality into an inclusion (#isathm("gamma_mono"),
 @fig:sign-conc). Second, a value can denote no integer without being the
 lattice's bottom element. The interval pair $absval(ivl(5, 3))$, whose lower bound
-exceeds its upper bound, is such a value. An analyzer that recognizes only the
-bottom element as empty misses it. Missing it is still sound, since the analyzer then assumes more stores than exist, but it loses precision. After the next
-join, the information that a program point is unreachable is gone.
+exceeds its upper bound, is such a value. An analyzer that treats only the
+bottom element as empty stays sound but loses the information that a point
+holding this value is unreachable (@sec:nonrel-state).
 
 @fig:domain-carrier previews what this chapter builds toward, the operations
 and laws of a domain arranged as a hierarchy of Isabelle classes and locales. A domain such as Interval or Sign
@@ -475,7 +473,7 @@ abstract values. The solver compares
 its values, joins them where control flow merges, starts from the least value
 $lbot$, and extrapolates with the widening $widen$ and the narrowing $narrow$
 of @sec:widening. The analysis also needs a greatest value $ltop$ for unknown
-values. A domain further supplies an emptiness test, a printer, and a
+values. A domain further supplies an emptiness test and a
 concretization $conc : A -> cal(P)(ZZ)$ with four laws. A type with these operations and laws is a
 _numeric domain_:
 
@@ -708,9 +706,7 @@ so, replaces it with #ctor("Bot") (#isaconst("normalize_lift")). The test
 relies on the domain's emptiness test, which #isathm("is_empty_correct") makes
 exact for every value. A pointwise state is empty exactly when some
 variable's value is (#isaconst("is_empty_state"),
-#isathm("is_empty_state_iff_gamma_state_empty")). The variable names form an
-infinite set, so the executable analyzer decides this on a finite
-representation of the state. Replacing an empty
+#isathm("is_empty_state_iff_gamma_state_empty")). Replacing an empty
 state by #ctor("Bot") only exchanges one abstract representation of the empty
 set for another, equivalent one (#isathm("gamma_state_normalize_lift")), so it
 cannot make the analysis unsound.
@@ -762,15 +758,13 @@ analysis.
 
 A domain answers two comparisons on abstract values, $"less"(a, b)$ for
 $a < b$ and $"eq"(a, b)$ for $a = b$. Like the truth test, each has three possible answers. A definite answer must hold for every pair of integers the two
-values denote, and $"None"$, meaning unknown, is always allowed:
-
-For all abstract values $a,b$, integers $i in conc(a)$ and $j in conc(b)$,
-and truth values $r$, the query contract requires
+values denote, and $"None"$, meaning unknown, is always allowed. For all
+abstract values $a,b$, integers $i in conc(a)$ and $j in conc(b)$, and truth
+values $r$, the query contract (#isalocale("sound_numeric_queries")) requires
 $
   "less"(a,b) = "Some"(r) ==> (i < j) = r, \
   "eq"(a,b) = "Some"(r) ==> (i = j) = r.
 $
-These two laws form the query contract (#isalocale("sound_numeric_queries")).
 
 Domains differ in which comparisons they can decide. Interval decides $a < b$
 when one interval lies entirely below the other, where a shared endpoint
@@ -844,10 +838,9 @@ the conjunction (@fig:query-tree).
     #_q.verdict.],
 ) <fig:query-tree>
 
-One proof serves every domain. The answer _true_ certifies that $c$ holds in
-every store the state describes, _false_ that it holds in none, and _unknown_
-makes no claim (#isathm("check_query_sound")). A locale combines the queries
-with forward evaluation (#isalocale("sound_check_query")). An analysis later
+The soundness theorem #isathm("check_query_sound") holds for every domain.
+The answer _true_ certifies that $c$ holds in every store the state describes,
+_false_ that it holds in none, and _unknown_ makes no claim. An analysis later
 passes these answers to the analyses it runs with and to the verdicts of its
 checks.
 
@@ -946,7 +939,7 @@ as the interval analysis of Nipkow and Klein does @nipkow14[§13.8.3].
 The verified TD solver requires its values to form a
 #isalocale("bounded_semilattice_sup_bot") (#isalocale("TD_side_upd_rule")),
 whose join is the _least_ upper bound, and the framework's proofs use this
-leastness as well (#isathm("sound_refinement.bfilter_reductive")). This
+leastness as well. This
 excludes every carrier in which two values have upper bounds but no least one.
 
 Goblint's default integer domain,
@@ -1010,6 +1003,9 @@ The exclusion costs precision. No Voblint domain can record that a variable
 avoids a value inside its range, since Sign has no value for "nonzero" and
 intervals are convex. After the guard `x != 0` with $x$ in $absval(ivl(-5, 5))$, every
 domain still admits $0$, so the check `x != 0` remains unproved there, while
-Goblint's `DefExc` records `Excluded {0}`. Voblint therefore cannot
-replicate every domain that Goblint ships. Admitting such carriers, by bounded
-integers as in Goblint or by a weaker join, is left for future work.
+Goblint's `DefExc` records `Excluded {0}`. Admitting such carriers is left
+for future work.
+
+A domain that meets these laws thus supplies sound comparisons, evaluation,
+truth tests, queries and guard refinement. @ch:analysis-interface asks how an
+analysis combines them into transfers at edges and calls.

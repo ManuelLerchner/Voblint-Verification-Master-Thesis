@@ -6,14 +6,10 @@
 
 = Related Work <ch:related>
 
-This chapter separates the parts of Voblint that come from earlier work from the
-new ones. Most parts
-have a precedent, from verified analyzers and solvers to Goblint and its
-local-trace semantics. The new part is their connection in one mechanized
-soundness proof (@sec:rel-summary). The literature was found through web and
-OpenAlex searches. AI agents supported this work heavily, from the search
-to checking each claim against its source
-(#link(<ai-use>)[statement on the use of generative AI]).
+Most parts of Voblint have a precedent,
+from verified analyzers and solvers to Goblint and its local-trace semantics.
+The new part is their connection in one mechanized soundness proof
+(@sec:rel-summary).
 
 == Unverified analyzers for C <sec:rel-practice>
 
@@ -348,12 +344,9 @@ fixpoint. For instance, Voblint publishes the entry state to a global seed, whic
 entry's local unknown reads back, whereas Goblint publishes it to the local entry
 unknown directly. Under the warrowing rules the seed itself can be widened, so widening applies
 at a different place than in Goblint, and it is not proved which of the two
-is more precise. Voblint also resolves call targets statically, and its
-analyses share one product state and one query kind without globals, whereas
-Goblint's MCP also passes events, spawns, and per-analysis globals. No agreement rate between
-the verdicts of the two analyzers is reported, since the corpus has not been
-run through Goblint and the adapted fixtures record Goblint's annotations only
-as prose.
+is more precise. Voblint's analyses also share one product state and one query
+kind without globals, whereas Goblint's MCP also passes events, spawns, and
+per-analysis globals.
 
 Goblint's MCP (@sec:coop-mcp) also answers a query cycle with the top element
 and caches answers per transfer

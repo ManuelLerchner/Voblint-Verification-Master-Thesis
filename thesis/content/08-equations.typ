@@ -28,10 +28,7 @@ at every node $v$ and context $c$. The left side is the activation collecting
 semantics of @sec:contexts, with graph, initial stores, root context, and
 policy fixed for this chapter, and $conc_(M)(sol(v, c))$ is the set of stores
 that the solved abstract state at $(v, c)$ describes under the solved values
-of the analysis globals (@sec:analysis-globals). At a call, the equations must also
-determine which callee context the call enters. Under entry-state
-policies, this context is computed from the abstract state at the call, which
-is known only while the equations are being solved.
+of the analysis globals (@sec:analysis-globals).
 
 == Context-indexed unknowns and call equations #thy-badge("Voblint_Framework", "DG_Indexed_Generator") <sec:eq-call>
 
@@ -43,7 +40,10 @@ $sol(v, c)$ is the abstract state for the activations of context $c$ at $v$. Gob
 #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape] @apinis14[§5.2].
 Besides the local unknowns, the equations have _global_ unknowns without a
 program point (@sec:side-effects). They hold the analysis globals of @sec:shared-facts
-and the entry states that calls publish to their callees.
+and the entry states that calls publish to their callees. The entry states
+for a callee entry $p$ in context $c'$ go to the _seed_
+$ctor("Activation_Seed") thin p space c'$ (#isatype("global_unknown")), which
+the equation of $(ctor("FunctionEntry") thin p, c')$ reads.
 
 Since a post-solution must describe every store that reaches $v$ in context
 $c$, the equation of $(v, c)$ collects abstract states from four sources. They are the
@@ -63,15 +63,13 @@ $
 $
 Here $P(v,c)$ lists the local edges into $v$ selected for context $c$, $K(v)$
 the calls returning to $v$, and $scripts(⨆)$ joins over a list, with empty join
-$lbot$. The fixed parameters of the generator are omitted
-(#isathm("routed_node_rhs_parts")), and the decomposition assumes that the
-operations of the analysis are well formed (@sec:analysis-globals). The
+$lbot$. The fixed parameters of the generator are omitted, and the decomposition
+assumes that the operations of the analysis are encoded well formed for the
+solver (#isathm("routed_node_rhs_parts")). The
 equations that Voblint generates are the inequalities
 $ sol(v, c) lge F_(v,c)(sol) quad "for every local unknown" (v, c), $
 together with the side effects of the right-hand sides, which publish entry
 states to seeds and contributions to analysis globals (@sec:side-effects).
-Since $conc_M$ is monotone, $conc_(M)(sol(v, c))$ of a post-solution contains
-the stores that each source describes.
 
 In the running example, most nodes use only the edge source. The program entry
 of `main` adds #isaconst("rhs_init"), the entry of `bump` in a context $c'$
@@ -81,11 +79,10 @@ as $(italic("pp3"), c_0)$ after `bump(5)`, has only the call source.
 
 At a call, the analyzer chooses the callee's context with a _routing_ function
 $ctxh(u, c, e)$ of the call site $u$, the caller context $c$, and the entry
-state $e$. Under entry-state contexts, the choice depends on $e$, so the
-calls that contribute to a callee context become known only during solving,
-as the routing cannot be fixed from the graph alone. The equation of the callee's entry
-therefore cannot list them. Each call instead publishes its entry state to the
-callee as a side effect (@sec:side-effects).
+state $e$. Under entry-state contexts the choice depends on $e$ and becomes
+known only during solving. The equation of the callee's entry therefore cannot
+list the calls that reach it. Each call instead publishes its entry state to
+the callee's seed as a side effect (@sec:side-effects).
 
 #let _loc(pos, body) = node(
   pos,
@@ -207,10 +204,7 @@ into its own value. The equation of the second call's continuation,
 $(italic("pp4"), c_0)$, does the same with $c_2 = [[4, 4]]$. The calls `bump(5)` and `bump(4)`
 thus use separate copies of `bump`, and the first result stays exactly 6.
 
-Each callee entry $p$ and context $c'$ has a global unknown, the _seed_
-$ctor("Activation_Seed") thin p space c'$ (#isatype("global_unknown")). Every
-call routed to $(p, c')$ publishes to it, and the equation of
-$(ctor("FunctionEntry") thin p, c')$ reads it. A call with several callees, or
+A call with several callees, or
 an enter that returns several entry pairs, routes and publishes each pair
 separately.
 
@@ -527,11 +521,7 @@ successor of a store that the predecessor's state describes, which is
 and the exit state read back in the context that the concrete semantics
 assigns, and routing totality gives #oblig("TOTAL").
 
-Theorem 8.1 is the result of this chapter. Every post-solution $sol$ of the
-equations $F_(v,c)$ of @sec:eq-call meets the goal stated at the start of the
-chapter,
-$ cal(A)(v,c) subset.eq conc_(M)(sol(v, c)), $
-at every $(v, c)$ in its solved set, for every domain and each policy of
-@tab:eq-policies. The theorem does not compute a post-solution, however. Something still has to
-solve the equations. @ch:solving obtains a post-solution from the verified TD
-solver whenever a solve returns.
+Theorem 8.1 thus meets the goal of the chapter opening at every solved
+$(v, c)$, for every domain and each policy of @tab:eq-policies. It does not
+compute a post-solution, however. @ch:solving obtains one from the verified TD
+solver whenever a solve terminates.

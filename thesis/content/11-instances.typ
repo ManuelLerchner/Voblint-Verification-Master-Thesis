@@ -11,17 +11,14 @@
 
 = Numeric and Relational Analyses <ch:instances>
 
-Up to now, the thesis has built a generic framework for abstract
-interpretation. @ch:domains to @ch:results state what a domain, an analysis,
-and a combination of analyses must prove, and show that every report is sound,
-whichever analyses produced it. Concrete analyses such as Interval appeared
-only to illustrate and motivate this interface. Voblint ships
-concrete instances of this interface, from which a user selects the analyses
-for a run. They are the non-relational domains Sign, Interval, Parity, and Congruence, their reduced
+@ch:domains to @ch:results show that every report is sound whichever analyses
+produced it, provided each meets its obligations. A user, however, runs
+concrete analyses, selected for each run. Voblint ships the
+non-relational domains Sign, Interval, Parity, and Congruence, their reduced
 product Int, and a relational order analysis. Each base domain records a
 different property of a variable, and on one loop Int proves a check that none
 of them proves alone. The order analysis proves relations between variables, so
-the framework also supports states that describe several variables jointly.
+the interface also admits states that describe several variables jointly.
 
 == Four non-relational numeric domains <sec:instances-supply>
 
@@ -31,8 +28,7 @@ Interval #thy-badge("Voblint_Domain", "Interval_Lattice"), Parity
 #thy-badge("Voblint_Domain", "Congruence_Lattice"), are the classical
 non-relational domains @mine17;
 congruences go back to Granger @granger89. The fifth domain, Int, combines all
-four. Its value holds one value of each base domain and denotes the
-intersection of their meanings (@sec:reduced-product). All five are
+four (@sec:reduced-product). All five are
 non-relational in the sense of @sec:nonrel-state, so each describes every
 variable separately. @fig:gamma shows one
 value of each and the integers it stands for.
@@ -96,10 +92,7 @@ supplies its operations as one record, and proves them sound once
 derives the transfer functions of @ch:analysis-interface together with their
 executable versions, and makes the domain a sound component of the product
 state of @ch:cooperation
-(#isathm("sound_nonrelational_ops.dg_analysis_execI")). Its procedure entry
-reuses the entry operation of the source semantics (@sec:pstep), which is
-polymorphic in the value type, at the abstract state with $ltop$ in place of
-the reset value $0$ (#isaconst("enter_binding")). The only further
+(#isathm("sound_nonrelational_ops.dg_analysis_execI")). The only further
 obligation concerns the initial state, which must describe the initial stores.
 
 We compare the four domains on one loop, the fixture #fixture("12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp", label: "05-mine_ex410_stride2_parity.vimp"),
@@ -179,11 +172,11 @@ the bound and the oddness together, does (@sec:reduced-product).
 
 == Reduced product of the numeric domains #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
 
-An Int value (#isatype("int_dom")) holds one value of each base domain and
-stands for the integers that all four allow. Running the four side by side
-would be sound, but each would work only with its own value. A fact that
-needs two of them, such as `v == 51` in @fig:stride2, would then stay unproved.
-In the program below, the guards keep
+Running the four base domains side by side would be sound, but each would work
+only with its own value. A fact that needs two of them, such as `v == 51` in
+@fig:stride2, would then stay unproved. An Int value (#isatype("int_dom"))
+therefore holds one value of each base domain and stands for the integers that
+all four allow. In the program below, the guards keep
 $x$ between $-2$ and $10$, and the assignment makes $x$ one more than a
 multiple of $4$. Only $1$, $5$, and $9$ satisfy both, so `x >= 1 && x <= 9`
 holds. Yet the interval alone still allows $-2$, and the residue class alone
@@ -350,17 +343,11 @@ keeps $x <= y$ and loses the strictness, which costs precision but not
 soundness. This guard filter meets the same soundness statement as the
 numeric guard filter of @sec:branches (#isathm("relc_branch_step_sound")).
 
-The transfers above add pairs only at guards, one or two per guard, and
-assignments remove pairs. The order analysis of @sec:relational adds further
-pairs after an assignment, but only with partners from a fixed finite list of
-variables. The join intersects the sets of pairs. Starting from the empty set
-of $ltop$, every operation therefore yields a finite $P$, and generated code
-can store it as a list. The emptiness test only compares with #ctor("RelBot")
-(#isathm("is_empty_relc_gamma")). The carrier has a single representation of
-unreachability, so it needs no lifting by a bottom element as the pointwise
-state of @sec:nonrel-state does. The type instantiates the solver's classes and
-#isalocale("executable_domain") of @fig:domain-carrier, but it is not a numeric
-domain.
+Guards add one or two pairs and assignments remove pairs. The order analysis
+of @sec:relational adds pairs after an assignment only with partners from a
+fixed finite list of variables. Since $ltop$ holds no pairs and the join
+intersects, every reachable $P$ is finite, and generated code stores it as a
+list.
 
 == The order analysis #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
 
@@ -406,5 +393,4 @@ both, because it treats a variable as ordered with itself, so it records
 answers #verdict("order-alone-interval", "20:3").
 
 Selecting both Int and the order analysis lets a check use the facts of either
-through the query mechanism of @ch:cooperation. No theorem guarantees that a
-combination is more precise than its parts (@sec:coop-mcp).
+through the query mechanism of @ch:cooperation.

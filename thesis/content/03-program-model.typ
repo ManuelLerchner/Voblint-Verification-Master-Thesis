@@ -19,13 +19,11 @@ holds the same store.
 
 @ch:background analyzed a single loop through its control-flow graph. VIMP
 programs also have procedures and recursion, and their meaning is given by a
-source semantics that executes the program text directly. To
-generate its equations, however, an analysis needs a fixed,
-finite set of program points, because its constraint system attaches one
-abstract state to each of them. The source semantics, a small-step semantics
-in the style of Nipkow and Klein @nipkow14[§7.3] (@sec:pstep), provides no such
-set. It locates an execution only by the command that still has to run, and under
-recursion these commands nest arbitrarily deep. Voblint therefore compiles a
+small-step source semantics in the style of Nipkow and Klein @nipkow14[§7.3]
+(@sec:pstep) that executes the program text directly. To generate its
+equations, however, an analysis needs a fixed, finite set of program points,
+because its constraint system attaches one abstract state to each of them. The
+source semantics provides no such set (@sec:why-graph). Voblint therefore compiles a
 program to a procedure-aware control-flow graph, whose nodes serve as the
 program points, and generates its equations from the graph
 (@fig:program-to-equations). The compilation step must then be part of the
@@ -214,11 +212,8 @@ execution.
   $
 ]
 
-As in @sec:intro-static, a check states a condition
-for the analyzer to decide. It does not influence the
-execution. It behaves like
-#skipC whatever value $e$ has, so it neither stops the execution nor refines the
-store.
+As in @sec:intro-static, a check states a condition for the analyzer to
+decide. It behaves like #skipC whatever value $e$ has.
 
 Calls come in two kinds. A call of a declared procedure starts an activation
 of that procedure (@sec:interproc).
@@ -330,8 +325,7 @@ semantics of @sec:cstep, which is also a small-step semantics.
 
 Without calls, a configuration is a pair $(c, s)$ of the command that remains
 to run and the store, as in the semantics of IMP by Nipkow and Klein
-@nipkow14[§7.3]. An assignment updates the store and leaves #skipC, and a
-check leaves the store unchanged. A sequence steps its first command until it
+@nipkow14[§7.3]. An assignment updates the store and leaves #skipC. A sequence steps its first command until it
 is #skipC, a conditional selects a branch by #isaconst("truthy"), and a loop
 unfolds into a conditional that runs the body and then the loop again. After
 each step, the remaining command describes the remainder of the execution
@@ -362,8 +356,8 @@ We write $c_1 ; c_2$ for sequencing and $(s_c,italic("dst")) :: F$ for pushing
 a frame. The optional destination $italic("dst")$ is either $"None"$ or
 $"Some"(x)$.
 
-*Local commands.* Assignment updates one variable; a check records no runtime
-failure and leaves the store unchanged:
+*Local commands.* Assignment updates one variable, and a check leaves the
+store unchanged:
 $
   ("assign" (x,e),s,F) & ->_p ("skip",s[x mapsto sem(e)_e s],F), \
    ("check" (l,e),s,F) & ->_p ("skip",s,F), \
@@ -429,12 +423,8 @@ $
   ->_p ("skip",#isaconst("combine_collect") _(italic("dst")) (s_c,s_r),F).
 $
 
-In Isabelle, these rules form one inductive definition, with one named
-introduction rule per case above. There the commands are capitalized
-constructors, a frame is written #ctor("Frame") $s_c$ $italic("dst")$, and
-$#isaconst("combine_collect") _(italic("dst")) (s_c,s_r)$ appears unfolded into
-#isaconst("combine_env") and #isaconst("combine_assign")
-(#isaconst("pstep")).
+In Isabelle, these rules form one inductive definition (#isaconst("pstep")),
+with one named introduction rule per case above.
 
 The root activation is modeled without a #ctor("Restore"), since `main` has no
 caller to return to, and a bare #ctor("Unwind") has no step
@@ -523,7 +513,7 @@ italic("formals") thin italic("args")$ (#isatype("call_action")) copies the
 callee's formals onto the edge, so the graph semantics binds actuals to formals
 without looking up the procedure table. VIMP has no function pointers (@sec:vimp), so
 every call names its callee, and the compiler can fix the target of each call
-edge. Supporting indirect calls would require discovering call targets during the analysis, which is left for future work.
+edge.
 The node kinds match Goblint's
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/framework/node0.ml")[`node0.ml`]),
 which also has statement and function-entry nodes and calls Voblint's
@@ -609,10 +599,8 @@ entry node, no local edge enters one, and every return edge ends at the
 result node of its own procedure. The structural contract #isaconst("wf_cfg")
 collects these properties, and every compiled graph satisfies it without
 premises (#isathm("compile_prog_wf")). The graph's entry is
-$ctor("FunctionEntry") thin #raw("main")$ (#isathm("cfg_entry_compile_prog")),
-and its edge sets are finite (#isathm("compile_prog_finite")). Later chapters
-rely on this shape to route calls (@ch:equations) and to enumerate edges in the
-executable analyzer.
+$ctor("FunctionEntry") thin #raw("main")$ (#isathm("cfg_entry_compile_prog")).
+Later chapters rely on this shape to route calls (@ch:equations).
 @fig:cfgmap shows the graph compiled from a recursive program.
 
 #let _sum-program = read("/shared/programs/sum-dec.vimp").trim()
@@ -812,7 +800,8 @@ it names. $sans("Returning")$
 covers the moment after a callee finishes. The graph is already at the
 callee's result node, while the source command $w$ is ready to pop its frame.
 
-The relation is useful only if every source step preserves it, as drawn in
+The relation transfers coverage from graph to source only if every source step
+preserves it, as drawn in
 @fig:csim-square.
 
 #block(breakable: false, width: 100%)[

@@ -35,7 +35,8 @@ direct encoding of the equations, as in Apinis et al. @apinis12 and Goblint,
 needs features this interface lacks. Voblint closes each gap with an
 adapter on the equations and leaves the solver and its proof as they are
 (@tab:eq-adapters). @ch:equations already stated the equations in the adapted
-form; buffering (@sec:update-rules) is applied after a right-hand side is built.
+form, except for buffering (@sec:update-rules), which is applied after a
+right-hand side is built.
 
 #figure(
   table(
@@ -72,7 +73,7 @@ The strategy trees of @sec:td express these value-dependent reads through
 continuations. Consider a call at $u$ in context $c$ with a single callee $p$
 whose enter function returns a single entry pair. Writing $d$ for the caller's
 state at $u$, the enter function yields the entry pair $(q, e) = enterh(d)$ and
-the context policy yields the callee context $c' = ctxh(u, c, e)$. The call's
+the routing function yields the callee context $c' = ctxh(u, c, e)$. The call's
 right-hand side (#isaconst("rhs_call")) is then the tree
 $
   t_"call" = #ctor("QueryL") ( & (u, c), lambda d. \
@@ -110,9 +111,8 @@ from this widening.
 A local unknown holds an abstract state of the analysis's local domain, and an
 analysis global holds a value of its global domain (@sec:shared-facts). The
 vendored TD solver, however, has a single value type $'d$ for all unknowns, so Voblint
-uses the product type of both domains as that value type. Every unknown holds a pair #isatype("dg_state") of
-a local and a global half, #isaconst("dg_local") and #isaconst("dg_global"),
-uses one half and leaves the other at $lbot$ (@tab:eq-carrier). Order and join
+uses the product type of both domains as that value type. Every unknown holds a pair (#isatype("dg_state")) and uses one half, leaving
+the other at $lbot$ (@tab:eq-carrier). Order and join
 on pairs work componentwise, so the solver's requirements on the value type
 follow from those on the two halves. The half an unknown uses depends on what
 it stores. A seed, for example, is a global unknown, because calls publish to
@@ -150,12 +150,12 @@ so the analyzer offers all five as a setting
 (#isathm("update_rule_update_global_of")). @fig:update-rules compares them.
 
 The rules differ in what they keep per origin, the right-hand side that
-published a contribution (@sec:td), and in whether they widen. Of the two
-_joining rules_, _join_ joins every contribution into the value, and _join per
-origin_ joins each origin's latest contribution. Of the three _warrowing rules_,
-_warrow_ and _warrow per origin_ warrow toward the same join or per origin, and
-_bounded narrowing_ also limits how often an origin may switch from widening to
-narrowing. In #isaconst("run_voblint"), the rule governs how a callee's entry
+published a contribution (@sec:td), and in whether they widen. _Join_ joins every
+contribution into the value, and _join per origin_ joins each origin's latest
+contribution. The three _warrowing rules_ also widen and narrow. _Warrow_ and
+_warrow per origin_ warrow toward the same join or per origin, and _bounded
+narrowing_ also limits how often an origin may switch from widening to
+narrowing. In the analyzer, the rule governs how a callee's entry
 state and a flow-insensitive program global (@sec:mixed-flow) accumulate their
 contributions. No rule is more precise on every program (@sec:eval-precision).
 
@@ -239,15 +239,14 @@ in Goblint's normal-call transfer
 The analyzer runs these buffered right-hand sides, which compute the same join
 as the right-hand sides of @sec:eq-call
 (#isaconst("routed_node_rhs_buffered")). Under warrowing rules, the timing can change the computed
-result, though not the equations it solves. @sec:outlook-extending discusses a
-solver extension that would make seeds and buffering unnecessary.
+result, though not the equations it solves.
 
 == Solver certificates and partial correctness <sec:certificate>
 
 Theorem 8.1 needs a post-solution on a set of unknowns that contains the
 program entry and is closed under execution steps. A solve that terminates
 provides a valuation #sol and a solved set $V$ on which #sol is a
-post-solution, but $V$ is closed under the reads of right-hand sides, starting
+post-solution (#isathm("td_certified_solver")), but $V$ is closed under the reads of right-hand sides, starting
 from the result of `main`. The solver thus works backward from that result,
 whereas executions run forward from the entry.
 
@@ -268,7 +267,8 @@ entry-state contexts a recursion can demand unboundedly many
 (@sec:eval-precision). Isabelle defines the solver on the arguments for which
 its recursion terminates (@sec:isabelle). Every run of the executable solver
 that returns lies in this domain (#isathm("solve_dom_of_solve_c")), so the
-theorems about the analyzer carry no separate termination premise.
+theorems about the analyzer (@ch:results) need no termination premise beyond
+the assumption that it returns a report.
 
 #theorem(
   name: [States of a terminating solve],
@@ -285,12 +285,7 @@ entry-state contexts. For unit and call strings, whose routing ignores the
 entry state, a companion theorem proves it
 (#isathm("fun_route_activation_collect_sound_of_terminates")).
 
-Together, these results close the gap left by Theorem 8.1. The verified TD
-solver solves any equation system given as strategy trees, and whenever a solve
-terminates, its valuation is a post-solution on its solved set
-(#isathm("td_certified_solver")). For the equations of @ch:equations, this
-solved set contains the program entry and every unknown that an execution
-reaches. The returned valuation therefore forms a valid cover for $cal(A)$
-(Theorem 9.1). The inclusion of the collecting semantics in the analyzer's states is the next
-step of the soundness chain in @fig:intro-nest. @ch:results collects these
-states into the report and derives the verdicts from them.
+Theorem 9.1 closes the gap left by Theorem 8.1. The states of every
+terminating solve over-approximate the activation collecting semantics, the next
+inclusion of the soundness chain in @fig:intro-nest. @ch:results collects these
+states into the report and derives the verdicts.

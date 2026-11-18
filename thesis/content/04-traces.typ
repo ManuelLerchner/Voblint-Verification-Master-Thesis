@@ -16,11 +16,11 @@ executions each pair describes. The graph execution of @sec:cstep cannot
 answer this, because it records only a node, a store, and a frame stack, and
 no calling context.
 
-This chapter therefore groups each execution into _activation traces_, which
-remember the caller of every activation, and assigns calling contexts to them.
-It then states one condition per kind of execution step under which a
-context-sensitive analysis soundly over-approximates the stores that executions
-reach at each node in each context.
+Activation traces close this gap by remembering the caller of every
+activation, and a calling context is
+assigned to each trace. One local
+condition per kind of execution step then suffices for a context-sensitive
+analysis to over-approximate the stores at each node and context.
 
 == Calling contexts and the collecting semantics <sec:why-traces>
 
@@ -334,9 +334,7 @@ semantics plays the role of the collecting semantics of @ch:background for
 programs with procedures, with valid traces in place of runs. A procedure's
 result node is an ordinary collected node, and the stores in which a run of the
 whole program completes are those collected at #ctor("FunctionResult")
-`main`. The set $cal(C)(v)$
-contains stores, not just these integers; the return value is one component of
-each store.
+`main`.
 
 Every store that a source execution reaches lies in this set, at the node the
 simulation of @sec:csim relates the execution to.
@@ -373,10 +371,10 @@ For the `sum` execution, a context recording the argument at entry can separate
 call site instead groups `sum(1)` and `sum(0)`, since both are called at
 `pp6`. This is a call string (@sec:interproc) bounded to one call site.
 
-The concrete semantics must also accommodate overlapping groups: an activation
-may be described by more than one abstract entry alternative. We therefore
-assign a set of possible contexts to a call. This semantic assignment is
-separate from the algorithm that selects contexts while solving the analysis.
+One call may have several contexts, for instance when an analysis splits an
+entry state into cases. A policy therefore assigns each call a set of contexts.
+The policy is a semantic assignment, separate from how the solver chooses
+contexts.
 
 #definition(name: [Context policy], isa: "context_policy", cmd: "type_synonym")[
   Let $C$ be the set of contexts and $I$ the set of call-information records.
@@ -434,10 +432,8 @@ policy. A policy may even be defined from the analysis result, as the
 entry-state policy is, since a policy only splits the collected stores among
 contexts and never changes them.
 
-A policy may admit several contexts or none. Neither the trace datatype nor
-validity prevents the empty case. An activation with no context would be
-absent from every context-indexed set, so a sound coverage contract must rule
-this out for calls from covered stores.
+A policy may admit several contexts or none, and neither the trace datatype
+nor validity prevents the empty case.
 
 #definition(name: [Activation collecting semantics], isa: "activation_collect", cmd: "definition")[
   The collecting semantics at a node $v$ and context $c$ is
@@ -487,22 +483,14 @@ $ cal(A)(v,c) subset.eq "cover"(v,c) quad "for every node" v "and context" c, $
 and every valid trace to carry at least one context, so that no reached store
 escapes the cover. The cover may include stores that no execution reaches.
 
-@fig:intro-nest shows the surrounding layers. The sets $cal(A)(v,c)$ group its
-collecting-semantics layer by context, and the reported analysis states will
-supply the cover.
-
 Checking the inclusion directly would mean following every trace. Valid traces,
 however, grow by only four rules (@sec:valid). It therefore suffices to check
 that each rule keeps the final store of the trace it builds inside the cover,
 in every context that trace carries. The _coverage contract_ does this with one
 local obligation per rule, each mentioning only stores and contexts. #oblig("INIT")
 covers the root rule, #oblig("INTRA") the local step, #oblig("CALL") the call,
-and #oblig("RETURN") the return. A fifth obligation, #oblig("TOTAL"), makes
-every call carry a context, so that no trace drops out of the context-indexed
-sets.
-
-@ch:equations derives these obligations from the parts of an equation's
-right-hand side and the context policy.
+and #oblig("RETURN") the return. A fifth obligation, #oblig("TOTAL"), requires
+every covered call to admit a context.
 
 The obligations use the objects fixed in @sec:valid: the initial stores
 $S$, the graph entry $v_0$, the edge sets $"intra"(g)$ and $"calls"(g)$, and the
@@ -628,11 +616,10 @@ for every valid trace.
   $ cal(C)(v) subset.eq union.big_(c in C) "cover"(v,c). $
 ]
 
-The proof first uses context existence. Every trace contributing a store to
-$cal(C)(v)$ contributes it to at least one $cal(A)(v,c)$, so
+The corollary follows from the theorem, since by #oblig("TOTAL") every valid
+trace carries a context and therefore
 $cal(C)(v) = union.big_(c in C) cal(A)(v,c)$
-(#isathm("node_collect_eq_Union_activation_collect")). The inclusion then
-follows from context-indexed soundness (#isathm("activation_collect_sound")).
+(#isathm("node_collect_eq_Union_activation_collect")).
 
 This chapter supplies the next links of the soundness chain of
 @fig:intro-nest. @ch:program-model placed every source execution in the graph.

@@ -158,16 +158,11 @@ to the generated module. @sec:ocaml-boundary describes the handwritten code arou
 ) <tab:sizes>
 
 The proofs say nothing about running time, and the generated code can be
-inefficient. In one case, a sampling profile of 256 chained assignments attributed
-most of the CPU time to a single function. The generated
-code of #isaconst("init_publications") recompiled the whole program at every
-equation evaluation, because its definition names the program's entry through the compiler from
-VIMP to control-flow graphs (@sec:compile). A proved code equation, #isathm("init_publications_code"), names
-the entry directly as #ctor("FunctionEntry") #isaconst("prog_main_name") and fixed this
-without changing any theorem. The chain of 256 assignments then ran
-#_speedup("chain256") times faster, and a program of 512 assignments in
-procedures of eight statements ran #_speedup("procs512") times faster, in one
-measurement each
+inefficient. The generated code of #isaconst("init_publications"), for instance,
+recompiled the whole program at every equation evaluation until a proved code
+equation (#isathm("init_publications_code")) named the program's entry directly,
+which made a chain of 256 assignments #_speedup("chain256") times faster in one
+measurement
 (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded]).
 Finding further inefficiencies and improving the generated code is future work.
 
@@ -175,16 +170,14 @@ The command-line tool links the module with the handwritten OCaml into a native
 program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the same code to
 WebAssembly, which a web worker in the reader's browser calls (@fig:build).
 
-A browser worker, however, has a much smaller stack than a native program. Deep
-recursions such as the one in #fixture(
+A browser worker, however, has a much smaller stack than a native program, so
+the bundle uses the
+#link("https://ocsigen.org/js_of_ocaml/latest/js_of_ocaml/effects.html")[continuation-passing
+  translation] of #raw("wasm_of_ocaml", lang: "sh") (#raw("--effects=cps", lang: "sh"))
+to lower the risk that deep recursions, such as the one in #fixture(
   "21-context-sensitivity/precision/04-function_chain_self_recursive_tail.vimp",
   label: "04-function_chain_self_recursive_tail",
-) can therefore overflow it. The bundle attempts to avoid this with the
-#link("https://ocsigen.org/js_of_ocaml/latest/js_of_ocaml/effects.html")[continuation-passing
-  translation] of #raw("wasm_of_ocaml", lang: "sh") (#raw("--effects=cps", lang: "sh")).
-In the transformed code, a function receives the computation to perform after
-it returns as an explicit continuation. Calls can then pass control to that
-continuation instead of retaining a return frame on the browser's stack.
+), overflow it.
 
 #figure(
   image("/shared/generated/svg/build.svg", width: 100%),
@@ -242,9 +235,7 @@ typed answer, whereas a user writes source text and reads a report.
 Unverified OCaml bridges both ends. On the input side, an `ocamllex` lexer
 and a Menhir parser turn the source text into an
 #isatype("imp_prog") and record each check's source position in its label.
-Both are generated from the grammar manifest
-#link(repo-blob + "manifests/vimp-grammar.yaml")[`vimp-grammar.yaml`] by
-#link(repo-blob + "scripts/gen_vimp_menhir.py")[`gen_vimp_menhir.py`]. On
+Both are generated from the VIMP grammar manifest (@fig:pipeline). On
 the output side, the generated #isaconst("render_report") turns the report's
 states into text. Handwritten OCaml then either prints the command-line report,
 placing each check at the position its label carries, or serializes the answer

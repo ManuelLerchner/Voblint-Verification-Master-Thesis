@@ -28,9 +28,9 @@
 brings to a node in a context (@sec:certificate). A user, however, is typically not
 interested in abstract states. They want to know whether the checks they wrote
 hold, whether a check can be reached at all, and whether an arithmetic
-operation, such as a division by zero, can fail. This chapter defines how the analyzer derives these answers from the
-abstract states, as verdicts and diagnostics in a report, and proves them
-correct.
+operation, such as a division by zero, can fail. The analyzer derives these
+answers from the abstract states and reports them as verdicts and diagnostics.
+Soundness theorems tie both to the executions of the program.
 
 == The analyzer function and its report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 

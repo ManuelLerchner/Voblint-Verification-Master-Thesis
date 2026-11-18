@@ -179,8 +179,7 @@ state, so that the analysis can answer the queries of the others.
 A local specification is sound (#isaconst("sound_local_spec")) if its
 concretization is monotone and its operations satisfy their laws whenever
 their channels hold (#isathm("sound_local_spec_iff")). Edge and combine follow
-the analysis contract (@sec:sound-core), with one law for both combine stages;
-enter requires entry coverage. The handler's answers about $x$ must hold at
+the analysis contract (@sec:sound-core), and enter requires entry coverage. The handler's answers about $x$ must hold at
 every store in $conc(x)$ where its own channel holds (#isaconst("sound_query")).
 This is the analyses' only mutual assumption. Verasco likewise proves
 transfers under correct-channel hypotheses @jourdan15[§7], following Astrée

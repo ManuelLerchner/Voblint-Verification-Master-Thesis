@@ -229,12 +229,6 @@ widening and narrowing (@sec:widening). The solver
 joins two values at a time, whenever a new value reaches an unknown, so
 joins need to exist only for pairs.
 
-A numeric domain adds a top element and an intersection to this structure. The
-top element describes a variable about which nothing is known, for instance, a
-value read from input. Refinement at a branch uses the intersection. It must keep every value that
-both operands admit, and its result must lie below both operands
-(#isalocale("sound_intersection"), @sec:branches).
-
 An analysis computes the description at a point from the descriptions at its
 predecessors, by a function $f$ on $lat(D)$, and its result must be stable
 under $f$. A _fixpoint_ of $f$ is an element with $f(d) = d$, and a
@@ -250,8 +244,7 @@ length bound, the _Kleene iterates_ $lbot, f(lbot), f(f(lbot)), dots$
 stabilize at $lfp f$ after finitely many steps @seidl12compiler[§1.5]
 (#isathm("lfp_Kleene_iter")). An analysis, however, does not have to compute
 $lfp f$. As long as $f$ is sound, every post-fixpoint that includes the initial
-states is already a sound result (@sec:abs-int). The verified solver that Voblint reuses therefore
-does not assume monotonicity (@sec:widening).
+states is already a sound result (@sec:abs-int).
 
 == Concretization and sound transfer functions <sec:abs-int>
 
@@ -332,7 +325,7 @@ $absval(ivl(0, 5))$ proves `i <= 5` at the loop head, and $absval(ivl(0, 10))$ d
 Much of abstract interpretation also assumes an abstraction function
 that forms a _Galois connection_ with $conc$ and gives
 every set of states a best abstraction @cousot79[§5.3], the most precise
-domain element whose concretization contains the set. Not every useful domain
+domain element whose concretization contains the set. Not every domain
 has such best abstractions, and Cousot and Cousot treat a Galois connection as
 the ideal case that efficient representations do not always meet
 @cousot92plilp[§5]. Voblint uses $conc$ alone, like the verified analyzers of
@@ -549,8 +542,7 @@ uses only this and holds whether the right-hand sides are monotone
 (@sec:td). Termination needs more. A classical widening is chosen so that repeated widening stabilizes
 after finitely many steps @cousot77[§9.1.3] @cousot92plilp[§4], and a classical
 narrowing must also make repeated narrowing stabilize. The solver's classes
-omit these stabilization laws, because termination of the side-effecting TD solver that
-Voblint uses is not proved (@sec:td). Within these laws, the
+omit these stabilization laws (@sec:td). Within these laws, the
 choice of widening and narrowing affects only precision and termination.
 
 == Context-sensitive analysis of procedures <sec:interproc>

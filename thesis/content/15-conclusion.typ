@@ -1,6 +1,7 @@
 #import "../lib/code.typ": isaconst, isalocale, isathm, isatype, oblig, repo-blob, site
 #import "../lib/figures.typ": verdict
 #import "../lib/stats.typ": stat
+#import "../lib/profiling.typ": prof-int
 
 = Conclusion <ch:conclusion>
 
@@ -13,19 +14,11 @@ user, a #verdict("PROVED") verdict therefore establishes the reported property
 for every analyzed execution that reaches the check, instead of resting on the
 tests the analyzer has passed.
 
-The current implementation of Voblint lies between existing formalized
-analyzers, such as Verasco @jourdan15 and the abstract interpreter of Nipkow and
-Klein @nipkow14, and Goblint. The formalized analyzers state their theorem about
-the analyzer they run, but avoid the mechanisms Goblint relies on for
-interprocedural precision. Verasco reanalyzes a function at every call site
-and raises an alarm at a possible recursive call, and the interpreter of
-Nipkow and Klein analyzes IMP, which has no procedures. Goblint instead solves
-equations over unknowns indexed by program point and calling context, publishes
-side effects to global unknowns, and computes the solution with a top-down
-solver. A formalization of the TD solver has been verified @tilscher26, but no proof connects
-Goblint's solved equations to the executions of the program. Voblint keeps Goblint's architecture and
-states a CompCert-style theorem about the analyzer it runs. As far as the author is aware, a proof that connects context-indexed,
-side-effecting equations and their solver to source executions has not been
+Formalized analyzers such as Verasco @jourdan15 and the abstract interpreter of
+Nipkow and Klein @nipkow14 state their theorem about the analyzer they run but
+use neither context-indexed nor side-effecting equations (@sec:rel-mechanized).
+Voblint keeps Goblint's architecture and states such a theorem about the
+analyzer it runs. As far as the author is aware, this combination has not been
 mechanized before (@sec:rel-summary).
 
 The end-to-end soundness theorem holds for every report #isaconst("run_voblint") returns,
@@ -45,9 +38,10 @@ remainder obligation rejects a real Goblint defect (@ch:evaluation). On the
 external benchmarks of @sec:eval-flavors, Voblint proves every check that Goblint
 proves with its plain interval domain or with full calling contexts, and
 #stat("corpus.kinds.precision") fixtures of the regression corpus record the
-precise verdicts it computes on further programs (@sec:eval-corpus). The analyzer runs in
-acceptable time on that corpus, although its list-based sets and maps limit how far it
-scales (@sec:eval-runtime).
+precise verdicts it computes on further programs (@sec:eval-corpus). The analyzer
+solves all but #prof-int("timeouts") of the #prof-int("cases") benchmark cases on
+that corpus within the limit of #prof-int("meta.timeout_s")~s per case, although
+its list-based sets and maps limit how far it scales (@sec:eval-runtime).
 
 == Recommendations for analyzer formalizations <sec:lessons>
 
@@ -165,7 +159,7 @@ a verified translation for a common fragment.
 A second limitation concerns the evaluation of precision. No general precision or completeness theorem is proved, so the evidence for precision
 rests on examples. The regression corpus is small and its expected verdicts were set by hand (@sec:eval-corpus),
 and beyond the small comparison of @sec:eval-flavors, no agreement rate with
-Goblint is measured (@sec:rel-goblint).
+Goblint is measured, since the corpus has not been run through Goblint.
 
 == Extensions towards C and Goblint <sec:outlook-extending>
 
@@ -175,7 +169,7 @@ without much change, since each soundness proof stays within its own
 obligations. For example, relational domains such as octagons or polyhedra @mine17
 could follow the order analysis (@sec:relational), and path-sensitive
 analyses could split a call into several entry pairs, which the interface
-already admits (@sec:calls). Other features of Goblint, such as machine
+already admits (@sec:calls). Other features, such as machine
 integers, pointers, or threads, would require extensive changes to Voblint. Machine integers illustrate the scale of such an extension.
 #link("https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/pull/357")[Pull request 357],
 developed separately from the version this thesis describes, introduces
@@ -185,19 +179,22 @@ bit separately and which the author co-developed
 (#link("https://github.com/goblint/analyzer/pull/1623")[Goblint pull request 1623]),
 is a natural next analysis.
 
-Whether a further C feature needs such a rewrite depends on how deeply it
-reaches into the formalization. Several central results are independent of the details of VIMP. The solver certificate is stated over unknowns and right-hand sides, and
+Whether a further C feature also changes the trace semantics depends on how
+deeply it reaches into the formalization. Several central results are independent of the details of VIMP. The solver certificate is stated over unknowns and right-hand sides, and
 the coverage contract refers to the language only through a few step functions
 (@sec:contract), so a feature that changes only these step functions leaves
 the rest of the proof intact. The trace semantics, however, assumes that a callee cannot touch its caller's
 locals, so a return can
-resume the caller with the locals it had before the call (@sec:calls).
-Features that keep this assumption, such as machine integers, change the
-step functions and the proofs that unfold them, while the contract and its
-composition keep their shape. A heap could be modeled as shared state with new transfers and proofs.
-Pointers into caller frames break the separation of locals @sotin11; threads
-add interference @schwarz21. These features require revisiting the trace
-semantics and its soundness argument.
+resume the caller with the locals it had before the call (@sec:calls). A heap, the memory that a C
+program allocates at run time, lies outside every frame and outlives the
+activation that allocated it. Like a global variable of VIMP, it would pass
+from caller to callee and back at a call, so it keeps the separation of locals.
+It still needs new step functions for allocation and for access through
+pointers, with their transfers and proofs. Pointers into a caller's frame, in
+contrast, let a callee change the caller's locals and break this separation
+@sotin11. Threads add interference, since another thread may change shared
+state between two steps @schwarz21. Both require revisiting the trace semantics
+and its soundness argument.
 
 Revisions of this scale may become more feasible as AI-assisted tools improve.
 Such tools have already made large-scale mathematical formalization practical
@@ -212,7 +209,8 @@ In the author's assessment, this thesis met its goal. It shows that an
 analyzer with Goblint's architecture, with calling contexts, side effects, and
 cooperating analyses, can be formalized in a proof assistant from source
 executions to reported verdicts and still be practical. The exported analyzer
-runs on the regression programs in acceptable time (@sec:eval-runtime) and is
+solves all but #prof-int("timeouts") of the benchmark cases within the time
+limit (@sec:eval-runtime) and is
 precise enough to decide the checks they pin (@sec:eval-corpus). The author is
 keen to see the formalization extended towards C and its insights carried back
 into Goblint itself.
