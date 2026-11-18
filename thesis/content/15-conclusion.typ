@@ -207,3 +207,12 @@ this project, the models behind these tools handled the formalization
 consistently better, and the surrounding Isabelle tooling improved as well.
 Continued progress in both areas may bring the revision of the trace semantics
 for pointers and threads within reach.
+
+In the author's assessment, this thesis met its goal. It shows that an
+analyzer with Goblint's architecture, with calling contexts, side effects, and
+cooperating analyses, can be formalized in a proof assistant from source
+executions to reported verdicts and still be practical. The exported analyzer
+runs on the regression programs in acceptable time (@sec:eval-runtime) and is
+precise enough to decide the checks they pin (@sec:eval-corpus). The author is
+keen to see the formalization extended towards C and its insights carried back
+into Goblint itself.
