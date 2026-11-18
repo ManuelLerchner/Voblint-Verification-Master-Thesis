@@ -1,0 +1,21 @@
+# Author review: "a solve that returns" hides the premise. The theorems assume
+# termination, so say "terminates" when no returned value is named.
+extends: existence
+message: "'%s': say the solve terminates."
+level: error
+ignorecase: true
+nonword: true
+tokens:
+  - '\b(?:whenever|if|once|when) (?:a|the) solve returns\b'
+  - '\bsolve that returns\b'
+
+tests:
+  - name: fires
+    input: |
+      The solver yields a post-solution whenever a solve returns.
+    want: |
+      1:35:Voblint.SolveReturns:'whenever a solve returns': say the solve terminates.
+  - name: clean on a returned value
+    input: |
+      Let d be the state the solve returns for the node.
+    want: ""

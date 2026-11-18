@@ -1,0 +1,246 @@
+thesis/shared/programs/mixed-flow.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+None
+Voblint trace
+  analysis: sign
+  context:  none
+  globals:  bounded-narrowing
+  program:  thesis/shared/programs/mixed-flow.vimp
+
+%%% multivar: solving for (exit_main, unit)
+%%% iter: begin iterate (exit_main, unit), called: true, stable: false, wpoint: false
+%%% eq: eq (exit_main, unit)
+%%% solver_query: entering query for (pp7, unit) from (exit_main, unit); stable false; called false
+  %%% iter: iterate called from query
+  %%% iter: begin iterate (pp7, unit), called: true, stable: false, wpoint: false
+  %%% eq: eq (pp7, unit)
+  %%% solver_query: entering query for (pp6 "y = get();" L4, unit) from (pp7, unit); stable false; called false
+    %%% iter: iterate called from query
+    %%% iter: begin iterate (pp6 "y = get();" L4, unit), called: true, stable: false, wpoint: false
+    %%% eq: eq (pp6 "y = get();" L4, unit)
+    %%% solver_query: entering query for (pp5 "set();" L4, unit) from (pp6 "y = get();" L4, unit); stable false; called false
+      %%% iter: iterate called from query
+      %%% iter: begin iterate (pp5 "set();" L4, unit), called: true, stable: false, wpoint: false
+      %%% eq: eq (pp5 "set();" L4, unit)
+      %%% solver_query: entering query for (pp4 "x = 1;" L4, unit) from (pp5 "set();" L4, unit); stable false; called false
+        %%% iter: iterate called from query
+        %%% iter: begin iterate (pp4 "x = 1;" L4, unit), called: true, stable: false, wpoint: false
+        %%% eq: eq (pp4 "x = 1;" L4, unit)
+        %%% solver_query: entering query for (entry_main, unit) from (pp4 "x = 1;" L4, unit); stable false; called false
+          %%% iter: iterate called from query
+          %%% iter: begin iterate (entry_main, unit), called: true, stable: false, wpoint: false
+          %%% eq: eq (entry_main, unit)
+          %%% side: side to Global Gx from (entry_main, unit); value: sign: Gx=0
+          %%% destab: destabilize Global Gx
+          %%% solver_query: entering query for Seed(main, unit) from (entry_main, unit)
+            %%% infl: add_infl Seed(main, unit) (entry_main, unit)
+            %%% answer: exiting query for Seed(main, unit) from (entry_main, unit)
+answer: ⊥
+          %%% rhs: (entry_main, unit) = sign: x=⊤, y=⊤, #ret=⊤
+          %%% sol: Var: (entry_main, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+          %%% destab: destabilize (entry_main, unit)
+          %%% iter: iterate changed (entry_main, unit)
+          %%% iter: begin iterate (entry_main, unit), called: true, stable: true, wpoint: false
+          %%% infl: add_infl (entry_main, unit) (pp4 "x = 1;" L4, unit)
+          %%% answer: exiting query for (entry_main, unit) from (pp4 "x = 1;" L4, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+        %%% rhs: (pp4 "x = 1;" L4, unit) = sign: x=⊤, y=⊤, #ret=⊤
+        %%% sol: Var: (pp4 "x = 1;" L4, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+        %%% destab: destabilize (pp4 "x = 1;" L4, unit)
+        %%% iter: iterate changed (pp4 "x = 1;" L4, unit)
+        %%% iter: begin iterate (pp4 "x = 1;" L4, unit), called: true, stable: true, wpoint: false
+        %%% infl: add_infl (pp4 "x = 1;" L4, unit) (pp5 "set();" L4, unit)
+        %%% answer: exiting query for (pp4 "x = 1;" L4, unit) from (pp5 "set();" L4, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+      %%% rhs: (pp5 "set();" L4, unit) = sign: x=+, y=⊤, #ret=⊤
+      %%% sol: Var: (pp5 "set();" L4, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=+, y=⊤, #ret=⊤
+New value: sign: x=+, y=⊤, #ret=⊤
+      %%% destab: destabilize (pp5 "set();" L4, unit)
+      %%% iter: iterate changed (pp5 "set();" L4, unit)
+      %%% iter: begin iterate (pp5 "set();" L4, unit), called: true, stable: true, wpoint: false
+      %%% infl: add_infl (pp5 "set();" L4, unit) (pp6 "y = get();" L4, unit)
+      %%% answer: exiting query for (pp5 "set();" L4, unit) from (pp6 "y = get();" L4, unit)
+answer: sign: x=+, y=⊤, #ret=⊤
+    %%% route: call at (pp5 "set();" L4, unit): entry sign: x=⊤, y=⊤, #ret=⊤ -> context unit
+    %%% side: side to Seed(set, unit) from (pp6 "y = get();" L4, unit); value: sign: x=⊤, y=⊤, #ret=⊤
+    %%% destab: destabilize Seed(set, unit)
+    %%% solver_query: entering query for (exit_set, unit) from (pp6 "y = get();" L4, unit); stable false; called false
+      %%% iter: iterate called from query
+      %%% iter: begin iterate (exit_set, unit), called: true, stable: false, wpoint: false
+      %%% eq: eq (exit_set, unit)
+      %%% solver_query: entering query for (pp1, unit) from (exit_set, unit); stable false; called false
+        %%% iter: iterate called from query
+        %%% iter: begin iterate (pp1, unit), called: true, stable: false, wpoint: false
+        %%% eq: eq (pp1, unit)
+        %%% solver_query: entering query for (pp0 "Gx = 1;" L2, unit) from (pp1, unit); stable false; called false
+          %%% iter: iterate called from query
+          %%% iter: begin iterate (pp0 "Gx = 1;" L2, unit), called: true, stable: false, wpoint: false
+          %%% eq: eq (pp0 "Gx = 1;" L2, unit)
+          %%% solver_query: entering query for (entry_set, unit) from (pp0 "Gx = 1;" L2, unit); stable false; called false
+            %%% iter: iterate called from query
+            %%% iter: begin iterate (entry_set, unit), called: true, stable: false, wpoint: false
+            %%% eq: eq (entry_set, unit)
+            %%% solver_query: entering query for Seed(set, unit) from (entry_set, unit)
+              %%% infl: add_infl Seed(set, unit) (entry_set, unit)
+              %%% answer: exiting query for Seed(set, unit) from (entry_set, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+            %%% rhs: (entry_set, unit) = sign: x=⊤, y=⊤, #ret=⊤
+            %%% sol: Var: (entry_set, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+            %%% destab: destabilize (entry_set, unit)
+            %%% iter: iterate changed (entry_set, unit)
+            %%% iter: begin iterate (entry_set, unit), called: true, stable: true, wpoint: false
+            %%% infl: add_infl (entry_set, unit) (pp0 "Gx = 1;" L2, unit)
+            %%% answer: exiting query for (entry_set, unit) from (pp0 "Gx = 1;" L2, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+          %%% rhs: (pp0 "Gx = 1;" L2, unit) = sign: x=⊤, y=⊤, #ret=⊤
+          %%% sol: Var: (pp0 "Gx = 1;" L2, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+          %%% destab: destabilize (pp0 "Gx = 1;" L2, unit)
+          %%% iter: iterate changed (pp0 "Gx = 1;" L2, unit)
+          %%% iter: begin iterate (pp0 "Gx = 1;" L2, unit), called: true, stable: true, wpoint: false
+          %%% infl: add_infl (pp0 "Gx = 1;" L2, unit) (pp1, unit)
+          %%% answer: exiting query for (pp0 "Gx = 1;" L2, unit) from (pp1, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+        %%% side: side to Global Gx from (pp1, unit); value: sign: Gx=+
+        %%% update: side to Global Gx from (pp1, unit) new: sign: Gx=≥0
+        %%% destab: destabilize Global Gx
+        %%% rhs: (pp1, unit) = sign: x=⊤, y=⊤, #ret=⊤
+        %%% sol: Var: (pp1, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+        %%% destab: destabilize (pp1, unit)
+        %%% iter: iterate changed (pp1, unit)
+        %%% iter: begin iterate (pp1, unit), called: true, stable: true, wpoint: false
+        %%% infl: add_infl (pp1, unit) (exit_set, unit)
+        %%% answer: exiting query for (pp1, unit) from (exit_set, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+      %%% rhs: (exit_set, unit) = sign: x=⊤, y=⊤, #ret=⊤
+      %%% sol: Var: (exit_set, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+      %%% destab: destabilize (exit_set, unit)
+      %%% iter: iterate changed (exit_set, unit)
+      %%% iter: begin iterate (exit_set, unit), called: true, stable: true, wpoint: false
+      %%% infl: add_infl (exit_set, unit) (pp6 "y = get();" L4, unit)
+      %%% answer: exiting query for (exit_set, unit) from (pp6 "y = get();" L4, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+    %%% rhs: (pp6 "y = get();" L4, unit) = sign: x=+, y=⊤, #ret=⊤
+    %%% sol: Var: (pp6 "y = get();" L4, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=+, y=⊤, #ret=⊤
+New value: sign: x=+, y=⊤, #ret=⊤
+    %%% destab: destabilize (pp6 "y = get();" L4, unit)
+    %%% iter: iterate changed (pp6 "y = get();" L4, unit)
+    %%% iter: begin iterate (pp6 "y = get();" L4, unit), called: true, stable: true, wpoint: false
+    %%% infl: add_infl (pp6 "y = get();" L4, unit) (pp7, unit)
+    %%% answer: exiting query for (pp6 "y = get();" L4, unit) from (pp7, unit)
+answer: sign: x=+, y=⊤, #ret=⊤
+  %%% route: call at (pp6 "y = get();" L4, unit): entry sign: x=⊤, y=⊤, #ret=⊤ -> context unit
+  %%% side: side to Seed(get, unit) from (pp7, unit); value: sign: x=⊤, y=⊤, #ret=⊤
+  %%% destab: destabilize Seed(get, unit)
+  %%% solver_query: entering query for (exit_get, unit) from (pp7, unit); stable false; called false
+    %%% iter: iterate called from query
+    %%% iter: begin iterate (exit_get, unit), called: true, stable: false, wpoint: false
+    %%% eq: eq (exit_get, unit)
+    %%% solver_query: entering query for (pp2 "return Gx;" L3, unit) from (exit_get, unit); stable false; called false
+      %%% iter: iterate called from query
+      %%% iter: begin iterate (pp2 "return Gx;" L3, unit), called: true, stable: false, wpoint: false
+      %%% eq: eq (pp2 "return Gx;" L3, unit)
+      %%% solver_query: entering query for (entry_get, unit) from (pp2 "return Gx;" L3, unit); stable false; called false
+        %%% iter: iterate called from query
+        %%% iter: begin iterate (entry_get, unit), called: true, stable: false, wpoint: false
+        %%% eq: eq (entry_get, unit)
+        %%% solver_query: entering query for Seed(get, unit) from (entry_get, unit)
+          %%% infl: add_infl Seed(get, unit) (entry_get, unit)
+          %%% answer: exiting query for Seed(get, unit) from (entry_get, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+        %%% rhs: (entry_get, unit) = sign: x=⊤, y=⊤, #ret=⊤
+        %%% sol: Var: (entry_get, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+        %%% destab: destabilize (entry_get, unit)
+        %%% iter: iterate changed (entry_get, unit)
+        %%% iter: begin iterate (entry_get, unit), called: true, stable: true, wpoint: false
+        %%% infl: add_infl (entry_get, unit) (pp2 "return Gx;" L3, unit)
+        %%% answer: exiting query for (entry_get, unit) from (pp2 "return Gx;" L3, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+      %%% rhs: (pp2 "return Gx;" L3, unit) = sign: x=⊤, y=⊤, #ret=⊤
+      %%% sol: Var: (pp2 "return Gx;" L3, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=⊤
+New value: sign: x=⊤, y=⊤, #ret=⊤
+      %%% destab: destabilize (pp2 "return Gx;" L3, unit)
+      %%% iter: iterate changed (pp2 "return Gx;" L3, unit)
+      %%% iter: begin iterate (pp2 "return Gx;" L3, unit), called: true, stable: true, wpoint: false
+      %%% infl: add_infl (pp2 "return Gx;" L3, unit) (exit_get, unit)
+      %%% answer: exiting query for (pp2 "return Gx;" L3, unit) from (exit_get, unit)
+answer: sign: x=⊤, y=⊤, #ret=⊤
+    %%% solver_query: entering query for Global Gx from (exit_get, unit)
+      %%% infl: add_infl Global Gx (exit_get, unit)
+      %%% answer: exiting query for Global Gx from (exit_get, unit)
+answer: sign: Gx=≥0
+    %%% solver_query: entering query for (pp3, unit) from (exit_get, unit); stable false; called false
+      %%% iter: iterate called from query
+      %%% iter: begin iterate (pp3, unit), called: true, stable: false, wpoint: false
+      %%% eq: eq (pp3, unit)
+      %%% rhs: (pp3, unit) = ⊥
+      %%% sol: Var: (pp3, unit) (wp: false)
+Old value: ⊥
+Eqd: ⊥
+New value: ⊥
+      %%% infl: add_infl (pp3, unit) (exit_get, unit)
+      %%% answer: exiting query for (pp3, unit) from (exit_get, unit)
+answer: ⊥
+    %%% rhs: (exit_get, unit) = sign: x=⊤, y=⊤, #ret=≥0
+    %%% sol: Var: (exit_get, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=⊤, y=⊤, #ret=≥0
+New value: sign: x=⊤, y=⊤, #ret=≥0
+    %%% destab: destabilize (exit_get, unit)
+    %%% iter: iterate changed (exit_get, unit)
+    %%% iter: begin iterate (exit_get, unit), called: true, stable: true, wpoint: false
+    %%% infl: add_infl (exit_get, unit) (pp7, unit)
+    %%% answer: exiting query for (exit_get, unit) from (pp7, unit)
+answer: sign: x=⊤, y=⊤, #ret=≥0
+  %%% rhs: (pp7, unit) = sign: x=+, y=≥0, #ret=⊤
+  %%% sol: Var: (pp7, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=+, y=≥0, #ret=⊤
+New value: sign: x=+, y=≥0, #ret=⊤
+  %%% destab: destabilize (pp7, unit)
+  %%% iter: iterate changed (pp7, unit)
+  %%% iter: begin iterate (pp7, unit), called: true, stable: true, wpoint: false
+  %%% infl: add_infl (pp7, unit) (exit_main, unit)
+  %%% answer: exiting query for (pp7, unit) from (exit_main, unit)
+answer: sign: x=+, y=≥0, #ret=⊤
+%%% rhs: (exit_main, unit) = sign: x=+, y=≥0, #ret=⊤
+%%% sol: Var: (exit_main, unit) (wp: false)
+Old value: ⊥
+Eqd: sign: x=+, y=≥0, #ret=⊤
+New value: sign: x=+, y=≥0, #ret=⊤
+%%% destab: destabilize (exit_main, unit)
+%%% iter: iterate changed (exit_main, unit)
+%%% iter: begin iterate (exit_main, unit), called: true, stable: true, wpoint: false
+
+
+Trace complete: 14 local and 4 global unknowns solved

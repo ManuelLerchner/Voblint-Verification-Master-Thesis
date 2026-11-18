@@ -1,0 +1,22 @@
+# Supervisor review (Chapter 6 figure): "only relying on color is dangerous,
+# e.g. with b&w print". Name the part by a label, line style or position.
+extends: existence
+message: "'%s' identifies something by colour alone: add a label, line style or position that survives greyscale print."
+level: warning
+ignorecase: true
+nonword: true
+tokens:
+  - '\((?:in )?(?:blue|green|red|orange|purple|teal|magenta|grey|gray|yellow)\)'
+  - '\b(?:shown|drawn|marked|highlighted) in (?:blue|green|red|orange|purple|teal|magenta|grey|gray|yellow)\b'
+
+tests:
+  - name: fires
+    input: |
+      The caller's locals (blue) meet the callee's globals, shown in green.
+    want: |
+      1:21:Voblint.ColourOnly:'(blue)' identifies something by colour alone: add a label, line style or position that survives greyscale print.
+      1:55:Voblint.ColourOnly:'shown in green' identifies something by colour alone: add a label, line style or position that survives greyscale print.
+  - name: clean
+    input: |
+      The dashed arrow marks the call.
+    want: ""

@@ -5,7 +5,6 @@
 #import "../lib/claims.typ": claim-ref
 #import "../lib/stats.typ": stat
 #import "../lib/sources.typ": thy
-#import "../lib/profiling.typ": prof-times
 
 // The call run_voblint received and the answer it returned (claim shell-json),
 // folded for print: `rule(path)` keeps a value "open" (one key per line),
@@ -52,15 +51,9 @@
 sound. Someone who analyzes a VIMP program, however, writes source text and
 reads a report in a terminal or a browser tab. This chapter asks how the
 proved HOL function becomes a program between the two, and which components the
-soundness guarantee for that program rests on. The proved function's abstract states are
-mathematical functions, which code cannot compute with, so they are first
-replaced by finite representations (@sec:represented-function). Isabelle's
-code generator then exports #isaconst("run_voblint") to OCaml
-(@sec:codegen), and an unverified shell of handwritten OCaml parses the source text and displays
-the report (@sec:ocaml-boundary). The change of representation is proved
-to preserve the theorem. The code generator and the shell are not proved
-correct, so the soundness guarantee for the running tool also rests on them, as
-@fig:intro-trust shows.
+soundness guarantee for that program rests on. The change to finite state
+representations is proved correct; code generation and the handwritten shell
+remain outside the proof (@fig:intro-trust).
 
 == Finite representations of abstract states <sec:represented-function>
 
@@ -76,8 +69,10 @@ generation exports the executable part together with each domain's operation
 record. The concretizations and their laws serve only the proofs.
 
 The pointwise states of @ch:domains are total functions on
-infinitely many variable names, so the solver could not even test whether two
-of them are equal. Following Concrete Semantics @nipkow14[§13.6], an
+infinitely many variable names. Generated code could apply such a function,
+but the solver also compares states for equality to detect that an unknown has
+stabilized, and equality of two functions on an infinite domain is not
+computable. Following Concrete Semantics @nipkow14[§13.6], an
 _executable state_ (#isatype("default_st")) instead stores a default value and
 a finite list of overrides. Voblint keeps two such pairs, one for locals with
 default #ltop and one for globals with default $0^sharp$, because VIMP
@@ -101,8 +96,9 @@ states of the order analysis (@sec:rel-state) are finite data.
 == Export to OCaml and WebAssembly #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 With these replacements, every function that #isaconst("run_voblint") uses
-has code equations, and Isabelle's
-code generator @haftmann10 can export it. One #isacmd("export_code")
+has _code equations_, the executable equations from which Isabelle's code
+generator @haftmann10 produces code (@sec:isabelle), so the generator can
+export it. One #isacmd("export_code")
 declaration emits #isaconst("run_voblint"), #isaconst("render_report"), and the
 constructors and selectors a caller needs into one OCaml file,
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
@@ -125,10 +121,7 @@ the solver keeps its valuation as a chain of closures, one per update.
 The code that runs is a small part of the development (@tab:sizes). Code
 generation keeps only the definitions that #isaconst("run_voblint") depends on and
 drops every proof, so the theories and the imported part of the vendored TD solver shrink
-to the generated module. The handwritten OCaml around this module is smaller
-still. Together with the playground's JavaScript, which draws the answer, it is the
-code that has to be checked by hand, while Zarith, the code generator, the compilers
-and the browser are trusted (@sec:ocaml-boundary).
+to the generated module. @sec:ocaml-boundary describes the handwritten code around this module.
 
 #figure(
   {
@@ -165,33 +158,26 @@ and the browser are trusted (@sec:ocaml-boundary).
 ) <tab:sizes>
 
 The proofs say nothing about running time, and the generated code can be
-inefficient. In one case, a sampling profile of 256 chained assignments attributed
-most of the CPU time to a single function. The generated
-code of #isaconst("init_publications") recompiled the whole program at every
-equation evaluation, because its definition names the program's entry through the compiler from
-VIMP to control-flow graphs (@sec:compile). A proved code equation, #isathm("init_publications_code"), names
-the entry directly as #ctor("FunctionEntry") #isaconst("prog_main_name") and fixed this
-without changing any theorem. The chain of 256 assignments then ran
-#_speedup("chain256") times faster, and a program of 512 assignments in
-procedures of eight statements ran #_speedup("procs512") times faster, in one
-measurement each
+inefficient. The generated code of #isaconst("init_publications"), for instance,
+recompiled the whole program at every equation evaluation until a proved code
+equation (#isathm("init_publications_code")) named the program's entry directly,
+which made a chain of 256 assignments #_speedup("chain256") times faster in one
+measurement
 (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded]).
 Finding further inefficiencies and improving the generated code is future work.
 
 The command-line tool links the module with the handwritten OCaml into a native
 program. For the playground, #raw("wasm_of_ocaml", lang: "sh") compiles the same code to
-WebAssembly, which a web worker in the reader's browser calls (@fig:build). Both tools
-thus run the generated code of #isaconst("run_voblint") up to the code generator and the
-compilers (@fig:intro-trust).
+WebAssembly, which a web worker in the reader's browser calls (@fig:build).
 
-A browser worker, however, has a much smaller stack than a native program. Deep
-recursions such as the one in #fixture(
+A browser worker, however, has a much smaller stack than a native program, so
+the bundle uses the
+#link("https://ocsigen.org/js_of_ocaml/latest/js_of_ocaml/effects.html")[continuation-passing
+  translation] of #raw("wasm_of_ocaml", lang: "sh") (#raw("--effects=cps", lang: "sh"))
+to lower the risk that deep recursions, such as the one in #fixture(
   "21-context-sensitivity/precision/04-function_chain_self_recursive_tail.vimp",
   label: "04-function_chain_self_recursive_tail",
-) can therefore overflow it. The bundle attempts to avoid this with the continuation-passing
-translation of #raw("wasm_of_ocaml", lang: "sh") (#raw("--effects=cps", lang: "sh")).
-With it, the browser build needs #prof-times("browser_ratio_median") the native solve
-time on the median run (@sec:eval-runtime, #link(site("profiling.html"))[profiling page]).
+), overflow it.
 
 #figure(
   image("/shared/generated/svg/build.svg", width: 100%),
@@ -204,7 +190,7 @@ time on the median run (@sec:eval-runtime, #link(site("profiling.html"))[profili
     project site.],
 ) <fig:build>
 
-== Traced solver runs #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
+== Tracing the solver #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 To explain a run, the command-line tool and the playground can trace the
 solver's steps. The solver trace records when each unknown is queried, which update
@@ -222,30 +208,34 @@ equals #isaconst("run_voblint") in the logic
 (#isathm("run_voblint_traced_eq")). Code generation exports both. A
 #isacmd("code_printing") declaration then tells the code generator to emit, in
 place of #isaconst("trace_event"), a call to the handwritten OCaml function
-`Solver_trace_hook.emit`. The hook receives a suspended event and builds it
-only when tracing is on. Only the traced entry point calls the hook, so an
-untraced run executes no handwritten code inside the analysis. For a traced run, the hook joins the trusted base and must
+`Solver_trace_hook.emit`. The hook receives a function that constructs an event
+and calls it only when tracing is on. Only the traced entry point calls the hook, so an
+untraced run executes no handwritten code inside the analysis. For a traced run, the hook joins the trusted foundation and must
 return, raise nothing, and leave the solver's values alone.
 
-The command-line tool prints the events with `--trace`, and the playground
-replays them step by step on the solved graph (@fig:replay-still). The replay
+// The replay figure's own run, opened with tracing on so the replay is ready.
+#let _replay-run = json("/shared/generated/playground/playground.json").at("solve-replay-still")
+#let _replay-link = playground-link(
+  read("/shared/generated/playground/" + _replay-run.program),
+  ctx: _replay-run.context,
+  trace: "verbose",
+)
+The command-line tool prints the events with `--trace`, and the
+#link(_replay-link)[playground] replays them step by step on the solved graph
+and can animate the whole solve (@fig:replay-still). The replay
 shows the order of the solve, which the solved values alone hide, such as when
-a call creates a new callee context. The solver trace itself is unverified, but
-a traced run returns the same report as an untraced one, provided the hook
-meets its obligations.
+a call creates a new callee context.
 
 
 #pagebreak(weak: true)
-== Unverified parser, rendering, and playground <sec:ocaml-boundary>
+== Unverified parser, renderer, and playground <sec:ocaml-boundary>
 
 The generated #isaconst("run_voblint") works on a syntax tree and returns a
 typed answer, whereas a user writes source text and reads a report.
 Unverified OCaml bridges both ends. On the input side, an `ocamllex` lexer
 and a Menhir parser turn the source text into an
 #isatype("imp_prog") and record each check's source position in its label.
-Both are generated from the grammar manifest
-#link(repo-blob + "manifests/vimp-grammar.yaml")[`vimp-grammar.yaml`] by
-#link(repo-blob + "scripts/gen_vimp_menhir.py")[`gen_vimp_menhir.py`]. On
+Both are generated from the VIMP grammar manifest (@fig:pipeline). On
 the output side, the generated #isaconst("render_report") turns the report's
 states into text. Handwritten OCaml then either prints the command-line report,
 placing each check at the position its label carries, or serializes the answer
@@ -290,7 +280,7 @@ the states into text, serialized as for the playground.
 
 The #link(site("playground.html"))[playground] is the browser front end of
 @fig:build. Its toolbar sets the configuration of #isaconst("run_voblint") and
-toggles the tracing of @sec:tracing, and the end-to-end soundness theorem covers every
+toggles the tracing of @sec:tracing, and the end-to-end soundness theorem applies to every
 configuration it can select (#isathm("run_voblint_source_sound")).
 @fig:pg-overview shows one run.
 
@@ -323,7 +313,8 @@ configuration it can select (#isathm("run_voblint_source_sound")).
 
 The handwritten OCaml around the generated analyzer (@tab:sizes) is tested.
 A #link(repo-blob + "tests/regression")[regression corpus] of
-#stat("corpus.cases") VIMP programs pins the expected verdicts: a definite one
+#stat("corpus.cases") VIMP programs, the _regression fixtures_, pins the
+expected verdicts: a definite one
 in `precision/`, #verdict("UNKNOWN") in `soundness/`, and a documented loss in
 `known-imprecision/`. Stored expected traces
 (#link(repo-blob + "tests/solver-trace")[golden files]) pin the solver traces of

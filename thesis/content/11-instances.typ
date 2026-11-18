@@ -11,15 +11,14 @@
 
 = Numeric and Relational Analyses <ch:instances>
 
-A user of Voblint selects the analyses that run on a program, and the
-selection determines which checks the report proves. The preceding chapters stated what a domain, an analysis, and a combination of
-analyses must prove, and @ch:results showed that every report is sound,
-whichever analyses produced it. Voblint instantiates this contract with the
+@ch:domains to @ch:results show that every report is sound whichever analyses
+produced it, provided each meets its obligations. A user, however, selects
+concrete analyses for each run. Voblint ships the
 non-relational domains Sign, Interval, Parity, and Congruence, their reduced
 product Int, and a relational order analysis. Each base domain records a
 different property of a variable, and on one loop Int proves a check that none
 of them proves alone. The order analysis proves relations between variables, so
-the framework also supports states that describe several variables jointly.
+the interface also admits states that describe several variables jointly.
 
 == Four non-relational numeric domains <sec:instances-supply>
 
@@ -29,8 +28,7 @@ Interval #thy-badge("Voblint_Domain", "Interval_Lattice"), Parity
 #thy-badge("Voblint_Domain", "Congruence_Lattice"), are the classical
 non-relational domains @mine17;
 congruences go back to Granger @granger89. The fifth domain, Int, combines all
-four. Its value holds one value of each base domain and denotes the
-intersection of their meanings (@sec:reduced-product). All five are
+four (@sec:reduced-product). All five are
 non-relational in the sense of @sec:nonrel-state, so each describes every
 variable separately. @fig:gamma shows one
 value of each and the integers it stands for.
@@ -60,7 +58,7 @@ value of each and the integers it stands for.
       table.hline(stroke: 0.4pt),
       ..row([Sign], "≥0"),
       ..row([Interval], "[-2,5]"),
-      ..row([Parity], "1+2ℤ", shown: raw("odd")),
+      ..row([Parity], "1+2ℤ"),
       ..row([Congruence], "2+3ℤ"),
       ..row(
         [Int],
@@ -81,16 +79,15 @@ value of each and the integers it stands for.
   caption: [One value of each non-relational domain, as the analyzer prints it, and
     the integers it denotes between $-6$ and $10$. Congruence values print as
     $c + m ZZ$, the integers congruent to $c$ modulo $m$ ($m ZZ$ when $c = 0$),
-    and the Parity value shown is that of the odd integers. An end cell is filled when
+    and Parity values print the same way modulo $2$. An end cell is filled when
     the set continues beyond the window. The values are illustrative. The Int value,
     the reduced state of $x$ in the program of @sec:reduced-product, denotes the intersection of its
     components' meanings, here ${1, 5, 9}$.],
 ) <fig:gamma>
 
 Each of these domains enters Voblint through the interface of
-@sec:domain-contract. It instantiates the order classes for its carrier,
-supplies its operations as the record #isatype("nonrelational_ops"), and proves
-them sound once
+@fig:domain-carrier. It instantiates the order classes for its carrier,
+supplies its operations as one record, and proves them sound once
 (#isalocale("sound_nonrelational_ops")). From this proof, a generic construction
 derives the transfer functions of @ch:analysis-interface together with their
 executable versions, and makes the domain a sound component of the product
@@ -129,7 +126,7 @@ $v = 51$, so every check holds.
 #let _v(dom, loc) = verdict("dom-stride2-" + dom, loc)
 #let _s-cell(dom, loc) = {
   let s = claim-row("dom-stride2-" + dom, loc).state
-  absval(raw(if dom == "parity" { parity-name(s) } else { s }))
+  absval(raw(s))
 }
 #let _adds = (
   sign: [sign of a value; finite],
@@ -173,13 +170,13 @@ but nothing about its size, and Sign knows only that $v$ is positive. Every
 answer is sound, yet none of the four proves `v == 51`. Only Int, which puts
 the bound and the oddness together, does (@sec:reduced-product).
 
-== The reduced product of the domains #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
+== Reduced product of the numeric domains #thy-badge("Voblint_Domain", "Int_Lattice") <sec:reduced-product>
 
-An Int value (#isatype("int_dom")) holds one value of each base domain and
-stands for the integers that all four allow. Running the four side by side
-would be sound, but each would work only with its own value. A fact that
-needs two of them, such as `v == 51` in @fig:stride2, would then stay unproved.
-In the program below, the guards keep
+Running the four base domains side by side would be sound, but each would work
+only with its own value. A fact that needs two of them, such as `v == 51` in
+@fig:stride2, would then stay unproved. An Int value (#isatype("int_dom"))
+therefore holds one value of each base domain and stands for the integers that
+all four allow. In the program below, the guards keep
 $x$ between $-2$ and $10$, and the assignment makes $x$ one more than a
 multiple of $4$. Only $1$, $5$, and $9$ satisfy both, so `x >= 1 && x <= 9`
 holds. Yet the interval alone still allows $-2$, and the residue class alone
@@ -239,9 +236,7 @@ option `ana.int.refinement` offers the same three modes, but Goblint defaults
 to no reduction, whereas Voblint defaults to repeating rounds until nothing
 changes.
 
-Int reduces the result of every arithmetic operation and of the guard filter,
-but not the result of a join, a widening, or a narrowing, which all work
-componentwise. For join and widening, Goblint makes the same choice. After a
+Joins, widenings, and narrowings work componentwise, without reduction. For join and widening, Goblint makes the same choice. After a
 narrowing, however, Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5503dec/src/cdomain/value/cdomains/int/intDomTuple.ml#L421-L431",
@@ -253,7 +248,7 @@ $b$ and break this law
 (#isathm("post_narrow_refinement_would_violate_narrow_ge")). Goblint is not bound by the law, because no proof constrains its lattices,
 and its answers may thus be more precise.
 
-== Order constraints as a relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
+== The relational order domain #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
 
 #let _order = 0.7pt + vb.neutral
 None of the earlier domains can express that $x <= y$, because each describes the
@@ -341,23 +336,20 @@ A relational state stores no value per variable, so it cannot evaluate an
 expression to an abstract value, and its transfers work on the pairs
 directly. An assignment to $x$ invalidates every relation that involves $x$,
 so it forgets every pair that mentions $x$. New relations come from guards. On
-the true arm of `if (x < y)`, the analysis knows that $x$ is smaller than $y$
-and records this by meeting its state with $absval(ctor("RelC"){x <= y})$
+the true arm of `if (x < y)`, $x$ is smaller than $y$, and the analysis
+records this by meeting its state with $absval(ctor("RelC"){x <= y})$
 (#isaconst("assume_step")). Since the carrier stores only non-strict pairs, it
 keeps $x <= y$ and loses the strictness, which costs precision but not
 soundness. This guard filter meets the same soundness statement as the
 numeric guard filter of @sec:branches (#isathm("relc_branch_step_sound")).
 
-Since pairs enter only at guards and assignments remove them, $P$ is finite in
-every value the analysis constructs, and generated code can store it as a
-list. The emptiness test only compares with #ctor("RelBot")
-(#isathm("is_empty_relc_gamma")). The carrier has a single representation of
-unreachability, so it needs no lifting by a bottom element as the pointwise
-state of @sec:nonrel-state does. The type instantiates the solver's classes and
-#isalocale("executable_domain") of @fig:domain-carrier, but it is not a numeric
-domain.
+Guards add one or two pairs and assignments remove pairs. The order analysis
+of @sec:relational adds pairs after an assignment only with partners from a
+fixed finite list of variables. Since $ltop$ holds no pairs and the join
+intersects, every reachable $P$ is finite, and generated code stores it as a
+list.
 
-== Order relations between variables #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
+== The order analysis #thy-badge("Voblint_Analysis_Relational", "Rel_Order_Local") <sec:relational>
 
 The order analysis runs on the relational state of @sec:rel-state and proves
 order checks that Interval cannot decide. Its guard and assignment transfers
@@ -400,12 +392,5 @@ both, because it treats a variable as ordered with itself, so it records
 #state("order-alone-order", "20:3") and proves `w == x`, where Interval
 answers #verdict("order-alone-interval", "20:3").
 
-The base domains record different properties, Int lets them share these
-facts, and the order analysis proves relations that no non-relational
-domain can express. A user does not have to choose between them. The
-product state and the channel of @ch:cooperation let Int and the order
-analysis run together. They exchange facts
-through queries, and every check is decided by the meet of their answers.
-Selecting both thus lets a check use the facts of either analysis, although no
-theorem guarantees that a combination is more precise than its parts
-(@sec:coop-mcp).
+Selecting both Int and the order analysis lets a check use the facts of either
+through the query mechanism of @ch:cooperation.

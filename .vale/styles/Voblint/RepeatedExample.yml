@@ -1,0 +1,23 @@
+# Supervisor review (Chapter 4): "for instance" underlined twice in one
+# paragraph. A second marker in the same paragraph stacks examples instead of
+# developing one.
+extends: occurrence
+message: "More than one 'for instance'/'for example' in a paragraph: develop one example."
+level: warning
+scope: paragraph
+ignorecase: true
+max: 1
+token: '\bfor (?:instance|example)\b'
+
+tests:
+  - name: fires
+    input: |
+      A store maps variables, for instance x to 1. A trace records stores, for example at pp5.
+    want: |
+      1:25:Voblint.RepeatedExample:More than one 'for instance'/'for example' in a paragraph: develop one example.
+  - name: clean
+    input: |
+      A store maps variables, for instance x to 1.
+
+      A trace records stores, for example at pp5.
+    want: ""

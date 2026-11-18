@@ -65,4 +65,6 @@ paper/generated/stats.tex
 !/.vale/styles/Voblint/
 # Vendored: jdkato/prompts publishes no release for `vale sync` to pin.
 !/.vale/styles/Prompts/
+# Vendored: three rules of ammil-industries/vale-signs-of-ai-writing that no release ships.
+!/.vale/styles/SignsOfAI/
 /.vale/.sync.lock

@@ -1,0 +1,20 @@
+# Author review: "Such a proof has to follow ..." -- a sentence that opens with
+# "Such a" makes the reader resolve the referent from the previous sentence or
+# paragraph. Name the object instead.
+extends: existence
+message: "'%s' opens the sentence: name the object it refers to."
+level: error
+nonword: true
+tokens:
+  - '(?<=^|[.!?]\s)Such an? [a-z]+'
+
+tests:
+  - name: fires
+    input: |
+      A proof is needed. Such a proof is long.
+    want: |
+      1:20:Voblint.SuchOpener:'Such a proof' opens the sentence: name the object it refers to.
+  - name: clean
+    input: |
+      A soundness proof for an analyzer is long.
+    want: ""

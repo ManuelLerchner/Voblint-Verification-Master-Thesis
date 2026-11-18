@@ -5,52 +5,41 @@
 #import "../lib/sources.typ": thy
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, ppoint, snapshot-var
 #import "../lib/claims.typ": claim-ref
+#import "../lib/cfg-graphs.typ": mixed-flow-final, mixed-flow-graph, mixed-flow-published
 
-= The Analysis Interface <ch:analysis-interface>
+= Analyses and Their Soundness Laws <ch:analysis-interface>
 
-The obligations of @ch:traces speak about the edges, calls, and contexts of a
-program. Much of what discharges them is the same for every analysis, namely,
-the equations built from the control-flow graph, the calling contexts, and the
-solver. Voblint therefore separates an analysis from the framework that runs
-it, as Goblint does @seidl26[§6] (@sec:state-of-art), and makes the split in
-its proof as well as in its program. This chapter states what an analysis must
-supply, and what it must prove about it, so that the framework can discharge
-the obligations of @ch:traces once for every analysis. An analysis supplies a
-record of abstract operations, and the analysis contract states what they
-preserve.
-
-@ch:domains ended with laws about one abstract state. Its order agrees with
-its meaning, and its operations over-approximate the concrete ones. For the
-non-relational domains of @ch:domains, these primitives determine every edge
-transfer (@sec:domain-contract). Other analyses need more. A relational
-analysis does not store one value per variable (@sec:rel-state), an analysis
-may keep facts that belong to no program point, and analyses may need each
-other's facts to be precise (@ch:cooperation). Calls, moreover, need more than
-one transfer, because the caller's locals survive the call, while the callee's
-globals and result flow back.
+A domain of @ch:domains describes the stores at one program point. To meet the
+obligations of @ch:traces, an analysis adds transfer functions that carry these
+descriptions through the program and across calls, and it proves each of them
+sound. Much of what discharges these obligations is
+the same for every analysis: the equations built from the control-flow graph,
+the calling contexts, and the solver. Voblint therefore separates an analysis
+from the framework that runs it, as Goblint does @seidl26[§6]
+(@sec:state-of-art), and makes the split in its proof as well as in its
+program.
 
 == Edge transfers and the enter/combine protocol <sec:calls>
 
-An ordinary edge of the control-flow graph carries an action $a$, such as an
-assignment or a guard, whose concrete meaning #isaconst("edge_step") is fixed
-by @ch:program-model. For a store $s$, #isai("edge_step a s") is the set of
-stores the edge can produce. An analysis describes the stores at a program
-point by an abstract state $d$ of its _local domain_ $D_L$ and
-supplies, for each action $a$, a transfer function $asem(a)$. The transfer is
-sound if it loses no successor:
-$ s in conc(d) and s' in #isai("edge_step a s") ==> s' in conc(asem(a) thin d). $
-This condition is the abstract counterpart of the obligation #oblig("INTRA") of
+An ordinary CFG edge carries an action $a$, such as an assignment or guard.
+For a store $s$, $sem(a)(s)$ is its set of successor stores
+(#isaconst("edge_step"), @sec:valid). An analysis describes the stores at a program
+point by an abstract state $d$ of its _local domain_ $D_L$. Its
+concretization $conc(d)$ is the set of stores described by $d$. For each
+action $a$, the analysis supplies a transfer function $asem(a)$. The transfer
+is sound if, for every store $s$ described by $d$ and every successor store
+$s'$ produced by $a$, the resulting abstract state $asem(a) thin d$ describes
+$s'$. This condition is the abstract counterpart of the obligation #oblig("INTRA") of
 @ch:traces for one edge.
 
-A call cannot be handled by one such transfer. After it returns, the caller's
-own locals are the ones from before the call, while the globals and the result
-come from the callee (#isaconst("combine_collect"), #oblig("RETURN")). An analysis
-therefore needs two states at a call, one for the callee to start from and one
-that saves what the caller needs when execution returns. As in Goblint,
-_enter_ (#isaconst("dgs_enter")) produces both
-states, and _combine_ (#isaconst("dgs_combine_env"),
-#isaconst("dgs_combine_assign")) builds the caller's state after the call from
-the resume state and the callee's exit state. Take one call:
+After a call returns, the caller's own locals are the ones from before the
+call, while the globals and the result come from the callee
+(#isaconst("combine_collect"), #oblig("RETURN")). An analysis therefore needs
+two states at a call, one for the callee to start from and one that saves what
+the caller needs when execution returns. As in Goblint, _enter_
+(#isaconst("dgs_enter")) produces both states, and _combine_ builds the
+caller's state after the call from the resume state and the callee's exit
+state. Take one call:
 
 #listing(lang: "c", ```
 global g;
@@ -60,8 +49,8 @@ fun main() { g = 1; x = 5; y = inc(x); }
 
 At the call `y = inc(x)`, the _entry state_ $e$ describes the store the
 callee starts with (`g = 1`, `a = 5`). The _resume state_ $q$ describes the caller's store (`x = 5`,
-`g = 1`). For soundness, enter must return such a pair, $q$ covering the
-caller's store and $e$ covering the entered store, a property called
+`g = 1`). For soundness, enter must return such a pair, $q$ describing the
+caller's store and $e$ describing the entered store, a property called
 _entry coverage_ (#isaconst("entry_pairs_cover")). When the callee exits with state $r$,
 combine merges $q$ and $r$ (@fig:return-stores).
 
@@ -105,49 +94,29 @@ combine merges $q$ and $r$ (@fig:return-stores).
   placement: none,
   caption: [Enter and combine at the call `y = inc(x)`, with the concrete store
     each abstract state must describe (schematic, with the body of `inc` drawn
-    as one edge). The combined state must describe the caller's locals (blue)
-    together with the callee's globals and result (green), as
-    #isaconst("combine_collect") does.],
+    as one edge). The combined state preserves `x = 5` from the caller and takes `g = 6`
+    and the result `4` from the callee, assigning the result to `y`.],
 ) <fig:return-stores>
 
 Enter may return several pairs, and each pair can get its own context
-(@sec:contexts). Goblint returns one pair per path in its
+(@sec:contexts). A path-sensitive analysis keeps separate abstract alternatives
+for executions reaching the same point, rather than immediately joining them.
+Goblint returns one pair per such alternative in its
 #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/lifters/specLifters.ml#L722")[path-sensitivity lifter] @apinis14[§5.7]. The analyses
 shipped with Voblint return one, so path-sensitive analyses remain future work.
 
 == Local soundness laws of an analysis <sec:sound-core>
 
-The operations of @sec:calls say how an analysis propagates abstract states.
-They do not by themselves guarantee that these states cover the concrete
-executions, and the framework cannot check this without knowing what the
-analysis tracks. It therefore asks every analysis for local guarantees, which
-@ch:equations composes into the five obligations of @ch:traces for every
-program and context policy. Edge transfers account for #oblig("INTRA") and
-combine for #oblig("RETURN"). The obligations #oblig("CALL") and #oblig("TOTAL") depend
-on the context policy, so the framework derives them from the entry coverage of
-@sec:calls together with the policy (@sec:eq-routing). Finally, #oblig("INIT")
-requires the initial state $d_0$ to cover the initial stores, which the
-analysis discharges when it is registered (#isathm("dg_analysis.init_sound")).
+Every operation of @sec:calls must be sound. An analysis states this through
+local soundness laws, which together yield the five obligations of
+@ch:traces for every program and context policy. #oblig("CALL") and
+#oblig("TOTAL") depend on the policy as well and follow from the entry coverage of
+@sec:calls. #oblig("INIT") requires the initial state $d_0$ to describe the
+initial stores, which the analysis discharges when it is registered
+(#isathm("dg_analysis.init_sound")).
 
-The framework takes the operations of an analysis as one parameter, the record
-#isatype("dg_spec") with one field per operation: the edge transfers, enter,
-the two combine stages, and a query handler that @ch:cooperation uses to let
-analyses exchange facts.
-
-#{
-  show raw.where(block: true): set text(size: 6.5pt)
-  thy("dg_spec")
-}
-
-Every field except the query handler carries, marked $sharp$, the name of the
-corresponding method of
-#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168")[`Spec`],
-the module signature of a Goblint analysis. A #isatype("call_info") names the
-callee, its formals, the arguments, and the destination of a call.
-
-The record holds the operations, and the _analysis contract_
-#isalocale("analysis_contract") states what their results must satisfy. For
-an analysis whose transfers depend only on the local state, it consists of
+The _analysis contract_ #isalocale("analysis_contract") states the soundness
+laws of the operations of @sec:calls. For an analysis whose transfers depend only on the local state, it consists of
 three laws on the concretization $conc$:
 #block(inset: (left: 1.5em, y: 0.3em))[
   #grid(
@@ -155,20 +124,19 @@ three laws on the concretization $conc$:
     column-gutter: 1.2em,
     row-gutter: 0.75em,
     [monotonicity], $d lle d' ==> conc(d) subset.eq conc(d')$,
-    [edges], $s in conc(d), thin s' in #isai("edge_step a s") ==> s' in conc(asem(a) thin d)$,
+    [edges], $s in conc(d), thin s' in sem(a)(s) ==> s' in conc(asem(a) thin d)$,
     [combine],
-    $s in conc(q), thin t in conc(r) ==> #isaconst("combine_collect") (s, t) in conc("combine"(q, r))$,
+    $s in conc(q), thin t in conc(r) ==> #isaconst("combine_collect") _(italic("dst")) (s, t) in conc("combine"(q, r))$,
   )
 ]
 Monotonicity turns the solver's inequalities into inclusions between sets of
 stores, as for a domain (@ch:domains). The edge law is the condition of
-@sec:calls and covers #oblig("INTRA"). The combine law covers #oblig("RETURN").
-If $q$ describes the caller's store $s$ and the exit state $r$ describes the
-callee's final store $t$, the combined state describes the store in which the
-caller continues. Transfers that also use facts without a program point need a
+@sec:calls and yields #oblig("INTRA"). The combine law, where $italic("dst")$
+is the call's destination, yields #oblig("RETURN").
+Transfers that also use facts without a program point need a
 more general form of these laws, which @sec:analysis-globals states.
 
-== Facts shared across program points <sec:shared-facts>
+== Analysis globals and program globals <sec:shared-facts>
 
 Not every fact belongs to one program point. A flow-insensitive fact, such as
 one range for a global variable `g` across the whole execution, lives in an
@@ -179,51 +147,63 @@ them access to such unknowns.
 
 === Analysis globals #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:analysis-globals>
 
-Seidl et al. describe a Goblint analysis with two domains @seidl26[§6]. The
+A Goblint analysis has two domains @seidl26[§6]. The
 local domain $D_L$ holds facts per program point and context, and the _global domain_ $D_G$ holds
 the values of _analysis globals_, which are unknowns without a program point. An assignment to `g`
 publishes its value to the analysis global of `g` as a side effect, and an
-edge that reads `g` depends on that unknown. Goblint's `Spec` likewise
-declares a local lattice `D` and a global lattice `G`.
+edge that reads `g` depends on that unknown.
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168")[`Spec`],
+the module signature of a Goblint analysis, likewise declares a local lattice
+`D` and a global lattice `G`.
 
 The word _global_ thus has two meanings. A _program global_ is a variable of the VIMP program. An analysis global is a fact the
 analysis keeps flow-insensitively. The two are independent, and by default, the numeric analyses keep program
 globals in the local state and use no analysis global (@sec:mixed-flow).
 
-A transfer that uses analysis globals still returns the next local state, but
-it may read and publish them on the way, in Goblint through a
-#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L142")[_manager_] argument whose contributions the framework passes to the
-solver @seidl26[§6]. Voblint adopts this design. Its transfer (#isatype("man_transfer")) receives a manager of type
-#isatype("man") instead of a local state. It reads an analysis global $v$ with
-#isaconst("man_global") $v$ and publishes $d$ to it with #isaconst("man_sideg") $v$ $d$. As a result, the equations of @ch:equations depend on an analysis
-global only where a transfer actually reads it. A transfer that is a pure function of the local state reads only the state at
-the edge's source and publishes nothing
-(#isathm("sp_compile_transfer_program_local_transfer")).
+A transfer still returns the next local state. In Goblint it receives a
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L142")[_manager_],
+an argument that gives it the local state and lets it read and publish
+analysis globals, and the framework passes the published contributions to the
+solver @seidl26[§6]. Voblint likewise passes a manager instead of a local state
+(#isatype("man_transfer")).
 
-With analysis globals, a local state alone no longer fixes which stores it
-describes, because its meaning may depend on their values. The analysis
-contract therefore uses a concretization $conc_(D G)(d, eta)$ of a local state
-$d$ under an _environment_ $eta$, which maps every analysis global to its value.
-Each law of @sec:sound-core takes $eta$ as an extra parameter
-(#isathm("analysis_contract.gammaDG_mono"),
-#isathm("analysis_contract.step_sound"),
-#isathm("analysis_contract.combine_sound")). Monotonicity holds in both
-arguments, and the edge and combine laws describe their results under $eta$
-joined with what the operation publishes. A technical premise
-(#isaconst("dg_spec_wf")) requires that the program of every operation run its
-continuation exactly once, so that what it publishes is well defined. The locale
-states these laws over the solver's representation of a valuation:
+The record #isatype("dg_spec") packages these manager-based operations with a
+query handler through which analyses exchange facts:
 #{
   show raw.where(block: true): set text(size: 6.5pt)
-  thy("analysis_contract")
+  thy("dg_spec")
 }
-Here, $sigma$ (#isai("\<tau>") in the locale) is an arbitrary valuation of the solver's unknowns
-(@sec:global-unknowns), $d$ is its local half #isaconst("dg_local") at the
-edge's source, and $eta$ is #isai("genv key \<tau>"), its values at the analysis
-globals. #isaconst("edge_out") and #isaconst("edge_pub") are the local state a
-transfer returns and what it publishes, and #isaconst("combine_out") and
-#isaconst("combine_pub") are the same for combine. An analysis without
-analysis globals ignores $eta$ and meets the three laws of @sec:sound-core.
+Every field except the query handler carries, marked $sharp$, the name of the
+corresponding method of `Spec`. A #isatype("call_info") names the
+callee, its formals, the arguments, and the destination of a call.
+
+With analysis globals, a local state alone no longer fixes which stores it
+describes. The laws therefore take an _environment_ $eta$, which maps every
+analysis global to its value, and use a concretization $conc_(D G)(d, eta)$. A
+transfer at $d$ and $eta$ returns a local state $d'$ together with the
+contributions $p$ it publishes to analysis globals, and combine at $q$, $r$,
+and $eta$ returns a pair $(q', p)$ in the same way. The three laws of
+@sec:sound-core become
+#block(inset: (left: 1.5em, y: 0.3em))[
+  #grid(
+    columns: (auto, 1fr),
+    column-gutter: 1.2em,
+    row-gutter: 0.75em,
+    [monotonicity],
+    $d lle d', thin eta lle eta' ==> conc_(D G)(d, eta) subset.eq conc_(D G)(d', eta')$,
+
+    [edges], $s in conc_(D G)(d, eta), thin s' in sem(a)(s) ==> s' in conc_(D G)(d', eta ljoin p)$,
+    [combine],
+    [$s in conc_(D G)(q, eta), thin t in conc_(D G)(r, eta)$ \
+      #h(
+        1.5em,
+      ) $==> #isaconst("combine_collect") _(italic("dst")) (s, t) in conc_(D G)(q', eta ljoin p)$],
+  )
+]
+The result must thus describe the successor store once the published
+contributions have reached the analysis globals. An analysis without analysis
+globals ignores $eta$ and publishes nothing, so the laws reduce to those of
+@sec:sound-core. The locale #isalocale("analysis_contract") states these laws.
 
 === Placement of program globals #thy-badge("Voblint_Framework", "DG_Keyed_Split_Spec") <sec:mixed-flow>
 
@@ -249,20 +229,35 @@ fun get() { return Gx; }
 fun main() { x = 1; set(); y = get(); }
 ```)
 
-The flow-insensitive placement keeps one value of `Gx` for every program
-point, including those before `set` runs, so it must cover the initial
-`Gx = 0` as well as the 1 written by `set`. Sign therefore claims only #signval(_mfs("y")) for `y`
-after `y = get()` (claim #claim-ref("mixed-flow-sign-shared")), although every
-execution ends with `y = 1`. Flow-sensitively, Sign carries #signval("+") from
+The flow-insensitive placement keeps a single value of `Gx` shared by all
+program points (@fig:mixed-flow). Every point that may change `Gx` publishes its value to the global unknown of `Gx` by
+a side effect. The entry of `main` publishes
+the initial value, #signval(mixed-flow-published("entry_main")), and the point
+after `Gx = 1` in `set` publishes #signval(mixed-flow-published("pp1")). The
+global unknown holds their join, #signval(mixed-flow-final), and every read of
+`Gx` returns this join. This includes the read at `return Gx` in `get`. Yet
+`get` only runs after `set` has written $1$, so `Gx` is positive there in every
+execution. Sign therefore claims only #signval(_mfs("y")) for `y`
+after `y = get()` (claim #claim-ref("mixed-flow-sign-shared")). Flow-sensitively, Sign carries #signval("+") from
 `set`'s exit into `get`'s entry and derives #signval(_mf("y")) (claim
-#claim-ref("mixed-flow-sign")). In sequential VIMP, the flow-insensitive
-placement can thus cost precision.
+#claim-ref("mixed-flow-sign")).
 
-The flow-insensitive placement matters for concurrent programs. Another thread
-may write a shared global at any point, so the simplest thread-modular
-analysis, which analyzes each thread on its own, keeps shared globals
-flow-insensitively @seidl26[§1, Ex. 4] @saan26phd[§5.3.1].
-The placement is proved to meet the analysis contract for the analyzer's
-product state (#isathm("keyed_split_contract")), so the end-to-end soundness theorem
-covers both placements, and a future extension with threads can build on a
-verified flow-insensitive core.
+#figure(
+  mixed-flow-graph,
+  placement: none,
+  caption: [The solved graph of the program above with `Gx` placed
+    flow-insensitively, in Sign. Solid green edges are side effects into the
+    global unknown of `Gx` (diamond) and the read at `return Gx`. Dashed edges
+    are calls, dotted edges continuations. Return edges are omitted. Labels and values come from claims
+    #claim-ref("mixed-flow-shared-dot") and #claim-ref("mixed-flow-shared-trace").],
+) <fig:mixed-flow>
+
+
+VIMP has no threads, so the flow-sensitive default loses nothing. The
+flow-insensitive placement prepares the analysis of concurrent programs. There
+another thread may write a shared global at any point, so a thread-modular
+analysis, which analyzes each thread on its own, can keep shared globals
+flow-insensitively @seidl26[§1, Ex. 4] @saan26phd[§5.3.1]. The end-to-end
+soundness theorem covers both placements (#isathm("keyed_split_contract")).
+Every analysis so far sees only its own state. The next chapter lets analyses
+exchange facts while they run.

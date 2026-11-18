@@ -2,7 +2,7 @@
 # covers running prose. Quoted questions belong in a citation or a footnote.
 extends: existence
 message: "Question in running prose: state the claim instead."
-level: warning
+level: error
 nonword: true
 tokens:
   - '[a-z)]\?(?:\s|$)'

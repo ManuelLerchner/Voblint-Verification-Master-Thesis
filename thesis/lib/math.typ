@@ -97,8 +97,6 @@
   body,
 )
 #let signval(x) = absval(ctor(x))
-// The analyzer prints parities as residue classes; the text names them.
-#let parity-name(s) = s.replace("1+2ℤ", "odd").replace("2ℤ", "even")
 #let ivl(a, b) = $[#a, #b]$
 
 // =============================================================== helpers ====

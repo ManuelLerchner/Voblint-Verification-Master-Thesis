@@ -1141,15 +1141,16 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  # Pages serves the gh-pages branch: main owns its root, and each pull request
-  # owns pr-preview/pr-<n>/. One commit replaces the branch history on every
-  # main deploy, so superseded PDFs do not accumulate in the repository.
+  # Pages serves the gh-pages branch: main owns its root, and each open pull
+  # request owns pr-preview/pr-<n>/. One commit replaces the branch history on
+  # every main deploy, so superseded PDFs do not accumulate in the repository.
   pages-deploy:
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy)
     needs: pages-site
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - name: Checkout Goblint Formalization
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1164,12 +1165,28 @@ jobs:
           name: pages-site
           path: build/github-pages
 
+      # A pull request merged while its CI still runs gets its preview deployed
+      # after pages-preview-cleanup.yml removed it. Carrying over only the
+      # previews of open pull requests drops such leftovers on every main deploy.
+      - name: Carry over the previews of open pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          git ls-remote --exit-code --heads origin gh-pages > /dev/null || exit 0
+          git fetch -q --depth 1 origin gh-pages
+          for n in $(gh pr list --repo "$REPO" --state open --limit 200 --json number --jq '.[].number'); do
+            dir="pr-preview/pr-$n"
+            if git ls-tree -d --name-only FETCH_HEAD -- "$dir" | grep -q .; then
+              git archive FETCH_HEAD "$dir" | tar -x -C build/github-pages
+            fi
+          done
+
       - name: Publish the site root
         uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
         with:
           folder: build/github-pages
           branch: gh-pages
-          clean-exclude: pr-preview/
           single-commit: true
 
   # Same-repository pull requests only: a fork's token cannot write gh-pages.
@@ -1196,7 +1213,18 @@ jobs:
           name: pages-site
           path: build/github-pages
 
+      # A pull request merged while this run was in progress already had its
+      # preview removed; deploying now would bring it back.
+      - name: Check that the pull request is still open
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.number }}
+        run: echo "state=$(gh pr view "$PR" --repo "$REPO" --json state --jq .state)" >> "$GITHUB_OUTPUT"
+
       - name: Publish the preview and comment its link
+        if: steps.pr.outputs.state == 'OPEN'
         uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1.8.1
         with:
           source-dir: build/github-pages
@@ -1205,6 +1233,7 @@ jobs:
       # The preview action's sticky comment cannot carry more links, so the
       # diffs get their own comment, found again by its marker and edited in place.
       - name: Link the diffs on the pull request
+        if: steps.pr.outputs.state == 'OPEN'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}

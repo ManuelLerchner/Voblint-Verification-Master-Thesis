@@ -1,14 +1,15 @@
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": (
-  claim-playground-link, isaconst, isai, isalocale, isathm, isatype, listing, oblig,
-  playground-base, thy-badge,
+  claim-playground-link, isaconst, isai, isalocale, isathm, isatype, listing, oblig, thy-badge,
 )
 #import "../lib/sources.typ": proved, thy
-#import "../lib/theorems.typ": theorem
+#import "../lib/theorems.typ": definition, theorem
 #import "../lib/theme.typ": vb
-#import "../lib/math.typ": absval, ctor, sem, setcomp
+#import "../lib/math.typ": absval, conc, ctor, sem, setcomp
 #import "../lib/figures.typ": check-row, snapshot-var, verdict
-#import "../lib/claims.typ": claim-ref, claim-snapshot, snapshot-cluster-of, snapshot-verdict
+#import "../lib/claims.typ": (
+  claim-ref, claim-snapshot, claim-text, snapshot-cluster-of, snapshot-verdict,
+)
 
 // One check row of a registered CLI claim (shared/claims.toml), so a verdict
 // or state drawn in a figure is read from checked output rather than typed.
@@ -21,203 +22,126 @@
   cells
 }
 
-= From Solutions to Verdicts <ch:results>
+= From Post-Solutions to Verdicts <ch:results>
 
-This chapter answers what the analyzer's report guarantees about the
-executions of the source program. Solving the equations of @ch:equations
-(@ch:solving) gives an abstract state for each CFG node and context the solver
-reached, as well as a value for each global unknown. By @sec:certificate, these states cover every
-execution. A user of the analyzer, however, reads neither the states nor the contexts. The user reads
-a report with one verdict for every `__voblint_check` and a diagnostic wherever
-a division may fail. The chapter shows how the analyzer derives this report
-from the solution. Its main result, a theorem about the analyzer function
-itself, states that every store a finite source execution reaches at a check
-satisfies the definite verdicts there.
+@ch:solving ended with abstract states that describe every store an execution
+brings to a node in a context (@sec:certificate). A user, however, is typically not
+interested in abstract states. They want to know whether the checks they wrote
+hold, whether a check can be reached at all, and whether an arithmetic
+operation, such as a division by zero, can fail. The analyzer derives these
+answers from the abstract states and reports them as verdicts and diagnostics.
+Soundness theorems tie both to the executions of the program.
 
 == The analyzer function and its report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 
-The constructions of the previous chapters are packaged behind one HOL
-function, #isaconst("run_voblint"). It takes an analysis configuration and a
-VIMP program. The configuration
-(#isatype("analysis_config")) packages the choices of the earlier chapters:
-the analyses that run together (@ch:cooperation), the update rule
-(@sec:update-rules), the context policy (@sec:eq-routing), and the placement
-of program globals (@sec:mixed-flow). The analyzer compiles the program to its
-graph #isaconst("prog_cfg") $p$ (@ch:program-model), builds the equation system of the configured analyses and
-context policy (@ch:equations), solves it from the exit of `main`
-(@ch:solving), and builds a report from the solution.
+The analyzer is one HOL function, #isaconst("run_voblint"), that runs the
+constructions of the previous chapters in order. It takes a VIMP program and a
+configuration (#isatype("analysis_config")), which fixes the analyses that run
+together (@ch:cooperation), the update rule
+(@sec:update-rules), the context policy (@sec:eq-routing), and the placement of
+program globals (@sec:mixed-flow). It compiles the program to its graph
+(@ch:program-model), generates the equations (@ch:equations), solves them from
+the exit of `main` (@ch:solving), and collects the solution into a report.
 
 #thy("run_voblint")
 
-Before it compiles anything, #isaconst("run_voblint") checks its two inputs,
-so that a report exists only where the soundness proofs apply.
-#isaconst("valid_config") requires a nonempty list of distinct analyses, and
-#isaconst("wf_program_compile_input_exec") decides the structural conditions
-that the compilation theorems of @ch:program-model assume. An input that fails
-is answered with #isaconst("Invalid_Activation") or
-#isaconst("Malformed_Program"), and #isaconst("No_Answer") stands for a solve
-that produces no result. Every answer #ctor("Analysed") $"res"$ thus comes
-from inputs that pass both tests (#isathm("run_voblint_report_contract")), and
-the executable test implies the well-formedness premise of the proofs
-(#isathm("wf_program_compile_input_exec_sound"), #isathm("run_voblint_wf")).
-The end-to-end soundness theorem of @sec:headline therefore needs no premise about the
-configuration or the program.
+The analyzer returns a report only for inputs that the proofs cover. Before
+compiling, it
+checks that the configuration selects a nonempty list of distinct analyses and
+that the program is well formed in the sense of @ch:program-model. Invalid
+inputs, and a solve that produces no result, receive an error instead of a
+report (#isathm("run_voblint_report_contract"), #isathm("run_voblint_wf")). The
+end-to-end theorem therefore needs no separate premise about its inputs.
 
-The report that #ctor("Analysed") carries (#isatype("analysis_report")) keeps
-the solver's states under their node and context, the values of the global
-unknowns, a verdict for every check (@sec:verdicts), and the arithmetic
-diagnostics (@sec:verdict-meaning). A node that the solver solved in several
-contexts carries several states. At a node $v$, the report describes every
-store that one of them describes (#isaconst("report_states_at"),
-#isaconst("report_sem")):
+The report (#isatype("analysis_report")) holds the solver's states with their
+nodes and contexts, the values of the global unknowns, a verdict for every
+check, and the arithmetic diagnostics. A user, however, asks what holds at a
+point of the source program, whichever call led there, and a source execution
+carries no context. The report therefore merges the contexts and returns to the
+single control-flow graph of the program. At a node $v$, it describes every
+store that one of its states at $v$ describes (#isaconst("report_sem")):
 $
-  #isai("\<R>\<^bsub>res\<^esub> v") = union.big_(#isai("d \<in> report_states_at res v")) #isai("\<gamma>\<^bsub>res\<^esub> d"),
+  cal(R)_("res")(v) = union.big_(d in #isaconst("report_states_at") ("res",v)) conc_("res")(d),
 $
-where #isai("\<gamma>\<^bsub>res\<^esub>") is the concretization of the
-configured analyses. The union drops the contexts, since a source execution
-carries no context to compare with, and a user asks what holds at a program
-point, whichever call led there. The proof, however, needs the contexts, since
-the coverage contract bounds the stores of each context separately
-(@sec:contract). The report therefore keeps them, and each state names its
-context. The states at $v$ in context $c$ describe the set
-#isai("report_context_sem res v c") (#isaconst("report_context_sem")), a subset
-of #isai("\<R>\<^bsub>res\<^esub> v"). @sec:chain shows that this set contains every
-store that an activation in context $c$ reaches at $v$.
+where #isaconst("report_states_at") collects the states at $v$ over all
+contexts and $conc_("res")$ is the concretization of the configured analyses,
+with $conc_("res")(ctor("Bot"))=emptyset$. The report still keeps
+the states per context, because the coverage contract bounds each context
+separately (@sec:contract).
 
 == Check verdicts from the report <sec:verdicts>
 
-The command-line tool prints the report through its checks: each check at $v$
-receives one of four verdicts, #verdict("PROVED"), #verdict("REFUTED"),
-#verdict("UNKNOWN"), or #verdict("DEAD"). The
-#link(playground-base)[browser playground] shows the same verdicts inline in
-the editor and beside the graph (@sec:ocaml-boundary). Each
-verdict is printed at the source position of its check, and the text report checks that these positions are unique (#isathm("run_voblint_labelled_check_sound")).
+Each check receives one of four verdicts, #verdict("PROVED"),
+#verdict("REFUTED"), #verdict("UNKNOWN"), or #verdict("DEAD"), shown at the
+check's source position.
 
-The analyzer first computes one verdict per state. Each state $d$ in
-#isai("report_states_at res v") gives its own verdict for a check:
+The analyzer computes them as it computed the report's stores, first per
+context and then folded back into the node of the program's control-flow
+graph. For each context $c$ solved at $v$, it decides the check from the state
+at $(v, c)$ (#isaconst("classify_point")). The state #ctor("Bot") describes no
+store and gives #verdict("DEAD"). For any other state, the analyzer evaluates the
+check's condition abstractly and asks the selected analyses which values it can
+take there (@sec:coop-queries). A condition evaluates to $1$ when it holds and to
+$0$ when it fails. If the only possible value is $1$, the check is
+#verdict("PROVED"). If the only possible value is $0$, it is
+#verdict("REFUTED"). Otherwise it is #verdict("UNKNOWN").
 
-#thy("classify_point")
+The node's verdict then combines the verdicts of its contexts
+(#isaconst("aggregate_verdicts")). Contexts with #verdict("DEAD") are ignored.
+If all other contexts give #verdict("PROVED"), or all give #verdict("REFUTED"),
+the node gets that verdict, and otherwise #verdict("UNKNOWN"). If one context
+proves `x > 0` and another refutes it, the stores reaching $v$ in the first
+satisfy the condition and those in the second violate it, so
+#verdict("UNKNOWN") is the only sound choice. If no context at $v$ is
+reachable, the node is #verdict("DEAD"), and no execution reaches the check
+(#isathm("run_voblint_dead_check_unreached")).
 
-The state #ctor("Bot") gives #verdict("DEAD"). Any other state is classified
-by #isaconst("mcp_classify"), which asks every selected analysis for the truth
-value of the check's condition through the queries of @sec:coop-queries and takes the meet of the
-answers: an exact $1$ gives #verdict("PROVED"), an exact $0$ gives
-#verdict("REFUTED"), and any other answer gives #verdict("UNKNOWN"). A definite answer
-holds in every store the state describes (#isathm("mcp_classify_proved"),
-#isathm("mcp_classify_refuted")).
+A verdict is a claim about the stores at its node. #verdict("PROVED") for a
+check `x > 0` claims that $x$ is positive whenever an execution reaches $v$. The verdict is
+therefore given a meaning as the set of stores in which its claim is true. This set plays the role that the concretization $conc$
+plays for a state. The verdict is then sound exactly when every store reaching
+$v$ lies in its set, and the chain of inclusions can continue from the report's
+stores $cal(R)_("res")(v)$ to the verdicts. #verdict("PROVED") admits
+the stores in which the condition holds, and #verdict("REFUTED") those in which
+it fails (#isaconst("verdict_holds")). #verdict("UNKNOWN")
+claims nothing and admits every store. #verdict("DEAD") claims that no store
+arrives at $v$. The chain already covers this reachability claim through
+$cal(R)_("res")(v)$, so as a set of stores it also admits every store:
 
-The analyzer then joins the per-context verdicts of a node's states into one
-verdict for the node (#isaconst("aggregate_verdicts")). If every state other than #ctor("Bot")
-gives #verdict("PROVED"), the node is #verdict("PROVED"). If every such state
-gives #verdict("REFUTED"), it is #verdict("REFUTED"). If the states disagree,
-or one of them gives #verdict("UNKNOWN"), the node is #verdict("UNKNOWN").
-For disagreeing states, #verdict("UNKNOWN") is the only sound choice. If one context proves `x > 0` and
-another refutes it, the stores reaching $v$ in the first satisfy the condition
-and those in the second violate it, so no single definite verdict holds for
-every store at the node.
-States classified #verdict("DEAD"), the #ctor("Bot") states, are neutral in
-this aggregation, so a node at which the report holds no state, or only
-#ctor("Bot") states, is #verdict("DEAD").
+#definition(name: [Stores admitted by a check verdict], isa: "check_stores", cmd: "definition")[
+  For a reported check $c$ with expression $e_c$,
+  $
+    #isaconst("check_stores") (c) = cases(
+      {s | sem(e_c)_e s != 0} & #[if the verdict is #verdict("PROVED")],
+      {s | sem(e_c)_e s = 0} & #[if the verdict is #verdict("REFUTED")],
+      Sigma & #[if the verdict is #verdict("UNKNOWN") or #verdict("DEAD")].
+    )
+  $
+  where $Sigma$ is the set of all stores.
+]
 
-A user reads the verdicts rather than the states. To state their correctness
-as an inclusion of sets of stores, like that of the states (@sec:contract),
-the verdicts at $v$ are turned into the stores consistent with them, the
-_verdict set_
-#isai("\<V>\<^bsub>res\<^esub> v"). If $v$ carries the check `x > 0` with
-verdict #verdict("PROVED"), the verdict set is $setcomp(s, s(x) > 0)$: the verdict
-tells the user that $x$ is positive there and nothing else.
-#verdict("REFUTED") gives the stores in which the condition fails, and #verdict("UNKNOWN") gives every store
-(#isaconst("verdict_holds")).
-A #verdict("DEAD") check says nothing about the values in a store. It claims
-that no store arrives at $v$, which is a statement about reachability, and
-@sec:verdict-meaning treats it. As a set of stores, it therefore admits
-every store and leaves the claims of the other checks at $v$ untouched:
+A node can carry several checks, and a store is consistent with the node only
+if it is consistent with each of them. The verdict set therefore intersects
+their sets:
 
-#thy("check_stores")
+#definition(
+  name: [Stores admitted by all verdicts at a node],
+  isa: "verdict_stores",
+  cmd: "definition",
+)[
+  For a node $v$,
+  $
+    cal(V)_("res")(v) = inter.big_(c in #isaconst("report_checks_at") ("res",v)) #isaconst("check_stores") (c).
+  $
+]
 
-A store is consistent with what the user reads at $v$ only if no verdict there
-contradicts it, so the verdict set keeps exactly the stores that satisfy every
-check at $v$:
-
-#thy("verdict_stores")
-
-The intersection states this for any number of checks at a node. In a compiled
-program, each check has a node of its own, and the verdict set is then the set
-of that single check.
-
-The verdict set can be much larger than
-#isai("\<R>\<^bsub>res\<^esub> v"), because a verdict keeps only
-the truth value of one condition (last row of @fig:chain). Soundness only
-requires that every store reaching $v$ lies in it.
-
-Since the verdicts at $v$ are computed from the states at $v$, every store that
-one of these states describes satisfies every definite verdict there. Thus
-#isai("\<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v")
+The verdicts are sound if $cal(R)_("res")(v) subset.eq cal(V)_("res")(v)$,
+that is, if every store the states describe satisfies every definite verdict, #verdict("PROVED") or
+#verdict("REFUTED"), at $v$. Since the verdicts are computed from these states, the inclusion holds
 (#isathm("analysis_report_verdicts_sound")) for every report that
-#isaconst("run_voblint") returns (#isathm("run_voblint_consistent")).
-
-== Four inclusions from source execution to verdict <sec:chain>
-
-Let $"res"$ be a report #isaconst("run_voblint") returns for a program $p$,
-$g$ = #isaconst("prog_cfg") $p$ its compiled graph, $cal(G)$ =
-#isaconst("declared_global") $p$ its global-variable classifier, and $S$ =
-#isaconst("cinit_stores") $cal(G)$ its initial-store set (@sec:vimp-vs-c,
-@ch:traces). A store is _reached_ if some finite source execution, started from a
-store in $S$, arrives at it. The argument that a verdict is sound places a
-reached store at a CFG node $v$ and follows a chain of inclusions between sets
-of stores there. It ends in the
-two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
-#isai("\<V>\<^bsub>res\<^esub> v"). Let $s$ be a store that a source execution
-reaches,
-#isai("\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (r, s, frs)"),
-and let $v$ be a node at which the run is observed,
-#isai("p, s0 \<turnstile> (r, s, frs) \<rhd> v") (@sec:at-node). Each step
-of the chain is a theorem:
-// One relation per row, centred over the fact that proves it, so the relations
-// line up whatever the length of the fact's name.
-#let _step(rel, fact) = stack(dir: ttb, spacing: 2pt, align(center, $#rel$), align(
-  center,
-  text(size: 7pt, fact),
-))
-#block(breakable: false, above: 1.6em, below: 1.6em, align(center, grid(
-  columns: (1fr, auto, 1fr),
-  column-gutter: 10pt,
-  row-gutter: 8pt,
-  align: (right + horizon, center + horizon, left + horizon),
-  [$s$],
-  _step(sym.in, isathm("source_reaches_node_collect")),
-  isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"),
-
-  [],
-  _step($=$, isathm("node_collect_eq_Union_activation_of_has_context")),
-  $union.big_c #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c")$,
-
-  [], _step(sym.subset.eq, isathm("run_voblint_covers")), isai("\<R>\<^bsub>res\<^esub> v"),
-
-  [],
-  _step(sym.subset.eq, isathm("analysis_report_verdicts_sound")),
-  isai("\<V>\<^bsub>res\<^esub> v"),
-)))
-The first step places a store that a finite source execution reaches in the node
-collecting semantics, at a node $v$ that the simulation relates to the run. On the annotated copy of the program, this is every node at which the run is observed
-(#isathm("csim_point_compile_prog"), @sec:at-node). The second step splits
-#isaconst("node_collect") into #isaconst("activation_collect") over the
-contexts #isai("adm") admits, with `main` in #isai("c\<^sub>0")
-(@sec:contexts). It only requires that every valid trace carries some context.
-Functional policies meet this for every trace, and the entry-state policy
-meets it through #oblig("TOTAL") on the solution (@sec:contract). The third
-inclusion is the analyzer's soundness result. Its proof combines the second
-step with the per-context bound of @ch:equations, which places the activation
-collecting semantics of each context inside the state solved for it
-(#isathm("activation_collect_dg_sound")). The same bound holds for the report
-itself, context by context. For the policy #isai("adm") and root context
-#isai("c\<^sub>0") of the run, every node $v$ and every context $c$ satisfy
-$
-  #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") subset.eq #isai("report_context_sem res v c")
-$
-(#isathm("run_voblint_context_covers")).
-The fourth inclusion is that of @sec:verdicts and depends only on the
-report and its consistency.
+#isaconst("run_voblint") returns (#isathm("run_voblint_consistent")). The
+verdict set can be much larger than $cal(R)_("res")(v)$, because a verdict
+keeps only the truth value of one condition (last row of @fig:chain).
 
 Consider the example below (@fig:chain), whose program calls `f` twice. The first call passes $1$. The second passes the input $x$ if $1 <= x <= 3$.
 So `m` is $2$, $4$, or $6$ at the checks: `m >= 2` always holds, and `m == 2`
@@ -267,21 +191,21 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
       let X(m) = (m - lo) * u
       let (r1, r2) = (_range(_m1), _range(_m2))
       let rows = (
-        ([#isai("\<A>") $v$ #raw(_ctx("f_pp1_ctx0"))], "dots", (2,), vb.called),
-        ([#isai("\<A>") $v$ #raw(_ctx("f_pp1_ctx1"))], "dots", (2, 4, 6), vb.called),
+        ([$cal(A)(v,$ #raw(_ctx("f_pp1_ctx0"))$)$], "dots", (2,), vb.called),
+        ([$cal(A)(v,$ #raw(_ctx("f_pp1_ctx1"))$)$], "dots", (2, 4, 6), vb.called),
         (
-          [$#isai("\<C>") med v = union.big_c #isai("\<A>") med v med c$, reached],
+          [$cal(C)(v) = union.big_c cal(A)(v,c)$, reached],
           "dots",
           (2, 4, 6),
           vb.proved,
         ),
         (
-          [#isai("\<R>\<^bsub>res\<^esub> v"), the report],
+          [$cal(R)_("res")(v)$, the report],
           "bar",
           (calc.min(r1.at(0), r2.at(0)), calc.max(r1.at(1), r2.at(1))),
           vb.accent,
         ),
-        ([#isai("\<V>\<^bsub>res\<^esub> v"), verdict #verdict(_vge)], "from", 2, vb.neutral),
+        ([$cal(V)_("res")(v)$, verdict #verdict(_vge)], "from", 2, vb.neutral),
       )
       for (k, (name, kind, vals, col)) in rows.enumerate() {
         let y = -0.75 * k
@@ -317,14 +241,17 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
       code, chain,
     )
   },
-  caption: [Left: the program. Right: the chain at the node $v$ of the check
-    `m >= 2` (line 3), projected on $m$, with Interval and entry-state
-    contexts. Each row is a set of stores. Both per-context rows lie inside the
-    union row, and each later row lies inside the rows below it. The report
-    admits $3$ and $5$, which no run reaches, and the verdict set of
-    #verdict(_vge) is unbounded. The check `m == 2` (line 4) sees the same
-    stores. Report and verdict are analyzer output (claim #claim-ref("chain-split-entry"));
-    the first three rows are derived by hand.],
+  caption: {
+    let (r1, r2) = (_range(_m1), _range(_m2))
+    let (lo, hi) = (calc.min(r1.at(0), r2.at(0)), calc.max(r1.at(1), r2.at(1)))
+    [The sets of stores at the check `m >= 2` (line 3), projected on $m$, under
+      Interval with entry-state contexts:
+      $cal(A)(v, #raw(_ctx("f_pp1_ctx0"))) = {2}$,
+      $cal(A)(v, #raw(_ctx("f_pp1_ctx1"))) = {2, 4, 6}$,
+      $cal(C)(v) = {2, 4, 6}$, $cal(R)_("res")(v) = {#lo, dots, #hi}$, and
+      $cal(V)_("res")(v) = {m | m >= 2}$. $cal(R)_("res")$ and $cal(V)_("res")$ are analyzer output (claim
+      #claim-ref("chain-split-entry")), the rest is derived by hand.]
+  },
   kind: image,
   placement: none,
 ) <fig:chain>
@@ -337,100 +264,154 @@ with $n in [1, 3]$. Its state #absval(raw(_m2)) also admits $3$ and $5$, and the
 is #verdict(_v2), the only sound verdict, since the run with $x = 1$ satisfies
 it and the runs with $x = 2$ and $x = 3$ violate it.
 
+== The soundness chain at a program point <sec:chain>
+
+A verdict at a node $v$ is sound if every store that an execution brings to
+$v$ satisfies it, that is, if every such store lies in the verdict set
+$cal(V)_("res")(v)$. All previous chapters build toward this inclusion, one step at a time. Each
+step is an inclusion between two sets of stores at $v$. @ch:program-model and
+@ch:traces place the reached stores in the collecting semantics and split it by
+context. @ch:equations and @ch:solving place the stores of each context inside
+the stores that the report's states describe, and @sec:verdicts places those
+inside the verdict set. Chaining the steps gives the goal. Each step may add
+stores that no execution reaches, which costs precision, but none loses a
+reached store.
+
+To state the steps, fix a report $"res"$ that #isaconst("run_voblint") returns
+for a program $p$. The program determines its procedure table $Pi$
+(#isaconst("prog_table")), its global-variable classifier $cal(G)$, and its
+initial stores $S$ (#isaconst("cinit_stores")). The sets $cal(C)(v)$ and
+$cal(A)(v,c)$ are the collecting sets of @ch:traces for its graph. A store $s$
+is _reached_ if a source execution from a store $s_0 in S$ arrives at it,
+$(#isaconst("main_body") thin Pi, s_0, []) ->_p^* (r,s,F)$. Let $v$ be a node at
+which the run is observed, $p, s_0 tack.r (r,s,F) gt.closed v$ (@sec:at-node).
+Each step of the chain is a theorem:
+// One relation per row, centred over the fact that proves it, so the relations
+// line up whatever the length of the fact's name.
+#let _step(rel, fact) = stack(dir: ttb, spacing: 2pt, align(center, $#rel$), align(
+  center,
+  text(size: 7pt, fact),
+))
+#block(breakable: false, above: 1.6em, below: 1.6em, align(center, grid(
+  columns: (1fr, auto, 1fr),
+  column-gutter: 10pt,
+  row-gutter: 8pt,
+  align: (right + horizon, center + horizon, left + horizon),
+  [$s$], _step(sym.in, isathm("source_reaches_node_collect")), $cal(C)(v)$,
+
+  [],
+  _step($=$, isathm("node_collect_eq_Union_activation_of_has_context")),
+  $union.big_c cal(A)(v,c)$,
+
+  [], _step(sym.subset.eq, isathm("run_voblint_covers")), $cal(R)_("res")(v)$,
+
+  [], _step(sym.subset.eq, isathm("analysis_report_verdicts_sound")), $cal(V)_("res")(v)$,
+)))
+The first step places a store that a finite source execution reaches in the node
+collecting semantics, at a node $v$ that the simulation relates to the run. On the annotated copy of the program, this is every node at which the run is observed
+(#isathm("csim_point_compile_prog"), @sec:at-node). The second step splits
+$cal(C)(v)$ into the sets $cal(A)(v,c)$ of the contexts that the policy
+$"adm"$ admits, with `main` in $c_0$ (@sec:contexts). It only requires that every valid trace carries some context.
+Functional policies meet this for every trace, and the entry-state policy
+meets it through #oblig("TOTAL") on the solution (@sec:contract). The third
+inclusion is the analyzer's soundness result. Its proof combines the second
+step with the per-context bound of @ch:equations, which places the activation
+collecting semantics of each context inside the state solved for it
+(#isathm("activation_collect_dg_sound")).
+The fourth inclusion is that of @sec:verdicts and depends only on the
+report and its consistency.
+
 == The end-to-end soundness theorem #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:headline>
 
-The chain of @sec:chain argues about one store at one node, and each of its
-steps is a separate theorem about an intermediate set of stores. A user of the
-analyzer needs a single statement instead, one that holds for every program and every analysis
-configuration. The
-end-to-end soundness theorem composes the four steps into such a statement. It
-quantifies over an arbitrary analysis configuration and program, the arguments
-of #isaconst("run_voblint") (@sec:report). Whenever the analyzer returns a
-report, every store that a finite source execution reaches is covered by that
-report and satisfies its definite verdicts. Of the sets in the chain, its conclusion keeps the node collecting semantics,
-#isai("\<R>\<^bsub>res\<^esub> v"), and the verdict set. Its per-context
-counterpart is #isathm("run_voblint_context_covers") (@sec:chain).
-
-The theorem is about #isaconst("run_voblint") itself, the constant that code
-generation exports. It therefore concerns the analyzer that the command-line
-tool and the playground run, up to the trusted code generator and target
-toolchains (@sec:codegen, @fig:intro-trust).
+Composing the four steps of @sec:chain gives a theorem about
+#isaconst("run_voblint"), the constant exported to the command-line tool and
+playground, subject to the trusted code generator and target toolchains
+(@sec:codegen, @fig:intro-trust).
 #theorem(name: [End-to-end soundness of the analyzer], isa: "run_voblint_source_sound")[
-  #proved("run_voblint_source_sound")
+  Fix a program $p$ and an analysis configuration, and suppose the analyzer
+  returns $ctor("Analysed")("res")$. Let a finite source execution start from
+  the main body with a store $s_0 in S$ and an empty frame stack and reach
+  $(r,s,F)$. Then the reached configuration is observed at some node
+  (#isaconst("at_node")), and for every node $v$,
+  $
+    p, s_0 tack.r (r,s,F) gt.closed v quad arrow.r.double quad
+    s in cal(C)(v) inter cal(R)_("res")(v) inter cal(V)_("res")(v).
+  $
+  The graph, procedure table, global classifier, and initial stores are those of
+  @sec:chain, with $cal(C)$ from @sec:collecting, $cal(R)_("res")$ from
+  @sec:report, and $cal(V)_("res")$ from @sec:verdicts.
 ]
 
-Here $cal(G)$ and $g$ are as in @sec:chain, and #isai("\<Pi>") is the procedure
-table #isaconst("prog_table") $p$. The theorem assumes three premises:
+The theorem speaks about the _analyzed executions_, the finite source
+executions of the analyzed program from an initial store in $S$, observed at
+any point during the run. Each such point corresponds to a node $v$ of the graph
+(#box($p, s_0 tack.r (r,s,F) gt.closed v$)), so no execution falls outside the analysis. At every such node, the execution's store
+lies in the collecting semantics ($s in cal(C)(v)$), so the graph accounts for
+it. The report's
+states at the node describe the store ($s in cal(R)_("res")(v)$), so the
+analysis has not missed it. The
+store also satisfies every definite verdict at the node
+($s in cal(V)_("res")(v)$), so no
+#verdict("PROVED") or #verdict("REFUTED") answer contradicts it. A user relies
+on this property of the verdicts. Whatever the analyzer reports as
+#verdict("PROVED") or #verdict("REFUTED") holds in every execution that reaches
+the check. Both hold vacuously at unreached checks, so a
+#verdict("REFUTED") verdict is not a verified counterexample.
 
-#[
-  #set enum(numbering: n => "(P" + str(n) + ")")
-  + #isai("s0 \<in> cinit_stores \<G>"): the run starts from a store in
-    #isaconst("cinit_stores"), the initial stores $S$ of @ch:traces, which zero
-    every global, as C does for objects with static storage duration, and leave
-    the locals unconstrained.
-  + #isai("\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"):
-    a finite #isaconst("pstep") execution of $p$ runs from the body of `main`
-    to a configuration with store $s$. Any stopping point is allowed, so
-    nonterminating programs are covered through their prefixes.
-  + #isaconst("run_voblint") $"config"$ $p$ $=$ #ctor("Analysed") $"res"$: the
-    analyzer returned a report. Input validity and solver termination are
-    therefore not separate premises (@sec:report). The theorem is a
-    partial-correctness result, since termination is not proved for every
-    program (@sec:certificate).
-]
+The theorem makes few assumptions about the run. The run starts from a store
+that sets every global to $0$ and leaves the locals of `main` unconstrained
+(#isaconst("cinit_stores")). It may be observed at any point, so the theorem
+also covers programs that never terminate, through every finite prefix of
+their runs. Valid inputs and a terminating solve are not separate premises,
+because the analyzer returns a report only when both hold (@sec:report). The
+result is still one of partial correctness. If the solve does not terminate,
+the analyzer returns no report, and the theorem says nothing about that program
+(@sec:certificate).
 
-The conclusions are stated at graph nodes, but a source configuration names
-none, since its residual command can occur at several places in the program.
-The node comes from the run, through the relation
-$p, s_0 tack.r ("residual", s, "frs") gt.closed v$ of @sec:at-node
-(#isaconst("at_node")), which may observe one configuration at several nodes.
-The theorem states that the configuration is observed at some node, and that
-at every node $v$ where it is observed
+== Arithmetic diagnostics #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
-#[
-  #set enum(numbering: n => "(S" + str(n) + ")")
-  + #isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node;
-  + #isai("s \<in> \<R>\<^bsub>res\<^esub> v"): some state the report
-    holds at $v$, under one of its contexts, describes $s$;
-  + #isai("s \<in> \<V>\<^bsub>res\<^esub> v"): every #verdict("PROVED") check listed at $v$
-    holds in $s$, and every #verdict("REFUTED") check is false in $s$.
-]
+Besides the checks, a user wants to know whether a division or remainder can
+fail. VIMP defines division by zero, whereas C leaves it undefined
+(@sec:vimp-vs-c), so the analyzer reports every place where the divisor may be
+zero. At each division and remainder, it asks the selected
+analyses which values the divisor can take (@sec:coop-queries). It reports
+#verdict("ERROR") if the divisor is zero whenever an analyzed execution reaches
+the node (#isathm("run_voblint_arithmetic_refuted")), #verdict("WARNING") if the
+analyses cannot exclude zero, and nothing otherwise.
 
-== Meaning of verdicts and diagnostics #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
+A missing diagnostic is itself a safety guarantee. If the analyzer returned a
+report and no diagnostic names node $v$, then for every store $s in cal(C)(v)$,
+every local edge $(v,a,w)$, every expression $e$ evaluated by $a$, and every
+divisor $d$ in $e$,
+$ sem(d)_e s != 0 $
+(#isathm("run_voblint_arithmetic_intra_safe")). A companion theorem extends
+this to the divisors in call arguments (#isathm("run_voblint_arithmetic_safe")).
 
-By the theorem of @sec:headline, the four verdicts make the following
-statements about _covered executions_, the finite source executions from an
-initial store in #isaconst("cinit_stores"), stopped at any point:
-- #verdict("PROVED"): whenever a covered execution reaches the check, the condition
-  holds (#isathm("run_voblint_check_sound")).
-- #verdict("REFUTED"): whenever a covered execution reaches the check, the condition
-  fails (#isathm("run_voblint_check_sound")). It is not a verified
-  counterexample, since it establishes no reaching execution.
-- #verdict("UNKNOWN"): the analysis decides neither.
-- #verdict("DEAD"): no covered execution reaches the check, because nothing is
-  collected at its node (#isathm("run_voblint_dead_check_unreached")).
-  Conversely, a check that an execution reaches is never #verdict("DEAD") (#isathm("run_voblint_check_sound")).
-#verdict("PROVED") and #verdict("REFUTED") hold vacuously when no execution
-reaches the check, and only #verdict("DEAD") claims anything about
-reachability. The corresponding theorem for #verdict("PROVED") and #verdict("REFUTED") is:
+// The severities come from the claim; the guarded division must stay free of
+// diagnostics, or the sentence about line 5 no longer holds.
+#let _diag(loc) = check-row("arith-diagnostics", loc: loc).cond
+#assert(
+  not claim-text("arith-diagnostics").contains("\n5:"),
+  message: "arith-diagnostics now reports the guarded division",
+)
+The program below divides by a constant zero, by an unconstrained input, and by
+the same input behind a guard:
 
-#[
-  #show raw.where(block: true): set text(size: 6.5pt)
-  #proved("run_voblint_check_sound")
-]
+#listing(lang: "c", claim: "arith-diagnostics", ```
+fun main() {
+  x = __voblint_nondet_int();
+  a = 10 / 0;
+  b = 10 / x;
+  if (x > 0) { c = 10 / x; }
+}
+```)
 
-At every division and remainder, the analyzer asks the queries of
-@sec:coop-queries whether the divisor can be zero. It reports an error if the
-divisor is zero whenever a covered execution reaches its node
-(#isathm("run_voblint_arithmetic_refuted")), a warning if the analyses cannot
-exclude zero, and nothing otherwise. Without a diagnostic at $v$, every divisor
-on an intraprocedural edge leaving $v$ is nonzero in every store collected at
-$v$ (#isathm("run_voblint_arithmetic_safe") adds call arguments):
+Under Interval, the analyzer reports #verdict(_diag("3:3")) for line 3, whose
+divisor is zero in every execution, and #verdict(_diag("4:3")) for line 4,
+where $x$ may be zero. On line 5, the guard
+`x > 0` excludes zero from the divisor, so the third division gets no
+diagnostic and is safe in every execution that reaches it (claim
+#claim-ref("arith-diagnostics")).
 
-#[
-  #show raw.where(block: true): set text(size: 6.5pt)
-  #proved("run_voblint_arithmetic_intra_safe")
-]
-
-These theorems complete the chain of @fig:intro-nest. Each verdict holds for
-every covered execution that reaches its check, in every analysis configuration.
+These guarantees complete the soundness chain of @fig:intro-nest, whose
+inclusions the end-to-end theorem of @sec:headline composes.
