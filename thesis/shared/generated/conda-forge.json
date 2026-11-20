@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-14",
+  "date": "2026-11-21",
   "platforms": [
     "osx-arm64",
     "osx-64",
@@ -321,13 +321,9 @@
         "browser"
       ],
       "via": null,
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "available": true,
+      "newest": "0.39.0",
+      "missing": []
     },
     "ocaml-sedlex": {
       "opam": "sedlex",
@@ -341,13 +337,9 @@
         "browser"
       ],
       "via": null,
-      "available": false,
-      "newest": null,
-      "missing": [
-        "osx-arm64",
-        "osx-64",
-        "linux-64"
-      ]
+      "available": true,
+      "newest": "3.8.1",
+      "missing": []
     },
     "ocamlformat": {
       "opam": "ocamlformat",
