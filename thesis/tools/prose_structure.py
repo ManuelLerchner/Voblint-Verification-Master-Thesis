@@ -14,7 +14,11 @@ these author preferences are checked on the Typst source instead:
   which hold the formal sources and the tooling;
 - a term is emphasized as a definition (`_store_`) in more than one section, or
   used in an earlier section than the one defining it. A reader of the PDF
-  alone meets it undefined, or meets the same introduction again.
+  alone meets it undefined, or meets the same introduction again;
+- the abstract runs over a page or cites the literature. A reader who knows
+  neither abstract interpretation nor Isabelle should get the problem and the
+  result at a high level, and a citation in the abstract is justified only for
+  work this thesis directly continues (supervisor review).
 
 Warnings only: the exit status is 0 unless --strict is given. Under GitHub
 Actions each warning is also printed as an annotation.
@@ -30,10 +34,13 @@ ROOT = Path(__file__).resolve().parents[1]
 MAIN = ROOT / "thesis.typ"
 MAX_ISA_REFS = 3
 MAX_CAPTION_WORDS = 60
+MAX_ABSTRACT_WORDS = 400
+ABSTRACT = "abstract.typ"
+# The AI-use statement is not exempt: the supervisor found a forward reference
+# there surprising and asked to leave it out.
 FORWARD_EXEMPT = {
     "abstract.typ",
     "acknowledgements.typ",
-    "ai-use.typ",
     "reading-guide.typ",
     "01-introduction.typ",
 }
@@ -74,6 +81,8 @@ LABEL = re.compile(r"<((?:ch|sec):[\w:.-]+)>")
 REF = re.compile(r"@((?:ch|sec):[\w:.-]+?)(?=[^\w:.-]|[.:-](?:\s|$))")
 MATH = re.compile(r"\$[^$]*\$")
 LISTING = re.compile(r"\b(?:thy|proved)\(")
+# A bibliography key has no `kind:` prefix, which separates it from @sec:… refs.
+CITATION = re.compile(r"(?<![\w.])@([A-Za-z][\w-]*)(?![\w:-])|#cite\(<([^>]+)>")
 
 
 def closing(text, i):
@@ -190,6 +199,26 @@ def term_findings(files, texts):
                 break
 
 
+def abstract_findings(f, text):
+    total = 0
+    for off, para in prose_paragraphs(text):
+        total += words(para)
+        for m in CITATION.finditer(para):
+            yield (
+                f,
+                line_of(text, off + m.start()),
+                f"citation @{m.group(1) or m.group(2)} in the abstract: keep it "
+                "only if this thesis directly continues that work",
+            )
+    if total > MAX_ABSTRACT_WORDS:
+        yield (
+            f,
+            1,
+            f"abstract of {total} words: shorten it to under "
+            f"{MAX_ABSTRACT_WORDS} and keep the high-level view",
+        )
+
+
 def check(files):
     texts = {f: f.read_text() for f in files}
     label_at = {}
@@ -201,6 +230,8 @@ def check(files):
 
     for n, f in enumerate(files):
         text, name = texts[f], f.name
+        if name == ABSTRACT:
+            yield from abstract_findings(f, text)
         for off, para in prose_paragraphs(text):
             # Names inside formulas are notation, not citations.
             refs = len(ISA_REF.findall(MATH.sub(" ", para)))

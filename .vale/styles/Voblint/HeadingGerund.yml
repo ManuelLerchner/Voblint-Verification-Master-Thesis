@@ -5,5 +5,22 @@ extends: existence
 message: "Activity title '%s': prefer a noun phrase for the subject."
 level: suggestion
 scope: heading
+# The second token: the supervisor named "building, computing, solving,
+# encoding" as unwelcome anywhere in a title, not only as its first word.
 tokens:
   - '^(?!Widening|Narrowing|Routing|Calling|Cooperating|Running)[A-Z][a-z]+ing\b'
+  - '(?<=\s)(?:building|computing|solving|encoding)\b'
+
+tests:
+  - name: fires
+    input: |
+      # Building the equations
+
+      # Solver encoding of the equations
+    want: |
+      1:3:Voblint.HeadingGerund:Activity title 'Building': prefer a noun phrase for the subject.
+      3:10:Voblint.HeadingGerund:Activity title 'encoding': prefer a noun phrase for the subject.
+  - name: clean
+    input: |
+      # Widening and narrowing
+    want: ""
