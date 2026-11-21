@@ -12,9 +12,12 @@
 
 // `Definition 3.1: Expressions (exp).` The formal source takes the round
 // parentheses of inline references. `cmd` remains checked source metadata.
-#let _thm-block(kind, name, isa-name, body, italic: true, cmd: none) = {
+// A statement stays on one page, so its premises are never cut from its
+// conclusion. Definitions and examples may span rule systems and split unless
+// the call passes `breakable: false`.
+#let _thm-block(kind, name, isa-name, body, italic: true, cmd: none, breakable: false) = {
   (thm-rich.step)()
-  block(above: 1.1em, below: 1.1em, width: 100%, {
+  block(above: 1.1em, below: 1.1em, width: 100%, breakable: breakable, {
     strong[#kind #context (thm-rich.display)("1.1")#if name != none [: #name]]
     if isa-name != none { [ (#isaname(isa-name))] }
     strong[.]
@@ -26,15 +29,23 @@
 #let theorem(body, name: none, isa: none) = _thm-block("Theorem", name, isa, body)
 #let lemma(body, name: none, isa: none) = _thm-block("Lemma", name, isa, body)
 #let corollary(body, name: none, isa: none) = _thm-block("Corollary", name, isa, body)
-#let definition(body, name: none, isa: none, cmd: none) = _thm-block(
+#let definition(body, name: none, isa: none, cmd: none, breakable: true) = _thm-block(
   "Definition",
   name,
   isa,
   body,
   italic: false,
   cmd: cmd,
+  breakable: breakable,
 )
-#let example(body, name: none, isa: none) = _thm-block("Example", name, isa, body, italic: false)
+#let example(body, name: none, isa: none, breakable: true) = _thm-block(
+  "Example",
+  name,
+  isa,
+  body,
+  italic: false,
+  breakable: breakable,
+)
 
 // Reset the theorem counter at every chapter, matching LaTeX's [chapter].
 #let reset-theorems-on-chapter = {

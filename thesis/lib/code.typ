@@ -95,9 +95,11 @@
 // relative to tests/regression; thesis/tools/vimp_listings.py checks that it
 // exists, and that no fixture path appears in the chapters without this link.
 #let repo-blob = "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/"
+// A zero-width space after each underscore lets a long fixture name wrap there
+// instead of stretching the line before it, as `isaname` does.
 #let fixture(path, label: none) = link(
   repo-blob + "tests/regression/" + path,
-  raw(if label == none { path } else { label }),
+  raw((if label == none { path } else { label }).replace("_", "_\u{200B}")),
 )
 
 // The published site. A pull-request preview passes `--input site-url=...`, so

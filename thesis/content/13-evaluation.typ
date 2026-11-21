@@ -571,13 +571,14 @@ skipped increment (left), a nondeterministic branch may skip the increment
 @monniaux24[slide 60]. In the reset at equality (right), the counter resets on
 `i == 10` instead of `i >= 10` @monniaux24[slide 77]:
 
-#grid(
+#block(below: 0.6em, grid(
   columns: (1fr, 1fr),
   column-gutter: 8pt,
+  row-gutter: 2pt,
   _flavor("flavors-skipped-interval"), _flavor("flavors-reset-eq-interval"),
   align(center, text(size: 8pt)[skipped increment]),
   align(center, text(size: 8pt)[reset at equality]),
-)
+))
 
 In the skipped increment, the skipping path carries the loop-head value back
 unchanged. Every interval $absval(ivl(0, c))$ with $c gt.eq 9$ is therefore a

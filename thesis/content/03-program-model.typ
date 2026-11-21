@@ -387,23 +387,22 @@ $
   ("body"(d) ; "restore",s_e,(s,italic("dst")) :: F).
 $
 The frame retains the caller's store even while the callee changes its own.
-#block(breakable: false, width: 100%)[
-  Library calls (@sec:vimp) need a rule of their own. A program does not
-  declare them, so the procedure table has no body for them and the rule above
-  does not apply. A fixed library table gives their meaning instead. Since no
-  body runs, the call finishes in one step and pushes no frame. The result
-  relation can admit more than one value, which is how `__voblint_nondet_int`
-  supplies an arbitrary input. Formally, if the library table maps $p$ to
-  $"Some"(italic("desc"))$, classifying the arguments $italic("es")$ against
-  $italic("desc")$ yields $"Some"(italic("sc"))$, and $italic("sc")$ can return
-  $z$ in $s$, then
-  $
-    ("call" ("Some"(x),p,italic("es")),s,F) ->_p ("skip",s[x mapsto z],F).
-  $
-  The classification fails when the number of arguments does not match
-  (#isaconst("special_table"), #isaconst("classify_special"),
-  #isaconst("special_result")). The rule requires a destination $x$.
-]
+
+Library calls (@sec:vimp) need a rule of their own. A program does not
+declare them, so the procedure table has no body for them and the rule above
+does not apply. A fixed library table gives their meaning instead. Since no
+body runs, the call finishes in one step and pushes no frame. The result
+relation can admit more than one value, which is how `__voblint_nondet_int`
+supplies an arbitrary input. Formally, if the library table maps $p$ to
+$"Some"(italic("desc"))$, classifying the arguments $italic("es")$ against
+$italic("desc")$ yields $"Some"(italic("sc"))$, and $italic("sc")$ can return
+$z$ in $s$, then
+$
+  ("call" ("Some"(x),p,italic("es")),s,F) ->_p ("skip",s[x mapsto z],F).
+$
+The classification fails when the number of arguments does not match
+(#isaconst("special_table"), #isaconst("classify_special"),
+#isaconst("special_result")). The rule requires a destination $x$.
 
 *Returns and restoration.* Let $r_v$ be the reserved return variable
 (#isaconst("ret_var")). The returned store $#isaconst("combine_collect") _(italic("dst")) (s_c,s_r)$
@@ -672,15 +671,13 @@ result to the destination (#isaconst("combine_collect")). A source frame
 semantics keeps in the residual command instead, behind the #ctor("Restore")
 marker.
 
-#block(breakable: false)[
-  #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[
-    A graph configuration $(v,s,K)$ (#isatype("cconf")) consists of a node
-    $v$, a store $s$, and a frame stack $K$. Each frame $(k,italic("dst"),s_c)$
-    (#isatype("cframe")) records the continuation node $k$, the optional
-    destination $italic("dst")$, and the caller's store $s_c$. The step
-    relation $kappa ->_c kappa'$ (#isaconst("cstep")) is defined by the rules
-    below, and $->_c^*$ is its reflexive transitive closure.
-  ]
+#definition(name: [Graph execution], isa: "cstep", cmd: "inductive", breakable: false)[
+  A graph configuration $(v,s,K)$ (#isatype("cconf")) consists of a node
+  $v$, a store $s$, and a frame stack $K$. Each frame $(k,italic("dst"),s_c)$
+  (#isatype("cframe")) records the continuation node $k$, the optional
+  destination $italic("dst")$, and the caller's store $s_c$. The step
+  relation $kappa ->_c kappa'$ (#isaconst("cstep")) is defined by the rules
+  below, and $->_c^*$ is its reflexive transitive closure.
 
   Fix $cal(G)$ and $g$.
   For a call edge $e=(u,a,#ctor("FunctionEntry") thin p,k)$ with destination $italic("dst")$,
@@ -804,14 +801,12 @@ The relation transfers coverage from graph to source only if every source step
 preserves it, as drawn in
 @fig:csim-square.
 
-#block(breakable: false, width: 100%)[
-  #theorem(name: [Graph executions simulate source steps], isa: "csim_step")[
-    Assume that the body of every declared procedure is compiled into $g$
-    (#isaconst("procs_embedded")), and that the command of $kappa$ returns only
-    inside an activation that a call opened (#isaconst("return_safe")). If
-    $kappa approx lambda$ and $kappa ->_p kappa'$, then
-    $ exists lambda'. lambda ->_c^* lambda' and kappa' approx lambda'. $
-  ]
+#theorem(name: [Graph executions simulate source steps], isa: "csim_step")[
+  Assume that the body of every declared procedure is compiled into $g$
+  (#isaconst("procs_embedded")), and that the command of $kappa$ returns only
+  inside an activation that a call opened (#isaconst("return_safe")). If
+  $kappa approx lambda$ and $kappa ->_p kappa'$, then
+  $ exists lambda'. lambda ->_c^* lambda' and kappa' approx lambda'. $
 ]
 
 #figure(
@@ -819,7 +814,7 @@ preserves it, as drawn in
     set text(size: 11pt)
     let dashed = (dash: "dashed")
     diagram(
-      spacing: (36mm, 18mm),
+      spacing: (36mm, 11mm),
       node((0, 0), $kappa$, name: <k>),
       node((1, 0), $kappa'$, name: <k2>),
       node((0, 1), $lambda$, name: <l>),

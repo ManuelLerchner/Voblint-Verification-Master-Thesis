@@ -261,12 +261,15 @@ The #ctor("Call", thy: "Activation_Trace_Def") term already retains its
 creating caller, so the return rule finds that caller through
 #isaconst("caller_of") and takes the continuation from the call edge.
 
-#block(breakable: false, width: 100%)[
-  #definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
-    The valid traces $cal(T)=cal(T)_(cal(G),g,S)$ are defined
-    inductively by the following rules. All variables range over the objects introduced
-    above, and $t,t'$ range over traces.
-  ]
+#definition(
+  name: [Valid traces],
+  isa: "valid_activation_trace",
+  cmd: "inductive_set",
+  breakable: false,
+)[
+  The valid traces $cal(T)=cal(T)_(cal(G),g,S)$ are defined
+  inductively by the following rules. All variables range over the objects introduced
+  above, and $t,t'$ range over traces.
 
   #block(breakable: false, width: 100%)[
     *Root.* Each initial store starts a root trace:

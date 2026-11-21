@@ -921,12 +921,10 @@ bounds $i$ to $absval(ivl(1, 8))$ but not $j$ from below, and the reversed order
 $j$ to $absval(ivl(2, 9))$ but not $i$ from above (claim
 #claim-ref("dom-conjunct-order")).
 
-#block(breakable: false)[
-  #lemma(name: [Soundness of guard refinement], isa: "bfilter_sound")[
-    If a store $s$ lies in $conc(d)$ and the guard $e$ has truth value
-    $r$ at $s$, then
-    $ s in conc(#isaconst("bfilter") (e,r,d)). $
-  ]
+#lemma(name: [Soundness of guard refinement], isa: "bfilter_sound")[
+  If a store $s$ lies in $conc(d)$ and the guard $e$ has truth value
+  $r$ at $s$, then
+  $ s in conc(#isaconst("bfilter") (e,r,d)). $
 ]
 
 The shipped inverse operators are sound but not the most precise possible.

@@ -628,8 +628,8 @@ every call that enters this context publishes its entry state to it
 that stand for no program variable at all (@ch:analysis-interface).
 
 Formally, a right-hand side returns a pair @saan26phd[§2.4.5],
-$rhs(x) : (Unk union Unk_G -> A) -> (Unk_G harpoon.rt A) times A$, of a
-partial map $rho$ of the contributions it publishes, joined per global
+$ rhs(x) : (Unk union Unk_G -> A) -> (Unk_G harpoon.rt A) times A, $
+of a partial map $rho$ of the contributions it publishes, joined per global
 unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a post-solution
 must bound both, $d lle sol(x)$ and $rho(g) lle sol(g)$ for every
 $g in op("dom")(rho)$. If the assignments

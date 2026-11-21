@@ -475,8 +475,8 @@ state $e$ gives the formal parameters, such as $[[4, 5]]$ for `bump(n)` when $e$
 binds $n$ to $absval(ivl(4, 5))$. It depends on the abstract entry state, so
 the concrete call alone does not determine it.
 
-The entry-state policy therefore takes its admissibility relation
-(#isaconst("routed_entry_context_rel")) from the solution. The definition is not
+The entry-state policy therefore takes its admissibility relation from the
+solution (#isaconst("routed_entry_context_rel")). The definition is not
 circular. The solver computes $sol$ from the equations alone and never consults
 the policy. The relation is defined afterwards for the finished $sol$, and only
 the soundness statement uses it, to fix which activations $cal(A)(v, c)$
