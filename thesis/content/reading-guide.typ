@@ -72,7 +72,7 @@ mathematical notation shared by the theories and the text.
       repeated and varied.],
     [#verdict("PROVED") #verdict("REFUTED") \ #verdict("UNKNOWN") #verdict("DEAD")],
     [A coloured monospace word on a tinted background is a verdict as the
-      analyzer reports it (@sec:verdict-meaning).],
+      analyzer reports it (@sec:verdicts).],
     [#claim-ref("intro-answers")],
     [An underlined blue name marks a _claim_, an analyzer run recorded with
       the thesis sources. Every verdict and state of Voblint quoted in the text
@@ -88,8 +88,7 @@ mathematical notation shared by the theories and the text.
       output. The name links to the file in the repository.],
     [#signval("+"), $absval(ivl(1, 9))$, #absval(raw("1+2ℤ"))],
     [A light purple background marks an abstract value, which describes a
-      set of concrete integers or of _stores_, the maps from variables to
-      their integer values.],
+      set of concrete integers or of stores (@sec:intro-static).],
     table.hline(),
   )
 }

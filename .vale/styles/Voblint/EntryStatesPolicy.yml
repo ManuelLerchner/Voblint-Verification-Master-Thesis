@@ -1,0 +1,21 @@
+# thesis/CLAUDE.md "Wording": an entry state is the state at a callee's entry;
+# the context policy built from it is "entry-state contexts".
+extends: existence
+message: "'%s': call the policy 'entry-state contexts'."
+level: error
+ignorecase: true
+nonword: true
+tokens:
+  - '\bentry states (?:policy|polic(?:ies)|context policy)\b'
+  - '\bpolicy of entry states\b'
+
+tests:
+  - name: fires
+    input: |
+      Under the entry states policy, each state gets a context.
+    want: |
+      1:11:Voblint.EntryStatesPolicy:'entry states policy': call the policy 'entry-state contexts'.
+  - name: clean
+    input: |
+      Under entry-state contexts, each entry state gets a context.
+    want: ""

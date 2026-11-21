@@ -1,0 +1,23 @@
+# Author review: "The differences that matter when comparing results with
+# Goblint lie in what this fragment leaves out." An abstract noun qualified by
+# "that matter(s)" delays the claim; name the differences directly.
+extends: existence
+message: "'%s' delays the claim behind an abstract subject: state the items directly."
+level: warning
+ignorecase: true
+tokens:
+  - '\b(?:differences?|points?|aspects?|things?|parts?|questions?) that matters?\b'
+  - '\blies? in what\b'
+  - '\b(?:do|does) not by (?:itself|themselves)\b'
+
+tests:
+  - name: fires
+    input: |
+      The differences that matter lie in what this fragment leaves out.
+    want: |
+      1:5:Voblint.DelayedSubject:'differences that matter' delays the claim behind an abstract subject: state the items directly.
+      1:29:Voblint.DelayedSubject:'lie in what' delays the claim behind an abstract subject: state the items directly.
+  - name: clean
+    input: |
+      Goblint wraps unsigned integers, and VIMP integers are unbounded.
+    want: ""

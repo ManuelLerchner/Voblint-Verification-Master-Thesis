@@ -10,8 +10,55 @@ Goal: every OCaml tool and library Voblint builds with installs through
 `pixi.toml`, so `ocaml-deps-install` (opam) and `ocaml/setup-ocaml` in CI can go.
 Targets `osx-arm64`, `osx-64`, `linux-64`, matching `[workspace].platforms`.
 
-Snapshot: 2026-09-18. Versions in the tables are what the local opam switch
-(`~/.opam/5.4.1`) has installed, so they are known to build Voblint.
+Snapshot: 2026-11-20. Package tables below were written on 2026-09-18 from the
+local opam switch (`~/.opam/5.4.1`), so their versions are known to build
+Voblint; current conda-forge state is in "Status 2026-11-20" and the checklist.
+
+## Status 2026-11-20
+
+`pixi run thesis-conda-write` records 17 of the 25 manifest packages as
+available on all three platforms. Still missing: `ocaml-findlib`,
+`ocaml-zarith`, `ocaml-zarith-stubs-js`, `ocaml-dune-build-info`,
+`ocamlformat`, `ocaml-js-of-ocaml-compiler`, `ocaml-js-of-ocaml`,
+`ocaml-wasm-of-ocaml-compiler`.
+
+conda-forge now ships `ocaml` 5.5.2 and `ocaml-dune` 3.25.0.
+
+| Feedstock | From | State |
+| --- | --- | --- |
+| tier-0 libraries (10) | staged-recipes#34872 | merged 2026-10-13, published |
+| `ocaml-ppxlib` | staged-recipes#35158 | published 0.38.0 build 1 on all platforms, win-64 gcc and vs2022 included |
+| `ocaml-sedlex` | staged-recipes#35158 | published 3.7 for linux-64, osx-64, osx-arm64; MementoRC's #2 enables win and more linux arches |
+| `ocaml-dune-configurator` | staged-recipes#35158 | published 3.24.2; MementoRC's #3 (more platforms, per-toolchain pins) green and mergeable |
+| `ocaml-ocplib-endian` | staged-recipes#35158 | published 1.2 build 1 on all platforms |
+| `ocaml-lwt-split` (`ocaml-lwt`, `ocaml-lwt-ppx`) | staged-recipes#35158 | published 6.1.2; MementoRC's #2 waits on dune-configurator#3 and fails on s390x (`gcc_linux-s390x 15.*` does not exist) |
+
+lwt, dune-configurator and ocplib-endian are not Voblint dependencies; they came
+from staged-recipes#35153 (semgrep, MementoRC, still open) because `lwt_ppx`
+needs ppxlib.
+
+Fixes after the first feedstock CI runs, all merged:
+
+- win-64 builds exited 127 at the first `mkdir` in `build.sh`. `m2-bash` ships
+  no `mkdir` or `cat`; they are in `m2-coreutils`. staged-recipes passed because
+  its CI base env had coreutils on PATH. Each recipe now lists `m2-coreutils`.
+- `ocaml-dune-configurator`, `ocaml-ocplib-endian` and `ocaml-lwt-split` had no
+  `provider: osx_arm64: default`, so no osx-arm64 job existed. staged-recipes
+  CI never builds osx-arm64, so it could not catch this.
+- sedlex and lwt failed to solve because staged-recipes builds a PR's recipes in
+  one job against each other, while the feedstocks build in parallel against the
+  published channel. A CI restart after the dependency reached the CDN index
+  (30-60 min after upload) fixed both.
+
+Open problem: the first win-64 builds `ocaml-ppxlib-0.38.0-he42b7ba_0` and
+`ocaml-dune-configurator-3.24.2-he42b7ba_0` are gcc-built but pin only
+`ocaml >=5.5.1,<5.5.2.0a0`, without the toolchain track. sedlex#2's vs2022
+lane resolved the gcc ppxlib and failed to link (`ppxlib_metaquot.lib` not
+found; gcc ships `.a`). Mark both broken via admin-requests once
+dune-configurator build 1 is published. ocaml-feedstock#224 (closes #223) makes
+the `ocaml` run_export carry the track (`ocaml >=5.5.2,<5.5.3.0a0 gcc_*`), so
+new builds get it without hand-written pins. #224 also renames the MSVC track
+`vs2022` to `vs`; the MNT PRs above still use `vs2022`.
 
 ## Who needs what
 
@@ -41,9 +88,9 @@ osx-arm64 with OCaml 5.4.0.
 
 | Feedstock | conda-forge now | Target | License | Blocks |
 | --- | --- | --- | --- | --- |
-| `ocaml-findlib` | 1.8.1, OCaml 4.14 only, no osx-arm64 | 1.9.8 | MIT | zarith, topkg chain, ocp-indent |
-| `ocaml-zarith` | 1.12 (2021), OCaml 4.11 only, no osx-arm64 | 1.14 | LGPL-2.0-only WITH OCaml-LGPL-linking-exception | native CLI |
-| `ocaml-dune` | dune only | add outputs `ocaml-dune-configurator`, `ocaml-dune-build-info` (same source, 3.x) | MIT | ppxlib-free chain via `base`; ocamlformat |
+| `ocaml-findlib` | 1.9.8 on linux-64 and osx-64, no osx-arm64 (2026-11-20) | osx-arm64 build | MIT | zarith, topkg chain, ocp-indent |
+| `ocaml-zarith` | 1.12 (2021), no osx-arm64 (2026-11-20) | 1.14 | LGPL-2.0-only WITH OCaml-LGPL-linking-exception | native CLI |
+| `ocaml-dune` | dune 3.25.0 only | add output `ocaml-dune-build-info` (same source, 3.x); `dune-configurator` became its own feedstock via staged-recipes#35158 | MIT | ocamlformat |
 | `ocaml-menhir` | 20250912 | 20260209 (optional) | GPL-2.0-only / LGPL-2.0-only WITH exception | nothing |
 
 ocamlfind 1.9.8 declares `ocaml < 5.5.0~`; a 5.5 migration needs the next
@@ -144,9 +191,14 @@ day of filing.
 | cross bootstrap misses `boot/pps.ml` | ocaml-dune-feedstock#18 | merged |
 | `OCAMLPATH` exposes only the active env | ocaml-dune-feedstock#19 | fixed by #20, published |
 | `ocamlcommon.cmxa` NUL-padded `-L` | ocaml-feedstock#132 | fixed by #134, `ocaml` build 8, published |
-| macOS `CONDA_OCAML_*` point at a nonexistent `-gcc` | ocaml-feedstock#101 | still open; workaround still needed |
-| tier 0 recipes (10 packages) | staged-recipes#34872 | ready for review, CI green, `help-c-cpp` pinged |
-| `ocaml-patricia-tree` | staged-recipes#34850 | ready for review since 2026-09-17 |
+| macOS `CONDA_OCAML_*` point at a nonexistent `-gcc` | ocaml-feedstock#101 | closed 2026-09-24; not yet checked whether the workaround below can go |
+| tier 0 recipes (10 packages) | staged-recipes#34872 | merged 2026-10-13 |
+| ppxlib, sedlex, lwt, dune-configurator, ocplib-endian | staged-recipes#35158 | merged 2026-11-19 |
+| `ocaml-patricia-tree` | staged-recipes#34850 | open, ready for review since 2026-09-17 |
+| findlib osx-arm64 | ocaml-findlib-feedstock#20 (cross lanes), #19 (ARM migrator) | open |
+| zarith 1.14 + osx-arm64 | ocaml-zarith-feedstock#7 | open, needs findlib on osx-arm64 |
+| win toolchain track in the `ocaml` run_export | ocaml-feedstock#223 / #224 | #224 open, CI green, reviewers isuruf and dslarm |
+| zarith_stubs_js release with the wasm runtime | janestreet/zarith_stubs_js#16 | open since 2026-09-14, no reply; `main` is at `v0.18~preview`, so the fix likely ships with Jane Street's v0.18 batch (no date announced) |
 
 MementoRC is listed as co-maintainer on all ten tier-0 recipes.
 
@@ -189,21 +241,25 @@ order.
 
 - [ ] Decide ocamlformat bundle vs split
 - [ ] Ask conda-forge (`@conda-forge/ocaml`) about `ocaml-compiler-libs` naming
-- [ ] Ask upstream for a zarith_stubs_js release with the wasm runtime
+- [x] Ask upstream for a zarith_stubs_js release with the wasm runtime (janestreet/zarith_stubs_js#16)
+- [ ] zarith_stubs_js: wait for v0.18, or patch v0.17.0 with the upstream wasm commits (`58891805`, `b1403f31`; check they apply)
 - [ ] `ocaml-findlib` 1.9.8 PR
 - [x] Report `OCAMLPATH` gap (ocaml-dune#19) and `.cmxa` relocation (ocaml#132)
 - [x] Submit `ocaml-compiler-libs` (in #34872)
-- [ ] Drop the osx `CONDA_OCAML_*` workaround once ocaml-feedstock#101 lands
-- [ ] Consider unskipping win once tier 0 is merged
-- [ ] `ocaml-zarith` 1.14 PR
-- [ ] `ocaml-dune` extra outputs PR
-- [x] staged-recipes: tier 0 new packages (#34872, ready for review, green)
-- [ ] staged-recipes: ppxlib
-- [ ] staged-recipes: sedlex
-- [ ] staged-recipes: js-of-ocaml
+- [ ] Drop the osx `CONDA_OCAML_*` workaround (ocaml-feedstock#101 closed 2026-09-24; recheck)
+- [x] Unskip win: ppxlib, dune-configurator, ocplib-endian, lwt build win-64 (gcc track); sedlex via MementoRC's #2
+- [ ] `ocaml-zarith` 1.14 PR merged (#7 open)
+- [ ] `ocaml-dune` output `ocaml-dune-build-info`
+- [x] staged-recipes: tier 0 new packages (#34872, merged 2026-10-13)
+- [x] staged-recipes: ppxlib (#35158, merged 2026-11-19)
+- [x] staged-recipes: sedlex (#35158, merged 2026-11-19)
+- [x] Feedstock fixes after first CI: `m2-coreutils` on win, osx-arm64 lanes (ppxlib#1, dune-configurator#1, ocplib-endian#1, lwt-split#1)
+- [ ] Mark win-64 `he42b7ba_0` builds of ppxlib and dune-configurator broken (no toolchain track)
+- [ ] Review ocaml-feedstock#224 (asked by MementoRC)
+- [ ] staged-recipes: js-of-ocaml 6.4.1 (#35750, draft; local osx-arm64 build and tests pass; merge after win is enabled once sedlex has win-64)
 - [ ] staged-recipes: ocamlformat
 - [ ] staged-recipes: zarith-stubs-js
-- [ ] Local `rattler-build` pass on osx-arm64 for each recipe before PR
+- [x] Local `rattler-build` pass on osx-arm64 for each recipe before PR (#35158 recipes and the feedstock fixes)
 - [ ] Switch `pixi.toml` native stack (ocaml, ocaml-dune, ocaml-menhir, ocaml-zarith)
 - [ ] Switch browser stack; drop `pin-depends` from `voblint.opam`
 - [ ] Switch ocamlformat; drop `ocaml/setup-ocaml` from CI

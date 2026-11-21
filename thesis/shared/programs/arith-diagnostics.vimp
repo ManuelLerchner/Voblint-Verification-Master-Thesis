@@ -1,0 +1,6 @@
+fun main() {
+  x = __voblint_nondet_int();
+  a = 10 / 0;
+  b = 10 / x;
+  if (x > 0) { c = 10 / x; }
+}

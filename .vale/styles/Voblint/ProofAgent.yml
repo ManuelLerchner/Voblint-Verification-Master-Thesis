@@ -1,0 +1,22 @@
+# thesis/CLAUDE.md: "Do not give proof objects intentions." Supervisor review
+# marked "the framework cannot check this without knowing what the analysis
+# tracks" as AI-sounding. Name the definition or theorem that does the work.
+extends: existence
+message: "'%s' gives a proof object intentions or perception: say which definition or theorem does what."
+level: warning
+ignorecase: true
+tokens:
+  - '\b(?:framework|solver|analy[sz]er|analysis|theorem|proof|compiler|equations?|policy|domain)\s+(?:knows|sees|looks|wants|tries|cares|believes|cannot check|never looks)\b'
+  - '\bwithout knowing\b'
+
+tests:
+  - name: fires
+    input: |
+      The framework cannot check this without knowing what the analysis tracks.
+    want: |
+      1:5:Voblint.ProofAgent:'framework cannot check' gives a proof object intentions or perception: say which definition or theorem does what.
+      1:33:Voblint.ProofAgent:'without knowing' gives a proof object intentions or perception: say which definition or theorem does what.
+  - name: clean
+    input: |
+      The theorem assumes that the cover meets the five obligations.
+    want: ""

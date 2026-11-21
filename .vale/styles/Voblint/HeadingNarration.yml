@@ -1,0 +1,30 @@
+# Supervisor review of the contents: a section named "Thesis outline ..." is
+# unusual, and "Lessons from the formalization" sounds like story time. Name
+# the topic; navigation belongs in the chapter openings.
+extends: existence
+message: "Title '%s' narrates the document or the project: name the topic instead."
+level: warning
+scope: heading
+ignorecase: true
+tokens:
+  - outline
+  - roadmap
+  - lessons?
+  - story
+  - journey
+  - organi[sz]ation of (?:the|this) thesis
+  - structure of (?:the|this) thesis
+
+tests:
+  - name: fires
+    input: |
+      # Thesis outline along the proof chain
+
+      # Lessons from the formalization
+    want: |
+      1:10:Voblint.HeadingNarration:Title 'outline' narrates the document or the project: name the topic instead.
+      3:3:Voblint.HeadingNarration:Title 'Lessons' narrates the document or the project: name the topic instead.
+  - name: clean
+    input: |
+      # Recommendations for analyzer formalizations
+    want: ""

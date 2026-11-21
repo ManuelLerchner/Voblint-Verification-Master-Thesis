@@ -211,6 +211,9 @@
   // definitions here fill the line and nothing refers to them by number.
   set math.equation(numbering: none)
   show math.equation: set text(font: "Latin Modern Math")
+  // A formula split across two lines reads as two formulas. LaTeX only
+  // discourages such breaks (\binoppenalty, \relpenalty); here they never occur.
+  show math.equation.where(block: false): box
   // Web links are blue and underlined. Links into the rendered theories (the
   // project's, the vendored solver's and HOL's) and
   // the listings' playground tags keep their own styling, and internal

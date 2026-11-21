@@ -3,7 +3,6 @@
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": *
 #import "../lib/code.typ": *
-#import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": corollary, definition, example, lemma, theorem
 #import "../lib/cfg-graphs.typ": sum-graph
 
@@ -11,47 +10,53 @@
 
 @ch:program-model matched every source execution with a graph execution.
 For an analysis that computes one abstract state per node, this suffices. A
-context-sensitive analysis, however, computes a separate state for each node and
-calling context, so justifying its result requires knowing which executions each
-context stands for. This chapter defines this correspondence. It
-groups executions into _activation traces_ and assigns calling contexts to
-them. It then states the _coverage contract_, the local conditions under which
-an analysis result contains every store that an execution brings to a node in a
-context.
+context-sensitive analysis, however, keeps a separate abstract state for each
+pair of a node and a calling context. Its soundness argument must say which
+executions each pair describes. The graph execution of @sec:cstep cannot
+answer this, because it records only a node, a store, and a frame stack, and
+no calling context.
+
+Activation traces close this gap. They remember the caller of every
+activation, and each trace carries a calling context. One local
+condition per kind of execution step then suffices for a context-sensitive
+analysis to over-approximate the stores at each node and context.
 
 == Calling contexts and the collecting semantics <sec:why-traces>
 
-A context-sensitive analysis splits the unknown $[v]$ of a node into unknowns
-$[v, c]$, one per calling context $c$ (@sec:interproc). Seidl et al. state that the invariant for
-$[u, c]$ "only need[s] to take into account executions reaching $u$ that
-satisfy the restriction imposed by context $c$" @seidl26[§4]. The abstract state
-for $[v, c]$ therefore has to describe only a subset of the stores that the
-state for $[v]$ describes, and it can be correspondingly more precise.
+A context-sensitive analysis replaces the unknown $[v]$ of a node by unknowns
+$[v, c]$, one per calling context $c$ (@sec:interproc). Seidl et al. state that
+the invariant for $[u, c]$ "only need[s] to take into account executions
+reaching $u$ that satisfy the restriction imposed by context $c$"
+@seidl26[§4]. The abstract state for $[v, c]$ therefore has to describe only a
+subset of the stores that the state for $[v]$ describes, and it can be
+correspondingly more precise.
 
-For the calls `bump(5)` and `bump(4)` of the running example
-(@fig:program-to-equations), an analysis with entry-state contexts claims the
-result $6$ in the context of the first call and $5$ in that of the second
-(@sec:interproc). To justify these claims, it must be known which store at the
-result node of `bump` belongs to which call. The collecting semantics, however, is too weak to tell. It holds
-both stores at the result node but does not record which activation reached
-each of them, so a richer semantics that keeps this information is needed.
+Consider the recursive program of @fig:cfgmap. Its call `sum(2)` calls
+`dec(2)`, then `sum(1)`, which calls `dec(1)` and `sum(0)`. The three
+activations of `sum` return $3$, $1$, and $0$, respectively. All visit the
+same result node. A set of stores collected at that node retains these results
+but forgets which invocation produced which result. An analysis that separates
+invocations by their entry values needs that association to justify a different
+result in each context.
 
-Contexts depend on how an activation was created, for example, on its call site
-or arguments and on the context of its caller (@sec:contexts). After a return,
-the caller must continue in the contexts it had before the call.
-Neither the graph execution nor a flat record of its runs exposes this. Each
-frame of the stack in @sec:cstep holds only what execution needs to resume its
-caller, and the frame disappears once the call has returned. The list of
-node-store pairs $(v, s)$ that a run passes through (@fig:flat-nested, top)
-interleaves the steps of all activations. In the program of @fig:cfgmap,
-`sum(2)` calls `dec` and then itself, so one run visits the nodes of `sum` in
-three activations, and the list records neither the call that created each activation nor the caller that each return resumes.
+Contexts depend on how an activation was created, such as its call site or its
+arguments. After a return, the caller must continue in the contexts it had
+before the call. Neither the graph execution nor a flat record of its
+runs exposes this. Each frame of the stack of @sec:cstep holds only what
+execution needs to resume the caller, and the frame disappears once the call
+has returned. A flat list of visited node-store pairs also interleaves the
+steps of all activations. @fig:flat-nested displays one execution both as a flat list and
+grouped by activation. For example, after `sum(2)` reaches `pp5`, execution
+enters `dec(2)`, follows its body, and resumes `sum(2)` at `pp6`. The nested
+view puts the steps of `dec(2)` in a separate box and marks its call in the
+path of `sum(2)`. The same grouping applies to the recursive call at `pp6`. The nested boxes form
+the _activation tree_ of the run, in which each activation is a child of the
+activation that called it @aho06[§7.2.1].
 
-Grouping the same run by activation, in contrast, makes these relationships
-explicit (@fig:flat-nested, bottom). Each box holds one activation
-(@sec:vimp) and lists the node-store pairs that this activation passes
-through, its _activation path_. A call creates a new activation attached to
-its caller, and a return composes the finished callee back into that caller.
+The _activation path_ lists only the node-store pairs of one activation.
+Its callees have paths of their own. To justify returns, we also retain the
+caller as it was at the call and the completed callee. This records which
+caller resumes even after its runtime stack frame has been removed.
 
 #let _acts = (vb.neutral, vb.accent, vb.sign, vb.par, vb.cong, vb.trusted)
 // Colour alone does not survive greyscale printing: every box names its
@@ -138,6 +143,7 @@ its caller, and a return composes the finished callee back into that caller.
 )
 #figure(
   {
+    align(left, text(size: 7.5pt, weight: "bold", fill: vb.muted)[(a) compiled graph])
     align(center, block(width: 52%, layout(size => {
       let g = sum-graph
       scale(size.width / measure(g).width * 100%, reflow: true, g)
@@ -147,363 +153,398 @@ its caller, and a return composes the finished callee back into that caller.
     set align(left)
     block(spacing: 0pt, {
       set par(leading: 0.45em)
-      text(size: 7.5pt, weight: "bold", fill: vb.muted)[flat list]
+      text(
+        size: 7.5pt,
+        weight: "bold",
+        fill: vb.muted,
+      )[(b) one run on (a), as a flat list of visited nodes]
       h(3pt)
       _flat(_run).map(((a, x)) => _chip(a, x)).join(h(2.5pt))
     })
     v(0.5em)
-    text(size: 7.5pt, weight: "bold", fill: vb.muted)[grouped by activation]
+    text(size: 7.5pt, weight: "bold", fill: vb.muted)[(c) the same run, grouped by activation]
     v(0.2em)
     _nested(_run)
   },
   kind: image,
-  caption: [The compiled graph of the program in @fig:cfgmap (top) and one run
-    on it, as the flat list of its steps and grouped by activation. Colors mark
-    each step's activation, which the flat list itself does not record. A
-    dashed tag #sym.arrow.r.hook marks a call of the named callee. The run is
-    written out by hand, and stores are omitted.],
+  placement: auto,
+  caption: [(a) The compiled graph of the program in @fig:cfgmap. (b) One
+    run on this graph. Each box names a node of (a), in the order the run
+    visits it. After `pp5`, for example, the run follows the dashed call edge
+    of (a) to the entry of `dec`, runs its body, and resumes at `pp6`. (c) The same steps in the same
+    order, grouped by the activation that executes them. Colors mark each
+    step's activation, which the flat list (b) itself does not record. A dashed
+    tag #sym.arrow.r.hook marks a call of the named callee. This is an
+    illustrative execution; stores are omitted.],
 ) <fig:flat-nested>
 
 == Activation traces of graph executions <sec:traces>
 
-This section turns the grouping of @fig:flat-nested into a set of traces and
-shows that every source execution yields one. The construction adapts _local
-traces_, which describe the view of one thread on a concurrent execution
-@schwarz21, from threads to procedure activations (@sec:activation-trace).
+=== Activation traces and their observers #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:activation-trace>
 
-=== Activations of a run #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:activation-trace>
+Let $V$ be the set of graph nodes and $Sigma$ the set of stores. An activation
+path $pi$ is a finite list of elements of $V times Sigma$, including the empty
+list (#isatype("activation_path")). The operator $dot.op$ concatenates lists, so
+$pi dot.op [(v,s)]$ appends one pair.
 
-The grouping of @fig:flat-nested becomes a datatype with one constructor per
-way a box arises. The outermost box, the activation of `main`, is a root. A box
-opened by a call is a callee trace and remembers its caller. When a callee
-finishes, its caller continues in a new trace that remembers both the caller at
-the call and the finished callee.
-
-#block(breakable: false)[
-  #definition(name: [Activation trace], isa: "activation_trace", cmd: "datatype")[
-    A trace has one constructor per way an activation begins or continues.
-    Its #isatype("activation_path") is the path of one activation, a list of
-    pairs of a CFG node and a store.
-  ]
-
-  #{
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("activation_path")
-    thy("activation_trace")
-  }
+#definition(name: [Activation trace], isa: "activation_trace", cmd: "datatype")[
+  Traces are the finite terms generated by
+  $
+    t ::= ctor("Root")(pi)
+    | ctor("Call", thy: "Activation_Trace_Def")(t, pi)
+    | ctor("Resume")(t, t', pi).
+  $
+  A root records the initial activation. A call records a new activation and
+  its creating caller $t$. A resumption records the suspended caller $t$,
+  its completed callee $t'$, and the caller's continued path $pi$.
 ]
 
-$#Root($pi$)$ is the initial activation of the program with activation path
-$pi$. A run starts with $#Root($[(italic("entry"), s_0)]$)$, the entry node of
-the graph, which is the entry of `main`, paired with an initial store $s_0$.
-$#CallT($t'$, $pi$)$ is a callee created by the caller $t'$. Its activation path begins at the callee's entered store.
-$#ResumeT($t'$, $t''$, $pi$)$ is the activation $t'$ continued past the call that produced the finished
-callee $t''$. The observer
-$#isaconst("path_of") thin t$ returns the activation path,
-$#isaconst("sink_node") thin t$ the node of its last entry,
-$#isaconst("sink_store") thin t$ that entry's store, and
-$#isaconst("caller_of") thin t$ the caller that created the activation, which
-a $ctor("Root")$ does not have. The
-#link(site("index.html#observers"))[explainer page] shows these observers interactively on a
-run of the program of @fig:flat-nested.
+For each constructor, $#isaconst("path_of") (t)$ is its last argument.
+When this path is nonempty, $#isaconst("sink_node") (t)$ and
+$#isaconst("sink_store") (t)$ are the node and store in its last pair. The
+option-valued function #isaconst("caller_of") returns $"None"$ when there is no
+creating caller, and $"Some"(t')$ when $t'$ is the creating caller:
+$
+  #isaconst("caller_of") (ctor("Root")(pi)) & = "None", \
+  #isaconst("caller_of") (ctor("Call", thy: "Activation_Trace_Def")(t, pi)) & = "Some"(t), \
+  #isaconst("caller_of") (ctor("Resume")(t,t',pi)) & = #isaconst("caller_of") (t).
+$
+Thus resuming `sum(2)` after `dec(2)` keeps `main` as its creating caller.
+It does not make the suspended `sum(2)` trace its own caller.
+We write $#isaconst("extend", thy: "Activation_Trace_Def") (t,(v,s))$ for
+appending $(v,s)$ to its path while keeping its constructor and retained traces
+unchanged.
 
-Each trace represents the history of one activation up to a program point, so
-on well-formed compiled programs, its activation path stays inside the nodes of
-one procedure (#isathm("valid_activation_trace_frag_callers")). Calls and
-returns start new traces instead of extending the current one, so a whole run
-is a family of traces linked by their caller and callee fields.
+A single activation may have several successive traces. Its call to a callee
+freezes its current trace; its resumption retains that frozen trace and the
+finished callee. Consequently, the nested activation boxes in @fig:flat-nested
+summarize an execution, while the trace terms additionally record its successive
+suspensions and resumptions. Calls and returns start new traces instead of
+extending the current one, so a whole run is a family of traces linked by their
+caller and callee fields.
 
-Because a $ctor("Call", thy: "Activation_Trace_Def")$ stores its caller
-exactly, frozen at the call site, a finished callee composes back into the
-activation that created it, and no search for a compatible stack frame is
-needed. Composing a callee back into its creator makes context-specific return flow sound. A return
-continues exactly the caller that created the callee, in each context of this caller, so the exit state of a callee entered in context $c'$ flows back only to
-the callers whose calls admitted $c'$. The abstract state for a context therefore needs to
-describe only the executions in that context.
+This design follows the local traces of Schwarz et al. @schwarz21[§3], which
+describe the view of one thread on a concurrent execution. They are defined
+inductively as well, with a rule that starts a created thread from the state of
+its creator and one rule per edge. Activation traces take over this scheme with
+an activation in place of a thread.
 
-This design follows the local traces of Schwarz et al. @schwarz21[§3]. A
-local trace is the view of one thread on a concurrent execution and ends at a
-program point with that thread's local state. The set of local traces is
-defined inductively, from initial traces, a rule that starts a created thread
-with the local state of its creator, and one rule per edge that extends a
-trace by a step. A lock also incorporates an initial trace or one ending
-in an unlock of the same mutex. Activation traces take over this
-scheme with an activation in place of a thread. $ctor("Root")$ corresponds to
-an initial trace, $ctor("Call", thy: "Activation_Trace_Def")$ to thread
-creation, a local step to a unary edge rule, and $ctor("Resume")$ to the
-binary lock rule, which here incorporates the finished callee. The traces
-themselves differ. A local trace is an acyclic graph of events from several
-threads, ordered by program order and by the creation and locking orders, and
-a lock may incorporate a trace of whichever thread last released the mutex. An
-activation trace holds the path of a single activation and refers to at most
-two other traces, and a $ctor("Resume")$ accepts only the callee that this
-activation itself created. Activations do not run concurrently, so nothing
-corresponds to reading globals written by another thread.
+=== Valid graph traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:valid>
 
-=== Valid traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:valid>
-
-The datatype also admits terms that no execution produces. A path may contain
-a step that follows no edge of the graph, for instance, a jump from the entry of
-`sum` directly to its result node. A $ctor("Resume")$ may pair a caller with a
-callee that another activation created, for instance, continue `main` after its
+The grammar also admits terms that no execution produces. A path may contain
+a step that follows no edge of the graph, such as a jump from the entry of
+`sum` directly to its result node. A #ctor("Resume") may pair a caller with a
+callee that another activation created, for example continue `main` after its
 call `sum(2)` with the finished inner activation `sum(1)`, whose caller is
-`sum(2)`. Validity rules out such terms by
-defining how traces arise. A trace is valid if it can be built from
-an initial store by rules that mirror the steps of graph execution, one for
-starting the program, one for a local edge, one for a call, and one for a
-return. Every step that a valid trace records then follows an edge of the
-graph, and every $ctor("Resume")$ combines a caller with the callee that it
-created itself.
+`sum(2)`. Validity rules out such terms by defining how traces arise, with one
+rule for starting the program, one for a local edge, one for a call, and one
+for a return. Fix a graph $g$, a global-variable classifier $cal(G)$, and
+initial stores $S subset.eq Sigma$ for the remainder of the chapter, and write
+$v_0$ for the graph entry (#isaconst("cfg_entry")).
 
-#block(breakable: false)[
-  #definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
-    For a global-variable classifier $cal(G)$, a graph $g$, and a set $S$ of
-    initial stores, #isai("\<T>\<^bsub>\<G>,g,S\<^esub>") (#isaconst("valid_activation_trace")) is
-    the least set of traces closed under the following four rules.
+The local edges $(u,a,v) in "intra"(g)$ carry an action $a$, and for a store
+$s$, $sem(a)(s)$ is the set of possible successor stores
+(#isaconst("edge_step")). A call edge $e=(u,a,#ctor("FunctionEntry") thin p,k) in "calls"(g)$ has the
+call site $u$, call information $a$ with the return destination, formal
+parameters, and actual arguments, the callee's entry node $#ctor("FunctionEntry") thin p$, and the
+continuation $k$. For such an edge, $#isaconst("call_enter") _e (s)$ is the entered store, in which
+the parameters are bound, and $#isaconst("combine_collect") _e (s,r)$ combines the caller's saved locals
+with the callee's globals and return value. The subscript $e$ stands for the
+call information of $e$, and $cal(G)$ is fixed.
+
+The rules mirror the graph execution of @sec:cstep. A local step extends the
+current trace along a local edge, as #isaconst("cstep") moves to the next
+node. A call starts a new trace at the callee's entry, as #isaconst("cstep")
+pushes a frame. A return resumes the caller after its callee reaches the result
+node, as #isaconst("cstep") pops one. Validity, however, keeps no frame stack.
+The #ctor("Call", thy: "Activation_Trace_Def") term already retains its
+creating caller, so the return rule finds that caller through
+#isaconst("caller_of") and takes the continuation from the call edge.
+
+#definition(
+  name: [Valid traces],
+  isa: "valid_activation_trace",
+  cmd: "inductive_set",
+  breakable: false,
+)[
+  The valid traces $cal(T)=cal(T)_(cal(G),g,S)$ are defined
+  inductively by the following rules. All variables range over the objects introduced
+  above, and $t,t'$ range over traces.
+
+  #block(breakable: false, width: 100%)[
+    *Root.* Each initial store starts a root trace:
+    $ frac(s in S, ctor("Root")([(v_0,s)]) in cal(T)). $
   ]
 
-  #thy("valid_activation_trace")
-]
-
-The root rule corresponds to the initial graph configuration, and the other
-three rules correspond to the three rules of #isaconst("cstep"). Intra appends
-a step along a local edge. Call starts a new trace that holds the caller, where
-#isaconst("cstep") pushes a frame. Ret builds a third trace that holds the caller
-and the callee, where #isaconst("cstep") pops the frame.
-
-The ret rule applies when a callee trace has reached a result node
-#isai("FunctionResult p"), which no edge leaves in a compiled graph. The rule
-finds the caller through #isai("caller_of callee = Some caller") and takes the
-#isaconst("calls") edge from its call site into $p$. That edge names the
-continuation $italic("cont")$, where the caller continues with the store that
-#isaconst("combine_collect") builds from both final stores.
-
-=== Valid traces of source executions #thy-badge("Voblint_Compile", "Source_To_Trace") <sec:source-bridge>
-
-The rules of valid traces mirror the rules of #isaconst("cstep"), but nothing
-so far states that a graph execution yields a valid trace. The following
-relation closes this gap. It also matches the trace's callers with the frame
-stack, so that it still holds after a return.
-
-#block(breakable: false)[
-  #definition(name: [Trace representation], isa: "activation_trace_repr", cmd: "definition")[
-    A valid trace represents a graph configuration if it ends at the configuration's node and store, and its chain of creating callers matches
-    the runtime frame stack.
+  #block(breakable: false, width: 100%)[
+    *Local step.* Follow a local edge and append its successor:
+    $
+      frac(
+        t in cal(T) quad (#isaconst("sink_node") (t),a,v) in "intra"(g) quad s' in sem(a)(#isaconst("sink_store") (t)),
+        #isaconst("extend", thy: "Activation_Trace_Def") (t,(v,s')) in cal(T)
+      ).
+    $
   ]
 
-  #{
-    show raw.where(block: true): set text(size: 6pt)
-    thy("stack_repr")
-    thy("activation_trace_repr")
-  }
-]
-
-For a well-formed compiled program (#isaconst("wf_compile_input")), the
-correspondence is lock-step. A local graph step extends the current trace, a
-call creates a $ctor("Call", thy: "Activation_Trace_Def")$ trace, and a return
-a $ctor("Resume")$ trace (#isathm("cstep_preserves_activation_trace_repr")).
-A $ctor("Root")$ trace represents the initial configuration
-(#isathm("located_activation_trace_entry")), so every reached configuration
-has a representing valid trace
-(#isathm("csteps_preserve_located_activation_trace")). The converse is neither
-proved nor needed.
-
-#block(breakable: false)[
-  #theorem(name: [Source executions are traces], isa: "source_run_has_activation_trace")[
-    For a well-formed compiled program, every finite source execution from an
-    initial store in $S$ has a matching graph configuration and a valid trace ending at
-    the same node with the same store, whose caller chain represents the graph's
-    frame stack.
+  #block(breakable: false, width: 100%)[
+    *Call.* Retain the caller and start the callee at its entry:
+    $
+      frac(
+        t in cal(T) quad e=(#isaconst("sink_node") (t),a,#ctor("FunctionEntry") thin p,k) in "calls"(g),
+        ctor("Call", thy: "Activation_Trace_Def")(t,[(#ctor("FunctionEntry") thin p,#isaconst("call_enter") _e (#isaconst("sink_store") (t)))]) in cal(T)
+      ).
+    $
   ]
 
-  #{
-    show raw.where(block: true): set text(size: 6.2pt)
-    proved("source_run_has_activation_trace")
-  }
-]
-
-The proof composes the simulation of @sec:csim (#isathm("csim_star")) with
-this lock-step correspondence, which both preserve the store.
-
-=== Trace stores per node #thy-badge("Voblint_CFG", "Activation_Trace_Collect") <sec:collect>
-
-Collecting the final stores of the valid traces per node gives the _node
-collecting semantics_. It plays the role of the collecting semantics of @ch:background for programs
-with procedures, with valid traces in place of runs.
-
-#block(breakable: false)[
-  #definition(name: [Node collecting semantics], isa: "node_collect", cmd: "definition")[
-    #thy("node_collect")
+  #block(breakable: false, width: 100%)[
+    *Return.* Resume the callee's creating caller at a matching continuation:
+    $
+      frac(
+        display(
+          mat(
+            delim: #none,
+            t' in cal(T) quad #isaconst("caller_of") (t')="Some"(t) quad #isaconst("sink_node") (t')=#ctor("FunctionResult") thin p;
+            e=(#isaconst("sink_node") (t),a,#ctor("FunctionEntry") thin p,k) in "calls"(g),
+          )
+        ),
+        ctor("Resume")(t,t',#isaconst("path_of") (t) dot.op [(k,#isaconst("combine_collect") _e (#isaconst("sink_store") (t),#isaconst("sink_store") (t')))]) in cal(T)
+      ).
+    $
   ]
 ]
 
-A store is in #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") exactly when some valid
-trace ends at $v$ with this store. The classifier, graph, and initial stores
-are those of the program at hand, written #isai("\<G>"), #isai("g"), and
-#isai("S") from here on. A procedure's result is an ordinary collected node,
-and the stores in which a run of the whole program completes are those collected at $ctor("FunctionResult") italic("main")$. Every store that a finite source
-execution of a well-formed program reaches therefore lies in the node
-collecting semantics at a corresponding node
-(#isathm("source_reaches_node_collect")).
+Every valid path is nonempty, so the node and store observers select an
+actual final node-store pair on valid traces. Returning from `dec(2)` thus resumes its creating activation
+`sum(2)`; an unrelated activation cannot be substituted merely because it
+visits the same call site. The continuation and the combined store come from a
+call edge from the caller's node into the callee's entry, on compiled graphs
+the unique one.
 
-The node collecting semantics forgets the traces, so a soundness statement
-over it alone is context-insensitive. The valid traces themselves, however, keep their
-structure. The same set of traces thus supports two views: collected per node,
-and split by context (@sec:contexts).
+=== The node collecting semantics #thy-badge("Voblint_CFG", "Activation_Trace_Collect") <sec:collect>
+
+The trace retains the calling history. To ask which stores can occur at a
+node, we project that history away.
+
+#definition(name: [Node collecting semantics], isa: "node_collect", cmd: "definition")[
+  The node collecting semantics is
+  $ cal(C)(v) = {#isaconst("sink_store") (t) | t in cal(T) and #isaconst("sink_node") (t)=v}. $
+]
+
+For example, at the result node of `sum`, the execution in @fig:flat-nested
+contributes stores with return values $0$, $1$, and $3$. The node collecting
+semantics plays the role of the collecting semantics of @ch:background for
+programs with procedures, with valid traces in place of runs. A procedure's
+result node is an ordinary collected node, and the stores in which a run of the
+whole program completes are those collected at #ctor("FunctionResult")
+`main`.
+
+Every store that a source execution reaches lies in this set, at the node the
+simulation of @sec:csim relates the execution to.
+
+#theorem(
+  name: [Reached source stores lie in $cal(C)(v)$],
+  isa: "source_reaches_node_collect",
+)[
+  Let $g$ be the graph compiled from a well-formed program with procedure
+  table $Pi$ (#isaconst("wf_compile_input")), and let $s_0 in S$. If
+  $(#isaconst("main_body") thin Pi, s_0, []) ->_p^* (r,s,F)$, then there are a
+  node $v$ and a frame stack $K$ such that
+  $ (r,s,F) approx (v,s,K) quad "and" quad s in cal(C)(v). $
+]
+
+The proof follows the source execution through the simulation of @sec:csim
+and builds a valid trace alongside the graph execution. A local graph step
+extends the current trace, a call starts a #ctor("Call", thy: "Activation_Trace_Def")
+trace, and a return builds a #ctor("Resume") trace. Throughout, the trace's
+chain of creating callers matches the frame stack, so a return resumes the same
+caller in the trace as on the stack. Soundness needs only this direction, since
+every reached source store must lie in the set that the analysis bounds.
+
+The node collecting semantics forgets the traces, so a soundness statement over
+it alone is context-insensitive. The valid traces themselves keep their
+structure, so the same set of traces supports two views, collected per node
+and split by context.
 
 == Calling contexts of traces #thy-badge("Voblint_CFG", "Activation_Trace_Context") <sec:contexts>
 
-The claims $6$ and $5$ for the two calls of `bump` can be checked only once it
-is known which executions each context stands for (@sec:why-traces). This
-section assigns contexts to activation traces and uses them to split the
-stores collected at each node.
+A context groups activations whose behavior the analysis describes together.
+For the `sum` execution, a context recording the argument at entry can separate
+`sum(2)`, `sum(1)`, and `sum(0)`. A context recording only the most recent
+call site instead groups `sum(1)` and `sum(0)`, since both are called at
+`pp6`. This is a call string (@sec:interproc) bounded to one call site.
 
-Contexts are chosen at calls. When `main` calls `bump(5)`, the analysis decides
-in which context it analyzes the callee. With call strings of length one, the
-context is the call site in `main`. With entry-state contexts, it is the
-abstract value of the formal parameter at the callee's entry, $[[5, 5]]$ under
-Interval (@sec:eq-routing). In general, the choice may depend on the call site,
-on the caller's context, which call strings extend, on the call itself, which
-names the callee, its formals, arguments, and destination, and on the
-caller's store and the _entered store_, the store at the callee's entry after
-the formals have been bound. A _context policy_ fixes this choice for every
-concrete call.
+One call may have several contexts, for instance when an analysis splits an
+entry state into cases. A policy therefore assigns each call a set of contexts.
+The policy is a semantic assignment, separate from how the solver chooses
+contexts.
 
-#block(breakable: false)[
-  #definition(name: [Context policy], isa: "context_policy", cmd: "type_synonym")[
-    A context policy maps a concrete call to the set of callee contexts it admits.
-  ]
-
-  #{
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("context_policy")
-  }
+#definition(name: [Context policy], isa: "context_policy", cmd: "type_synonym")[
+  Let $C$ be the set of contexts and $I$ the set of call-information records.
+  A context policy is a function
+  $ "adm": V times C times I times Sigma times Sigma -> cal(P)(C). $
+  Its arguments are the call site $u$, caller context $c$, call information $i$,
+  caller store $s$, and entered store $s_e$. Its result is the set of callee
+  contexts admitted for those arguments.
 ]
 
-A policy returns a set of contexts rather than one, because an analysis may
-split a call into cases. Goblint's $"enter"^sharp$ (@sec:interproc) may
-return several alternatives for one call, each a pair of a caller state for the
-return and a callee entry state, and each alternative gets its own context.
-Suppose a caller passes an argument that is either negative or positive, and
-its state keeps the two cases apart. A path-sensitive analysis, for instance,
-keeps one state per path. With one alternative per case, the callee is analyzed in one context for negative arguments and in
-another for positive ones, and a sign analysis keeps the sign in both, whereas a
-single entry state would join the cases to $ltop$. When the cases overlap, one
-concrete call belongs to several contexts at once
-(#isathm("ov_two_contexts_admitted")).
+For a call edge $e$ at call site $u$, write $"adm"_e (c,s)$ for the contexts
+the policy admits when the call along $e$ is made from store $s$ in context $c$.
+A call trace retains its caller and entered store but not the call edge, so
+$"admits"(u,c,p,s,s_e,c')$ states that some call edge from $u$ into $p$ enters
+$s_e$ from $s$ and admits $c'$ (#isaconst("admits_call_context")).
 
-The set may also be empty, for instance, at a call that the analysis
-considers unreachable. An entry-state policy admits no context there, because
-the analysis's state at the call site describes no caller store
-(@sec:eq-routing). Stores that the analysis result excludes need no context. At a call that the program actually makes, however, an empty set
-would lose the callee, which the coverage contract rules out (@sec:contract).
+#definition(name: [Contexts carried by a trace], isa: "activation_context_rel", cmd: "inductive")[
+  Fix an initial context $c_0 in C$. The predicate $"carries"(t,c)$
+  states that trace $t$ carries context $c$. It is defined inductively by the
+  following rules.
 
-A policy speaks about a single call. The contexts of a whole trace follow by
-applying it along the calls that created the trace. The root activation
-carries the initial context #isai("c\<^sub>0"). A callee carries every
-context $c'$ that the policy admits for its call from some context $c$ of its caller (#isaconst("admits_call_context")). The policy receives the caller's store and the entered store that #isaconst("call_enter") computes from it. A
-local step keeps the contexts of the trace
-(#isathm("activation_context_rel_extend")), and a resumed caller carries
-the contexts it had before the call
-(#isathm("activation_context_rel_Resume_iff")). An activation may therefore
-carry several contexts or none. The
-#link(site("index.html#settings"))[explainer page]
-draws, for each policy, the contexts that the analyzer creates for one program.
-
-#block(breakable: false)[
-  #definition(name: [Context of a trace], isa: "activation_context_rel", cmd: "inductive")[
-    The contexts that a trace may carry.
+  #block(breakable: false, width: 100%)[
+    *Root.* The root activation carries the initial context:
+    $ "carries"(ctor("Root")(pi),c_0). $
   ]
-
-  #{
-    show raw.where(block: true): set text(size: 6pt)
-    thy("activation_context_rel")
-  }
-]
-
-Voblint offers three policies (#isatype("context_mode")): the unit context policy
-with one context for every activation, call strings bounded to the $k$
-most recent call sites, and entry-state contexts
-@sharir81 @seidl12compiler[§§2.6, 2.9]. Entry-state contexts follow Goblint's
-partial tabulation, which tabulates procedure summaries only for the calling
-contexts the analysis meets @saan26phd[§3.3] @schwarz25phd[§5, p. 110]. Unlike
-bounded call strings, they can form an infinite set, so the analysis may not
-terminate (@sec:certificate). The traces store no context, so the concrete
-semantics stays independent of the analysis, and the theorems take the policy
-as a parameter and hold for every policy. A policy may even be defined from
-the analysis result, as the entry-state policy is (@sec:eq-routing). This is
-not circular, because no policy changes the stores collected per node. The
-policy only splits them among contexts.
-
-The node collecting semantics can now be split by context. A store belongs to
-context $c$ at node $v$ if some valid trace ending at $v$ with that store
-carries $c$.
-
-#block(breakable: false)[
-  #definition(
-    name: [Activation collecting semantics],
-    isa: "activation_collect",
-    cmd: "definition",
-  )[
-    #thy("activation_collect")
+  #block(breakable: false, width: 100%)[
+    *Call.* A callee carries every context admitted for its call from a context
+    of its caller, at the entered store that starts its path:
+    $
+      frac(
+        "carries"(t,c) quad "admits"(#isaconst("sink_node") (t),c,p,#isaconst("sink_store") (t),s_e,c'),
+        "carries"(ctor("Call", thy: "Activation_Trace_Def")(t,[(#ctor("FunctionEntry") thin p,s_e)] dot.op pi),c')
+      ).
+    $
+  ]
+  #block(breakable: false, width: 100%)[
+    *Resume.* A resumed caller carries the contexts it had before the call:
+    $ frac("carries"(t,c), "carries"(ctor("Resume")(t,t',pi),c)). $
   ]
 ]
 
-The set #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") is called the _activation collecting semantics_ at $v$ and $c$.
-It contains the final stores of the valid traces that end at $v$ and carry
-$c$, and the abstract state computed for $[v, c]$ must describe it. In the
-running example under interval entry-state contexts (@sec:eq-routing), the
-final store of `bump(5)`, with result $6$, lies in the set of context
-$[[5, 5]]$ at `bump`'s result node, and that of `bump(4)`, with result $5$, in
-the set of context $[[4, 4]]$. Each context's state thus describes one result,
-whereas a single state for the node bounds it at best by $absval(ivl(5, 6))$
-(@sec:interproc). No store is lost as long as every valid trace carries a
-context. The next section reduces the requirement to contain these sets to
-local checks.
+Since the call rule reads only the first pair of the callee's path, a local
+step leaves the contexts of a trace unchanged
+(#isathm("activation_context_rel_extend")).
+
+For a concrete illustration, choose the policy that assigns each callee its
+formal argument's integer value, and take $c_0=0$. The three `sum`
+activations then carry contexts $2$, $1$, and $0$. When `sum(1)` returns to
+`sum(2)`, the resumed caller carries $2$ again. Voblint offers three policies
+(#isatype("context_mode")): the unit policy with one context for every
+activation, call strings bounded to the $k$ most recent call sites, and
+entry-state contexts @sharir81 @seidl12compiler[§§2.6, 2.9]. The traces store
+no context, so the theorems take the policy as a parameter and hold for every
+policy. A policy may even be defined from the analysis result, as the
+entry-state policy is, since a policy only splits the collected stores among
+contexts and never changes them.
+
+A policy may admit several contexts or none, and neither the trace datatype
+nor validity prevents the empty case.
+
+#definition(name: [Activation collecting semantics], isa: "activation_collect", cmd: "definition")[
+  The collecting semantics at a node $v$ and context $c$ is
+  $
+    cal(A)(v,c) = {#isaconst("sink_store") (t) | t in cal(T) and #isaconst("sink_node") (t)=v and "carries"(t,c)}.
+  $
+  Here $cal(A)$ has the fixed parameters $cal(G),"adm",c_0,g,S$.
+]
+
+The only difference from $cal(C)(v)$ is the condition $"carries"(t,c)$. Consequently,
+$cal(A)(v,c) subset.eq cal(C)(v)$ for every context. If every valid trace
+carries a context, then $cal(C)(v)=union.big_(c in C) cal(A)(v,c)$.
+These sets may overlap: the same trace may carry several contexts, and
+different traces may have the same final store.
+
+#figure(
+  table(
+    columns: (auto, auto, auto, auto),
+    align: (left, center, center, center),
+    inset: 5pt,
+    [*Activation*],
+    [*Context*],
+    [*Return value*],
+    [*Membership at* $v=#ctor("FunctionResult") thin #raw("sum")$],
+
+    [`sum(2)`], [$2$], [$3$], [$s_2 in cal(A)(v,2) subset.eq cal(C)(v)$],
+    [`sum(1)`], [$1$], [$1$], [$s_1 in cal(A)(v,1) subset.eq cal(C)(v)$],
+    [`sum(0)`], [$0$], [$0$], [$s_0 in cal(A)(v,0) subset.eq cal(C)(v)$],
+  ),
+  caption: [The execution of @fig:flat-nested under the illustrative concrete-argument
+    policy. Here $s_i$ is the final store of `sum(i)`, not its initial store.
+    The return-value column shows one component of each store. These are
+    concrete execution values, not analyzer output.],
+) <fig:trace-context-stores>
+
+An analysis supplies a candidate set of stores for each $(v,c)$. In the example,
+its candidate at $(#ctor("FunctionResult") thin #raw("sum"),2)$ must contain $s_2$, whose return value
+is $3$. The following contract establishes such containment for every valid
+trace, including recursive calls of arbitrary depth.
 
 == The coverage contract and its soundness #thy-badge("Voblint_CFG", "Activation_Trace_Abstract") <sec:contract>
 
-An analysis result is sound if, at every node $v$ and in every context $c$,
-it accounts for the stores of the activation collecting semantics
-#isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). Soundness is stated over a _cover_, a function #isai("cover") that assigns a set of
-stores to each node and context. Since valid
-traces grow by only four rules, it suffices to check the cover against each
-rule once. The _coverage contract_ does this with one local obligation per rule,
-each mentioning only stores. For a call edge from $u$ into procedure $p$ with
-continuation $k$, it requires
-#block(inset: (left: 1.5em, y: 0.3em))[
-  #grid(
-    columns: (auto, 1fr),
-    column-gutter: 1em,
-    row-gutter: 0.75em,
-    oblig("INIT"), $s in S ==> s in "cover"(#isaconst("cfg_entry") g, c_0)$,
-    oblig("INTRA"),
-    $(u, a, v) in #isaconst("intra") g, thin s in "cover"(u, c), thin s' in #isaconst("edge_step") a thin s ==> s' in "cover"(v, c)$,
+A _cover_ is a function $"cover": V times C -> cal(P)(Sigma)$ assigning a
+candidate set of stores to each node and context. We want a cover to contain
+the activation collecting semantics,
+$ cal(A)(v,c) subset.eq "cover"(v,c) quad "for every node" v "and context" c, $
+and every valid trace to carry at least one context, so that no reached store
+escapes the cover. The cover may include stores that no execution reaches.
 
-    oblig("CALL"),
-    [$s in "cover"(u, c), thin c' "admitted from" s$ \
-      #h(1.5em)$==> #isaconst("call_enter") (s) in "cover"(ctor("FunctionEntry") p, c')$],
+Checking the inclusion directly would mean following every trace. Valid traces,
+however, grow by only four rules (@sec:valid). It therefore suffices to check
+that each rule keeps the final store of the trace it builds inside the cover,
+in every context that trace carries. The _coverage contract_ does this with one
+local obligation per rule, each mentioning only stores and contexts. #oblig("INIT")
+covers the root rule, #oblig("INTRA") the local step, #oblig("CALL") the call,
+and #oblig("RETURN") the return. A fifth obligation, #oblig("TOTAL"), requires
+every covered call to admit a context.
 
-    oblig("RETURN"),
-    [$s in "cover"(u, c), thin c' "admitted at" u "from" s "for" (p', e), thin t in "cover"(ctor("FunctionResult") p, c')$ \
-      #h(1.5em)$==> #isaconst("combine_collect") (s, t) in "cover"(k, c)$],
-  )
+The obligations use the objects fixed in @sec:valid: the initial stores
+$S$, the graph entry $v_0$, the edge sets $"intra"(g)$ and $"calls"(g)$, and the
+entered and returned stores $#isaconst("call_enter") _e$ and
+$#isaconst("combine_collect") _e$, together with the
+initial context $c_0$, the policy $"adm"$, and the relation $"admits"$ of
+@sec:contexts. They must hold for all the variables shown below. In the call
+obligations, fix any edge
+$e=(u,a,#ctor("FunctionEntry") thin p,k) in "calls"(g)$. The stores $s,r,s'$ range over $Sigma$, and $c,c'$
+range over $C$.
+
+#block(breakable: false, width: 100%)[
+  #oblig("INIT") covers initial stores:
+  $ s in S ==> s in "cover"(v_0,c_0). $
 ]
-In #oblig("CALL"), "$c'$ admitted from $s$" means that the policy admits $c'$
-for this call edge from $s$ in context $c$. #oblig("RETURN") must hold for
-every admitted $c'$, since one call may admit several contexts and the
-returning activation may carry any of them. In "$c'$ admitted at $u$ from $s$ for
-$(p', e)$", the admitting call edge may be any edge leaving $u$, into $p'$ with
-entered store $e$ (#isaconst("admits_call_context")). A compiled graph has one call edge per
-call site (#isaconst("calls_source_unique"),
-#isathm("compile_prog_calls_source_unique")), so on such a graph the admitting
-edge is always the call edge of the return. In the running
-example under entry-state contexts, #oblig("CALL") requires the cover at the
-entry of `bump` in context $[[5, 5]]$ to contain the entered store with
-$n = 5$, and #oblig("RETURN") requires the cover at the continuation in `main`
-to contain the store in which `a` holds $6$. @fig:contract shows these four
-obligations at one call. A fifth obligation, #oblig("TOTAL"), concerns calls
-that get no context.
+#block(breakable: false, width: 100%)[
+  #oblig("INTRA") preserves coverage along each local edge:
+  $
+    (u,a,v) in "intra"(g) and s in "cover"(u,c) and s' in sem(a)(s)
+    ==> s' in "cover"(v,c).
+  $
+]
+#block(breakable: false, width: 100%)[
+  #oblig("CALL") covers entry in every context admitted by this edge:
+  $
+    s in "cover"(u,c) and c' in "adm"_e (c,s)
+    ==> #isaconst("call_enter") _e (s) in "cover"(#ctor("FunctionEntry") thin p,c').
+  $
+]
+#block(breakable: false, width: 100%)[
+  #oblig("RETURN") covers the combination of caller and callee stores:
+  $
+    s in "cover"(u,c) and "admits"(u,c,p',s,s_e,c')
+    and r in "cover"(#ctor("FunctionResult") thin p,c') \
+    ==> #isaconst("combine_collect") _e (s,r) in "cover"(k,c).
+  $
+]
+#block(breakable: false, width: 100%)[
+  #oblig("TOTAL") requires at least one admitted context for every covered call:
+  $ s in "cover"(u,c) ==> "adm"_e (c,s) != emptyset. $
+]
+
+#oblig("TOTAL") is necessary because #oblig("CALL") and #oblig("RETURN") quantify only over admitted
+contexts. If the policy assigns the call `sum(2)` no context, those
+obligations impose no bound on its result. Yet `main` resumes in its original
+context after the call, where its store still has to be covered. #oblig("TOTAL")
+excludes this gap. It applies to every store in the cover at a call site,
+including stores added by over-approximation; an empty cover imposes no
+requirement at that site. Without #oblig("TOTAL"), the soundness theorem below
+fails. A checked counterexample meets the other four obligations
+(#isathm("tot_weak_obligations")), yet its cover misses a reached store
+(#isathm("total_dropped_unsound")).
 
 #let _key(pos, name, body, col: vb.neutral) = node(
   pos,
@@ -514,7 +555,7 @@ that get no context.
   inset: 4pt,
   name: name,
 )
-#let _ob(o) = text(size: 7pt, fill: vb.accent, weight: "bold", smallcaps(o))
+#let _ob(o) = text(size: 7pt, oblig(upper(o)))
 #figure(
   diagram(
     spacing: (14mm, 9mm),
@@ -526,7 +567,7 @@ that get no context.
     _key((2, 0), <c-k>, [continuation $k$, $c$]),
     edge(<c-init>, <c-entry>, "-|>", label: _ob("Init")),
     edge(<c-entry>, <c-u>, "-|>", label: _ob("Intra"), label-side: right),
-    edge(<c-u>, <c-pe>, "-|>", label: _ob("Call"), stroke: vb.called),
+    edge(<c-u>, <c-pe>, "-|>", label: [#_ob("Call") \ #_ob("Total")], stroke: vb.called),
     edge(<c-pe>, <c-pr>, "-|>", label: _ob("Intra")),
     edge(<c-pr>, <c-k>, "-|>", label: _ob("Return"), stroke: vb.called),
     edge(
@@ -541,54 +582,55 @@ that get no context.
   placement: none,
   caption: [The obligations at one call (schematic). Boxes are (node, context)
     pairs, and each solid arrow is labeled with the obligation it represents.
-    The dotted arrow is no obligation. It marks the caller store $s$ that
-    #oblig("RETURN") reads.],
+    #oblig("TOTAL") guarantees that the call arrow exists, since at least one
+    callee context $c'$ is admitted. The dotted arrow is no obligation. It marks
+    the caller store $s$ that #oblig("RETURN") reads.],
 ) <fig:contract>
 
-#oblig("CALL") and #oblig("RETURN") constrain only admitted contexts. If a
-call from a store in the cover gets no context, both hold vacuously, yet the
-resumed caller still carries its contexts at the continuation
-(#isathm("resume_keeps_context")), so the cover can miss a reached store
-(#isathm("total_dropped_unsound")). #oblig("TOTAL") therefore requires the
-policy to admit a callee context for every call from a store
-$s in #isai("cover u c")$ (#isaconst("call_context_total_on")). Call strings
-and the unit context policy meet it for every cover
-(#isathm("call_context_total_on_of_fun")), and entry-state contexts through
-the coverage of the analysis's entry (@sec:eq-routing). The locale
-#isalocale("activation_coverage") assumes the five obligations, and they imply
-the goal by induction over the four rules of valid traces.
+In the illustrative execution, #oblig("CALL") covers the entered store of `sum(2)`
+in context $2$. #oblig("RETURN") combines its final store, with result $3$, with the
+saved store of `main`, so the cover at `pp10` in context $c_0$ contains the
+store with `x = 3`.
 
-#{
-  show raw.where(block: true): set text(size: 6pt)
-  thy("activation_coverage")
-}
-
-#block(breakable: false)[
-  #theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
-    If the cover meets the five obligations of
-    #isalocale("activation_coverage"), then for every node $v$ and context $c$, the activation collecting semantics
-    at $v$ and $c$ is contained in #isai("cover v c").
-  ]
-
-  #proved("activation_collect_sound")
+#theorem(name: [Soundness of the coverage contract], isa: "activation_collect_sound")[
+  If the cover and policy satisfy #oblig("INIT"), #oblig("INTRA"), #oblig("CALL"), #oblig("RETURN"), and #oblig("TOTAL"), then
+  for every node $v$ and context $c$,
+  $ cal(A)(v,c) subset.eq "cover"(v,c). $
 ]
 
-The theorem bounds each context separately. Since #oblig("TOTAL") gives every
-valid trace a context, the sets of all contexts together contain the whole
-node collecting semantics:
+The proof proceeds by induction over valid traces, maintaining a stronger
+invariant: each trace in the
+creating-caller chain carries at least one context, and its final store is
+covered in every context it carries. The caller chain is needed in the return
+case to recover the suspended caller's coverage. For each context of that
+caller, #oblig("TOTAL") supplies a context admitted for the callee's entry. The callee
+is covered in that context, and #oblig("RETURN") then covers the resumed store in the
+caller's original context.
 
-#block(breakable: false)[
-  #corollary(name: [The cover contains the collection], isa: "node_collect_covered")[
-    Under the five coverage obligations, every store of the node collecting
-    semantics at $v$ lies in #isai("cover v c") for some context $c$.
-  ]
+In Isabelle, a _locale_ packages fixed parameters and assumptions so that its
+results can be reused for each instance. The locale
+#isalocale("activation_coverage") assumes exactly these five obligations, so
+every cover that meets them inherits the inclusion above and context existence
+for every valid trace.
 
-  #proved("node_collect_covered")
+#corollary(name: [Covers contain every collected store], isa: "node_collect_covered")[
+  Under the same five obligations,
+  $ cal(C)(v) subset.eq union.big_(c in C) "cover"(v,c). $
 ]
 
-With @ch:program-model and @sec:source-bridge, this completes the concrete
-half of the soundness argument. Every store that a finite source execution
-reaches lies in every cover that meets the coverage contract. The following
-chapters build such covers from abstract domains (@ch:domains), transfer
-functions (@ch:analysis-interface), and a solved equation system
-(@ch:equations, @ch:solving).
+The corollary follows from the theorem, since by #oblig("TOTAL") every valid
+trace carries a context and therefore
+$cal(C)(v) = union.big_(c in C) cal(A)(v,c)$
+(#isathm("node_collect_eq_Union_activation_collect")).
+
+This chapter supplies the next links of the soundness chain of
+@fig:intro-nest. @ch:program-model placed every source execution in the graph.
+Here, the stores of those executions are collected at each node and context,
+and the question whether an analysis accounts for all of them becomes a set of
+checks at single edges and calls. From now on, no argument follows a whole
+execution or its call stack. An analysis result is sound for every context
+policy once it meets the coverage contract.
+
+The following chapters construct such a result. They build it from abstract
+domains (@ch:domains) and transfer functions (@ch:analysis-interface), and
+obtain it as the solution of an equation system (@ch:equations, @ch:solving).

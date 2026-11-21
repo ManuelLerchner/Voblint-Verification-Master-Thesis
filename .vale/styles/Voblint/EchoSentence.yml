@@ -1,0 +1,24 @@
+# Author review: "Results agree as well.", "Checks agree.", "The order of
+# evaluation does not matter either." A sentence that only announces agreement
+# or irrelevance carries no claim; state the shared property instead.
+extends: existence
+message: "Echo sentence '%s': state what agrees or why it does not matter."
+level: warning
+nonword: true
+tokens:
+  - '(?<=^|[.!?]\s+)[A-Z][a-z]+(?: [a-z]+){0,3} (?:agree|agrees|differ|differs)(?: as well| too)?\.'
+  - '\b(?:does|do) not matter (?:either|here)\.'
+  - '\bneeds? no further (?:caveat|explanation|discussion|comment)\b'
+
+tests:
+  - name: fires
+    input: |
+      Checks agree. Results agree as well. The order does not matter either.
+    want: |
+      1:1:Voblint.EchoSentence:Echo sentence 'Checks agree.': state what agrees or why it does not matter.
+      1:15:Voblint.EchoSentence:Echo sentence 'Results agree as well.': state what agrees or why it does not matter.
+      1:48:Voblint.EchoSentence:Echo sentence 'does not matter either.': state what agrees or why it does not matter.
+  - name: clean
+    input: |
+      Both analyses agree on the sign of x after the guard.
+    want: ""

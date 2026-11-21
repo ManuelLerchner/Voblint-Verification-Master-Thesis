@@ -13,16 +13,10 @@
 
 = Abstract Domains <ch:domains>
 
-This chapter determines what an abstract domain must provide so that the
-abstract values a solver computes over-approximate the stores that executions
-reach. @ch:traces reduced soundness to five
-obligations on a cover, which assigns each node and context a set of stores.
-The obligations are local conditions, and together they guarantee that the
-cover contains, for each node and context, every store that an execution in
-this context reaches at the node (#isathm("activation_collect_sound")). These
-sets are arbitrary and usually infinite. An analyzer, however, computes with
+The covers of @ch:traces assign arbitrary, usually infinite sets of
+stores to nodes and contexts. An analyzer, however, computes with
 finite abstract values, and its solver (@sec:td) compares, joins, widens, and
-narrows them without knowing what they mean. A domain therefore supplies
+narrows them without reference to the stores they describe. A domain therefore has to supply
 operations the solver can compute with and laws that let the soundness proof
 turn the solver's inequalities into inclusions between sets of stores.
 
@@ -30,7 +24,7 @@ Recall from @sec:abs-int that an abstract value $a$
 denotes a set $conc(a)$ of concrete values. A value of a numeric domain such
 as Sign or Interval denotes a set of integers, $conc(a) subset.eq ZZ$. An
 abstract state $d$, in contrast, denotes a set of stores,
-$conc(d) subset.eq (#isatype("vname") -> ZZ)$ (@sec:domain-states). An
+$conc(d) subset.eq (#isatype("vname") -> ZZ)$. An
 arbitrary lattice of abstract values is not enough. First,
 the order must agree with the concretization. The solver only proves inequalities
 $a lle b$ in the abstract order, while the obligations of @ch:traces are
@@ -39,10 +33,14 @@ $ a lle b ==> conc(a) subset.eq conc(b) $
 turns each such inequality into an inclusion (#isathm("gamma_mono"),
 @fig:sign-conc). Second, a value can denote no integer without being the
 lattice's bottom element. The interval pair $absval(ivl(5, 3))$, whose lower bound
-exceeds its upper bound, is such a value. An analyzer that recognizes only the
-bottom element as empty misses it. Missing it is still sound, since the analyzer then assumes more stores than exist, but it loses precision. After the next
-join, the information that a program point is unreachable is gone
-(@sec:nonrel-state).
+exceeds its upper bound, is such a value. An analyzer that treats only the
+bottom element as empty stays sound but loses the information that a point
+holding this value is unreachable (@sec:nonrel-state).
+
+@fig:domain-carrier previews what this chapter builds toward, the operations
+and laws of a domain arranged as a hierarchy of Isabelle classes and locales. A domain such as Interval or Sign
+proves these laws once, and the framework derives every transfer function from
+its operations (@sec:instances-supply).
 
 #let _snode(pos, name, body) = node(pos, text(size: 8pt, body), name: name, inset: 3pt)
 #let _order = 0.7pt + vb.neutral
@@ -454,6 +452,19 @@ join, the information that a program point is unreachable is gone
   })
 }
 
+#figure(
+  domain-tree("carrier"),
+  kind: image,
+  placement: top,
+  caption: [The operations and laws of a non-relational domain over its carrier
+    type #raw("'a"). Classes are solid and locales dashed, and each lists what
+    it declares. Solid arrows point to what a declaration extends, dashed ones
+    to the class that constrains its type variable. Heavier borders mark the
+    interfaces an analysis implements, and #mono-mark a monotone strengthening.
+    Fill gives the origin: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored
+    TD solver, #swatch(vb.voblint) Voblint.],
+) <fig:domain-carrier>
+
 == Numeric domains and their concretization laws #thy-badge("Voblint_Domain", "Abstract_Domain") <sec:domain-carrier-laws>
 
 The two requirements of the chapter opening become laws on the carrier of a
@@ -462,8 +473,8 @@ abstract values. The solver compares
 its values, joins them where control flow merges, starts from the least value
 $lbot$, and extrapolates with the widening $widen$ and the narrowing $narrow$
 of @sec:widening. The analysis also needs a greatest value $ltop$ for unknown
-values. A domain further supplies an emptiness test, a printer, and a
-concretization $conc : A -> cal(P)(ZZ)$ with four laws. Such a type is a
+values. A domain further supplies an emptiness test and a
+concretization $conc : A -> cal(P)(ZZ)$ with four laws. A type with these operations and laws is a
 _numeric domain_:
 
 #{
@@ -505,11 +516,11 @@ therefore return an empty pair other than $lbot$. The emptiness test
 (#isaconst("is_bottom_ivl")) therefore inspects the bounds. It reports a pair
 as empty if $l > u$, if its lower bound is
 $+infinity$, or if its upper bound is $-infinity$. The widening is the
-standard one of @sec:widening, except that widening with $lbot$ returns the
-other operand (#isaconst("widen_ivl_core")), and the narrowing refines only
+standard one of @sec:widening (#isaconst("widen_ivl_core")), except that
+widening with $lbot$ returns the other operand, and the narrowing refines only
 infinite bounds (#isaconst("narrow_ivl_td")).
 
-== Abstract states as sets of stores <sec:domain-states>
+== Abstract states and their concretization <sec:domain-states>
 
 A numeric domain describes the possible values of one variable. The
 obligations of @ch:traces, however, are stated over sets of stores. A store
@@ -559,7 +570,7 @@ the stores with $0 <= x <= y <= 5$.
     unbounded. Their intersection is exactly the dots. Illustrative.],
 ) <fig:rel-vs-nonrel>
 
-An _abstract state_ describes a set of stores. It is a type $D$ with
+An abstract state (@sec:intro-static) describes a set of stores. It is a type $D$ with
 the order and join the solver needs, and a monotone concretization that maps
 each state $d$ to the set $conc(d)$ of stores it describes. Each kind of state
 defines its own concretization, and Isabelle overloads one constant,
@@ -567,24 +578,22 @@ defines its own concretization, and Isabelle overloads one constant,
 analyses use non-relational states. The concretization of a relational state
 maps the whole state to a set of stores instead of each variable to a set of
 integers. The interface of this chapter admits such a state, because the
-solver and the framework ask only for order, join, and a monotone
-concretization. The relational state that records relations $x <= y$
-(@sec:rel-state) instantiates the solver's classes and
+solver and the framework ask only for a join semilattice with a least element,
+widening and narrowing, and a monotone concretization. Voblint's relational state, which records relations $x <= y$, instantiates the solver's classes and
 #isalocale("executable_domain") without being a numeric domain. The remaining
 sections of this chapter develop the non-relational case.
 
-== Pointwise states and the unreachable state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
+== Pointwise abstract states and unreachability #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
 
-A non-relational state is represented pointwise. It replaces the integer of a
-store by an abstract value:
-#isatype("abs_state") $=$ #isatype("vname") $=>$ `'a`, so a state $d$ maps
-every variable name $x$ to $d(x)$. Its concretization admits a store if every
+A non-relational state is represented pointwise. For a numeric carrier $A$, it
+replaces the integer of a store by an abstract value:
+#isatype("abs_state") $=$ #isatype("vname") $-> A$, so a state $d$ maps
+every variable name $x$ to $d(x) in A$. Its concretization admits a store if every
 variable's value lies in the concretization of its abstract value:
 
-#{
-  show raw.where(block: true): set text(size: 6.5pt)
-  thy("gamma_state")
-}
+$ conc(d) = {s | forall x. s(x) in conc(d(x))}. $
+On the left, $conc$ is the state concretization (#isaconst("gamma_state")), and
+on the right, it is the numeric domain's concretization.
 
 Order and join work variable by variable, as for any function type in HOL.
 A state $d_1$ lies below $d_2$ if $d_1(x) lle d_2(x)$ for every variable $x$,
@@ -639,7 +648,7 @@ many ways. Every state with one empty variable describes no store, and only
 one of them is the bottom state (@fig:pointwise).
 
 Neither simple test works. Treating only the all-bottom state as unreachable
-misses most cases, because refining a branch condition (@sec:branches) usually
+misses most cases, because refining a branch condition usually
 empties a single variable, as in ${x |-> signval(bot), y |-> signval(top)}$. Treating
 every empty state as unreachable is correct at the moment of the test, but the
 information does not survive the next step. Joining two differently empty
@@ -697,9 +706,7 @@ so, replaces it with #ctor("Bot") (#isaconst("normalize_lift")). The test
 relies on the domain's emptiness test, which #isathm("is_empty_correct") makes
 exact for every value. A pointwise state is empty exactly when some
 variable's value is (#isaconst("is_empty_state"),
-#isathm("is_empty_state_iff_gamma_state_empty")). The variable names form an
-infinite set, so the executable analyzer decides this on a finite
-representation of the state (@sec:represented-function). Replacing an empty
+#isathm("is_empty_state_iff_gamma_state_empty")). Replacing an empty
 state by #ctor("Bot") only exchanges one abstract representation of the empty
 set for another, equivalent one (#isathm("gamma_state_normalize_lift")), so it
 cannot make the analysis unsound.
@@ -729,8 +736,10 @@ A condition is an expression too, and VIMP reads its value as a truth value,
 with nonzero meaning true. If the abstract value of a condition admits only
 one truth value, a branch can drop the arm that needs the other. A domain
 therefore also supplies a truth test (#isalocale("sound_truth_test")). The
-test $"tobool"(a)$ has three possible answers. It returns $"Some"(b)$ if every
-integer in $conc(a)$ has truth value $b$, and $"None"$ otherwise:
+test $"tobool"(a)$ has three possible answers, $"Some"("true")$,
+$"Some"("false")$, and $"None"$. An answer $"Some"(b)$ must be correct for
+every integer in $conc(a)$, while $"None"$ is always allowed, even when a
+definite answer would be sound:
 $ "tobool"(a) = "Some"(b) and i in conc(a) ==> (i != 0) = b. $
 Interval's test #isaconst("interval_tobool") returns $"Some"("true")$ for
 $ivl(l, u)$ if the interval excludes $0$, that is, $u < 0$ or $l > 0$, and
@@ -749,26 +758,27 @@ analysis.
 
 A domain answers two comparisons on abstract values, $"less"(a, b)$ for
 $a < b$ and $"eq"(a, b)$ for $a = b$. Like the truth test, each has three possible answers. A definite answer must hold for every pair of integers the two
-values denote, and $"None"$, meaning unknown, is always allowed:
-
-#{
-  show raw.where(block: true): set text(size: 6.5pt)
-  thy("sound_numeric_queries")
-}
+values denote, and $"None"$, meaning unknown, is always allowed. For all
+abstract values $a,b$, integers $i in conc(a)$ and $j in conc(b)$, and truth
+values $r$, the query contract (#isalocale("sound_numeric_queries")) requires
+$
+  "less"(a,b) = "Some"(r) ==> (i < j) = r, \
+  "eq"(a,b) = "Some"(r) ==> (i = j) = r.
+$
 
 Domains differ in which comparisons they can decide. Interval decides $a < b$
 when one interval lies entirely below the other, where a shared endpoint
 suffices for the answer false, and $a = b$ when the intervals are disjoint or
 the same single integer. Sign decides $a < b$ whenever the signs separate the
-values, for example, for zero and a positive value. Parity and Congruence, the
-domains of @ch:instances, are weaker here. Parity can only refute equality
+values, for example, for zero and a positive value. Parity and Congruence, two
+further domains of Voblint, are weaker here. Parity can only refute equality
 between an even and an odd value and never decides $<$. Congruence answers
 only when both values are single integers.
 
-#definition(name: [Query], isa: "check_query", cmd: "fun")[
+#definition(name: [Three-valued check query], isa: "check_query", cmd: "fun")[
   A query evaluates a condition $c$ on an abstract state $d$ to one of three
-  answers, _true_, _false_, or _unknown_, by recursion on $c$, using only the
-  domain's two comparisons.
+  answers, _true_, _false_, or _unknown_, by recursion on $c$, using forward
+  evaluation of the operands and the domain's two comparisons.
 ]
 
 In #isaconst("check_query"), a comparison first evaluates its operands forward to abstract values $hat(a)$ and $hat(b)$
@@ -785,8 +795,8 @@ Negation keeps _unknown_. The connectives `!`, `&&`, and `||` combine the answer
 of their operands in three-valued logic. A definite _false_ decides `&&`, and a
 definite _true_ decides `||`, regardless of the other operand's answer. Any
 other expression $e$ is read as $e != 0$, its truth value in VIMP. A new domain
-therefore gets checks on arbitrary conditions by providing these two
-comparisons.
+therefore gets checks on arbitrary conditions by providing forward evaluation
+and these two comparisons.
 
 For example, the condition `x <= y && y != 0` is answered from $"less"(hat(y), hat(x))$ and
 $"eq"(hat(y), hat(0))$ alone. In Sign, with $x$ non-positive and $y$ positive,
@@ -822,18 +832,17 @@ the conjunction (@fig:query-tree).
   placement: none,
   caption: [How #isaconst("check_query") answers a compound condition, in Sign
     with #absval(raw(_q.state)) (claim #claim-ref("dom-query-tree-sign")). Each comparison becomes
-    one of the domain's two comparisons (blue), as $~>$ marks; the answer follows
+    one of the domain's two comparisons, as $~>$ marks; the answer follows
     the colon. Negation flips a definite answer,
     and `&&` is true because both operands are, so the check is
     #_q.verdict.],
 ) <fig:query-tree>
 
-One proof covers every domain. The answer _true_ certifies that $c$ holds in
-every store the state describes, _false_ that it holds in none, and _unknown_
-makes no claim (#isathm("check_query_sound")). #isalocale("sound_check_query")
-combines the queries with forward evaluation. An analysis passes these answers
-to the analyses it runs with and to the verdicts as answers to the query
-#isaconst("EvalInt") of @sec:coop-queries (@sec:coop-mcp, @sec:verdicts).
+The soundness theorem #isathm("check_query_sound") holds for every domain.
+The answer _true_ certifies that $c$ holds in every store the state describes,
+_false_ that it holds in none, and _unknown_ makes no claim. An analysis later
+passes these answers to the analyses it runs with and to the verdicts of its
+checks.
 
 The queries evaluate both operands of a connective in the same state, so for $x$ in $absval(ivl(1, 2))$,
 `x == 1 || x == 2` stays unknown, although every store satisfies it (claim
@@ -888,21 +897,22 @@ and likewise for equality, addition, subtraction, and multiplication
 (#isalocale("sound_inverse_ops")).
 
 The refined operand is then combined with the value known before. Nipkow and
-Klein use the lattice meet for this and require it to be exact on the denoted
-sets. Voblint asks for less, namely an intersection that keeps every integer
-both operands share and lies below both (#isalocale("sound_intersection"), shown in
-@sec:isabelle). For Interval, it is the normalized meet
+Klein use the lattice meet for this. Voblint asks only for an intersection that
+keeps every integer both operands share and lies below both
+(#isalocale("sound_intersection"), shown in @sec:isabelle). By monotone
+concretization, it then denotes exactly the shared integers, but it does not have to be
+the greatest lower bound in the abstract order. For Interval, it is the normalized meet
 #isaconst("intersect_ivl"), which agrees with the meet on the operands below. In the program above, Interval
 refines $x$ to $ltop lmeet absval(ivl(1, +infinity)) = absval(ivl(1, +infinity))$ on the true
 arm and to
 $absval(ivl(-infinity, 0))$ on the false arm. Both arms then give $y$ a non-negative
 value, and the join yields #absval(raw(_g.state)).
 
-The guard filter #isaconst("bfilter") takes a condition, the required truth
-value, and a state, and applies the inverse operators along the structure of
-the condition. For the arithmetic operands of a comparison, it calls
-#isaconst("afilter"), which refines a state so that an expression evaluates
-within a required value @nipkow14[§13.7.1]. Its soundness is exactly what
+The guard filter takes a condition, the required truth value, and a state, and
+applies the inverse operators along the structure of the condition
+(#isaconst("bfilter")). For the arithmetic operands of a comparison, it refines
+the state so that an expression evaluates within a required value
+(#isaconst("afilter")) @nipkow14[§13.7.1]. Its soundness is exactly what
 the branch needs, since it never removes a store that satisfies the guard.
 The filter refines a conjunction from right to left. Each conjunct is applied
 once, to the state the conjuncts on its right have refined, and the filter does
@@ -911,13 +921,10 @@ bounds $i$ to $absval(ivl(1, 8))$ but not $j$ from below, and the reversed order
 $j$ to $absval(ivl(2, 9))$ but not $i$ from above (claim
 #claim-ref("dom-conjunct-order")).
 
-#block(breakable: false)[
-  #lemma(name: [Sound guard filter], isa: "bfilter_sound")[
-    If a store $s$ lies in $conc(d)$ and the guard $e$ has truth value
-    #isai("res") at $s$, then $s$ lies in the concretization of the filtered state.
-  ]
-
-  #proved("bfilter_sound")
+#lemma(name: [Soundness of guard refinement], isa: "bfilter_sound")[
+  If a store $s$ lies in $conc(d)$ and the guard $e$ has truth value
+  $r$ at $s$, then
+  $ s in conc(#isaconst("bfilter") (e,r,d)). $
 ]
 
 The shipped inverse operators are sound but not the most precise possible.
@@ -925,74 +932,78 @@ Interval and Sign, for
 instance, do not invert arithmetic and cannot learn $x < 4$ from `x + 1 < 5`,
 as the interval analysis of Nipkow and Klein does @nipkow14[§13.8.3].
 
-== The domain interface and its derived transfers #thy-badge("Voblint_Nonrelational", "Nonrelational_Transfer") <sec:domain-contract>
-
-A domain provides two groups of operations, which @fig:domain-carrier shows
-with their laws. The _carrier operations_ serve the
-solver: the order, the join, bottom and top, widening and narrowing, the
-emptiness test, and the printer, tied to the concretization by the laws of
-@sec:domain-carrier-laws. The _primitives_ mirror the program's own
-operations: evaluation and the truth test (@sec:domain-forward), the two
-comparisons (@sec:queries), and the inverse operators and the intersection
-(@sec:branches). A non-relational domain hands its primitives over as one
-record of type #isatype("nonrelational_ops") and proves them sound once by
-interpreting #isalocale("sound_nonrelational_ops"). For Interval, the record
-is #isaconst("ivl_ops").
-
-These two groups are all a domain supplies. The primitives determine the
-transfer function of every edge (#isaconst("tf_abs"), #isaconst("enter_for")),
-so a domain writes none itself:
-#block(inset: (left: 1.5em, y: 0.3em))[
-  #grid(
-    columns: (auto, 1fr),
-    column-gutter: 1.2em,
-    row-gutter: 0.75em,
-    [assignment `x = e`], $d |-> d[x |-> asem(e) thin d]$,
-    [guard $b$, required value $r$], [the guard filter of @sec:branches for $b$ and $r$],
-    [#keyw("return") $e$], $d |-> d[#isaconst("ret_var") |-> asem(e) thin d]$,
-    [entry with formals $overline(x)$, arguments $overline(e)$],
-    [every local set to $ltop$, globals kept, then $overline(x) |-> asem(overline(e)) thin d$],
-  )
-]
-Skips, procedure bodies, and checks leave the state unchanged. With Interval
-and $d(x) = absval(ivl(0, 9))$, for instance, the edge `x = x + 1` yields
-$d[x |-> absval(ivl(1, 10))]$. The interpretation of
-#isalocale("sound_nonrelational_ops") proves all of these transfers sound at
-once, so the domains of @ch:instances mainly define their values and
-primitives and prove the primitive laws. The analyzer runs the same primitives
-on a finite representation of states, and their soundness carries over to the
-generated code without further proof (#isathm("exec_local_spec_sound"),
-@sec:represented-function).
-
-#figure(
-  domain-tree("carrier"),
-  kind: image,
-  placement: top,
-  caption: [The operations and laws of a non-relational domain over its carrier type
-    #raw("'a"), down to the soundness locale #isalocale("sound_nonrelational_ops")
-    an analysis interprets. Each class (solid) or locale (dashed) lists the
-    operations and laws it declares, which the declarations below it inherit.
-    Solid arrows point to what a declaration extends, dashed ones to the class
-    its type variable is constrained to. An interface an analysis implements
-    has a heavier border and lists its instances. A superscript #mono-mark
-    marks an interface with a monotone strengthening, and an interpretation
-    that proves it (#isalocale("mono_nonrelational_ops")). Color gives where a
-    node is declared: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored TD
-    solver, #swatch(vb.voblint) Voblint.],
-) <fig:domain-carrier>
-
 == Carriers without least upper bounds <sec:excluded-carriers>
 
-The verified TD solver requires a #isalocale("bounded_semilattice_sup_bot")
-(#isalocale("TD_side_upd_rule")), whose join is the _least_ upper bound, and
-the framework's proofs use this leastness as well
-(#isathm("sound_refinement.bfilter_reductive")). Goblint's exclusion-set
-domain #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`]
-loses this property once its bit ranges are dropped. It describes an integer by a
-definite value, `Definite n`, or by `Excluded S`, every integer outside a
-finite set $S$, and `Excluded S` lies below `Excluded S'` when $S' subset.eq S$.
-Over mathematical integers, every upper bound of `Definite 1` and `Definite 2`
-is some `Excluded S` with $1, 2 in.not S$, and any $p in.not S union {1, 2}$
-gives the strictly smaller upper bound `Excluded` $(S union {p})$. Admitting
-such a carrier, by bounded integers as in Goblint or by a weaker join, is left
+The verified TD solver requires its values to form a
+#isalocale("bounded_semilattice_sup_bot") (#isalocale("TD_side_upd_rule")),
+whose join is the _least_ upper bound, and the framework's proofs use this
+leastness as well. This
+excludes every carrier in which two values have upper bounds but no least one.
+
+Goblint's default integer domain,
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`],
+is such a carrier once its bit range is removed. A value is then
+`Definite n`, denoting ${n}$, or `Excluded S`, denoting $ZZ without S$ for a
+finite set $S$ (@fig:defexc). Every `Excluded {p}` with $p in.not {1, 2}$ lies
+above `Definite 1` and `Definite 2`. A least upper bound $u$ of the two would
+lie below each of them, so by monotonicity of $conc$
+$ {1, 2} subset.eq conc(u) subset.eq inter.big_(p in.not {1, 2}) (ZZ without {p}) = {1, 2}. $
+No value denotes exactly ${1, 2}$, since `Definite n` denotes a single integer
+and `Excluded S` all but finitely many.
+
+#let _gnode(pos, name, body) = node(pos, text(size: 7pt, raw(body)), name: name, inset: 3pt)
+#figure(
+  diagram(
+    spacing: (4.5mm, 4.6mm),
+    _gnode((1.5, 0), <x-top>, "Excluded {}"),
+    _gnode((0.6, 1), <x-3>, "Excluded {3}"),
+    _gnode((2.4, 1), <x-4>, "Excluded {4}"),
+    _snode((3.4, 1), <x-more>, $dots.c$),
+    _gnode((1.5, 2), <x-34>, "Excluded {3,4}"),
+    _gnode((1.5, 3), <x-345>, "Excluded {3,4,5}"),
+    _snode((1.5, 3.6), <x-down>, $dots.v$),
+    node(
+      (1.5, 4.4),
+      text(size: 8pt, fill: vb.muted, ${1, 2}$),
+      name: <x-12>,
+      inset: 3pt,
+      stroke: stroke(paint: vb.muted, thickness: 0.6pt, dash: "dashed"),
+      shape: rect,
+      corner-radius: 2pt,
+    ),
+    _gnode((-0.9, 5.3), <x-s0>, "Definite 0"),
+    _gnode((0.4, 5.3), <x-s1>, "Definite 1"),
+    _gnode((2.6, 5.3), <x-s2>, "Definite 2"),
+    _gnode((3.9, 5.3), <x-s3>, "Definite 3"),
+    _snode((4.9, 5.3), <x-smore>, $dots.c$),
+    _gnode((1.5, 6.4), <x-bot>, "Bot"),
+    edge(<x-top>, <x-3>, "-", stroke: _order),
+    edge(<x-top>, <x-4>, "-", stroke: _order),
+    edge(<x-3>, <x-34>, "-", stroke: _hit),
+    edge(<x-4>, <x-34>, "-", stroke: _hit),
+    edge(<x-34>, <x-345>, "-", stroke: _hit),
+    edge(<x-345>, <x-down>, "-", stroke: _hit),
+    edge(<x-345>, <x-s1>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
+    edge(<x-345>, <x-s2>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
+    edge(<x-12>, <x-s1>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
+    edge(<x-12>, <x-s2>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
+    ..("s0", "s1", "s2", "s3").map(n => edge(label("x-" + n), <x-bot>, "-", stroke: _order)),
+  ),
+  kind: image,
+  placement: none,
+  caption: [Goblint's exclusion sets without a bit range, ordered bottom to
+    top. The blue chain of upper bounds of `Definite 1` and `Definite 2`
+    descends forever. A least upper bound would denote ${1, 2}$ (dashed), which
+    no value does. Illustrative, not machine-checked.],
+) <fig:defexc>
+
+The exclusion costs precision. No Voblint domain can record that a variable
+avoids a value inside its range, since Sign has no value for "nonzero" and
+intervals are convex. After the guard `x != 0` with $x$ in $absval(ivl(-5, 5))$, every
+domain still admits $0$, so the check `x != 0` remains unproved there, while
+Goblint's `DefExc` records `Excluded {0}`. Admitting such carriers is left
 for future work.
+
+A domain that meets these laws thus supplies sound comparisons, evaluation,
+truth tests, queries and guard refinement. @ch:analysis-interface asks how an
+analysis combines them into transfers at edges and calls.

@@ -32,14 +32,17 @@
 
 #let _cells(e) = {
   let forms = e.forms
-  let symbol = forms.map(f => f.symbol).dedup().map(isai).join([ \ ])
+  let symbol = forms.map(f => f.symbol).dedup().map(x => isai(x, plain: true)).join([ \ ])
   let decls = forms.map(_decl).join([ \ ])
   if e.local != none {
     let l = e.local
     symbol += if e.kind == "named" {
-      [ \ #isai(l.symbol) #_small[only within #isalocale(l.scope), which fixes its environment]]
+      [ \ #isai(
+          l.symbol,
+          plain: true,
+        ) #_small[only within #isalocale(l.scope), which fixes its environment]]
     } else {
-      [ \ #_small[within #isalocale(l.scope):] #isai(l.symbol)]
+      [ \ #_small[within #isalocale(l.scope):] #isai(l.symbol, plain: true)]
     }
   }
   if e.group == "shorthand" {
@@ -66,7 +69,9 @@
   )
 }
 
-#let notation-table() = {
+// The thesis omits source-only forms that its mathematical presentation does not use.
+#let notation-table(omit: ("abs_step", "activation_coverage.carries")) = {
+  let entries = notation.entries.filter(e => e.id not in omit)
   set text(size: 8pt)
   set par(first-line-indent: 0pt, justify: false)
   show raw: set text(size: 7.5pt)
@@ -86,15 +91,17 @@
       table.hline(stroke: 0.4pt),
     ),
     ..for (key, g) in notation.groups {
-      let rows = notation.entries.filter(e => e.group == key)
-      (
-        // A subheader: Typst keeps it with the first row of its group.
-        table.header(level: 2, repeat: false, table.cell(
-          colspan: 4,
-          inset: (x: 4pt, top: 7pt, bottom: 3pt),
-        )[*#g.title*#if "note" in g [ #h(0.3em) #_small(g.note)]]),
-        ..rows.map(_cells).flatten(),
-      )
+      let rows = entries.filter(e => e.group == key)
+      if rows.len() > 0 {
+        (
+          // A subheader: Typst keeps it with the first row of its group.
+          table.header(level: 2, repeat: false, table.cell(
+            colspan: 4,
+            inset: (x: 4pt, top: 7pt, bottom: 3pt),
+          )[*#g.title*#if "note" in g [ #h(0.3em) #_small(g.note)]]),
+          ..rows.map(_cells).flatten(),
+        )
+      }
     },
     table.hline(stroke: 0.5pt),
   )

@@ -6,6 +6,8 @@ extend-exclude = [
   "codegen/generated/",
   "docs/generated/",
   "docs/history/",
+  # Conda build strings carry hex hashes such as he42b7ba_0.
+  "docs/CONDA_FORGE_OCAML.md",
   "thesis/shared/generated/",
   "thesis/lib/isabelle-symbols.typ",
   "vendor/",

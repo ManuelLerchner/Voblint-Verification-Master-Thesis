@@ -578,7 +578,7 @@
     "equation generator",
     _eq,
     isa: isaconst("routed_node_rhs"),
-    see: <sec:eq-unknowns>,
+    see: <sec:eq-call>,
   )[
     The right-hand side of $(v, c)$: the join of one program per incoming
     local edge, one per call whose continuation is $v$, and the seed-reading
@@ -607,8 +607,8 @@
   )[
     The run setting that selects callee contexts: the single unit context of
     the context-insensitive analysis; call strings, the most recent call sites
-    cut to a fixed length $k$; or entry states, the abstract values of the
-    callee's formals at entry. Under entry states, overlapping entry pairs can
+    cut to a fixed length $k$; or entry-state contexts, the abstract values of the
+    callee's formals at entry. Under entry-state contexts, overlapping entry pairs can
     place one call in several contexts.
   ],
   term("routing", "routing", _eq, notation: ctxh, see: <sec:eq-routing>)[
@@ -722,11 +722,11 @@
     reachable state.
   ],
   term("proved", "PROVED", _res, sort: "verdict 1", see: <sec:verdicts>)[
-    Whenever a covered execution reaches the check, its condition holds. The
+    Whenever an analyzed execution reaches the check, its condition holds. The
     verdict does not assert that the check is reached.
   ],
   term("refuted", "REFUTED", _res, sort: "verdict 2", see: <sec:verdicts>)[
-    Whenever a covered execution reaches the check, its condition fails. It is
+    Whenever an analyzed execution reaches the check, its condition fails. It is
     not a verified counterexample.
   ],
   term("unknown-verdict", "UNKNOWN", _res, sort: "verdict 3", see: <sec:verdicts>)[
@@ -795,15 +795,16 @@
     code equations; a constant without one cannot be exported. Voblint exports
     #isaconst("run_voblint") to OCaml.
   ],
-  term("definitional-adequacy", "definitional adequacy", _trust, see: <sec:trust-boundary>)[
+  term("adequacy", "adequacy", _trust, see: <sec:vimp-vs-c>)[
     Whether definitions such as the source semantics describe the intended
     language. It is addressed by argument and review; a proof over the
     definitions cannot establish it.
   ],
-  term("trusted-base", "trusted base", _trust, see: <sec:trust-boundary>)[
-    The components the delivered analyzer relies on and no theorem covers: the
-    parser, Isabelle's kernel and code generator, the OCaml and WebAssembly
-    toolchains and runtimes, the browser, and the rendering code.
+  term("trusted-foundation", "trusted foundation", _trust, see: <sec:intro-scope>)[
+    The components that every part of the analyzer, proved or not, relies on
+    and no theorem covers: the Isabelle kernel, the code generator with its
+    target mappings, and the toolchains that compile and run the generated
+    code.
   ],
   term(
     "non-vacuity",
@@ -832,7 +833,7 @@
     evaluation also uses repository measurement, source inspection and
     argument, each for the claims it can support.
   ],
-  term("regression-fixture", "regression fixture", _trust)[
+  term("regression-fixture", "regression fixture", _trust, see: <sec:eval-corpus>)[
     A VIMP program of the regression corpus whose analyzer output is recorded
     and rechecked. It demonstrates one behavior, not a general result.
   ],

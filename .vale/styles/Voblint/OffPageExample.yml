@@ -1,0 +1,25 @@
+# Supervisor review (Chapter 4): "The explainer page shows these observers
+# interactively" -- "either insert the example here or don't mention it; in
+# papers, you usually also don't expect anyone to read the appendix". The PDF
+# has to carry the example itself.
+extends: existence
+message: "'%s' leaves the example off the page: show it here or drop the pointer."
+level: warning
+ignorecase: true
+nonword: true
+tokens:
+  - '\b(?:explainer|project site|website)(?:\s+page)?\s+(?:shows|draws|animates|displays|illustrates|demonstrates)\b'
+  - '\bexplainer\s+page\b(?!\s+(?:shows|draws|animates|displays|illustrates|demonstrates)\b)'
+  - '\binteractively\b'
+
+tests:
+  - name: fires
+    input: |
+      The explainer page shows these observers interactively.
+    want: |
+      1:5:Voblint.OffPageExample:'explainer page shows' leaves the example off the page: show it here or drop the pointer.
+      1:42:Voblint.OffPageExample:'interactively' leaves the example off the page: show it here or drop the pointer.
+  - name: clean
+    input: |
+      From the JSON, the playground draws the graph.
+    want: ""
