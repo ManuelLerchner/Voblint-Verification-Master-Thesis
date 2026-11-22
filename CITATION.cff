@@ -6,7 +6,7 @@ title: >-
   Voblint: A Verified Goblint-Style Static Analysis Pipeline in
   Isabelle/HOL
 type: software
-version: 2.3.0
+version: 2.3.1
 date-released: "2026-11-22"
 doi: 10.5281/zenodo.23260696
 license: BSD-3-Clause
