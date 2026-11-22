@@ -52,7 +52,7 @@ references:
 abstract: >-
   Voblint is a machine-checked Isabelle/HOL framework for building, running
   and verifying interprocedural abstract interpreters, modeled on Goblint's
-  D/G architecture. It chains verified compilation of a small imperative
+  split between flow-sensitive local states and shared values. It chains verified compilation of a small imperative
   language to a procedure-aware control-flow graph, an activation-local
   operational semantics, executable equation generation, and a vendored
   verified side-effecting top-down solver into one soundness statement about

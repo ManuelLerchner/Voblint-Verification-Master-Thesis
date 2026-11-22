@@ -29,14 +29,14 @@
 \maketitle
 \begin{abstract}
 Voblint formalizes an executable interprocedural static analysis pipeline in
-Isabelle/HOL, following Goblint's D/G architecture. The development connects
+Isabelle/HOL, following Goblint's analyzer architecture. The development connects
 programs in VIMP, a procedural imperative language, to sound abstract results
 through a verified control-flow graph compiler, an equation generator, and a
 verified side-effecting top-down solver. The soundness argument applies to the
 result computed by the analyzer.
 
 The framework separates program semantics, abstract domains, transfer
-operations, and solver integration. Its D/G interface distinguishes local
+operations, and solver integration. Its analysis interface distinguishes local
 analysis states from shared information communicated through side effects.
 Reusable soundness results support context-insensitive and context-sensitive
 analyses. Concrete instances include sign, interval, parity, and congruence

@@ -78,7 +78,7 @@
 #let rhs(x) = $italic("rhs")_#x$
 #let sol = $sigma$
 
-// ================================================ D/G specification fields ===
+// ======================================= analysis specification fields ===
 // The mixfix syntax of the dg_spec record fields and of routed_context's route.
 #let enterh = sh("enter")
 #let combineenvh = sh("combine_env")

@@ -502,7 +502,6 @@
     "dg",
     "local/shared split",
     _eq,
-    abbr: "D/G",
     isa: isatype("dg_state"),
     see: <sec:shared-facts>,
   )[
@@ -675,7 +674,7 @@
     quotiented by equal lookups. Readback, $rho_(cal(G))$, turns it into a
     function on names by looking each name up at the location its
     classification selects; the same overloaded readback applies to lifted and
-    D/G states.
+    local/shared states.
   ],
   term(
     "commutation",

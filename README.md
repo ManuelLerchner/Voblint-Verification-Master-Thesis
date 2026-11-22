@@ -448,11 +448,11 @@ Congruence tightened
 ([`Int_Backward.thy`](src/Analyses/Int/Int_Backward.thy),
 [`Int_Refinement.thy`](src/Analyses/Int/Int_Refinement.thy)).
 
-## The generic D/G framework
+## The generic analysis framework
 
-Analyses are factored the way Goblint factors them: **D** holds the abstract facts
-attached to program points, **G** the information published and consumed across
-points. The framework's interface is
+Analyses are factored the way Goblint factors them: a flow-sensitive local state
+is attached to each program point and context, and shared values are published
+and consumed across points through side effects. The framework's interface is
 [`dg_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy), the Isabelle
 counterpart of Goblint's
 [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
@@ -526,7 +526,7 @@ everything else.
 
 ## Foundations
 
-- **Goblint** ([GitHub](https://github.com/goblint/analyzer)): modular interprocedural abstract interpretation and the D/G architecture.
+- **Goblint** ([GitHub](https://github.com/goblint/analyzer)): modular interprocedural abstract interpretation and the split between local states and shared values.
 - **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)): reusable abstract interpretation in Isabelle/HOL.
 - **The Top-Down Solver Verified** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)): the vendored executable verified solver.
 - **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)).

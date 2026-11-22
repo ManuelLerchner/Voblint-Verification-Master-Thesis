@@ -24,7 +24,7 @@ LAYERS = [
     ("Program_Model", "source semantics, CFG, compiler, traces, contract"),
     (
         "Abstract_Interpreter",
-        "domain interfaces, D/G framework, routing, solver bridge",
+        "domain interfaces, analysis framework, routing, solver bridge",
     ),
     ("Analyses", "Sign, Interval, Parity, Congruence, Int, relational witness"),
     ("Executable_Surface", "analyzer function, report, end-to-end theorems, export"),

@@ -21,7 +21,7 @@
     Voblint_Compile:
       "The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces.",
     Voblint_Framework:
-      "The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.",
+      "The generic analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.",
     Voblint_Exec:
       "The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over.",
     Voblint_Routing:

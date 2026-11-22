@@ -139,7 +139,7 @@ name = "sound_nonrelational_transfer"
 
 [[anchor]]
 chapter = "ch:analysis-interface"
-concept = "D/G analysis specification"
+concept = "analysis specification"
 kind = "type"
 name = "dg_spec"
 
@@ -213,7 +213,7 @@ name = "activation_collect_sound"
 
 [[anchor]]
 chapter = "ch:results"
-concept = "Coverage from a solved D/G table"
+concept = "Coverage from a solved equation system"
 kind = "thm"
 name = "activation_collect_dg_sound"
 
