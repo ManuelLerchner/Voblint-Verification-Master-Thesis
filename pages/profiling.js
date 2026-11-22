@@ -1133,7 +1133,7 @@ function method(meta) {
     `Native: the CLI built from the generated OCaml, one process per run${meta.jobs ? `, ${meta.jobs} at a time` : ""}. Time is the CLI's own measurement around the solve (--timing), the median of ${meta.reps} runs; process start-up, parsing and printing are not in it. Peak RSS is the whole process's, from the system's time command.`,
     `WebAssembly: the playground's bundle under Node with a ${meta.wasm_stack_kib ?? 512} KiB stack, about a Chrome worker's, timed by the analyzer around the same solve, median of ${meta.reps} runs.`,
     `Solver work (evaluations, unknowns, contexts) is counted from a separate traced run's JSON Lines events.`,
-    `Every configuration uses the CLI's other defaults (globals warrow, Int refinement to a fixpoint, flow-sensitive program globals) and ignores a fixture's PARAM header, so all configurations see the same programs.`,
+    `Every configuration uses the CLI's other defaults (globals warrow, which widens and then narrows shared values; Int refinement to a fixpoint, flow-sensitive program globals) and ignores a fixture's PARAM header, so all configurations see the same programs.`,
     `Fixtures whose header bounds the run with --timeout are left out; runs over ${meta.timeout_s} s count as timeouts. A configuration the CLI rejects for a fixture (exit 1) counts as no proof.`,
     `These are measurements of one machine and build: evidence about cost on this corpus, not a claim about other programs or a property the theorems establish.`,
   ].filter(Boolean);

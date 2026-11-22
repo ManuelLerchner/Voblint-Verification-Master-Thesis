@@ -23,7 +23,7 @@
     Voblint_Framework:
       "The generic analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.",
     Voblint_Exec:
-      "The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over.",
+      "Executable states: association-list states, and the transport of a solved system to the function-valued states the framework is stated over.",
     Voblint_Routing:
       "Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework.",
     Voblint_Analysis_Relational:
@@ -57,7 +57,7 @@
     Voblint_Solver: "solver interface",
     Voblint_Compile: "compiler",
     Voblint_Framework: "framework",
-    Voblint_Exec: "executable carrier",
+    Voblint_Exec: "executable states",
     Voblint_Routing: "routing",
     Voblint_Analysis_Relational: "order analysis",
     Voblint_Result: "result",

@@ -62,8 +62,8 @@
                 <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework" data-info="The Order analysis is selectable in the CLI and browser alongside the five numeric analyses. It supplies its local specification directly, without the non-relational operation bundles. Its lower layer reflects that shorter dependency chain; CLI imports it directly."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Order (relational)</text></a>
               </g>
               <g class="stratum stratum-d4" data-layer="d4">
-                <text class="stratum-name" x="306" y="327" text-anchor="end">Executable carrier</text>
-                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="—" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="320.0" y="308" width="670.0" height="30"></rect><text x="655.0" y="327">Exec</text></a>
+                <text class="stratum-name" x="306" y="327" text-anchor="end">Executable states</text>
+                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="—" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="Executable states: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="320.0" y="308" width="670.0" height="30"></rect><text x="655.0" y="327">Exec</text></a>
               </g>
               <g class="stratum stratum-d3" data-layer="d3">
                 <text class="stratum-name" x="306" y="376" text-anchor="end">Framework and compiler</text>
