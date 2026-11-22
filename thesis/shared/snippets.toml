@@ -160,7 +160,7 @@ why = "Main-statements appendix: the compiled graph simulates every source run."
 why = "Main-statements appendix: the local obligations bound the context-indexed collecting semantics."
 
 [snippets.activation_collect_dg_sound]
-why = "Main-statements appendix: a solved D/G table bounds the collecting semantics."
+why = "Main-statements appendix: a solved equation system bounds the collecting semantics."
 
 [snippets.node_collect_semantic_postfix]
 why = "Figure gallery: the theorem-statement example."

@@ -154,7 +154,7 @@
                 </select>
                 <span id="placement-help" class="visually-hidden">
                   Flow-sensitive keeps every global in each point's own state.
-                  Flow-insensitive assigns each global an unknown, read by points that use it. This placement applies to analyses whose states split by variable. The order analysis retains its whole relational state at each point. Warrowing a flow-insensitive global can fail to stabilize. Flow-insensitive therefore selects bounded narrowing unless you chose a rule explicitly.
+                  Flow-insensitive gives each global one shared value, read by the points that use it. This placement applies to analyses whose states split by variable. The order analysis retains its whole relational state at each point. Warrowing a flow-insensitive global can fail to stabilize. Flow-insensitive therefore selects bounded narrowing unless you chose a rule explicitly.
                 </span>
               </div>
 

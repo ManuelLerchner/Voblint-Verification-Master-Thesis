@@ -6,7 +6,7 @@ title: >-
   Voblint: A Verified Goblint-Style Static Analysis Pipeline in
   Isabelle/HOL
 type: software
-version: 2.3.0
+version: 2.3.1
 date-released: "2026-11-22"
 doi: 10.5281/zenodo.23260696
 license: BSD-3-Clause
@@ -51,20 +51,22 @@ references:
       https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/thesis.pdf
 abstract: >-
   Voblint is a machine-checked Isabelle/HOL framework for building, running
-  and verifying interprocedural abstract interpreters, modeled on Goblint's
-  D/G architecture. It chains verified compilation of a small imperative
-  language to a procedure-aware control-flow graph, an activation-local
-  operational semantics, executable equation generation, and a vendored
-  verified side-effecting top-down solver into one soundness statement about
-  the analyzer's own output. The statement covers every configuration the
-  tool offers -- any cooperating combination of five numeric analyses and a
-  relational order analysis, five global update rules, context-insensitive,
-  entry-state and call-string context policies, and flow-sensitive or
-  flow-insensitive program globals -- and is
-  stated about the same operation that is exported to OCaml and runs in the
-  command-line tool and the browser playground. Solver termination is a
-  per-program premise; lexing, parsing, code generation and rendering lie
-  outside the proved chain.
+  and verifying interprocedural abstract interpreters, modeled on the
+  Goblint static analyzer. Like Goblint, it separates the flow-sensitive state
+  kept at each program point from values shared across program points. It
+  chains verified compilation of a small imperative language to a control-flow
+  graph that records procedure calls, a semantics that follows one procedure
+  call at a time, executable equation generation, and an existing verified
+  equation solver into one soundness statement about the analyzer's own
+  output. The statement covers every configuration the tool offers: any
+  cooperating combination of five numeric analyses and a relational order
+  analysis, five rules for updating shared values, three ways of
+  distinguishing calling contexts (none, entry state, call string), and
+  flow-sensitive or flow-insensitive program globals. It is stated about the
+  same function that is exported to OCaml and runs in the command-line tool
+  and the browser playground. Solver termination is a per-program premise;
+  lexing, parsing, code generation and rendering lie outside the proved
+  chain.
 keywords:
   - abstract interpretation
   - static analysis

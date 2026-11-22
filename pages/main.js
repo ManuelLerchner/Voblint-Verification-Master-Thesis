@@ -4118,15 +4118,18 @@ function updateGlobalsControls() {
       ? "take one narrowing step each time an origin switches from widening to narrowing"
       : `narrow freely until an origin has switched from widening to narrowing ${bound} times, then take one step per switch`;
   const descriptions = {
-    join: "Join every value side-effected into a global.",
+    join: "Join every value a program point sends to a shared value, such as a procedure's entry state.",
 
-    "per-origin": "Keep side-effected values separate by origin before joining them.",
+    "per-origin":
+      "Keep the values sent to a shared value separate by origin, the program point that sent them, before joining them.",
 
-    warrow: "Widen, then narrow, every value side-effected into a global.",
+    warrow:
+      "Widen, then narrow, every value sent to a shared value, such as a procedure's entry state.",
 
-    "warrow-per-origin": "Widen and narrow side-effected values separately per origin.",
+    "warrow-per-origin":
+      "Widen and narrow the values sent to a shared value separately per origin.",
 
-    "bounded-narrowing": `Widen side-effected values per origin; ${narrowing}.`,
+    "bounded-narrowing": `Widen the values sent to a shared value per origin; ${narrowing}.`,
   };
 
   const sharedWarning =

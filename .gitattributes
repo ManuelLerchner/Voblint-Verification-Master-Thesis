@@ -36,10 +36,8 @@ cli/frontend/vimp_parser.mly linguist-generated=true
 cli/frontend/vimp_lexer.mll linguist-generated=true
 cli/frontend/vimp_printer.ml linguist-generated=true
 
-# Generated Isabelle: the per-domain registrations (manifests/analyses.yaml ->
-# scripts/gen_analysis_assembly.py) and the grammar theory
+# Generated Isabelle: the grammar theory
 # (manifests/vimp-grammar.yaml -> scripts/gen_vimp_isabelle.py).
-src/Analyses/*/generated/** linguist-generated=true
 src/Program_Model/VIMP/VIMP_Grammar_Generated.thy linguist-generated=true
 
 # Thesis artifacts extracted from the theories, the analyzer and the explainer.

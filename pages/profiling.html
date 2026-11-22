@@ -104,7 +104,7 @@
         <summary>Measurement method</summary>
         <ul>
           <li>Each fixture runs under every configuration with the CLI's other defaults
-            (globals warrow, Int refinement to a fixpoint, flow-sensitive program globals). A
+            (globals warrow, which widens and then narrows shared values; Int refinement to a fixpoint, flow-sensitive program globals). A
             fixture's own <code>PARAM</code> header is ignored, so every configuration analyzes the same
             programs.</li>
           <li>Time is the CLI's own measurement around the solve (<code>--timing</code>), the median
@@ -200,7 +200,7 @@
             sweep stops at the first <em>n</em> whose run passes <span data-meta="timeout_s">the snapshot’s recorded time limit</span>
             or fails; the reading names where.</li>
           <li>Evaluations: the number of <code>eq</code> events in a separate traced run's JSON Lines
-            trace, one per evaluation of an unknown's right-hand side. Tracing slows the run; the
+            trace, one per evaluation of one equation of the system. Tracing slows the run; the
             repository's tracer gate checks that a traced run gives the same answer as an untraced
             one.</li>
           <li>WebAssembly: the playground's bundle under Node with a 512&nbsp;KiB stack and no trace,

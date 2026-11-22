@@ -13,15 +13,19 @@
 
 ## What is Voblint?
 
-Voblint is a context-sensitive static analyzer for VIMP, a small C-like language
-with integer variables and recursive procedures. Modeled on Goblint, it builds
-a control-flow graph, derives a system of equations, and solves them with a
-verified generic solver. Its soundness proof in Isabelle/HOL connects the
-parsed program to the analyzer's reported answers.
+Voblint is a static analyzer for VIMP, a small C-like language with integer
+variables and recursive procedures. It is context-sensitive: it can analyze a
+procedure separately for different kinds of calls instead of merging every
+call into one result. Modeled on Goblint, it builds a control-flow graph,
+derives a system of equations, and solves them with an existing verified
+solver. Its soundness proof in Isabelle/HOL connects the parsed program to the
+analyzer's reported answers.
 
-The proof is modular: domains, analyses, and calling-context policies each
-establish their own soundness obligations. Activation traces connect individual
-procedure activations to the contexts used by the analysis. The analyzer is
+The proof is modular: domains (the kinds of abstract values, such as
+intervals), analyses, and calling-context policies each establish their own
+soundness obligations. An activation trace records one procedure call (an
+activation) from entry to return, and these traces connect the program's
+executions to the contexts the analysis uses. The analyzer is
 exported to OCaml and runs in a command-line tool and a
 [browser playground](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html).
 
@@ -125,10 +129,12 @@ pixi run voblint --analysis interval --context entry-state my_program.vimp --pla
 </p>
 
 `--context none|entry-state|call-string` selects the analysis context,
-`--globals` the update rule for side-effected globals, and
+`--globals` how the solver updates values shared across program points, such
+as a procedure's entry state (the default, `warrow`, widens while a value grows
+and narrows once it shrinks), and
 `--program-globals flow-sensitive|flow-insensitive` whether a program's globals
-travel with each point's state or each live at its own global unknown, read only by
-the points that mention it;
+travel with each point's state or each get one shared value of their own, read
+only by the points that mention it;
 both placements carry the same soundness theorem. `pixi run voblint --help`
 lists every flag. `--graph-snapshot` prints the solved graph as deterministic
 text and `--parse-only` checks syntax.
@@ -448,11 +454,11 @@ Congruence tightened
 ([`Int_Backward.thy`](src/Analyses/Int/Int_Backward.thy),
 [`Int_Refinement.thy`](src/Analyses/Int/Int_Refinement.thy)).
 
-## The generic D/G framework
+## The generic analysis framework
 
-Analyses are factored the way Goblint factors them: **D** holds the abstract facts
-attached to program points, **G** the information published and consumed across
-points. The framework's interface is
+Analyses are factored the way Goblint factors them: a flow-sensitive local state
+is attached to each program point and context, and shared values are published
+and consumed across points through side effects. The framework's interface is
 [`dg_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy), the Isabelle
 counterpart of Goblint's
 [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
@@ -509,7 +515,7 @@ Requirements: **Isabelle2025-2**, an **[AFP](https://www.isa-afp.org/)** checkou
 
 ```bash
 ./scripts/setup.sh                             # pixi, OCaml and developer tooling
-pixi run vendor-init                           # fetch the TD solver submodule
+pixi run vendor-init                           # fetch the top-down (TD) solver submodule
 AFP=/path/to/afp/thys pixi run isabelle-build  # check the formalization
 ```
 
@@ -526,7 +532,7 @@ everything else.
 
 ## Foundations
 
-- **Goblint** ([GitHub](https://github.com/goblint/analyzer)): modular interprocedural abstract interpretation and the D/G architecture.
+- **Goblint** ([GitHub](https://github.com/goblint/analyzer)): modular interprocedural abstract interpretation and the split between local states and shared values.
 - **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)): reusable abstract interpretation in Isabelle/HOL.
 - **The Top-Down Solver Verified** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)): the vendored executable verified solver.
 - **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)).

@@ -50,7 +50,7 @@ why = "Main-statements appendix: simulation of source runs by the compiled graph
 why = "Main-statements appendix: the activation coverage theorem."
 
 [facts.activation_collect_dg_sound]
-why = "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
+why = "Main-statements appendix: a solved equation system satisfies the coverage obligations."
 fact = "routed_context.activation_collect_dg_sound"
 
 [facts.nv_source_certified]
