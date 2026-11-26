@@ -1,0 +1,22 @@
+# Supervisor review (p. 63): a typed "Theorem 8.1" or "Section 6.1" silently
+# goes stale when numbering shifts. Reference the label instead (@sec:..,
+# @fig:..); references render empty for Vale, so only typed numbers match.
+# Warning until theorem environments take labels. A locator into another
+# work ("Example 4.10 of Miné's tutorial") is not a cross-reference.
+extends: existence
+message: "Typed cross-reference '%s': use a label reference so the number stays current."
+level: warning
+nonword: true
+tokens:
+  - '\b(?:Theorem|Lemma|Corollary|Definition|Figure|Table|Section|Chapter|Appendix|Example)\s+[A-Z]?\d+(?:\.\d+)+\b(?!\s+(?:of|in)\b)'
+
+tests:
+  - name: fires
+    input: |
+      Theorem 8.1 closes the gap.
+    want: |
+      1:1:Voblint.HardRef:Typed cross-reference 'Theorem 8.1': use a label reference so the number stays current.
+  - name: locator into another work
+    input: |
+      The program follows Example 4.10 of the tutorial.
+    want: ""

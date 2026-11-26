@@ -55,7 +55,7 @@ them differently.
       [procedure table, initial stores, and the set of all stores],
       [@sec:vimp, @ch:traces, @sec:verdicts],
       $conc_(D G)(d, eta)$,
-      [stores described by a local state $d$ under the environment $eta$ of analysis globals],
+      [stores described by a local state $d$ under the environment $eta : V_G -> D_G$ of analysis globals],
       [@sec:analysis-globals],
       $conc_M$, [concretization of the product state of the selected analyses], [@sec:coop-mcp],
       $conc_("res")$, [concretization of the configured analyses in a report], [@sec:report],
@@ -63,7 +63,7 @@ them differently.
       [a call string extended by site $u$, and its first $k$ entries],
       [@sec:eq-routing],
       $e|_"formals"$,
-      [the entry-state context, the abstract values of the callee's formals in $e$],
+      [the entry-state context, the abstract values of the callee's formal parameters in $e$],
       [@sec:eq-routing],
       table.hline(stroke: 0.5pt),
     )

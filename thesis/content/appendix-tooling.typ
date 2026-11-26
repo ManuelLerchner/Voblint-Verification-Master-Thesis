@@ -126,7 +126,7 @@ so a stale analyzer is noticed before it reaches the continuous integration.
       b,
       "-|>",
       stroke: 0.6pt + vb.neutral,
-      label: if lab != none { text(size: 6.5pt, fill: vb.muted, lab) },
+      label: if lab != none { text(size: 7pt, fill: vb.neutral, lab) },
       label-side: center,
     )
     diagram(

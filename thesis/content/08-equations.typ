@@ -32,12 +32,12 @@ of the analysis globals (@sec:analysis-globals).
 
 == Context-indexed unknowns and call equations #thy-badge("Voblint_Framework", "DG_Indexed_Generator") <sec:eq-call>
 
-The equations must keep the activations of `bump(5)` and `bump(4)` apart, so
+In the running example (@fig:program-to-equations), `main` calls `bump(5)` and `bump(4)`, and `bump` returns its argument plus one. The equations must keep the two activations apart, so
 that the first call's result stays exactly $6$ (@sec:interproc). Voblint
 therefore indexes the unknowns of the equations by contexts. For every
 node $v$ and context $c$, there is a _local_ unknown $(v, c)$, whose value
-$sol(v, c)$ is the abstract state for the activations of context $c$ at $v$. Goblint's local unknowns have the
-#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape] @apinis14[§5.2].
+$sol(v, c)$ is the abstract state for the activations of context $c$ at $v$. Goblint's local unknowns are also
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[pairs of a node and a context] @apinis14[§5.2].
 Besides the local unknowns, the equations have _global_ unknowns without a
 program point (@sec:side-effects). They hold the analysis globals of @sec:shared-facts
 and the entry states that calls publish to their callees. The entry states
@@ -53,19 +53,18 @@ entry states published by calls (@sec:calls). Along a local edge, the
 activation keeps its context $c$ (@sec:contexts), whereas a callee runs in a
 context of its own.
 
-For a valuation $tau$ of the other unknowns (@sec:constraints), the local
-component $F_(v,c)(tau)$ of the right-hand side of $(v,c)$ joins the four sources:
+For a valuation $sol$ of all unknowns (@sec:constraints), the local
+component $F_(v,c)(sol)$ of the right-hand side of $(v,c)$ joins the four sources:
 $
-  F_(v,c)(tau) = & #isaconst("rhs_init") (v) \
-           ljoin & scripts(⨆)_(e in P(v,c)) #isaconst("rhs_edge") (tau,c,e) \
-           ljoin & scripts(⨆)_(k in K(v)) #isaconst("rhs_call") (tau,c,k,v) \
-           ljoin & #isaconst("rhs_seed") (tau,c,v).
+  F_(v,c)(sol) = & #isaconst("rhs_init") (v) \
+           ljoin & scripts(⨆)_(e in P(v,c)) #isaconst("rhs_edge") (sol,c,e) \
+           ljoin & scripts(⨆)_(k in K(v)) #isaconst("rhs_call") (sol,c,k,v) \
+           ljoin & #isaconst("rhs_seed") (sol,c,v).
 $
 Here $P(v,c)$ lists the local edges into $v$ selected for context $c$, $K(v)$
 the calls returning to $v$, and $scripts(⨆)$ joins over a list, with empty join
 $lbot$. The fixed parameters of the generator are omitted, and the decomposition
-assumes that the operations of the analysis are encoded well formed for the
-solver (#isathm("routed_node_rhs_parts")). The
+assumes a technical well-formedness condition on how the operations of the analysis are encoded as solver programs (#isathm("routed_node_rhs_parts")). The
 equations that Voblint generates are the inequalities
 $ sol(v, c) lge F_(v,c)(sol) quad "for every local unknown" (v, c), $
 together with the side effects of the right-hand sides, which publish entry
@@ -129,7 +128,7 @@ the callee's seed as a side effect (@sec:side-effects).
 )
 #figure(
   placement: none,
-  scale(80%, reflow: true, diagram(
+  scale(90%, reflow: true, diagram(
     spacing: (11mm, 6.5mm),
     _loc((0, 0), $(italic("pp2"), c_0)$),
     _loc((0, 4.2), $(italic("pp3"), c_0)$),
@@ -138,7 +137,7 @@ the callee's seed as a side effect (@sec:side-effects).
     _seed((2.8, 1.9), $ctor("Activation_Seed") thin #_b space c_1$),
     _loc((2.8, 2.9), $(ctor("FunctionEntry") thin #_b, c_1)$),
     _loc((2.8, 3.9), $(ctor("FunctionResult") thin #_b, c_1)$),
-    _step((1.4, 4.2), $sh("combine")(q_1, r_1)$),
+    _step((1.4, 4.2), $combineh(q_1, r_1)$),
     _read((0, 0), (1.4, 0), [caller value], side: left),
     edge(
       (0, 0),
@@ -171,7 +170,7 @@ the callee's seed as a side effect (@sec:side-effects).
       inset: 8pt,
       name: <ctx-main>,
     ),
-    node((0, -0.75), text(7pt, fill: vb.muted)[`main`, $c_0$], stroke: none),
+    node((0, -0.75), text(8pt, fill: vb.neutral)[`main`, $c_0$], stroke: none),
     node(
       enclose: ((2.8, 2.9), (2.8, 3.9)),
       stroke: 0.5pt + vb.muted,
@@ -180,7 +179,7 @@ the callee's seed as a side effect (@sec:side-effects).
       inset: 8pt,
       name: <ctx-bump>,
     ),
-    node((2.8, 4.6), text(7pt, fill: vb.muted)[`bump`, $c_1$], stroke: none),
+    node((2.8, 4.6), text(8pt, fill: vb.neutral)[`bump`, $c_1$], stroke: none),
   )),
   caption: [The first call under entry-state contexts. Node-context pairs are
     local unknowns, and the rounded seed is a global unknown. The other boxes
@@ -192,14 +191,14 @@ the callee's seed as a side effect (@sec:side-effects).
 In the figure, `main` runs in the root context $c_0$, and its call `bump(5)` sits on the edge from
 $italic("pp2")$ to $italic("pp3")$. The equation of the continuation
 $(italic("pp3"), c_0)$ connects caller and callee. First,
-enter (@sec:calls) turns the caller's value at $(italic("pp2"), c_0)$ into an
+$enterh$ (@sec:calls) turns the caller's value at $(italic("pp2"), c_0)$ into an
 _entry pair_ $(q_1, e_1)$. The resume state $q_1$ describes the caller's
-store during the call, and its entry state $e_1$ describes the callee's store
+store during the call, and the entry state $e_1$ describes the callee's store
 at entry, with $n$ bound to $absval(ivl(5, 5))$. Second, routing computes the
 callee context $c_1 = ctxh(u, c_0, e_1) = [[5, 5]]$ from the call site $u$,
 the caller context and the entry state, and the equation publishes $e_1$ to
 that context. Third, the equation reads the exit state $r_1$ of `bump` in
-$c_1$ and joins $sh("combine")(q_1, r_1)$, the caller's store after the call,
+$c_1$ and joins $combineh(q_1, r_1)$, which describes the caller's store after the call,
 into its own value. The equation of the second call's continuation,
 $(italic("pp4"), c_0)$, does the same with $c_2 = [[4, 4]]$. The calls `bump(5)` and `bump(4)`
 thus use separate copies of `bump`, and the first result stays exactly 6.
@@ -311,7 +310,7 @@ $
 This condition is called _routing adequacy_
 (#isathm("routed_context.routing_adequate", thy: "Routed_Context", display: "routing_adequate")).
 It also requires the callee's entry unknown in $c'$ to be in the solved set.
-#oblig("CALL") and #oblig("RETURN") rely on routing adequacy, because the call
+#oblig("CALL"), which covers the callee's entry, and #oblig("RETURN"), which covers the store after the call, rely on routing adequacy, because the call
 publishes $e$ and its continuation reads the callee's exit state in the same
 context $c'$. Routing adequacy says nothing about a call to which $italic("adm")$
 assigns no context. A call without a context would disappear from the activation
@@ -347,7 +346,7 @@ the soundness theorem and are proved once for each context policy.
     from caller context $c$, the context to which the equations route the
     entry state $e$, and why the two agree. $u dot c$ prepends the site,
     $"take"_k$ keeps the first $k$ entries, and $e|_"formals"$ lists the
-    formals' values in $e$.],
+    values of the formal parameters in $e$.],
 ) <tab:eq-policies>
 
 @tab:eq-policies compares the three context policies that Voblint implements.

@@ -248,7 +248,7 @@ thesis-redline = { cmd = "bash thesis/tools/typst-redline.sh", depends-on = [
 ], description = "Build the thesis with its changes since origin/main, or the given base, marked in place." }
 thesis-feedback = { cmd = "python3 thesis/tools/feedback_extract.py", description = "Extract a reviewer's PDF annotations into a checklist located in the sources, e.g. `pixi run thesis-feedback ~/Downloads/feedback.pdf`." }
 thesis-whitespace = { cmd = "python3 thesis/tools/whitespace.py", description = "Warn about thesis pages with a large blank stretch (reads the built PDF)." }
-thesis-prose-structure = { cmd = "python3 thesis/tools/prose_structure.py", description = "Warn about dense Isabelle citations, long captions, listings in figures, forward references and terms defined twice or used before their definition." }
+thesis-prose-structure = { cmd = "python3 thesis/tools/prose_structure.py", description = "Warn about dense Isabelle citations, long captions, listings in figures, forward references, terms defined twice or used before their definition, and spelled-out abstract operations." }
 thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", depends-on = [
   "thesis-local-data",
 ], description = "Build the thesis PDF while allowing warnings during drafting." }

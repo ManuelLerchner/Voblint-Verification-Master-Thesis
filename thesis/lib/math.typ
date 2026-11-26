@@ -81,6 +81,8 @@
 // ======================================= analysis specification fields ===
 // The mixfix syntax of the dg_spec record fields and of routed_context's route.
 #let enterh = sh("enter")
+// The two combine stages read as one operation where the split does not matter.
+#let combineh = sh("combine")
 #let combineenvh = sh("combine_env")
 #let combineassignh = sh("combine_assign")
 #let ctxh = sh("context")

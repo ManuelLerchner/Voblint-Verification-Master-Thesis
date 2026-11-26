@@ -79,7 +79,7 @@ $
   t_"call" = #ctor("QueryL") ( & (u, c), lambda d. \
                                & #ctor("Side") ( ctor("Activation_Seed") thin p space c', e, \
                                & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
-                                   #ctor("Answer", thy: "Basics_side") (sh("combine") (q, r)) ) ) ).
+                                   #ctor("Answer", thy: "Basics_side") (combineh (q, r)) ) ) ).
 $
 The tree performs the steps of @fig:eq-unknowns in order. The general tree
 (#isaconst("routed_call_program")) runs them for every callee and entry pair
@@ -110,7 +110,7 @@ from this widening.
 
 A local unknown holds an abstract state of the analysis's local domain, and an
 analysis global holds a value of its global domain (@sec:shared-facts). The
-vendored TD solver, however, has a single value type $'d$ for all unknowns, so Voblint
+vendored TD solver, however, has a single value type for all unknowns, so Voblint
 uses the product type of both domains as that value type. Every unknown holds a pair (#isatype("dg_state")) and uses one half, leaving
 the other at $lbot$ (@tab:eq-carrier). Order and join
 on pairs work componentwise, so the solver's requirements on the value type

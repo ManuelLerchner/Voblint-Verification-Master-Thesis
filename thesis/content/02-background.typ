@@ -144,7 +144,7 @@ descriptions.
 An analysis describes the states a program can be in at each of its points, so
 the points are made explicit first. A _control-flow graph_ (CFG) has the program
 points as nodes and an edge for every way control can pass from one point to
-the next, labeled with the assignment or condition executed on the way.
+the next, labeled with the assignment or condition executed along it.
 @fig:counting-loop shows the graph of the running example, which counts `i`
 from $0$ to $5$. The loop becomes a cycle through $h$, $b$, and $t$, and
 its _loop head_ $h$ is the node through which control enters and exits the cycle.
@@ -554,7 +554,7 @@ unknown per program point, the entry of `bump` must cover both arguments, so,
 over intervals, its result is at best $absval(ivl(5, 6))$, and the analysis cannot show
 that the first call returns $6$. A context-sensitive analysis instead
 separates the activations of a procedure by their calling
-contexts (@sec:intro-static) @aho06[§7.2.1]. Its unknowns become pairs $[v, c]$ of a program point
+contexts (@sec:intro-static) @aho06[§7.2.1]. Its unknowns become pairs $(v, c)$ of a program point
 $v$ and a context $c$ @apinis12[§3], so every context of a procedure gets its
 own copy of the procedure's unknowns.
 
@@ -577,9 +577,9 @@ context is therefore a choice of abstraction, and the trivial choice, a single
 context, gives back the analysis with one unknown per program point.
 
 A context-sensitive analysis handles a call with two abstract operations @apinis12[§3]. The first,
-$"enter"^sharp$, maps the caller's state before the call to the callee's entry
+$enterh$, maps the caller's state before the call to the callee's entry
 state. The callee's context is chosen at the same point, for example as the
-extended call string or as this entry state itself. The second, $"comb"^sharp$,
+extended call string or as this entry state itself. The second, $combineh$,
 computes the caller's state after the call. It needs the callee's exit state for the return value and the caller's state before the call for the caller's local variables, which the callee does not see. Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L252",

@@ -26,18 +26,18 @@ For a store $s$, $sem(a)(s)$ is its set of successor stores
 (#isaconst("edge_step"), @sec:valid). An analysis describes the stores at a program
 point by an abstract state $d$ of its _local domain_ $D_L$. Its
 concretization $conc(d)$ is the set of stores described by $d$. For each
-action $a$, the analysis supplies a transfer function $asem(a)$. The transfer
+action $a$, the analysis supplies a transfer function $asem(a)$, where $sharp$ marks an abstract operation. The transfer
 is sound if, for every store $s$ described by $d$ and every successor store
 $s'$ produced by $a$, the resulting abstract state $asem(a) thin d$ describes
 $s'$. This condition is the abstract counterpart of the obligation #oblig("INTRA") of
-@ch:traces for one edge.
+@ch:traces, which requires each local edge to preserve the cover.
 
 After a call returns, the caller's own locals are the ones from before the
 call, while the globals and the result come from the callee
-(#isaconst("combine_collect"), #oblig("RETURN")). An analysis therefore needs
+(#isaconst("combine_collect"), the store that #oblig("RETURN") covers). An analysis therefore needs
 two states at a call, one for the callee to start from and one that saves what
-the caller needs when execution returns. As in Goblint, _enter_
-(#isaconst("dgs_enter")) produces both states, and _combine_ builds the
+the caller needs when execution returns. As in Goblint, _enter_ $enterh$
+(#isaconst("dgs_enter")) produces both states, and _combine_ $combineh$ builds the
 caller's state after the call from the resume state and the callee's exit
 state. Take one call:
 
@@ -77,7 +77,7 @@ combine merges $q$ and $r$ (@fig:return-stores).
       _st((0, 0), [resume state $q$ \ describes #_from-s[`x = 5`], `g = 1`]),
       _st(
         (0, 2),
-        [$sh("combine")(q, r)$ \ describes #_from-s[`x = 5`], #_from-t[`g = 6`], #_from-t[`y = 4`]],
+        [$combineh(q, r)$ \ describes #_from-s[`x = 5`], #_from-t[`g = 6`], #_from-t[`y = 4`]],
       ),
       _st((5, 0), [entry state $e$ \ describes `g = 1`, `a = 5`]),
       _st(
@@ -86,8 +86,8 @@ combine merges $q$ and $r$ (@fig:return-stores).
       ),
       intra-edge(<c-pp5>, <c-pp6>, label: "continuation", label-side: right),
       intra-edge(<c-ent>, <c-ex>, label: "g := g + a; return a - 1", label-side: left),
-      call-edge(<c-pp5>, <c-ent>, label: $sh("enter")$, label-side: left),
-      call-edge(<c-ex>, <c-pp6>, label: $sh("combine")$, label-side: right),
+      call-edge(<c-pp5>, <c-ent>, label: $enterh$, label-side: left),
+      call-edge(<c-ex>, <c-pp6>, label: $combineh$, label-side: right),
     )
   },
   kind: image,
@@ -107,10 +107,9 @@ shipped with Voblint return one, so path-sensitive analyses remain future work.
 
 == Local soundness laws of an analysis <sec:sound-core>
 
-Every operation of @sec:calls must be sound. An analysis states this through
-local soundness laws, which together yield the five obligations of
-@ch:traces for every program and context policy. #oblig("CALL") and
-#oblig("TOTAL") depend on the policy as well and follow from the entry coverage of
+The local soundness laws of an analysis together yield the five obligations of
+@ch:traces for every program and context policy. #oblig("CALL") (cover the entered store) and
+#oblig("TOTAL") (every covered call has a context) depend on the policy as well and follow from the entry coverage of
 @sec:calls. #oblig("INIT") requires the initial state $d_0$ to describe the
 initial stores, which the analysis discharges when it is registered
 (#isathm("dg_analysis.init_sound")).
@@ -126,15 +125,15 @@ three laws on the concretization $conc$:
     [monotonicity], $d lle d' ==> conc(d) subset.eq conc(d')$,
     [edges], $s in conc(d), thin s' in sem(a)(s) ==> s' in conc(asem(a) thin d)$,
     [combine],
-    $s in conc(q), thin t in conc(r) ==> #isaconst("combine_collect") _(italic("dst")) (s, t) in conc("combine"(q, r))$,
+    $s in conc(q), thin t in conc(r) ==> #isaconst("combine_collect") _(italic("dst")) (s, t) in conc(combineh(q, r))$,
   )
 ]
 Monotonicity turns the solver's inequalities into inclusions between sets of
 stores, as for a domain (@ch:domains). The edge law is the condition of
 @sec:calls and yields #oblig("INTRA"). The combine law, where $italic("dst")$
 is the call's destination, yields #oblig("RETURN").
-Transfers that also use facts without a program point need a
-more general form of these laws, which @sec:analysis-globals states.
+Transfers that read facts without a program point need the more general laws
+of @sec:analysis-globals.
 
 == Analysis globals and program globals <sec:shared-facts>
 
@@ -174,12 +173,12 @@ query handler through which analyses exchange facts:
   thy("dg_spec")
 }
 Every field except the query handler carries, marked $sharp$, the name of the
-corresponding method of `Spec`. A #isatype("call_info") names the
-callee, its formals, the arguments, and the destination of a call.
+corresponding method of `Spec`. A #isatype("call_info") is the call information of @sec:valid: the
+callee, its formal parameters, the actual arguments, and the variable that receives the result.
 
 With analysis globals, a local state alone no longer fixes which stores it
-describes. The laws therefore take an _environment_ $eta$, which maps every
-analysis global to its value, and use a concretization $conc_(D G)(d, eta)$. A
+describes. The laws therefore take an _environment_ $eta : V_G -> D_G$, from the analysis's
+global names $V_G$ to their values (in Goblint, the manager's `global`), and use a concretization $conc_(D G)(d, eta)$. A
 transfer at $d$ and $eta$ returns a local state $d'$ together with the
 contributions $p$ it publishes to analysis globals, and combine at $q$, $r$,
 and $eta$ returns a pair $(q', p)$ in the same way. The three laws of
@@ -200,8 +199,7 @@ and $eta$ returns a pair $(q', p)$ in the same way. The three laws of
       ) $==> #isaconst("combine_collect") _(italic("dst")) (s, t) in conc_(D G)(q', eta ljoin p)$],
   )
 ]
-The result must thus describe the successor store once the published
-contributions have reached the analysis globals. An analysis without analysis
+An analysis without analysis
 globals ignores $eta$ and publishes nothing, so the laws reduce to those of
 @sec:sound-core. The locale #isalocale("analysis_contract") states these laws.
 
@@ -212,10 +210,10 @@ of @sec:analysis-globals keeps them in the local state, as in Goblint's default
 base analysis for single-threaded programs
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/base.ml#L539")[`base.ml`],
 @saan26phd[§5.6.1]).
-The other placement keeps each program global at an analysis global of its
+The flow-insensitive placement keeps each program global at an analysis global of its
 own, published by side effects and read where it is used. The analysis is then
-_mixed flow-sensitive_, flow-sensitive in the locals and flow-insensitive in
-the globals.
+_mixed flow-sensitive_, meaning flow-sensitive in the locals and flow-insensitive in
+the globals. In the following program, this placement costs precision.
 
 // A value at `pp7`, after both calls, from the flow-sensitive Sign run.
 #let _mf(var) = snapshot-var("mixed-flow-sign", "main_pp7_ctx0", var)
@@ -230,12 +228,11 @@ fun main() { x = 1; set(); y = get(); }
 ```)
 
 The flow-insensitive placement keeps a single value of `Gx` shared by all
-program points (@fig:mixed-flow). Every point that may change `Gx` publishes its value to the global unknown of `Gx` by
-a side effect. The entry of `main` publishes
+program points (@fig:mixed-flow). The entry of `main` publishes
 the initial value, #signval(mixed-flow-published("entry_main")), and the point
 after `Gx = 1` in `set` publishes #signval(mixed-flow-published("pp1")). The
 global unknown holds their join, #signval(mixed-flow-final), and every read of
-`Gx` returns this join. This includes the read at `return Gx` in `get`. Yet
+`Gx`, including `return Gx` in `get`, returns this join. Yet
 `get` only runs after `set` has written $1$, so `Gx` is positive there in every
 execution. Sign therefore claims only #signval(_mfs("y")) for `y`
 after `y = get()` (claim #claim-ref("mixed-flow-sign-shared")). Flow-sensitively, Sign carries #signval("+") from

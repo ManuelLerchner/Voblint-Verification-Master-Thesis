@@ -6,7 +6,7 @@
   unproved: rgb("#B3261E"), // outside the trust boundary
   neutral: rgb("#37474F"),
   accent: rgb("#1565C0"),
-  muted: rgb("#78909C"),
+  muted: rgb("#607D8B"),
 
   // solver state
   stable: rgb("#2E7D32"),

@@ -34,7 +34,7 @@ additionally relies on correct parsing, code generation, and presentation
 (@fig:intro-trust).
 
 Concrete analysis configurations satisfy the premises of the end-to-end theorem, and the
-remainder obligation rejects a real Goblint defect (@ch:evaluation). On the
+soundness obligation of the abstract remainder rejects a real Goblint defect (@ch:evaluation). On the
 external benchmarks of @sec:eval-flavors, Voblint proves every check that Goblint
 proves with its plain interval domain or with full calling contexts, and
 #stat("corpus.kinds.precision") fixtures of the regression corpus record the
