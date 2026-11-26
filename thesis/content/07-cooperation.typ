@@ -224,7 +224,7 @@ the intersection of the selected fields' concretizations.
   {
     set text(size: 7.5pt)
     set par(first-line-indent: 0pt, justify: false)
-    let lab(body) = text(size: 6.5pt, fill: vb.muted, body)
+    let lab(body) = text(size: 7pt, fill: vb.muted, body)
     let cell(pos, name, body, color: vb.neutral, width: 21mm) = node(
       pos,
       align(center, body),

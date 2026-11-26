@@ -37,7 +37,7 @@ these per-context results sound, Voblint introduces _activation traces_, a
 semantics that distinguishes individual procedure invocations and relates them
 to their calling contexts. This
 construction fits into a modular soundness proof that follows Goblint's
-architecture. Abstract domains, which describe sets of values or states, analyses,
+architecture. Abstract domains, analyses,
 and policies for choosing calling contexts have separate soundness proofs.
 A single theorem combines them with the solver's correctness. The resulting guarantee
 holds for every analysis configuration that Voblint offers. To our knowledge, no

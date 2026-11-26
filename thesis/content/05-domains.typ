@@ -482,8 +482,8 @@ _numeric domain_:
   thy("numeric_domain")
 }
 
-The third and fourth laws, #isathm("gamma_mono") and
-#isathm("is_empty_correct"), are the two requirements of the chapter opening.
+The laws #isathm("gamma_mono") and
+#isathm("is_empty_correct") are the two requirements of the chapter opening.
 The class extends #isalocale("executable_domain"), the part the analyzer runs, by
 the concretization and its laws.
 
@@ -937,7 +937,7 @@ as the interval analysis of Nipkow and Klein does @nipkow14[§13.8.3].
 The verified TD solver requires its values to form a
 #isalocale("bounded_semilattice_sup_bot") (#isalocale("TD_side_upd_rule")),
 whose join is the _least_ upper bound, and the framework's proofs use this
-leastness as well. This
+leastness as well. The requirement
 excludes every carrier in which two values have upper bounds but no least one.
 
 Goblint's default integer domain,

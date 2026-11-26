@@ -574,7 +574,7 @@ fails. A checked counterexample meets the other four obligations
       <c-u>,
       <c-k>,
       "..|>",
-      label: text(size: 6.5pt, fill: vb.muted)[caller store $s$],
+      label: text(size: 7pt, fill: vb.muted)[caller store $s$],
       label-side: right,
     ),
   ),

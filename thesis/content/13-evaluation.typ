@@ -37,20 +37,20 @@ consistent is to exhibit a program that meets all of them, as
 #cite(<marmsoler26stark>, form: "prose", supplement: [§9]) does for the locale
 assumptions of a formal model.
 
-Here, the two-call program of @fig:program-to-equations is analyzed with
-Interval, entry-state contexts, and the _warrow_ update rule. The theory builds a source execution
+Here, the program of @fig:program-to-equations, which calls `bump(5)` and `bump(4)` and checks both results, is analyzed with
+Interval, entry-state contexts, and the _warrow_ update rule (@sec:update-rules). The theory builds a source execution
 that returns from `bump(5)` and `bump(4)` and stops before the first check.
 Evaluation shows that the analyzer answers and that both checks are
 #verdict("PROVED"). These facts discharge every premise of the source-level
 soundness theorem for this execution (#isathm("nv_source_certified")).
-They also instantiate the check-soundness theorem at `a == 6`:
+They also instantiate the soundness theorem for #verdict("PROVED") verdicts (@sec:verdicts) at `a == 6`:
 the reached store satisfies the condition reported as proved
 (#isathm("nv_check_proved_sound")).
 
 A #verdict("DEAD") verdict needs its own instance, since its theorem concludes
 that no run reaches a node rather than that a condition holds there. A second
 program sets `x = 1` and guards a check by `x < 0`. The analyzer marks the
-check #verdict("DEAD"). Instantiating the unreachability theorem shows that
+check #verdict("DEAD"). Instantiating the unreachability theorem of @sec:verdicts shows that
 the collecting semantics at that node is empty (#isathm("nv_dead_unreached")). In all three instances, the source executions are
 proved by rule application, while `eval` computes the compiled graphs and the
 analyzer's answers.

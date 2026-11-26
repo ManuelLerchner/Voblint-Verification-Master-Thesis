@@ -103,7 +103,7 @@ the source hold for the executable. The compiler is extracted to Caml and
 linked with unverified parts. Leroy lists what remains trusted: the
 semantics of Clight and of the PowerPC assembly, the CIL-based parser, the
 assembler and the linker, and Coq's extraction together with the Caml compiler
-and run-time system @leroy09[§5]. Voblint's guarantee has the same shape, a
+and run-time system @leroy09[§5]. Voblint's guarantee likewise consists of a
 theorem about the function the tool runs, code generated from the prover, and
 an explicit list of trusted components (@fig:intro-trust). Analyzer soundness
 is weaker than compiler correctness, however, since it only over-approximates
@@ -264,7 +264,7 @@ optimality (@sec:update-rules).
 Of the two classical approaches of Sharir and Pnueli (@sec:interproc), Voblint's
 call-string policy follows the call-string approach, and its entry-state policy
 resembles the functional approach tabulated per input @sharir81. At the return, Voblint combines the caller's state before the call with the
-callee's exit state (@sec:calls), the shape of the return function of
+callee's exit state (@sec:calls), as does the return function of
 #cite(<knoop92>, form: "prose", supplement: [§4.1]). Reps et al. solve such
 problems precisely when the facts are finite and the transfer functions
 distributive @reps95, whereas Voblint requires neither and proves no general
@@ -320,7 +320,7 @@ the source contract of @sec:vimp.
 === Correspondence with Goblint's architecture
 
 Goblint uses the side-effecting constraint systems of @sec:side-effects
-@seidl03 @apinis12 to decouple a mixed flow-sensitive analysis from the solver.
+@seidl03 @apinis12 to decouple a mixed flow-sensitive analysis (@sec:mixed-flow) from the solver.
 On the analysis side, a _digest_ is a total function that assigns each local
 trace a summary value (@sec:rel-digests). Digests and the solver's update rules
 recover precision @seidl26. Voblint adopts the split. An analysis supplies
@@ -385,7 +385,7 @@ local state for Java Card bytecode, but their analysis is context-insensitive. #
 prove in Coq that a context-sensitive points-to analysis with a
 flow-insensitive heap is sound. Their concrete semantics is parameterized by a function that computes the
 callee context from the call site, the caller's context, and the receiver, and
-their specification has no executable solver @dabrowski09[§7]. This is the
+their specification has no executable solver @dabrowski09[§7]. Their semantics is the
 closest precedent for Voblint's semantics. Voblint differs in that a relation
 admits its contexts, so one call may have several, that splitting the stores
 by context provably loses none, and that the indexing is connected to an

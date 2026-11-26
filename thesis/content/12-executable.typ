@@ -75,7 +75,7 @@ stabilized, and equality of two functions on an infinite domain is not
 computable. Following Concrete Semantics @nipkow14[§13.6], an
 _executable state_ (#isatype("default_st")) instead stores a default value and
 a finite list of overrides. Voblint keeps two such pairs, one for locals with
-default #ltop and one for globals with default $0^sharp$, because VIMP
+default #ltop and one for globals with default $sh(0)$, because VIMP
 initializes globals to zero as C does for static storage (#c11("6.7.9p10")).
 After `x = 0` in `main`, for example, the local part holds the default #ltop
 and the single override $x |-> absval(ivl(0, 0))$, and every other local still

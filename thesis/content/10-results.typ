@@ -311,9 +311,9 @@ The first step places a store that a finite source execution reaches in the node
 collecting semantics, at a node $v$ that the simulation relates to the run. On the annotated copy of the program, this is every node at which the run is observed
 (#isathm("csim_point_compile_prog"), @sec:at-node). The second step splits
 $cal(C)(v)$ into the sets $cal(A)(v,c)$ of the contexts that the policy
-$"adm"$ admits, with `main` in $c_0$ (@sec:contexts). It only requires that every valid trace carries some context.
+$"adm"$ admits, with `main` in $c_0$ (@sec:contexts). It requires that every valid trace carries a context.
 Functional policies meet this for every trace, and the entry-state policy
-meets it through #oblig("TOTAL") on the solution (@sec:contract). The third
+meets it through #oblig("TOTAL"), which requires an admitted context for every covered call (@sec:contract). The third
 inclusion is the analyzer's soundness result. Its proof combines the second
 step with the per-context bound of @ch:equations, which places the activation
 collecting semantics of each context inside the state solved for it

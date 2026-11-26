@@ -215,7 +215,7 @@ single domain whose value holds all four components, and it reduces after
 every arithmetic operation and guard. A fact such as "odd" therefore sharpens
 the interval stored in the value itself, during expression evaluation.
 Goblint separates the two mechanisms in the same way. Its integer domains form
-one value domain inside its base analysis, whereas its MCP combines whole
+one value domain inside its base analysis, whereas its master control program (MCP, @sec:coop-mcp) combines whole
 analyses.
 
 A reduction round first combines the range
@@ -354,9 +354,8 @@ list.
 The order analysis runs on the relational state of @sec:rel-state and proves
 order checks that Interval cannot decide. Its guard and assignment transfers
 are those of @sec:rel-state. After an assignment has forgotten the pairs
-involving the changed variable, the analysis asks the channel how the new
-value relates to each variable. Every selected analysis, the order analysis
-included, may give an answer (@sec:coop-mcp). In the program below, the guard `x < y` tells Interval
+involving the changed variable, the analysis asks the other analyses through the query channel (@sec:coop-channels) how the new
+value relates to each variable. Every selected analysis may answer. In the program below, the guard `x < y` tells Interval
 nothing about either variable, so it keeps
 #state("order-alone-interval", "12:5") and reports
 #verdict("order-alone-interval", "12:5") at the first check. The order

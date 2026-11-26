@@ -201,7 +201,7 @@ filtering of guards in an analysis does. Input enters only through the statement
 `x = __voblint_nondet_int();` and never inside an expression. Restricting input to this statement keeps #isaconst("aval") a function.
 
 Commands are built from expressions. Besides the structured statements, there
-are calls, which may store a result, and two markers that appear only during
+are calls, which may store a result in a _destination_ variable, and two markers that appear only during
 execution.
 
 #definition(name: [Commands], isa: "gcom", cmd: "datatype")[
@@ -353,8 +353,7 @@ Fix the global-variable classifier $cal(G)$ and procedure table $Pi$.
 Write $kappa ->_p kappa'$ for one step and $->_p^*$ for its reflexive
 transitive closure. The rules below define the step relation.
 We write $c_1 ; c_2$ for sequencing and $(s_c,italic("dst")) :: F$ for pushing
-a frame. The optional destination $italic("dst")$ is either $"None"$ or
-$"Some"(x)$.
+a frame. The destination $italic("dst")$ is optional.
 
 *Local commands.* Assignment updates one variable, and a check leaves the
 store unchanged:
