@@ -1,6 +1,6 @@
 # thesis/CLAUDE.md "Review patterns": use the field's vocabulary.
 extends: substitution
-message: "Colloquial '%s': prefer '%s'."
+message: "Colloquial '%[2]s': prefer '%[1]s'."
 level: warning
 ignorecase: true
 swap:
@@ -12,3 +12,17 @@ swap:
   pretty much: almost
   figure out: determine
   get rid of: remove
+  # Supervisor review (pp. 54, 62): informal stand-ins for the actual relation.
+  same shape: the same structure, named
+  on the way: along the edge, or name the step
+
+tests:
+  - name: fires
+    input: |
+      Goblint's unknowns have the same shape.
+    want: |
+      1:29:Voblint.Colloquial:Colloquial 'same shape': prefer 'the same structure, named'.
+  - name: clean
+    input: |
+      Goblint's unknowns are also pairs of a node and a context.
+    want: ""

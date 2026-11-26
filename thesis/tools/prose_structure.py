@@ -18,7 +18,10 @@ these author preferences are checked on the Typst source instead:
 - the abstract runs over a page or cites the literature. A reader who knows
   neither abstract interpretation nor Isabelle should get the problem and the
   result at a high level, and a citation in the abstract is justified only for
-  work this thesis directly continues (supervisor review).
+  work this thesis directly continues (supervisor review);
+- an abstract operation is spelled out (`sh("combine")`, `"comb"^sharp`)
+  where `lib/math.typ` names it (`combineh`). One spelling per operation keeps
+  prose, formulas and figures from drifting apart (supervisor review, p. 63).
 
 Warnings only: the exit status is 0 unless --strict is given. Under GitHub
 Actions each warning is also printed as an annotation.
@@ -32,6 +35,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ROOT / "thesis.typ"
+MATH_LIB = ROOT / "lib" / "math.typ"
 MAX_ISA_REFS = 3
 MAX_CAPTION_WORDS = 60
 MAX_ABSTRACT_WORDS = 400
@@ -82,6 +86,8 @@ REF = re.compile(r"@((?:ch|sec):[\w:.-]+?)(?=[^\w:.-]|[.:-](?:\s|$))")
 MATH = re.compile(r"\$[^$]*\$")
 LISTING = re.compile(r"\b(?:thy|proved)\(")
 # A bibliography key has no `kind:` prefix, which separates it from @sec:… refs.
+SHARP_HELPER = re.compile(r'^#let (\w+) = sh\("([\w-]+)"\)', re.M)
+RAW_SHARP = re.compile(r'"([\w-]+)"\^sharp|sh\("([\w-]+)"\)')
 CITATION = re.compile(r"(?<![\w.])@([A-Za-z][\w-]*)(?![\w:-])|#cite\(<([^>]+)>")
 
 
@@ -219,8 +225,26 @@ def abstract_findings(f, text):
         )
 
 
+def sharp_findings(f, text, helpers):
+    for m in RAW_SHARP.finditer(text):
+        name = m.group(1) or m.group(2)
+        if name in helpers:
+            yield (
+                f,
+                line_of(text, m.start()),
+                f"abstract operation '{name}' spelled out: write {helpers[name]}",
+            )
+        elif m.group(1):
+            yield (
+                f,
+                line_of(text, m.start()),
+                f'"{name}"^sharp: write sh("{name}"), or name it in lib/math.typ',
+            )
+
+
 def check(files):
     texts = {f: f.read_text() for f in files}
+    helpers = {op: name for name, op in SHARP_HELPER.findall(MATH_LIB.read_text())}
     label_at = {}
     for n, f in enumerate(files):
         for m in LABEL.finditer(texts[f]):
@@ -232,6 +256,7 @@ def check(files):
         text, name = texts[f], f.name
         if name == ABSTRACT:
             yield from abstract_findings(f, text)
+        yield from sharp_findings(f, text, helpers)
         for off, para in prose_paragraphs(text):
             # Names inside formulas are notation, not citations.
             refs = len(ISA_REF.findall(MATH.sub(" ", para)))

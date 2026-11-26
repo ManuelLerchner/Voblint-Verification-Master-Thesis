@@ -32,7 +32,7 @@ clean. The checks that keep the text honest, and what each one reads:
 | `thesis-stats` | `scripts/pages_stats.py` cannot measure the repository (every build writes the uncommitted `shared/generated/stats.json` from it), or a line of `content/` naming lines, theories, files, sessions, fixtures, cases or lemmas carries a number outside `stat()` and outside the commented `ALLOW` list in `tools/stats.py` |
 | `thesis-alignment` | the `align-list` rows of `pages/index.html`, which the evaluation counts, do not parse (every build and the refs and links checks write the uncommitted `shared/generated/goblint-alignment.json` from them; edit the page) |
 | `thesis-notation` | `shared/generated/notation.json`, the README's Notation block or the explainer's legend no longer matches the declarations in the theories, a declaration changed shape, or a symbol's anchor is missing from the rendered theories (`thesis-notation-write` refreshes all three; edit `shared/notation.toml` or the theories, never the output) |
-| `thesis-prose-structure` | never fails; warns about a prose paragraph with more than three `isa*` citations outside its formulas, a caption over 60 words, a `thy`/`proved` listing inside `#figure`, an `@ch`/`@sec` reference from outside the front matter and introduction to a later chapter or section other than an appendix, and a term emphasized as a definition (`_store_`) in two sections or used in a section before the one defining it |
+| `thesis-prose-structure` | never fails; warns about a prose paragraph with more than three `isa*` citations outside its formulas, a caption over 60 words, a `thy`/`proved` listing inside `#figure`, an `@ch`/`@sec` reference from outside the front matter and introduction to a later chapter or section other than an appendix, a term emphasized as a definition (`_store_`) in two sections or used in a section before the one defining it, and an abstract operation spelled out (`sh("combine")`) where `lib/math.typ` names it (`combineh`) |
 | `prose-lint`, `prose-rules-test` | a Vale rule at level error matches (`.vale.ini`; warnings and suggestions are for review), or a project rule's inline `tests:` no longer produce the alerts they list |
 | `thesis-vimp` | a VIMP listing's playground link does not decode to the program it shows, names a setting the playground lacks, is missing from the PDF's link annotations, or runs a claimed or fixture program at other settings; or VIMP code reaches the document outside `listing(lang: "c")` (`thesis-vimp-source` is the no-build part; `thesis-vimp-write` refreshes `shared/generated/vimp-claims.json`) |
 
@@ -247,8 +247,9 @@ Rules the author set while reviewing drafts. They refine the sections above.
   (`Voblint.EntryStatesPolicy`).
 - Precise mathematics. Say post-fixpoint when a value only satisfies
   $f(d) lle d$, say inequality when soundness needs only $lle$, write abstract
-  operations with a sharp ($sh(+)$), and do not say an iteration "reaches" a
-  limit it only approaches.
+  operations with a sharp ($sh(+)$), through their `lib/math.typ` helper
+  where one exists (`enterh`, `combineh`, `ctxh`), and do not say an
+  iteration "reaches" a limit it only approaches.
 - Define every term before its first use, including the ones that feel
   obvious (loop head, control-flow graph, carrier, key set, shared key). When a
   later section gives the full definition, explain the meaning needed here at
