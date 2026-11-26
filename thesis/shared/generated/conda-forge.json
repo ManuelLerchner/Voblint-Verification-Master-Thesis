@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-21",
+  "date": "2026-11-27",
   "platforms": [
     "osx-arm64",
     "osx-64",
@@ -199,7 +199,7 @@
       ],
       "via": "conda-forge/staged-recipes#34872",
       "available": true,
-      "newest": "2.1.1",
+      "newest": "2.1.2",
       "missing": []
     },
     "ocaml-yojson": {
