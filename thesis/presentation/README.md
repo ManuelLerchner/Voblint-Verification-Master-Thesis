@@ -10,7 +10,7 @@ Outputs are in `build/presentation/`: `voblint-slides.pdf` and
 `speaker-notes.txt`. CI builds the deck in the thesis job, and the site
 publishes it as `slides.pdf`, linked from every page's top navigation.
 
-The deck has 26 main slides, planned at 20:00, and three backups. `build.py` fails on any Typst warning, on main slides out of order, and
+The deck has 25 main slides, planned at 19:05, and three backups. `build.py` fails on any Typst warning, on main slides out of order, and
 on a main talk over 20 minutes.
 
 ## Style

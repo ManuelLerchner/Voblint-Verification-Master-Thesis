@@ -3,6 +3,7 @@
 // figures instead of bullet text.
 #import "@preview/cetz:0.5.2"
 #import "../lib/theme.typ": vb
+#import "@preview/codly:1.3.0": codly, codly-init
 
 #let ink = rgb("#111111")
 #let paper = rgb("#F4F5F5")
@@ -29,6 +30,24 @@
   set par(leading: 0.55em)
   show raw: set text(font: "Isabelle DejaVu Sans Mono", size: 0.9em)
   show math.equation: set text(font: "Latin Modern Math")
+  // VIMP listings use the thesis's codly frame, highlighted as C, with a
+  // playground link in the language tag.
+  show: codly-init.with()
+  codly(
+    zebra-fill: none,
+    fill: rgb("#EAEFEF"),
+    stroke: 1pt + pale,
+    radius: 10pt,
+    display-icon: false,
+    number-format: n => text(fill: grey, size: 0.75em, str(n)),
+    lang-format: (lang, icon, color) => box(
+      radius: 4pt,
+      fill: color.lighten(80%),
+      stroke: 0.8pt + color,
+      inset: (x: 0.4em, y: 0.15em),
+      text(size: 0.7em, fill: color.darken(20%), lang),
+    ),
+  )
   body
 }
 

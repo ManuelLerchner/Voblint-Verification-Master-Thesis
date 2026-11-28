@@ -49,7 +49,10 @@ def plain(value):
             return " "
         if value.get("func") in {"parbreak", "linebreak"}:
             return "\n"
-        return plain(value.get("text", value.get("children", value.get("body", ""))))
+        for key in ("text", "children", "body", "child"):
+            if key in value:
+                return plain(value[key])
+        return ""
     return ""
 
 

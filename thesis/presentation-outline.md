@@ -2,7 +2,7 @@
 
 Working title: **Voblint: Verifying a Context-Sensitive Abstract Interpreter**
 
-Target: **20 minutes, excluding questions**, 26 main slides planned at exactly 20:00. Audience: computer-science students and
+Target: **20 minutes, excluding questions**, 25 main slides planned at 19:05. Audience: computer-science students and
 examiners who know programming but not necessarily abstract interpretation,
 Isabelle, or proof assistants.
 
@@ -39,36 +39,35 @@ explanation pattern of Tom Wheeler's Temporal introduction: a small example,
 complexity that piles up, then the formal answer. The demo is live in the
 browser playground; the deck stays a PDF.
 
-| # | Slide | Time | Figure | Source |
-| --- | --- | --- | --- | --- |
-| 1 | Title | 0:20 | banner | |
-| 2 | Tests check some runs | 0:30 | explainer `runs` | thesis §1.1 |
-| 3 | Goblint | 0:40 | logo, checked properties | thesis §1.4 |
-| 4 | Confident wrong answers | 0:45 | remainder bug | thesis ch. 1, Goblint issue 1156 |
-| 5 | Proofs, checked by machines | 0:40 | timeline | see below |
-| 6 | The checker checks the proof, not the definitions | 0:50 | checked chain | see below |
-| 7 | Goblint's architecture splits the proof | 0:40 | pipeline | thesis §1.3, §1.4 |
-| 8 | Four verdicts | 0:35 | playground `clamp` | thesis §1.5.1 |
-| 9 | VIMP, a small C | 0:45 | grammar, explainer `island` | thesis §3.1, §3.7 |
-| 10 | A question about every run | 0:40 | bump, abstract values | `contexts.vimp` |
-| 11 | From the graph to equations | 0:45 | counting loop, equations | thesis ch. 2, site |
-| 12 | How many copies of a procedure (4-step build) | 1:00 | context grid | claims `ctx-demo-*` |
-| 13 | Why we need a trace semantics (4-step build) | 1:20 | CFG, split graph, flat run, datatype | thesis §4.1, §15.1 |
-| 14 | Activation traces on the example (3-step build) | 0:55 | activations, per-context sets | thesis ch. 4 |
-| 15 | Five local obligations | 1:05 | obligations, contract diagram | `activation_coverage` |
-| 16 | Chain of set inclusions (4-step build) | 0:45 | nested sets | thesis ch. 10 |
-| 17 | The end-to-end theorem | 0:50 | generated statement | `run_voblint_source_sound` |
-| 18 | What is proved, what is trusted | 0:40 | trust pipeline | site, thesis trust figure |
-| 19 | The remainder bug against an obligation | 0:45 | side by side, claim verdicts | `prefix_congruence_mod_unsound` |
-| 20 | Parts of the formalization | 0:25 | site treemap | thesis `fig:intro-corpus` |
-| 21 | What runs, what holds it up | 0:30 | iceberg | `stat()` |
-| 22 | What Voblint supports | 0:40 | domain cards, settings | thesis ch. 11 |
-| 23 | Now: the playground | 2:10 | example links | claims, playground |
-| 24 | Relevance to Goblint, limits | 0:40 | alignment counts | thesis §15.2 |
-| 25 | Outlook | 0:40 | three effort tiers | thesis §15.3 |
-| 26 | Conclusion | 0:25 | statement | thesis ch. 15 |
+| # | Slide | Time |
+| --- | --- | --- |
+| 1 | Voblint | 0:20 |
+| 2 | Tests check some runs. An analysis covers all of them. | 0:30 |
+| 3 | Goblint: an abstract interpreter for C | 0:35 |
+| 4 | But analyzers are programs, and they give confident wrong answers | 0:45 |
+| 5 | Fixing one bug does not rule out the next: proofs, checked by machines | 0:40 |
+| 6 | The checker checks the proof, not the definitions | 0:50 |
+| 7 | Goblint's architecture lets the proof split along its modules | 0:40 |
+| 8 | What the user sees: four verdicts | 0:35 |
+| 9 | Our language: VIMP, a small C | 0:45 |
+| 10 | Calling contexts decide precision | 1:10 |
+| 11 | Layer 1: one state per node | 0:40 |
+| 12 | Layer 2: one state per (node, context) | 0:40 |
+| 13 | Layer 3: a run as a flat list? | 0:40 |
+| 14 | Layer 4: activation traces | 0:45 |
+| 15 | Activation traces on the example | 0:50 |
+| 16 | The proof contract: five local obligations | 1:05 |
+| 17 | The end-to-end theorem | 0:50 |
+| 18 | Now: the formalization | 1:30 |
+| 19 | What is proved, what is trusted | 0:40 |
+| 20 | What runs, and what holds it up | 0:30 |
+| 21 | What Voblint supports, all covered by the theorem | 0:35 |
+| 22 | Now: the playground | 1:50 |
+| 23 | Relevance to Goblint, and limits | 0:40 |
+| 24 | Outlook: towards C and Goblint | 0:35 |
+| 25 | Conclusion | 0:25 |
 
-Total 20:00, with no slack. If the demo runs long, move slide 20 or 21 to backup.
+Total 19:05. Figures and sources are named in each slide's `sources:` line and speaker notes in `presentation/slides.typ`.
 
 ## Sources for slides 3 and 4
 
