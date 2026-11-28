@@ -1,665 +1,664 @@
+// The thesis talk. Narrative: why such a tool has to exist, a small example,
+// how building an analyzer piles up complexity, the bug that slips through
+// anyway, what a machine-checked analyzer changes, and the running tool.
 #import "theme.typ": *
-#import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isalocale, isathm, listing, playground-link, site
+#import "../lib/code.typ": isathm
 #import "../lib/claims.typ": claim-check
 
 #show: deck
 
-#let baseline = "3520a4ec77ac0a9c2a3f7812a37a69f4148128cd"
-#let repo = (
-  "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/" + baseline + "/"
+#let pg(name) = "/shared/generated/playground/" + name
+#let svg(name) = "/shared/generated/svg/" + name + ".svg"
+
+#let code-card(body, w: 520pt) = block(
+  width: w,
+  radius: 12pt,
+  fill: rgb("#132A33"),
+  inset: (x: 26pt, y: 20pt),
+  {
+    set text(fill: rgb("#E6EEF0"), size: 24pt)
+    set par(leading: 0.5em)
+    body
+  },
 )
-#let source(path, label) = link(repo + path, label)
-#let running = read("/shared/generated/playground/contexts.vimp")
-#let playground = playground-link(
-  running,
-  analysis: "interval",
-  globals: "warrow",
-  ctx: "entry-state",
-)
-#let trace-paper = "https://doi.org/10.1007/978-3-030-88806-0_18"
-#let solver-paper = "https://doi.org/10.1007/978-3-032-28079-4_3"
-#let remainder-fix = "https://github.com/goblint/analyzer/pull/1161"
-#let rewrite = "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/pull/357"
-#let replay = (
-  "https://raw.githubusercontent.com/ManuelLerchner/Voblint-Verification-Master-Thesis/"
-    + baseline
-    + "/docs/images/solve-replay.gif"
-)
+
+#let verdict-tag(v) = {
+  let c = if v == "PROVED" { green } else if v == "REFUTED" { red } else { amber }
+  box(inset: (x: 10pt, y: 5pt), radius: 6pt, fill: c, text(
+    fill: white,
+    size: 20pt,
+    weight: "bold",
+    v,
+  ))
+}
+
+// ======================================================== 1. Why it exists
+
+#page(fill: night, margin: 0pt)[
+  #metadata((
+    id: 1,
+    title: [Voblint],
+    seconds: 20,
+    notes: [
+      Introduce yourself in one sentence. Then go straight to the question
+      the talk answers: why should anyone trust what a program analyzer says?
+    ],
+  )) <talk-slide>
+  #set text(fill: white)
+  #align(center + horizon)[
+    #image("assets/voblint.png", height: 220pt)
+    #v(8pt)
+    #text(size: 72pt, weight: "bold")[Voblint]
+    #v(-12pt)
+    #text(size: 30pt)[Verifying a context-sensitive abstract interpreter]
+    #v(30pt)
+    #text(size: 22pt, fill: grey)[
+      Manuel Lerchner · Master's thesis · Technical University of Munich\
+      Supervisors: Alexandra Graß and Helmut Seidl
+    ]
+  ]
+]
 
 #talk-slide(
-  1,
-  [Voblint],
-  30,
+  2,
+  [Tests check #b(amber)[some] runs. An analysis covers #b(blue)[all] of them.],
+  60,
+  section: [Why],
   [
-    #grid(
-      columns: (1fr, 230pt),
-      column-gutter: 30pt,
-      [
-        #text(size: 42pt, weight: "bold")[Verifying a context-sensitive abstract interpreter]
-        #v(26pt)
-        #text(size: 27pt)[Manuel Lerchner]
-        #v(8pt)
-        #aside[Master’s thesis · Informatics\ Technical University of Munich]
-        #v(22pt)
-        #aside[Supervisors: Alexandra Graß and Helmut Seidl]
-      ],
-      image("assets/voblint.png", width: 230pt),
-    )
+    #v(20pt)
+    #align(center, image(svg("runs"), width: 1080pt))
   ],
-  sources: [Source-to-report soundness in Isabelle/HOL],
   notes: [
-    Open with the question: how can we trust the guarantees produced by
-    a static analyzer? This talk explains the formalization, its main semantic
-    construction, and the boundary of its guarantee.
+    Start from why such tools exist. Most code is checked by testing. A test
+    run that passes tells you about that run. The input nobody tried is never
+    checked (left). A static analyzer reads the program and computes one region
+    that contains every run, tried or not (right). If that region misses the
+    bad states, no run reaches them. That is why people stop looking at a line
+    once the analyzer says it is fine. It also means a wrong answer is worse
+    than no answer.
   ],
 )
-
-#roadmap(2, 1)
 
 #talk-slide(
   3,
-  [A verified solver needs sound equations],
+  [Machines now check #b(blue)[large proofs]],
   60,
+  section: [Why],
   [
-    #lead[Goblint analyzes C using a modular,\ context-sensitive equation system.]
-    #v(24pt)
-    #pipeline()
-    #v(25pt)
-    #accent[Voblint connects the equations to source executions.]
     #v(10pt)
-    #aside[A correct solution of the wrong equations still gives the wrong answer.]
+    #align(center, cetz.canvas(length: 1cm, {
+      import cetz.draw: *
+      let milestone(x, y, year, name, tool, c) = {
+        line((x, 0), (x, y), stroke: 1.5pt + c)
+        circle((x, 0), radius: 0.12, fill: c, stroke: none)
+        content(
+          (x, y),
+          anchor: if y > 0 { "south" } else { "north" },
+          padding: 0.15,
+          box(inset: 8pt, radius: 6pt, fill: white, stroke: 1pt + c, align(
+            center,
+            text(size: 21pt)[#text(weight: "bold", name)\ #text(
+                size: 16pt,
+                fill: grey,
+              )[#year · #tool]],
+          )),
+        )
+      }
+      // Milestones sit at even spacing; the year labels carry the time.
+      let x(i) = 1.6 + i * 4.6
+      line((0, 0), (x(7) + 1.2, 0), stroke: 2.5pt + grey, mark: (end: ">"))
+      content((-0.4, 0.5), anchor: "south-east", text(size: 18pt, fill: grey)[maths ↑])
+      content((-0.4, -0.5), anchor: "north-east", text(size: 18pt, fill: grey)[software ↓])
+      // Neighbouring cards alternate in height so they never overlap.
+      milestone(x(0), -1.4, "2009", [seL4 kernel], "Isabelle", green)
+      milestone(x(1), -4.4, "2009", [CompCert], "Coq", green)
+      milestone(x(2), 1.4, "2015", [Kepler\ conjecture], "HOL Light, Isabelle", blue)
+      milestone(x(3), 4.6, "2022", [Liquid\ Tensor], "Lean", blue)
+      milestone(x(4), 1.4, "2025", [Busy\ Beaver 5], "Coq", blue)
+      milestone(x(5), -1.4, "2026", [AWS Nitro\ hypervisor], "Isabelle", green)
+      milestone(x(6), 4.6, "Sep 2026", [Navier–\ Stokes], "Lean", red)
+      milestone(x(7), 1.4, "Nov 2026", [Riemann\ Hypothesis], "Lean", red)
+    }))
   ],
-  sources: [#link(solver-paper)[Tilscher, Graß & Seidl · NFM 2026]],
+  sources: [Red: formal proofs produced with AI systems in 2026. Sources: presentation-outline.md.],
   notes: [
-    Define abstract interpretation verbally: an interval may contain
-    extra values, but must retain every concrete value. Goblint is the motivating
-    C analyzer. The solver and side-effecting constraints are prior work; this
-    formalization supplies the source-to-equations-to-report connection for VIMP.
-    Preview the result: whenever the analysis function returns a report, its
-    definite verdicts hold on covered executions reaching the relevant point.
+    The second trend: proof assistants. A proof assistant checks every step
+    of a proof against a small trusted kernel. Twenty years ago that meant
+    single heroic projects. Today it is routine: the Kepler conjecture, the
+    Liquid Tensor Experiment, the fifth Busy Beaver value. On the software
+    side, an OS kernel, a C compiler, and since this year AWS's hypervisor.
+    And this autumn the scale changed again: AI systems produced Lean proofs
+    of a Navier–Stokes blow-up result (OpenAI, September) and of the Riemann
+    Hypothesis (released 20 November, certified by the Lean FRO and the
+    Mathlib Initiative the next day). Check the status of both the week of
+    the talk.
   ],
 )
 
 #talk-slide(
   4,
-  [One procedure, two calls],
-  60,
+  [The checker checks the proof, #b(red)[not the question]],
+  75,
+  section: [Why],
   [
-    #grid(
-      columns: (1.1fr, 1fr),
-      column-gutter: 40pt,
-      [#set text(size: 23pt)
-        #listing(running, lang: "c", analysis: "interval", globals: "warrow", ctx: "entry-state")],
-      [#subhead[VIMP]
-        Integer variables, globals, control flow, and recursive procedures.
-        #v(13pt)
-        #subhead[Voblint]
-        Isabelle/HOL checks the formal arguments. The playground runs generated code.
-        #v(13pt)
-        #aside[Unbounded integers; no pointers, heap, or threads.]],
-    )
+    #v(50pt)
+    #checked-chain([What we #b(blue)[mean]], [Formal #b(blue)[statement]\ + definitions], [
+      Formal #b(blue)[proof]
+    ])
+    #v(70pt)
+    #align(center, text(size: 24pt, fill: rgb("#444"))[
+      Riemann (Nov 2026): a separate tool confirms the theorem #emph[is] Mathlib's statement.\
+      Navier–Stokes (Oct 2026): "the formalised Lean proof does not correspond to the NL proof".
+    ])
   ],
-  sources: [#link(playground)[Open the running example ↗]],
+  sources: [Lean FRO and Mathlib Initiative, 21 Nov 2026 · Bastounis, Circelli, Hansen, arXiv 2610.08144],
   notes: [
-    Explain that bump returns its argument plus one: a is 6 and b is 5.
-    These are concrete values. Introduce Isabelle as the proof assistant and the
-    playground as the browser interface. We will return to this exact program.
-    Source: pinned thesis program-model and evaluation chapters; capture manifest
-    contexts entry, Interval / entry-state / warrow / flow-sensitive globals.
+    What does a machine check actually give you? The kernel checks that the
+    proof proves the formal statement. It cannot check that the statement and
+    its definitions say what we mean. That step stays with humans. The Riemann
+    certification therefore ran a separate statement check. For the Navier–Stokes
+    result, a group argues that the Lean proof does not correspond to the
+    published argument. Keep this picture in mind; it comes back when we look
+    at what Voblint trusts.
   ],
 )
 
-#roadmap(5, 2)
+// ===================================================== 2. A small example
 
 #talk-slide(
-  6,
-  [Merging calls loses useful information],
-  75,
+  5,
+  [A question about #b(blue)[every run]],
+  60,
+  section: [Example],
   [
     #grid(
       columns: (1fr, 1fr),
-      column-gutter: 45pt,
-      [#subhead[One context]
-        #text(size: 35pt)[$5, 4 arrow.r [4, 5]$]
-        #v(12pt)
-        Both returns: $[5, 6]$
-        #v(17pt)
-        #result(
-          claim-check("pg-contexts-none-join", "a == 6").at(3),
-          [for both checks],
-          color: vb.trusted,
-        )],
-      [#subhead[Entry-state contexts]
-        #text(size: 35pt)[$5 arrow.r [6, 6]$]
-        #linebreak()
-        #text(size: 35pt)[$4 arrow.r [5, 5]$]
-        #v(17pt)
-        #result(claim-check("pg-contexts-entry", "a == 6").at(3), [for both checks])],
+      column-gutter: 40pt,
+      align: horizon,
+      code-card(raw(read(pg("contexts.vimp")), lang: none)),
+      cetz.canvas(length: 1.25cm, {
+        import cetz.draw: *
+        // The values a and b take, against what three abstractions keep.
+        for i in range(0, 10) {
+          line((i * 1.3, -0.15), (i * 1.3, 0.15), stroke: 1pt + grey)
+          content((i * 1.3, -0.6), text(size: 18pt, fill: grey, str(i)))
+        }
+        line((-0.3, 0), (12.3, 0), stroke: 1.5pt + grey)
+        circle((5 * 1.3, 0), radius: 0.22, fill: ink, stroke: none)
+        circle((6 * 1.3, 0), radius: 0.22, fill: ink, stroke: none)
+        content((5.5 * 1.3, 0.8), text(size: 20pt, weight: "bold")[runs: 5, 6])
+        let band(y, from, to, c, label) = {
+          rect(
+            (from * 1.3, y - 0.3),
+            (to * 1.3, y + 0.3),
+            fill: c.transparentize(70%),
+            stroke: 2pt + c,
+            radius: 0.2,
+          )
+          content((-0.5, y), anchor: "east", text(size: 20pt, fill: c, weight: "bold", label))
+        }
+        band(-2.0, 1, 9.3, amber, [sign])
+        band(-3.2, 5, 6, blue, [interval])
+        band(-4.4, 0, 9.3, vb.called, [parity])
+        content((9.6 * 1.3, -2.0), anchor: "west", text(size: 18pt, fill: grey)[positive])
+        content((9.6 * 1.3, -3.2), anchor: "west", text(size: 18pt, fill: grey)[[5, 6]])
+        content((9.6 * 1.3, -4.4), anchor: "west", text(size: 18pt, fill: grey)[any])
+      }),
     )
-    #v(26pt)
-    #accent[Which concrete executions must each context cover?]
-    #v(10pt)
-    #aside[Policies: none · entry state · bounded call string]
   ],
-  sources: [#source("thesis/shared/claims.toml", [Registered context examples])],
   notes: [
-    The left registered run uses Interval with the join update rule to
-    isolate loss from merging. The right uses entry-state contexts with warrow.
-    This is a concrete precision example, not a general precision theorem. The
-    values shown explain the join and the two calls; the displayed verdicts are
-    read from registered claims. Bounded call strings remember recent call sites.
+    Here is the example for the rest of the talk. bump adds one. main calls it
+    twice and asks two questions. If you run it, both checks hold. An analyzer
+    must answer without running the program, for every input, so it computes
+    with abstract values: descriptions of sets of numbers. A sign says
+    "positive", an interval says "between 5 and 6", parity says "even or odd".
+    Every abstract value must contain every value a run can produce. It may
+    contain more. That is the deal: precision may be lost, a real value never.
+  ],
+)
+
+#talk-slide(
+  6,
+  [How hard could it be? Merging calls #b(red)[loses] precision],
+  70,
+  section: [Example],
+  [
+    #grid(
+      columns: (1fr, 1fr),
+      column-gutter: 40pt,
+      align(center)[
+        #text(size: 30pt, weight: "bold")[One state per procedure]\
+        #small[both calls of bump merged]
+        #v(10pt)
+        #crop(pg("contexts.png"), 1734, 1286, 28, 82, 806, 548, width: 540pt)
+      ],
+      align(center)[
+        #text(size: 30pt, weight: "bold", fill: blue)[One state per calling context]\
+        #small[a copy of bump per entry state]
+        #v(10pt)
+        #crop(pg("contexts.png"), 1734, 1286, 28, 710, 794, 548, width: 540pt)
+      ],
+    )
+  ],
+  notes: [
+    The descent starts. The simple analyzer keeps one state per procedure. bump
+    is called with 5 and with 4, so it sees n in an interval up to 5, returns
+    up to 6, and both checks come back UNKNOWN (left). The fix: analyze bump
+    separately per calling context, here per entry value. Now a is exactly 6
+    and b exactly 5, and both checks are PROVED (right). Real analyzers such
+    as Goblint, a static analyzer for C developed at TUM, do this.
   ],
 )
 
 #talk-slide(
   7,
-  [Activation traces retain the caller],
-  100,
+  [More precision, more machinery: #b(red)[infinitely many] contexts],
+  45,
+  section: [Example],
   [
+    #v(10pt)
+    #grid(
+      columns: (1fr, 380pt),
+      column-gutter: 30pt,
+      align: horizon,
+      align(center, image(svg("infinite"), height: 470pt)),
+      [
+        #text(size: 28pt)[A recursive call can create a #b(blue)[new context] every time.]
+        #v(24pt)
+        #text(size: 28pt)[The solver explores only the #b(blue)[finitely many] it reaches.]
+        #v(24pt)
+        #small[Contexts, widening, globals, a demand-driven solver: each piece is another place for a bug.]
+      ],
+    )
+  ],
+  notes: [
+    Contexts bring their own trouble. With recursion there can be infinitely
+    many of them, so the equations have infinitely many unknowns. The solver
+    only touches the ones it needs. Add widening for loops, shared globals,
+    and the solver itself, and you have the kind of machinery real analyzers
+    are built from. Every one of those pieces can be wrong.
+  ],
+)
+
+#talk-slide(
+  8,
+  [We added all the machinery. Is it correct now? #b(red)[No.]],
+  60,
+  section: [Example],
+  [
+    #v(10pt)
     #grid(
       columns: (1fr, 1fr),
       column-gutter: 40pt,
-      [#subhead[One trace per activation]
-        #text(size: 28pt)[main]
-        #pad(left: 30pt)[
-          ↳ bump(5) → return 6
-          #v(12pt)
-          ↳ bump(4) → return 5
-        ]
-        #v(24pt)
-        #aside[A return resumes the caller that made the call.]],
-      [#subhead[Contexts describe these traces]
-        A policy relates an activation to one or more contexts.
-        #v(20pt)
-        Every reachable activation must receive a context.
-        #v(20pt)
-        #accent[Union of context groups\ = node collecting semantics]],
+      align: horizon,
+      code-card(raw(
+        "c = -5;   // or c = -7\n__voblint_check(c % 2 == 1);",
+        lang: none,
+      )),
+      [
+        #grid(
+          columns: (auto, 1fr),
+          column-gutter: 20pt,
+          row-gutter: 30pt,
+          align: (right + horizon, left + horizon),
+          text(size: 26pt, weight: "bold")[C11],
+          [#text(
+              size: 40pt,
+              weight: "bold",
+              fill: green,
+            )[−5 % 2 = −1]\ #small[remainder truncates toward zero]],
+
+          text(size: 26pt, weight: "bold")[Goblint],
+          [#text(
+              size: 40pt,
+              weight: "bold",
+              fill: red,
+            )[always 1]\ #small[congruence domain ignored the sign]],
+        )
+      ],
     )
-    #v(24pt)
-    #aside[The groups can overlap. A context is not an activation identifier.]
+    #v(40pt)
+    #align(center, text(
+      size: 28pt,
+    )[A #b(red)[confident wrong answer] in a mature analyzer, fixed after a user report.])
   ],
-  sources: [#isathm("node_collect_eq_Union_activation_collect", display: "Context coverage") · #link(trace-paper)[Schwarz et al. · SAS 2021]],
+  sources: [Goblint issue 1156, fixed by pull request 1161],
   notes: [
-    A trace retains the caller ancestry and completed callee structure,
-    rather than only a reached store. Contexts remain outside the concrete
-    semantics and are related to traces by a policy. The union equality requires
-    context coverage; it is not true for an arbitrary policy admitting no contexts.
-    Trace inspiration: Improving Thread-Modular Abstract Interpretation (SAS 2021).
+    So we have all the machinery. Are we done? Here is a real bug from
+    Goblint. In C, the remainder truncates toward zero, so minus five modulo
+    two is minus one. Goblint's congruence domain ignored the sign of the
+    dividend and claimed the remainder is always one. A user found it, and
+    pull request 1161 fixed it. Fixing one bug does not rule out the next.
   ],
 )
 
-#roadmap(8, 3)
+// =============================================== 3. What a proof changes
+
+#let c-congr = claim-check("goblint-1161-congruence", "c % 2 == 1")
+#let i-one = claim-check("goblint-1161-int", "c % 2 == 1")
+#let i-neg = claim-check("goblint-1161-int", "c % 2 == -1")
 
 #talk-slide(
   9,
-  [An Isabelle locale captures the proof contract],
-  105,
+  [The same bug, #b(blue)[with a proof obligation]],
+  75,
+  section: [Proof],
   [
-    #aside[#isalocale("activation_coverage"): fix the semantics and candidate cover; assume:]
-    #v(18pt)
     #grid(
-      columns: (140pt, 1fr),
-      row-gutter: 18pt,
-      accent([CALL]), [Cover the entered callee in every admitted context.],
-      accent([RETURN]), [Combine a callee result with its matching caller.],
-      accent([TOTAL]), [Admit a context for every call from a store in the cover.],
+      columns: (1fr, 1fr),
+      column-gutter: 50pt,
+      [
+        #text(size: 30pt, weight: "bold")[Unverified analyzer]
+        #v(14pt)
+        #card([Remainder operator\ returns 1], grey, w: 520pt, h: 100pt)
+        #align(center, text(size: 40pt, fill: grey)[↓])
+        #card(
+          [#text(fill: red)[Wrong answer ships]\ #text(
+              size: 20pt,
+              weight: "regular",
+            )[found by a user]],
+          red,
+          w: 520pt,
+          h: 100pt,
+        )
+      ],
+      [
+        #text(size: 30pt, weight: "bold", fill: blue)[Voblint]
+        #v(14pt)
+        #card([Every remainder must\ #b(blue)[contain the real one]], blue, w: 520pt, h: 100pt)
+        #align(center, text(size: 40pt, fill: red)[✗])
+        #card(
+          [#text(fill: green)[Isabelle refutes the operator]\ #text(
+              size: 20pt,
+              weight: "regular",
+            )[counterexample: −5]],
+          green,
+          w: 520pt,
+          h: 100pt,
+        )
+      ],
     )
-    #v(25pt)
-    #rule
-    #v(15pt)
-    #aside[*INIT* covers initial stores. *INTRA* preserves local steps.]
-    #v(20pt)
-    #lead[Prove coverage once by induction.\ Discharge the locale for each analysis.]
+    #v(4pt)
+    #align(center)[
+      #set text(size: 22pt)
+      Same program, sound domains: #h(10pt) Congruence #verdict-tag(c-congr.at(3)) #h(24pt)
+      Int: #raw(i-one.at(2)) #verdict-tag(i-one.at(3)) #h(6pt) #raw(i-neg.at(2)) #verdict-tag(i-neg.at(3))
+    ]
   ],
-  sources: [#isalocale("activation_coverage", display: "Coverage contract") · #isathm("activation_collect_sound", display: "Coverage theorem")],
+  sources: [#isathm("congruence_mod_sound") · #isathm("prefix_congruence_mod_unsound")],
   notes: [
-    Explain CALL and RETURN using the two bump activations. TOTAL is
-    quantified over stores in the proposed cover, including abstractly admitted
-    stores that are not actually reachable. Without TOTAL, CALL and RETURN can
-    hold vacuously. The contract fixes no numeric domain, equations, or solver.
-    The induction follows root, local extension, call, and resumed caller.
+    This is the comparison that matters. In an unverified analyzer the
+    operator is code; nothing forces it to agree with C. In Voblint every
+    abstract remainder carries an obligation: whatever the concrete values,
+    their real remainder must lie in the abstract result. Goblint's pre-fix
+    answer cannot meet it. Isabelle proves the opposite, with minus five as
+    the witness. The bug could not have been proved sound, so it could not
+    ship. On the same program, the sound congruence domain says UNKNOWN, and
+    the combined Int domain refutes the wrong check and proves the right one.
   ],
 )
 
+#let rungs = ([Source runs], [Graph traces], [Per-context sets], [Analyzer result])
+#let ring-colours = (ink, vb.voblint, vb.locale, vb.solver)
+#let nested(upto) = cetz.canvas(length: 1cm, {
+  import cetz.draw: *
+  let r(i) = 2.4 + 1.9 * i
+  // Reserve the final frame so the figure does not move while it grows.
+  rect((0, -r(3) * 0.8), (2 * r(3), r(3) * 0.8), stroke: none)
+  for i in range(upto).rev() {
+    circle((r(i), 0), radius: (r(i), r(i) * 0.8), fill: white, stroke: 3.5pt + ring-colours.at(i))
+  }
+  for p in ((1.6, -0.2), (2.6, -0.9), (2.1, -1.4), (3.2, -0.5)) {
+    circle(p, radius: 0.13, fill: ink, stroke: none)
+  }
+})
+
 #talk-slide(
   10,
-  [Equations implement the call protocol],
-  75,
-  [
-    #grid(
-      columns: (1fr, 26pt, 1fr, 26pt, 1fr, 26pt, 1fr),
-      align: horizon,
-      step([Enter], [bind arguments]),
-      [→],
-      step([Route], [choose context]),
-      [→],
-      step([Solve], [read callee result], color: vb.solver),
-      [→],
-      step([Combine], [resume caller]),
-    )
-    #v(30pt)
-    #grid(
-      columns: (1fr, 1fr),
-      column-gutter: 35pt,
-      [#subhead[D: local information]
-        Flow-sensitive facts at a node and context.],
-      [#subhead[G: shared information]
-        Contributions published to other unknowns.],
-    )
-    #v(22pt)
-    #aside[Analyses justify transfers; policies justify routing.]
-  ],
-  sources: [#source("thesis/content/08-equations.typ", [Routed equation construction])],
+  [Soundness is a chain of #b(blue)[set inclusions]],
+  90,
+  section: [Proof],
+  steps: 4,
+  step => grid(
+    columns: (460pt, 1fr),
+    rows: 480pt,
+    align: (left + horizon, center + horizon),
+    [
+      #checklist(rungs, step, colours: ring-colours)
+      #v(20pt)
+      #small[Each step may add states: precision lost.\ None may drop one: soundness kept.]
+    ],
+    nested(step),
+  ),
   notes: [
-    Enter produces caller continuation and callee entry information;
-    route selects the callee context. Publish its entry seed before querying its
-    result, then combine with the saved caller information. Side effects here are
-    equation contributions, not arbitrary host-language effects. Briefly mention
-    that cooperating analyses exchange information under query/answer contracts.
-    Architectural correspondence with Goblint does not establish equal fixpoints.
+    How do we prove it for the whole analyzer, not just one operator? We follow
+    one program point and the states real runs have there (the dots).
+    Step one: the source program compiles to a graph, and every source run is
+    a run on the graph. Step two: the runs on the graph are grouped by calling
+    context. Step three: the solver's answer contains each group. Each step is
+    its own theorem. Each may add states, which costs precision. None may drop
+    a state. Chained together: everything a real run can do is in the answer.
   ],
 )
 
 #talk-slide(
   11,
-  [The proof connects source to solution],
-  105,
+  [What you see, and what #b(blue)[holds it up]],
+  60,
+  section: [Proof],
   [
     #grid(
-      columns: (1.05fr, 1.65fr),
-      row-gutter: 19pt,
-      column-gutter: 32pt,
-      accent([Source → CFG]), [Each source step has a matching graph execution.],
-      accent([CFG → traces]), [Calls and returns yield valid activation traces.],
-      accent([Traces → contexts]), [Every reached store belongs to a context group.],
-      accent([Equations → cover]), [A post-solution meets the coverage obligations.],
-      text(fill: vb.solver, weight: "bold", [Solver → certificate]),
-      [A successful solve yields a partial post-solution.],
+      columns: (440pt, 1fr),
+      column-gutter: 30pt,
+      align: horizon,
+      [
+        #text(size: 24pt, weight: "bold")[Above the line: the verdicts]
+        #v(6pt)
+        #crop(pg("clamp.png"), 1328, 1090, 0, 0, 1328, 1090, width: 420pt)
+      ],
+      [
+        #text(size: 24pt, weight: "bold")[Below the line: one theorem per link]
+        #v(6pt)
+        #image(svg("metro"), width: 100%)
+      ],
     )
-    #v(19pt)
-    #aside[Dependency-closed solved unknowns · no leastness claim · partial correctness]
   ],
-  sources: [#isathm("source_run_has_activation_trace", display: "Source-to-trace bridge") · #link(solver-paper)[Inherited solver]],
   notes: [
-    This is the central proof diagram. Losing a reachable branch in
-    compilation or returning to the wrong caller would break the first links,
-    irrespective of solver correctness. The proof works backwards from the
-    solver certificate to establish coverage of source behavior. Its partial
-    post-solution covers the solved unknowns, with dependency closure. The
-    surrounding argument establishes coverage of relevant reachable nodes.
-    Widening/narrowing do not imply a least fixpoint. General solver termination
-    is not proved. Cite the side-effecting solver and update rules to Tilscher,
-    Graß, and Seidl (NFM 2026); CAV 2024 is its earlier solver background.
+    A user sees verdicts: PROVED, REFUTED, DEAD, a warning (left). Below the line
+    is the proof that makes those words mean something: each line on the right
+    is one component, semantics, compiler, domains, framework, solver, and each
+    interchange is a place where one theorem uses another. PROVED means the
+    check holds whenever a run reaches the point. It does not say the point is
+    reachable. DEAD says it is not.
   ],
 )
 
-#roadmap(12, 4)
-
 #talk-slide(
-  13,
-  [What a returned report guarantees],
-  90,
+  12,
+  [What is #b(amber)[trusted], not proved],
+  70,
+  section: [Proof],
   [
-    #lead[Every source-reached store is covered\ at every node where it is observed.]
-    #v(16pt)
-    #aside[Allowed initial store + finite source execution + returned report]
+    #v(10pt)
+    #checked-chain(
+      [C-like programs\ #text(size: 20pt, weight: "regular")[what we mean]],
+      [VIMP semantics\ #text(size: 20pt, weight: "regular")[the definition]],
+      [Soundness\ theorem],
+    )
     #v(20pt)
     #grid(
       columns: (1fr, 1fr),
-      column-gutter: 32pt,
-      row-gutter: 14pt,
-      result([PROVED], [true whenever reached]),
-      result([REFUTED], [false whenever reached], color: vb.unproved),
-
-      result([DEAD], [unreachable], color: vb.neutral),
-      result([UNKNOWN], [no definite verdict], color: vb.trusted),
+      column-gutter: 30pt,
+      align: horizon,
+      image(svg("island"), width: 100%),
+      [
+        #text(
+          size: 26pt,
+        )[#b(amber)[Trusted:] parser, code generation, OCaml and the browser runtime.]
+        #v(16pt)
+        #text(
+          size: 26pt,
+        )[#b(blue)[Scope:] unbounded integers, no pointers, heap or threads. Partial correctness.]
+      ],
     )
-    #v(24pt)
-    #accent[Each context’s reported states also cover its own collecting set.]
-    #v(12pt)
-    #aside[No arithmetic diagnostic at a point ⇒ covered divisors are nonzero.]
   ],
-  sources: [#isathm("run_voblint_source_sound", display: "Source result") · #isathm("run_voblint_context_covers", display: "Per-context result") · #isathm("run_voblint_arithmetic_safe", display: "Arithmetic safety")],
   notes: [
-    Initial globals are zero; main's locals are unconstrained. A source
-    run is covered through at least one context, not every context. Separately,
-    the per-context theorem covers each context's activation collecting set.
-    PROVED and REFUTED do not imply reachability; REFUTED is not a counterexample.
-    Arithmetic claims concern covered graph points. Printed positions and state
-    strings are outside the theorem. The per-context statement was checked in
-    Analysis_Certified through I/Q; the pinned paper still describes it as future work.
+    Back to the picture from the start. Isabelle checks the proof against the
+    VIMP semantics. Whether VIMP models the programs we care about is an
+    argument, not a theorem. VIMP is a fragment of C (left): integers,
+    globals, recursive procedures; no pointers, heap or threads, and integers
+    do not overflow. The parser and the generated-code toolchain sit outside
+    the proof. The guarantee is partial correctness: it covers every run when
+    the solver finishes.
+  ],
+)
+
+// ================================================================ 4. Demo
+
+#talk-slide(
+  13,
+  [The proved analyzer #b(blue)[runs in your browser]],
+  150,
+  section: [Demo],
+  [
+    #align(center, image(svg("build"), width: 1100pt))
+    #v(10pt)
+    #align(center, text(
+      size: 26pt,
+    )[Isabelle generates the analyzer's code from #b(blue)[the same definition] the theorem is about.])
+  ],
+  notes: [
+    Live demo, about two minutes. Open the playground. Run the bump example
+    with contexts off: both checks UNKNOWN. Switch to entry-state contexts: both
+    PROVED, and the graph gets a box per context. Then open the overview
+    example: PROVED, REFUTED and DEAD checks, an arithmetic warning. The code
+    running here is generated by Isabelle from the function the theorem is
+    about, compiled to WebAssembly. If the network fails, show this slide.
   ],
 )
 
 #talk-slide(
   14,
-  [The obligations have testable force],
-  75,
+  [Watching the solver work],
+  50,
+  section: [Demo],
   [
-    #grid(
-      columns: (1fr, 1fr),
-      column-gutter: 40pt,
-      [#subhead[A theorem instance exists]
-        Source run + successful analysis\ of the two-call program.
-        #v(24pt)
-        #result([a == 6], [#claim-check("pg-contexts-entry", "a == 6").at(3)])
-        #v(12pt)
-        #result([b == 5], [#claim-check("pg-contexts-entry", "b == 5").at(3)])],
-      [#subhead[A defective operation is excluded]
-        Truncating remainder:
-        #v(15pt)
-        #text(size: 38pt)[−5 % 2 = −1]
-        #v(15pt)
-        Returning only $1$ for every odd input loses a concrete behavior.],
-    )
-    #v(22pt)
-    #aside[Dropping TOTAL also admits a cover that misses a reached store.]
+    #align(center, crop(pg("solve-replay-still.png"), 2088, 1472, 0, 0, 2088, 1472, height: 500pt))
   ],
-  sources: [#isathm("nv_source_certified", display: "Non-vacuity") · #isathm("prefix_congruence_mod_unsound", display: "Rejected operator") · #link(remainder-fix)[Goblint #1161]],
   notes: [
-    The left theorem discharges the premises for the bump example with
-    Interval, entry-state contexts, and warrow. It is distinct from the Int capstone.
-    Displayed verdicts are registered analyzer claims; the theorem is separate
-    machine-checked evidence. Evaluation proofs additionally trust code generation.
-    The right theorem excludes any remainder operator with the defective constant
-    answer. Goblint PR 1161 is the original fix. Mention the TOTAL counterexample
-    in one sentence; do not walk through its proof. None is a general precision result.
+    The playground can replay the solve step by step: which unknown is being
+    evaluated, which call is being entered, and when a callee's entry state is
+    published. Here the first call into a context reads its callee's seed.
+    This is how we debugged the analyzer during development.
   ],
 )
 
 #talk-slide(
   15,
-  [Explore the result and replay the solve],
-  75,
+  [Combining domains #b(blue)[proves more]],
+  45,
+  section: [Demo],
   [
-    #grid(
-      columns: (1.15fr, 0.9fr),
-      column-gutter: 25pt,
-      [#link(playground)[#image(
-          "/shared/generated/playground/overview.png",
-          width: 100%,
-          height: 245pt,
-          fit: "contain",
-        )]
-        #v(10pt)
-        #text(size: 20pt)[#link(playground)[Open the two-call example ↗]]],
-      [#link(replay)[#image(
-          "/shared/generated/playground/solve-replay-still.png",
-          width: 100%,
-          height: 245pt,
-          fit: "contain",
-        )]
-        #v(10pt)
-        #text(size: 20pt)[#link(replay)[Play the solver tracing GIF ↗]]],
-    )
-    #v(15pt)
-    #aside[Source and verdicts · procedure/context graph · queries and entry publication]
-    #v(8pt)
-    #aside[The replay shows solver activity, not a concrete execution.]
+    #align(center, image(pg("int-refinement.png"), height: 500pt))
   ],
-  sources: [#isaconst("run_voblint", display: "Exported analysis function") · #source("thesis/shared/playground-figures.toml", [Capture settings])],
-  media: "solve-replay.gif",
   notes: [
-    First show the overview, which uses Interval + Order and call-string
-    length 1. Then switch to the replay of bump under Interval / entry-state /
-    warrow. They are different captures. Play about 35 seconds and pause when a
-    context is created and its entry seed published. Use the offline replay page
-    from the build directory, or the linked GIF. Keep the static fallback available.
-    The proof evidence was on the previous slide; animation is only a demonstration.
+    One precision example, not a general claim. y + 1 == 3 tells us y is 2.
+    Sign, interval and parity alone each answer UNKNOWN at the check. The
+    reduced product Int combines them and proves y == 2.
   ],
 )
+
+// =========================================================== 5. Wrap-up
 
 #talk-slide(
   16,
-  [The guarantee has a defined boundary],
-  60,
+  [What it took],
+  50,
+  section: [Wrap-up],
   [
     #grid(
-      columns: (1fr, 1fr),
-      column-gutter: 42pt,
-      [#subhead[Inside the formal argument]
-        VIMP source semantics\
-        Compilation and activation traces\
-        Analysis equations and solver\
-        Semantic report and verdicts],
-      [#text(size: 25pt, fill: vb.trusted, weight: "bold")[Outside that argument]
-        #v(14pt)
-        Parser and source positions\
-        Code generator and target toolchain\
-        Tracing hook and display\
-        Adequacy of the language model],
+      columns: (1fr, 380pt),
+      column-gutter: 30pt,
+      align: horizon,
+      image(svg("strata"), width: 100%),
+      [
+        #text(size: 28pt)[One layer per Isabelle session, sized by its proof.]
+        #v(24pt)
+        #text(size: 28pt)[Built with #b(blue)[heavy AI assistance].]
+        #v(12pt)
+        #small[The same question as slide 4 applies: definitions and theorem statements were reviewed by hand.]
+      ],
     )
-    #v(30pt)
-    #lead[VIMP is not C. Termination is not general.]
-    #v(12pt)
-    #aside[Unbounded integers; defined division by zero; no Goblint-equivalence theorem.]
   ],
-  sources: [#source("docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md", [Trust boundary])],
   notes: [
-    The result starts from a VIMP syntax tree and its specified
-    semantics. It does not establish correctness of arbitrary C or Goblint's
-    OCaml implementation. The tracing hook must preserve results. Isabelle's
-    kernel and logical foundations are trusted; the executable guarantee also
-    relies on code generation and the toolchain. Kernel validity does not establish
-    model adequacy. The pinned solver fork is still private, limiting public reproduction.
+    The formalization in cross-section: each layer is an Isabelle session,
+    sized by its proof. AI tools wrote much of the proof text, which is the
+    same trend as the 2026 results from the start. And the same caution
+    applies: a checked proof of the wrong statement is worthless, so the
+    definitions and the theorem statements were reviewed by hand.
   ],
 )
 
-#roadmap(17, 5)
-
-#talk-slide(
-  18,
-  [Developing the formalization in Isabelle],
-  120,
+#statement-slide(
+  17,
+  40,
+  [So what is Voblint?],
   [
-    #grid(
-      columns: (1fr, 1fr),
-      column-gutter: 40pt,
-      [#subhead[Definitions and proof obligations]
-        - Prototype interfaces with open `sorry` obligations.
-        - Revise the execution model for recursive calls.
-        - Prove generic lemmas; discharge domain and context obligations.
-        #v(16pt)
-        #aside[Finding: derive interfaces from the intended final theorem.]],
-      [#subhead[Checking and understanding]
-        - Run Isabelle builds to check the connected development.
-        - Use `isar-tools` to find unused or duplicated lemmas.
-        - Trace and debug generated OCaml when a solve stalls or loses precision.
-        #v(16pt)
-        #aside[Example: publish a callee’s entry seed before solving its context.]],
-    )
-    #v(22pt)
-    #aside[AI assisted proof construction; human review owned definitions and claims.]
+    A static analyzer whose #b(blue)[every answer] is backed by a
+    #b(green)[machine-checked proof], from the #b(blue)[source program] to
+    the #b(blue)[verdict], with its #b(amber)[trusted parts] named.
   ],
-  sources: [#source("thesis/content/15-conclusion.typ", [Lessons]) · #source("thesis/content/ai-use.typ", [AI-use disclosure])],
   notes: [
-    These are retrospective findings, not new theorems. The sorry obligations describe the exploratory phase, not accepted finished proofs. Explain a locale as a named bundle of assumptions with reusable theorems. Builds check validity; maintenance checks address proof quality. The initial
-    whole-execution model made matching calls and recursion awkward; traces made
-    caller ancestry explicit. Stating the final theorem earlier could have saved
-    rework. Tracing exposed solving a callee before publishing its entry seed.
-    Say plainly: AI tools generated many proofs and implementation details; I
-    chose the research direction, selected and revised designs, and approved
-    definitions and theorem statements. Isabelle checks derivability; I remain
-    responsible for the specification and claims. Connect the tools to concrete development problems rather than enumerate commands.
+    Summary in one sentence. Then take questions. Leave this slide up.
   ],
 )
 
-#talk-slide(
-  19,
-  [Machine integers: a follow-up rewrite],
-  60,
-  [
-    #grid(
-      columns: (1fr, 1fr),
-      column-gutter: 45pt,
-      [#subhead[Thesis baseline]
-        Unbounded integer semantics.
-        #v(15pt)
-        The source-to-report theorem presented in this talk.],
-      [#subhead[Existing machine-integer branch]
-        Kinds from i8 to u64; typed core and explicit conversions.
-        #v(15pt)
-        Changes reach semantics, compiler, domains, equations, and execution.],
-    )
-    #v(27pt)
-    #lead[Separate from the submitted thesis.]
-    #v(10pt)
-    #aside[A starting point for follow-up work; the baseline proof does not transfer automatically.]
-  ],
-  sources: [#link(rewrite)[PR #357 · branch 31e267925] · #source("thesis/content/15-conclusion.typ", [Outlook])],
-  notes: [
-    PR 357 explicitly calls this effectively a rewrite and says it
-    will not be merged as part of the master's thesis. It includes substantial
-    work but was not rebuilt for this presentation; do not imply certification of
-    every machine-domain configuration. The branch's rewritten thesis is outside
-    our baseline. Mention richer relational/path-sensitive analyses as interface
-    extensions; pointers and threads require revisiting caller/callee separation.
-    The detailed unsigned-conversion example is in backup.
-  ],
-)
+// ============================================================== Backups
 
 #talk-slide(
-  20,
-  [What this work establishes],
-  60,
+  101,
+  [Backup: what is inherited, what is new],
+  0,
+  section: [Backup],
   [
-    #v(8pt)
-    #text(
-      size: 39pt,
-      weight: "bold",
-    )[A soundness argument from source\ executions to analyzer verdicts.]
     #v(30pt)
     #grid(
       columns: (1fr, 1fr, 1fr),
       column-gutter: 30pt,
-      [#subhead[Concrete meaning]
-        Activation traces explain what contexts cover.],
-      [#subhead[Composable proof]
-        Local obligations connect to an inherited solver.],
-      [#subhead[Executable result]
-        The analyzed function is the one exported to OCaml.],
-    )
-    #v(30pt)
-    #aside[Partial correctness for VIMP, with an explicit trust boundary.]
-  ],
-  sources: [#link(playground)[Playground ↗] · #source("thesis/content/15-conclusion.typ", [Thesis conclusion])],
-  notes: [
-    Return to the opening question. Trust requires the whole semantic
-    chain, not only solver correctness. Restate the contributions in this order:
-    concrete meaning of contexts, modular obligations, and the theorem about the
-    executable analysis function. Leave this slide visible for questions.
-  ],
-)
-
-#talk-slide(
-  21,
-  [Backup: context precision],
-  0,
-  [
-    #subhead[The same call site can hide different caller histories.]
-    main calls f with positive and negative values; f calls g at one site.
-    #v(25pt)
-    #table(
-      columns: (2fr, 1fr, 1fr),
-      stroke: none,
-      inset: 14pt,
-      [*Sign analysis*], [*k = 1*], [*k = 2*],
-      [Check: 0 < x],
-      [#claim-check("ctx-nest-k1", "0 < x").at(3)],
-      [#claim-check("ctx-nest-k2", "0 < x").at(3)],
-
-      [Check: y < 0],
-      [#claim-check("ctx-nest-k1", "y < 0").at(3)],
-      [#claim-check("ctx-nest-k2", "y < 0").at(3)],
-    )
-    #v(18pt)
-    #aside[Length 2 retains the call in main; the price is another copy of g.]
-  ],
-  sources: [#source("thesis/shared/claims.toml", [Registered claims: ctx-nest-k1 / ctx-nest-k2])],
-  notes: [
-    Executable precision evidence for one program, not monotonic precision for all
-    context bounds. Concrete results are x = 6 and y = -20. The active analysis
-    is Sign. The displayed verdicts come from the claim snapshots.
-  ],
-)
-
-#talk-slide(
-  22,
-  [Backup: why TOTAL is necessary],
-  0,
-  [
-    #lead[A covered caller can have no admitted\ callee context.]
-    #v(25pt)
-    #grid(
-      columns: (1fr, 26pt, 1fr, 26pt, 1fr),
-      align: horizon,
-      step([Caller], [store lies in the cover]),
-      [→],
-      step([Callee], [no admitted context], color: vb.unproved),
-      [→],
-      step([Continuation], [a real return can be missed], color: vb.unproved),
-    )
-    #v(28pt)
-    #aside[CALL and RETURN quantify over admitted contexts and may hold vacuously.]
-  ],
-  sources: [#isathm("total_dropped_unsound", display: "Machine-checked counterexample")],
-  notes: [
-    TOTAL is required for every call from a store in the proposed cover, not only
-    a reachable store. This schematic illustrates the failure; the linked theorem
-    supplies the concrete counterexample. It is separate from the domain remainder defect.
-  ],
-)
-
-#talk-slide(
-  23,
-  [Backup: machine-integer conversions],
-  0,
-  [
-    #subhead[From the separate machine-integer branch]
-    #text(size: 32pt)[u8 x = 250;   x = x + 10;]
-    #v(32pt)
-    #grid(
-      columns: (1fr, 30pt, 1fr, 30pt, 1fr),
-      align: horizon,
-      step([250 + 10], [operands promoted to i32]),
-      [→],
-      step([260], [addition result]),
-      [→],
-      step([4], [conversion back to u8]),
-    )
-    #v(26pt)
-    #aside[Branch fixture expectation; this presentation does not certify that branch.]
-  ],
-  sources: [#link(rewrite)[PR #357] · #link("https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/31e267925ed730b8edc9c38aa2b2c21101d75531/tests/regression/26-machine-kinds/01-unsigned_wraparound.vimp")[Pinned fixture]],
-  notes: [
-    The fixture expects the conversion result 4 and a conversion-overflow diagnostic.
-    Do not generalize from this fixture to signed overflow or all configurations.
-    The expression is shown as a branch-specific excerpt, not current-baseline VIMP.
-  ],
-)
-
-#talk-slide(
-  24,
-  [Backup: inherited work and contribution],
-  0,
-  [
-    #grid(
-      columns: (1fr, 1.5fr),
-      column-gutter: 30pt,
-      row-gutter: 22pt,
-      accent([Goblint]), [Modular D/G architecture; enter/combine call protocol.],
-      accent([Schwarz et al.]), [Local-trace semantics inspiring activation traces.],
-      accent([Tilscher, Graß & Seidl]), [Side-effecting verified solver and update rules.],
-      accent([This formalization]),
-      [Source compilation, context-indexed coverage, equation soundness, and source-to-report composition.],
+      card(
+        [#text(fill: grey)[Goblint]\ #text(
+            size: 20pt,
+            weight: "regular",
+          )[local/global split,\ enter/combine protocol]],
+        grey,
+        w: 340pt,
+        h: 220pt,
+      ),
+      card(
+        [#text(fill: grey)[Prior proofs]\ #text(
+            size: 20pt,
+            weight: "regular",
+          )[local traces (SAS 2021),\ verified solver (NFM 2026)]],
+        grey,
+        w: 340pt,
+        h: 220pt,
+      ),
+      card(
+        [#text(fill: blue)[This thesis]\ #text(
+            size: 20pt,
+            weight: "regular",
+          )[source semantics to verdicts,\ context-indexed coverage,\ executable analyzer]],
+        blue,
+        w: 340pt,
+        h: 220pt,
+      ),
     )
   ],
-  sources: [#link(trace-paper)[SAS 2021] · #link(solver-paper)[NFM 2026] · #source("thesis/content/14-related.typ", [Related work])],
+  sources: [Schwarz et al., SAS 2021 · Tilscher, Graß, Seidl, NFM 2026],
   notes: [
-    Do not claim the first verified static analyzer: earlier analyzers such as
-    Verasco have end-to-end proofs. The distinguishing connection here involves
-    recursive procedures, context-indexed side-effecting equations, and the
-    inherited verified solver. The pinned solver fork remains private.
+    If asked about the contribution: the solver and the side-effecting
+    equations come from prior work, the D/G architecture from Goblint. This
+    thesis connects them to source executions through context-indexed
+    semantics, and ships the result as an executable analyzer.
   ],
 )

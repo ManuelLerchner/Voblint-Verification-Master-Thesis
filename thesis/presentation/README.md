@@ -1,37 +1,40 @@
 # Thesis presentation
 
-Build the PDF, timed speaker notes, and offline solver replay:
+Build the slides and timed speaker notes:
 
 ```sh
-rtk pixi run python3 thesis/presentation/build.py
+pixi run slides
 ```
 
-Outputs are in `build/presentation/`: `voblint-slides.pdf`,
-`speaker-notes.txt`, `replay.html`, and `solve-replay.gif`.
-The deck has 20 main slides totaling 20 minutes and four backup slides.
-The PDF uses a static replay frame; open the companion HTML to play the GIF.
-When `ffmpeg` is available, the build also creates an MP4 and uses native video
-controls in the companion page, allowing playback to pause at a solver event.
+Outputs are in `build/presentation/`: `voblint-slides.pdf` and
+`speaker-notes.txt`. CI builds the deck in the thesis job, and the site
+publishes it as `slides.pdf`, linked from every page's top navigation.
 
-The source uses [Touying 0.8.0](https://typst.app/universe/package/touying/).
-Its local theme follows the shared TUM Beamer/Rochester layout in the author's
-[IDP presentation](https://github.com/ManuelLerchner/ProliferatingCellCollectives-IDP/tree/HEAD/presentation)
-and [bachelor presentation](https://github.com/ManuelLerchner/AutoPas-FuzzyTuning-Bachelor-Thesis/tree/HEAD/presentation):
-white 4:3 pages, a blue header and rule, black titles, square bullets, and page
-numbers. `assets/tum.png` comes from the IDP presentation's `figures/tum.png`.
-The header uses this project's title instead of the other chair's affiliation.
+The deck has 17 main slides, planned at 18 minutes of a 20-minute slot, and one
+backup. `build.py` fails on any Typst warning, on main slides out of order, and
+on a main talk over 20 minutes.
 
-Technical claims use baseline `3520a4ec77ac0a9c2a3f7812a37a69f4148128cd`.
-The machine-integer outlook refers separately to branch revision
-`31e267925ed730b8edc9c38aa2b2c21101d75531`; it is not part of that baseline.
-Theorem links and displayed verdicts reuse the thesis's existing helpers and
-generated claims. Speaker notes distinguish demonstrations, proof instances,
-trusted components, and retrospective development findings.
+## Style
 
-Both reference decks repeat an outline at each section boundary. This deck uses
-five ten-second transitions, included in the 20-minute timing: motivation,
-foundations, implementation and verification, results, and discussion/outlook.
+16:9 pages, one claim per slide as its title with the key words coloured, and
+figures instead of bullet text: side-by-side comparisons, a checklist build
+beside a growing figure, statement slides. The narrative follows a "why it
+exists, a small example, the complexity that piles up, the bug that slips
+through, what a proof changes, the running tool" arc. `theme.typ` holds the
+visual language; `slides.typ` holds the talk and its speaker notes.
 
-The title image `assets/voblint.png` is the existing 1024 × 1024 original from
-`~/Downloads/voblint-favicon.png`, matching the repository's 256 × 256 favicon.
-It is reused without image editing.
+Text is set in Roboto from the pixi environment (`font-ttf-roboto`), with
+system fonts ignored, so the deck renders the same locally and in CI.
+
+## Sources of figures
+
+- Explainer SVGs lifted for the thesis, under `shared/generated/svg/`.
+- Playground captures under `shared/generated/playground/`, guarded by
+  `thesis-playground`.
+- Analyzer verdicts through `claim-check`, guarded by `thesis-claims`.
+- Theorem names through `isathm`, which fails the build on a missing link.
+- New drawings (timeline, abstract values, the checked-chain picture, nested
+  sets) are cetz code in `slides.typ` and `theme.typ`.
+
+`../presentation-outline.md` records the plan and the source status of every
+external claim, in particular the 2026 results on slides 3 and 4.

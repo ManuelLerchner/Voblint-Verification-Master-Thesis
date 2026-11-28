@@ -1,18 +1,39 @@
-"""Build the slides, timed speaker notes, and an offline replay companion."""
+"""Build the slides and their timed speaker notes.
+
+Warnings fail the build, as for the thesis: a missing font or an overflowing
+box must not reach the published deck.
+"""
 
 import json
-import shutil
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "build/presentation"
+TALK_SECONDS = 20 * 60
 
 
-def run(*args):
-    result = subprocess.run(args, cwd=ROOT, check=True, capture_output=True, text=True)
-    if result.stderr.strip():
-        raise RuntimeError(result.stderr)
+def typst(*args):
+    # Roboto comes from the pixi environment, so the deck renders the same on
+    # every machine; system fonts would differ between a Mac and CI.
+    conda = os.environ.get("CONDA_PREFIX")
+    if not conda:
+        sys.exit("build.py: run through `pixi run slides`, which provides the fonts")
+    fonts = ["--font-path", "thesis/assets/fonts", "--font-path", f"{conda}/fonts"]
+    command = [
+        "typst",
+        *args[:1],
+        "--root",
+        "thesis",
+        "--ignore-system-fonts",
+        *fonts,
+        *args[1:],
+    ]
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+    if result.returncode != 0 or "warning:" in result.stderr:
+        sys.exit(result.stderr)
     return result.stdout
 
 
@@ -34,67 +55,33 @@ def plain(value):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    options = ["--root", "thesis", "--font-path", "thesis/assets/fonts"]
     source = "thesis/presentation/slides.typ"
-    run("typst", "compile", *options, source, str(OUT / "voblint-slides.pdf"))
+    typst("compile", source, str(OUT / "voblint-slides.pdf"))
     slides = json.loads(
-        run(
-            "typst",
-            "eval",
-            *options,
-            "--in",
-            source,
-            "query(<talk-slide>).map(it => it.value)",
-        )
+        typst("eval", "--in", source, "query(<talk-slide>).map(it => it.value)")
     )
-    if sum(s["seconds"] for s in slides) != 1200:
-        raise ValueError("Main talk must total 20 minutes")
-    if [s["id"] for s in slides] != list(range(1, 25)):
-        raise ValueError("Expected 20 main slides and four backups")
+    main_talk = [s for s in slides if s["id"] < 100]
+    if [s["id"] for s in main_talk] != list(range(1, len(main_talk) + 1)):
+        sys.exit("build.py: main slides must be numbered 1, 2, ... in order")
+    total = sum(s["seconds"] for s in main_talk)
+    if total > TALK_SECONDS:
+        sys.exit(f"build.py: main talk runs {total} s, over {TALK_SECONDS} s")
     notes = []
     elapsed = 0
     for s in slides:
         start = f"{elapsed // 60}:{elapsed % 60:02}"
         elapsed += s["seconds"]
         end = f"{elapsed // 60}:{elapsed % 60:02}"
+        label = s["id"] if s["id"] < 100 else "Backup"
         notes.append(
-            f"{s['id']}. {plain(s['title'])} ({start}–{end}; {s['seconds']} seconds)\n"
-            f"{plain(s['notes'])}\n"
+            f"{label}. {plain(s['title'])} ({start}–{end}; {s['seconds']} s)\n"
+            f"{plain(s['notes']).strip()}\n"
         )
     (OUT / "speaker-notes.txt").write_text("\n".join(notes))
-    shutil.copyfile(ROOT / "docs/images/solve-replay.gif", OUT / "solve-replay.gif")
-    media = '<img src="solve-replay.gif" alt="Solver replay">'
-    if shutil.which("ffmpeg"):
-        run(
-            "ffmpeg",
-            "-v",
-            "error",
-            "-y",
-            "-i",
-            str(OUT / "solve-replay.gif"),
-            "-vf",
-            "pad=ceil(iw/2)*2:ceil(ih/2)*2",
-            "-pix_fmt",
-            "yuv420p",
-            "-movflags",
-            "+faststart",
-            str(OUT / "solve-replay.mp4"),
-        )
-        media = (
-            '<video controls src="solve-replay.mp4" aria-label="Solver replay"></video>'
-        )
-    (OUT / "replay.html").write_text(
-        """<!doctype html>
-<html lang="en"><meta charset="utf-8"><title>Voblint solver replay</title>
-<style>body{font:20px sans-serif;margin:24px;color:#222}img,video{max-width:100%;
-max-height:85vh}a{color:#0065bd}</style>
-<h1>Voblint solver replay</h1>
-<p>Interval · entry-state contexts · bump(5) and bump(4)</p>
-<p>Animated demonstration; the PDF contains a static fallback.</p>
-MEDIA
-</html>""".replace("MEDIA", media)
+    print(
+        f"Built {len(main_talk)} main slides, {len(slides) - len(main_talk)} backup;"
+        f" main talk {total // 60}:{total % 60:02}. Outputs: {OUT}"
     )
-    print(f"Built {len(slides)} slides; main talk 20:00. Outputs: {OUT}")
 
 
 if __name__ == "__main__":

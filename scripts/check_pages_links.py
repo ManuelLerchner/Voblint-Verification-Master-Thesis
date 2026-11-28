@@ -74,6 +74,7 @@ BUILD_OUTPUTS = (
     "sitemap.xml",
     "thesis.pdf",
     "paper.pdf",
+    "slides.pdf",
     "formalization.pdf",
 )
 ISABELLE_HTML = REPO / "build" / "isabelle-html"
