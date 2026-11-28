@@ -165,7 +165,10 @@ pymupdf = "*"
 # The slides' text face; build.py ignores system fonts so CI renders the same.
 font-ttf-roboto = ">=3.16,<4"
 [feature.thesis.tasks]
-slides = { cmd = "python3 thesis/presentation/build.py", description = "Build the thesis talk to build/presentation/voblint-slides.pdf, with timed speaker notes; warnings are errors." }
+slides = { cmd = "python3 thesis/presentation/build.py", depends-on = [
+  "thesis-stats-write",
+  "thesis-alignment-write",
+], description = "Build the thesis talk to build/presentation/voblint-slides.pdf, with timed speaker notes; warnings are errors." }
 # The refs and links checks also read the citations of goblint-alignment.json.
 thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", depends-on = [
   "thesis-alignment-write",

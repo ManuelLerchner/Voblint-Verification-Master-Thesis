@@ -28,6 +28,7 @@
   set text(font: ("Roboto", "DejaVu Sans Mono"), size: 28pt, fill: ink)
   set par(leading: 0.55em)
   show raw: set text(font: "Isabelle DejaVu Sans Mono", size: 0.9em)
+  show math.equation: set text(font: "Latin Modern Math")
   body
 }
 

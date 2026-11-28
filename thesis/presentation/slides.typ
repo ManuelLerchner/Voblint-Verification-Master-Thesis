@@ -1,38 +1,48 @@
-// The thesis talk. Narrative: why such a tool has to exist, a small example,
-// how building an analyzer piles up complexity, the bug that slips through
-// anyway, what a machine-checked analyzer changes, and the running tool.
+// The thesis talk. It opens like the thesis introduction (wrong answers,
+// machine-checked proofs, Goblint's architecture), works through one example
+// into the formal argument, demonstrates the playground live, and closes like
+// the thesis conclusion (relevance to Goblint, limits, outlook).
 #import "theme.typ": *
-#import "../lib/code.typ": isathm
+#import "../lib/code.typ": (
+  decode-isabelle, isabelle-scripts, isabelle-syntax, isaconst, isalocale, isathm, isatype, site,
+)
 #import "../lib/claims.typ": claim-check
+#import "../lib/stats.typ": stat
+#import "../lib/theme.typ": metro
 
 #show: deck
+// Isabelle sub- and superscripts, as the thesis renders them.
+#show raw.where(lang: "isabelle"): isabelle-scripts
 
 #let pg(name) = "/shared/generated/playground/" + name
 #let svg(name) = "/shared/generated/svg/" + name + ".svg"
 
-#let code-card(body, w: 520pt) = block(
+#let code-card(body, w: 520pt, size: 24pt) = block(
   width: w,
   radius: 12pt,
   fill: rgb("#132A33"),
   inset: (x: 26pt, y: 20pt),
   {
-    set text(fill: rgb("#E6EEF0"), size: 24pt)
+    set text(fill: rgb("#E6EEF0"), size: size)
     set par(leading: 0.5em)
     body
   },
 )
 
-#let verdict-tag(v) = {
-  let c = if v == "PROVED" { green } else if v == "REFUTED" { red } else { amber }
-  box(inset: (x: 10pt, y: 5pt), radius: 6pt, fill: c, text(
-    fill: white,
-    size: 20pt,
-    weight: "bold",
-    v,
-  ))
-}
+#let verdict-colour(v) = if v == "PROVED" { green } else if v == "REFUTED" {
+  red
+} else if v == "DEAD" { grey } else { amber }
+#let verdict-tag(v) = box(inset: (x: 10pt, y: 5pt), radius: 6pt, fill: verdict-colour(v), text(
+  fill: white,
+  size: 20pt,
+  weight: "bold",
+  v,
+))
 
-// ======================================================== 1. Why it exists
+// A coverage obligation's name, in the thesis's small capitals.
+#let ob(name) = text(fill: vb.locale, weight: "bold", smallcaps(name))
+
+// ============================================================ Motivation
 
 #page(fill: night, margin: 0pt)[
   #metadata((
@@ -40,8 +50,9 @@
     title: [Voblint],
     seconds: 20,
     notes: [
-      Introduce yourself in one sentence. Then go straight to the question
-      the talk answers: why should anyone trust what a program analyzer says?
+      Introduce yourself in one sentence. Voblint is short for verified
+      Goblint. The question of the talk: can we trust what a program analyzer
+      says?
     ],
   )) <talk-slide>
   #set text(fill: white)
@@ -62,28 +73,85 @@
 #talk-slide(
   2,
   [Tests check #b(amber)[some] runs. An analysis covers #b(blue)[all] of them.],
-  60,
-  section: [Why],
+  40,
+  section: [Motivation],
   [
     #v(20pt)
     #align(center, image(svg("runs"), width: 1080pt))
   ],
   notes: [
-    Start from why such tools exist. Most code is checked by testing. A test
-    run that passes tells you about that run. The input nobody tried is never
-    checked (left). A static analyzer reads the program and computes one region
-    that contains every run, tried or not (right). If that region misses the
-    bad states, no run reaches them. That is why people stop looking at a line
-    once the analyzer says it is fine. It also means a wrong answer is worse
-    than no answer.
+    A static analyzer answers questions about every execution of a program
+    at once: can this divisor be zero, is this point reachable, does this
+    condition always hold. A passing test suite has seen finitely many runs
+    (left). An analysis computes one region containing every run, tried or
+    not (right). Developers act on these answers without running the
+    program, so the answers have to be right.
   ],
 )
 
 #talk-slide(
   3,
-  [Machines now check #b(blue)[large proofs]],
-  60,
-  section: [Why],
+  [But analyzers are programs, and they give #b(red)[confident wrong answers]],
+  50,
+  section: [Motivation],
+  [
+    #v(10pt)
+    #grid(
+      columns: (1fr, 1fr),
+      column-gutter: 40pt,
+      align: horizon,
+      [
+        #code-card(raw(
+          "c = -5;   // or c = -7\n__voblint_check(c % 2 == 1);",
+          lang: none,
+        ))
+        #v(30pt)
+        #text(
+          size: 26pt,
+        )[Goblint, a static analyzer for C: #b(red)[more than a hundred] issues labeled #emph[unsound] since 2021.]
+      ],
+      grid(
+        columns: (auto, 1fr),
+        column-gutter: 20pt,
+        row-gutter: 30pt,
+        align: (right + horizon, left + horizon),
+        text(size: 26pt, weight: "bold")[C11],
+        [#text(
+            size: 40pt,
+            weight: "bold",
+            fill: green,
+          )[−5 % 2 = −1]\ #small[the remainder truncates toward zero]],
+
+        text(size: 26pt, weight: "bold")[Goblint],
+        [#text(
+            size: 40pt,
+            weight: "bold",
+            fill: red,
+          )[always 1]\ #small[the congruence domain ignored the sign]],
+      ),
+    )
+    #v(30pt)
+    #align(center, text(
+      size: 28pt,
+    )[A wrong answer is worse than no answer: nobody looks for the error.])
+  ],
+  sources: [Goblint issue 1156, fixed by pull request 1161 · Goblint issue tracker, label "unsound"],
+  notes: [
+    The analyzer is itself a program, and its errors produce confident
+    answers that real runs contradict. Goblint's issue tracker has more than
+    a hundred issues labeled unsound since 2021. One example: Goblint claimed
+    c % 2 == 1 for c = −5 or −7. In C the remainder truncates toward zero, so
+    the answer is −1. The congruence domain ignored the sign of the dividend.
+    An imprecise answer leaves the question open; a wrong one gives nobody a
+    reason to look.
+  ],
+)
+
+#talk-slide(
+  4,
+  [Fixing one bug does not rule out the next: #b(blue)[proofs, checked by machines]],
+  45,
+  section: [Motivation],
   [
     #v(10pt)
     #align(center, cetz.canvas(length: 1cm, {
@@ -122,53 +190,184 @@
   ],
   sources: [Red: formal proofs produced with AI systems in 2026. Sources: presentation-outline.md.],
   notes: [
-    The second trend: proof assistants. A proof assistant checks every step
-    of a proof against a small trusted kernel. Twenty years ago that meant
-    single heroic projects. Today it is routine: the Kepler conjecture, the
-    Liquid Tensor Experiment, the fifth Busy Beaver value. On the software
-    side, an OS kernel, a C compiler, and since this year AWS's hypervisor.
-    And this autumn the scale changed again: AI systems produced Lean proofs
-    of a Navier–Stokes blow-up result (OpenAI, September) and of the Riemann
-    Hypothesis (released 20 November, certified by the Lean FRO and the
-    Mathlib Initiative the next day). Check the status of both the week of
-    the talk.
+    Fixing one bug does not rule out the next. Ruling out all of them needs a
+    proof that the answers hold for every run, and an analyzer is too complex
+    for a proof checked by reading it. Proof assistants do this at scale: a
+    small trusted kernel checks every inference step. They have verified the
+    CompCert compiler and the seL4 kernel, settled the Kepler conjecture, and
+    in 2026 AI systems produced Lean proofs of a Navier–Stokes blow-up result
+    and of the Riemann Hypothesis. Check the status of both the week of the
+    talk.
   ],
 )
 
 #talk-slide(
-  4,
-  [The checker checks the proof, #b(red)[not the question]],
-  75,
-  section: [Why],
+  5,
+  [The checker checks the proof, #b(red)[not the definitions]],
+  55,
+  section: [Motivation],
   [
-    #v(50pt)
+    #v(40pt)
     #checked-chain([What we #b(blue)[mean]], [Formal #b(blue)[statement]\ + definitions], [
       Formal #b(blue)[proof]
     ])
-    #v(70pt)
+    #v(50pt)
     #align(center, text(size: 24pt, fill: rgb("#444"))[
       Riemann (Nov 2026): a separate tool confirms the theorem #emph[is] Mathlib's statement.\
-      Navier–Stokes (Oct 2026): "the formalised Lean proof does not correspond to the NL proof".
+      Navier–Stokes (Oct 2026): "the formalised Lean proof does not correspond to the NL proof".\
+      Voblint: the proof starts at #b(blue)[VIMP's semantics]; its adequacy for C is argued, not proved.
     ])
   ],
   sources: [Lean FRO and Mathlib Initiative, 21 Nov 2026 · Bastounis, Circelli, Hansen, arXiv 2610.08144],
   notes: [
-    What does a machine check actually give you? The kernel checks that the
-    proof proves the formal statement. It cannot check that the statement and
-    its definitions say what we mean. That step stays with humans. The Riemann
-    certification therefore ran a separate statement check. For the Navier–Stokes
-    result, a group argues that the Lean proof does not correspond to the
-    published argument. Keep this picture in mind; it comes back when we look
-    at what Voblint trusts.
+    The kernel checks a proof only against the definitions it is given.
+    Whether the statement and definitions say what we mean stays a human
+    question. The Riemann certification therefore ran a separate statement
+    check; for the Navier–Stokes result, a group argues the Lean proof does
+    not match the published argument. For Voblint, the proof starts from the
+    semantics of its input language, VIMP. Whether that models the C programs
+    Goblint analyzes is argued in the thesis, not proved.
   ],
 )
 
-// ===================================================== 2. A small example
+#talk-slide(
+  6,
+  [Goblint's architecture lets the proof #b(blue)[split along its modules]],
+  55,
+  section: [Motivation],
+  [
+    #v(20pt)
+    #align(center, cetz.canvas(length: 1.35cm, {
+      import cetz.draw: *
+      let stage(x, label, c, note) = {
+        rect((x - 2.6, -1.1), (x + 2.6, 1.1), radius: 0.25, fill: white, stroke: 2.5pt + c)
+        content((x, 0), text(size: 20pt, weight: "bold", label))
+        content((x, -1.5), anchor: "north", text(size: 17pt, fill: c, note))
+      }
+      stage(0, [VIMP\ program], ink, [source runs])
+      stage(6, [Graph +\ contexts], blue, [this thesis])
+      stage(12, [Equations], blue, [this thesis])
+      stage(18, [TD solver], green, [verified before])
+      stage(24, [Verdicts], blue, [this thesis])
+      for x in (2.7, 8.7, 14.7, 20.7) {
+        line((x, 0), (x + 0.6, 0), stroke: 2.5pt + grey, mark: (end: ">", fill: grey))
+      }
+      content((12, 3.2), text(
+        size: 22pt,
+      )[each domain, context policy and the solver proves #b(blue)[its own obligation]])
+      line((6, 2.6), (6, 1.1), stroke: (paint: grey, dash: "dashed"))
+      line((12, 2.6), (12, 1.1), stroke: (paint: grey, dash: "dashed"))
+      line((18, 2.6), (18, 1.1), stroke: (paint: grey, dash: "dashed"))
+    }))
+    #v(30pt)
+    #align(center, text(size: 26pt)[
+      The solver's theorem says its result satisfies #emph[the equations].\
+      Whether the equations describe #b(blue)[the program] is the missing link.
+    ])
+  ],
+  sources: [TD solver: Stade et al. 2024, Tilscher, Graß, Seidl, NFM 2026 · Goblint: Vojdani et al. 2016, Seidl et al. 2026],
+  notes: [
+    Goblint defines each analysis independently of the solver, and the two
+    meet at a side-effecting equation system. That gives a proof its
+    modules: a domain proves its operations sound, a context policy proves its
+    contexts agree with the real calls, the solver proves its result satisfies
+    the equations, and generic theorems combine them. The top-down solver,
+    with side effects, was already verified in Isabelle by prior work. Its
+    theorem says nothing about whether the equations describe the program.
+    That link, through calling contexts, is what this thesis proves.
+  ],
+)
 
 #talk-slide(
-  5,
+  7,
+  [What the user sees: #b(blue)[four verdicts]],
+  45,
+  section: [Motivation],
+  [
+    #grid(
+      columns: (560pt, 1fr),
+      column-gutter: 40pt,
+      align: horizon,
+      image(pg("clamp.png"), width: 100%),
+      [
+        #set text(size: 23pt)
+        #let row(v, body) = block(below: 18pt, grid(
+          columns: (150pt, 1fr),
+          align: (left + horizon, left + horizon),
+          verdict-tag(v), body,
+        ))
+        #row("PROVED", [holds whenever a run reaches the check])
+        #row("REFUTED", [fails whenever a run reaches it; not a counterexample])
+        #row("DEAD", [no run reaches the check])
+        #row("UNKNOWN", [the analysis cannot decide])
+        #small[Plus a warning at every division whose divisor might be zero.]
+      ],
+    )
+  ],
+  sources: [Playground run of the regression test 48-clamp_every_answer (thesis Fig. 1.2)],
+  notes: [
+    From the user's side, Voblint answers each check with one of four
+    verdicts. PROVED and REFUTED say nothing about reachability; only DEAD
+    does. A REFUTED check is a real error only if some run reaches it, which
+    Voblint does not prove. This is the playground, which we will use live
+    later.
+  ],
+)
+
+// ======================================================= Language, example
+
+#talk-slide(
+  8,
+  [Our language: VIMP, #b(blue)[a small C]],
+  50,
+  section: [Example],
+  [
+    #grid(
+      columns: (1fr, 1fr),
+      column-gutter: 40pt,
+      align: horizon,
+      [
+        #set text(size: 24pt)
+        #text(weight: "bold")[Expressions] #h(8pt) #small[(#isatype("exp"))]
+        $
+          e ::= & n | x | e + e | e - e | e * e | e \/ e | e % e \
+              | & e < e | e <= e | e == e | dots | !e | e        && e | e || e
+        $
+        #v(12pt)
+        #text(weight: "bold")[Commands] #h(8pt) #small[(#isatype("gcom"))]
+        $
+          c ::= & x := e | "check"(e) | c; c | "if" (e) {c} "else" {c} \
+              | & "while" (e) {c} | [x :=] p(e, dots, e) | "return" e
+        $
+        #v(12pt)
+        #text(size: 22pt)[
+          #b(green)[Has:] unbounded integers, locals and globals, recursive
+          procedures with value parameters, nondeterministic input.\
+          #b(red)[Lacks:] pointers and heap, arrays and structs, machine
+          integers, threads, floating point, `goto`.
+        ]
+      ],
+      align(center, image(svg("island"), width: 100%)),
+    )
+  ],
+  sources: [Thesis §3.1 (syntax) and §3.7 (comparison with C11)],
+  notes: [
+    VIMP is a small imperative language modelled on C: integer expressions
+    where comparisons yield 0 or 1, and commands with assignment, checks,
+    conditionals, loops, calls with an optional result, and return. It has
+    unbounded integers, globals, and recursive procedures with value
+    parameters. It leaves out what makes C hard: pointers and the heap,
+    arrays and structs, machine integers, threads. Every construct needs a
+    semantics, a compiler case and a sound transfer function in every
+    domain, so the language is kept small. The picture places VIMP inside
+    the C that Goblint analyzes.
+  ],
+)
+
+#talk-slide(
+  9,
   [A question about #b(blue)[every run]],
-  60,
+  45,
   section: [Example],
   [
     #grid(
@@ -207,20 +406,18 @@
     )
   ],
   notes: [
-    Here is the example for the rest of the talk. bump adds one. main calls it
-    twice and asks two questions. If you run it, both checks hold. An analyzer
-    must answer without running the program, for every input, so it computes
-    with abstract values: descriptions of sets of numbers. A sign says
-    "positive", an interval says "between 5 and 6", parity says "even or odd".
-    Every abstract value must contain every value a run can produce. It may
-    contain more. That is the deal: precision may be lost, a real value never.
+    The running example. bump adds one; main calls it twice and asks two
+    questions. Running it, both hold. An analyzer must answer for every
+    input without running it, so it computes with abstract values: a sign,
+    an interval, a parity. Each must contain every value a run produces and
+    may contain more. Precision may be lost, a real value never.
   ],
 )
 
 #talk-slide(
-  6,
-  [How hard could it be? Merging calls #b(red)[loses] precision],
-  70,
+  10,
+  [Merging calls #b(red)[loses] precision; contexts keep them apart],
+  50,
   section: [Example],
   [
     #grid(
@@ -241,19 +438,18 @@
     )
   ],
   notes: [
-    The descent starts. The simple analyzer keeps one state per procedure. bump
-    is called with 5 and with 4, so it sees n in an interval up to 5, returns
-    up to 6, and both checks come back UNKNOWN (left). The fix: analyze bump
-    separately per calling context, here per entry value. Now a is exactly 6
-    and b exactly 5, and both checks are PROVED (right). Real analyzers such
-    as Goblint, a static analyzer for C developed at TUM, do this.
+    With one state per procedure, bump sees n up to 5 and returns up to 6,
+    and both checks come back UNKNOWN (left). Analyzing bump once per calling
+    context, here per entry value, gives a = 6 and b = 5 exactly: both
+    PROVED (right). Goblint does this. The price is the proof: what does "the
+    states of bump in context n = 5" mean for real runs?
   ],
 )
 
 #talk-slide(
-  7,
-  [More precision, more machinery: #b(red)[infinitely many] contexts],
-  45,
+  11,
+  [#b(red)[Infinitely many] contexts, created while solving],
+  30,
   section: [Example],
   [
     #v(10pt)
@@ -266,89 +462,350 @@
         #text(size: 28pt)[A recursive call can create a #b(blue)[new context] every time.]
         #v(24pt)
         #text(size: 28pt)[The solver explores only the #b(blue)[finitely many] it reaches.]
-        #v(24pt)
-        #small[Contexts, widening, globals, a demand-driven solver: each piece is another place for a bug.]
       ],
     )
   ],
   notes: [
-    Contexts bring their own trouble. With recursion there can be infinitely
-    many of them, so the equations have infinitely many unknowns. The solver
-    only touches the ones it needs. Add widening for loops, shared globals,
-    and the solver itself, and you have the kind of machinery real analyzers
-    are built from. Every one of those pieces can be wrong.
+    With recursion there can be infinitely many contexts, so the equation
+    system has infinitely many unknowns, and a callee's contexts become known
+    only during solving. The solver touches only the ones it needs.
+  ],
+)
+
+// ============================================================ Formal part
+
+// One run of the bump example: activation, node, and the value that matters.
+#let act-colours = (ink, blue, vb.called)
+#let chip(a, body) = box(
+  inset: (x: 7pt, y: 4pt),
+  radius: 5pt,
+  fill: act-colours.at(a).lighten(85%),
+  stroke: 1.2pt + act-colours.at(a),
+  text(size: 20pt, font: "DejaVu Sans Mono", body),
+)
+#let run = (
+  (0, [entry_main]),
+  (0, [pp2]),
+  (1, [entry_bump n=5]),
+  (1, [pp0]),
+  (1, [exit_bump ↩6]),
+  (0, [pp3 a=6]),
+  (2, [entry_bump n=4]),
+  (2, [pp0]),
+  (2, [exit_bump ↩5]),
+  (0, [pp4 b=5]),
+  (0, [⋯ exit_main]),
+)
+#let activation(a, name, steps, tag: none) = block(
+  width: 100%,
+  inset: 12pt,
+  radius: 10pt,
+  stroke: 2pt + act-colours.at(a),
+  fill: white,
+  below: 10pt,
+)[
+  #text(size: 22pt, weight: "bold", fill: act-colours.at(a), name)
+  #if tag != none { h(10pt) + tag }
+  #h(14pt)
+  #steps.map(s => chip(a, s)).join(h(6pt))
+]
+
+#talk-slide(
+  12,
+  [The trace semantics: #b(blue)[one trace per activation]],
+  75,
+  section: [Proof],
+  steps: 3,
+  step => [
+    #text(size: 24pt, weight: "bold")[A run of the example, step by step]
+    #v(6pt)
+    #run.map(((a, s)) => chip(a, s)).join(h(5pt))
+    #v(24pt)
+    #if step >= 2 [
+      #text(size: 24pt, weight: "bold")[The same run, grouped by activation]
+      #v(6pt)
+      #activation(0, [main], (
+        [entry_main],
+        [pp2],
+        [↪ bump(5)],
+        [pp3],
+        [↪ bump(4)],
+        [pp4],
+        [⋯],
+      ))
+      #pad(left: 60pt, activation(
+        1,
+        [bump(5)],
+        ([entry_bump n=5], [pp0], [exit_bump ↩6]),
+        tag: if step >= 3 { b(blue)[context n = 5] },
+      ))
+      #pad(left: 60pt, activation(
+        2,
+        [bump(4)],
+        ([entry_bump n=4], [pp0], [exit_bump ↩5]),
+        tag: if step >= 3 { b(vb.called)[context n = 4] },
+      ))
+    ]
+    #if step >= 3 [
+      #v(8pt)
+      #align(center, text(size: 26pt)[
+        Flat: #h(6pt) $cal(C)("exit_bump") = {5, 6}$ #h(40pt)
+        Per context: #h(6pt) $cal(A)("exit_bump", 5) = {6}$, #h(6pt) $cal(A)("exit_bump", 4) = {5}$
+      ])
+    ]
+  ],
+  sources: [#isatype("activation_trace") · #isaconst("node_collect") · #isaconst("activation_collect") · after the local traces of Schwarz et al., SAS 2021],
+  notes: [
+    Here is one run of the example as a flat list of steps; three activations
+    interleave. Grouped by activation, each call opens a new trace that
+    remembers its caller, and each return resumes the caller that made the
+    call: one trace per activation, caller kept. A context can now be read
+    off a trace, here the value of n on entry. Projecting contexts away gives
+    the classical collecting semantics, where results 5 and 6 mix at
+    exit_bump. Keeping them gives one set per context. That is what the
+    context-sensitive analysis must cover. The construction adapts the local
+    traces Schwarz et al. use for threads to procedure activations.
   ],
 )
 
 #talk-slide(
-  8,
-  [We added all the machinery. Is it correct now? #b(red)[No.]],
-  60,
-  section: [Example],
+  13,
+  [Valid traces: #b(blue)[four rules]],
+  50,
+  section: [Proof],
   [
-    #v(10pt)
-    #grid(
-      columns: (1fr, 1fr),
-      column-gutter: 40pt,
-      align: horizon,
-      code-card(raw(
-        "c = -5;   // or c = -7\n__voblint_check(c % 2 == 1);",
-        lang: none,
-      )),
-      [
-        #grid(
-          columns: (auto, 1fr),
-          column-gutter: 20pt,
-          row-gutter: 30pt,
-          align: (right + horizon, left + horizon),
-          text(size: 26pt, weight: "bold")[C11],
-          [#text(
-              size: 40pt,
-              weight: "bold",
-              fill: green,
-            )[−5 % 2 = −1]\ #small[remainder truncates toward zero]],
-
-          text(size: 26pt, weight: "bold")[Goblint],
-          [#text(
-              size: 40pt,
-              weight: "bold",
-              fill: red,
-            )[always 1]\ #small[congruence domain ignored the sign]],
-        )
-      ],
+    #set text(size: 27pt)
+    #let rule(name, premises, conclusion) = block(
+      width: 100%,
+      inset: (x: 18pt, y: 12pt),
+      radius: 10pt,
+      fill: white,
+      stroke: 1.5pt + pale,
+      below: 12pt,
+      grid(
+        columns: (170pt, 1fr),
+        align: (left + horizon, center + horizon),
+        text(weight: "bold", fill: blue, name), $ (#premises) / (#conclusion) $,
+      ),
     )
-    #v(40pt)
-    #align(center, text(
-      size: 28pt,
-    )[A #b(red)[confident wrong answer] in a mature analyzer, fixed after a user report.])
+    #rule([Root], $s in S$, $"Root"([(v_0, s)]) in cal(T)$)
+    #rule(
+      [Local step],
+      $t in cal(T) quad ("sink"(t), a, v) in "intra"(g) quad s' in [|a|]("store"(t))$,
+      $"extend"(t, (v, s')) in cal(T)$,
+    )
+    #rule(
+      [Call],
+      $t in cal(T) quad e = ("sink"(t), a, "entry" p, k) in "calls"(g)$,
+      $"Call"(t, [("entry" p, "enter"_e ("store"(t)))]) in cal(T)$,
+    )
+    #rule(
+      [Return],
+      $t' in cal(T) quad "caller"(t') = "Some"(t) quad "sink"(t') = "result" p quad e = ("sink"(t), a, "entry" p, k) in "calls"(g)$,
+      $"Resume"(t, t', "path"(t) dot [(k, "combine"_e ("store"(t), "store"(t')))]) in cal(T)$,
+    )
   ],
-  sources: [Goblint issue 1156, fixed by pull request 1161],
+  sources: [#isaconst("valid_activation_trace"); shortened: sink, store, caller, enter, combine for sink_node, sink_store, caller_of, call_enter, combine_collect],
   notes: [
-    So we have all the machinery. Are we done? Here is a real bug from
-    Goblint. In C, the remainder truncates toward zero, so minus five modulo
-    two is minus one. Goblint's congruence domain ignored the sign of the
-    dividend and claimed the remainder is always one. A user found it, and
-    pull request 1161 fixed it. Fixing one bug does not rule out the next.
+    Formally, the valid traces are an inductive set with one rule per kind of
+    step. A root starts from an initial store at the graph entry. A local
+    step follows an edge of the control-flow graph. A call starts a new trace
+    at the callee's entry and keeps the caller. A return resumes exactly the
+    caller that created the callee, at the continuation of the call edge, and
+    combines the caller's saved store with the callee's result. No frame
+    stack is needed: the Call term remembers its caller.
   ],
 )
 
-// =============================================== 3. What a proof changes
+#talk-slide(
+  14,
+  [The proof contract: #b(blue)[five local obligations]],
+  70,
+  section: [Proof],
+  [
+    #grid(
+      columns: (1fr, 330pt),
+      column-gutter: 20pt,
+      align: horizon,
+      [
+        #set text(size: 21pt)
+        #let row(name, body) = block(below: 13pt, grid(
+          columns: (110pt, 1fr),
+          align: (left + horizon, left + horizon),
+          ob(name), body,
+        ))
+        #row([Init], $s in S ==> s in "cover"(v_0, c_0)$)
+        #row(
+          [Intra],
+          $(u, a, v) in "intra"(g), s in "cover"(u, c), s' in [|a|](s) ==> s' in "cover"(v, c)$,
+        )
+        #row(
+          [Call],
+          $s in "cover"(u, c), c' in "adm"_e (c, s) ==> "enter"_e (s) in "cover"("entry" p, c')$,
+        )
+        #row(
+          [Return],
+          [$s in "cover"(u, c)$, $c'$ admitted, $r in "cover"("result" p, c') ==> "combine"_e (s, r) in "cover"(k, c)$],
+        )
+        #row([Total], $s in "cover"(u, c) ==> "adm"_e (c, s) != emptyset$)
+        #v(16pt)
+        #block(inset: 16pt, radius: 10pt, fill: marker.lighten(40%))[
+          #text(size: 24pt)[*Theorem.* The five obligations imply
+            $cal(A)(v, c) subset.eq "cover"(v, c)$ for every node $v$ and context $c$.]
+        ]
+        #v(8pt)
+        #small[#ob([Call]) and #ob([Return]) sit where Goblint runs `enter` and `combine`.]
+      ],
+      cetz.canvas(length: 1cm, {
+        import cetz.draw: *
+        let box-at(pos, label, c) = {
+          rect(
+            (pos.at(0) - 1.6, pos.at(1) - 0.55),
+            (pos.at(0) + 1.6, pos.at(1) + 0.55),
+            radius: 0.2,
+            fill: white,
+            stroke: 2pt + c,
+          )
+          content(pos, text(size: 17pt, label))
+        }
+        box-at((0, 0), [$v_0$, $c_0$], ink)
+        box-at((0, -3.2), [$u$, $c$], ink)
+        box-at((5, -3.2), [entry $p$, $c'$], vb.called)
+        box-at((5, -6.4), [result $p$, $c'$], vb.called)
+        box-at((0, -6.4), [$k$, $c$], ink)
+        let arr(a, b, label, anchor, c) = {
+          line(a, b, stroke: 2pt + c, mark: (end: ">", fill: c))
+          content((a, 50%, b), anchor: anchor, padding: 0.2, text(size: 15pt, label))
+        }
+        arr((0, 1.6), (0, 0.6), ob([Init]), "west", ink)
+        arr((0, -0.6), (0, -2.6), ob([Intra]), "west", ink)
+        arr((1.65, -3.2), (3.35, -3.2), [#ob([Call])\ #ob([Total])], "south", vb.called)
+        arr((5, -3.8), (5, -5.8), ob([Intra]), "west", vb.called)
+        arr((3.35, -6.4), (1.65, -6.4), ob([Return]), "north", vb.called)
+        line((0, -3.8), (0, -5.8), stroke: (paint: grey, thickness: 1.5pt, dash: "dashed"))
+      }),
+    )
+  ],
+  sources: [#isalocale("activation_coverage") · #isathm("activation_collect_sound") · Return shown simplified],
+  notes: [
+    How do we prove an analysis covers every trace without following every
+    trace? Traces grow by four rules, so it is enough that each rule keeps us
+    inside the analysis's claimed sets, the cover. One local obligation per
+    rule, plus TOTAL: every call that can happen gets at least one context.
+    Without TOTAL the theorem fails, and the thesis has a machine-checked
+    counterexample. The theorem follows by induction over valid traces. In
+    Isabelle this is a locale: any analysis that discharges the five
+    obligations inherits the inclusion. CALL and RETURN sit exactly where
+    Goblint runs enter and combine.
+  ],
+)
+
+#let rungs = ([Source runs], [Graph traces], [Per-context sets], [Analyzer result])
+#let ring-colours = (ink, vb.voblint, vb.locale, vb.solver)
+#let nested(upto) = cetz.canvas(length: 1cm, {
+  import cetz.draw: *
+  let r(i) = 2.4 + 1.9 * i
+  // Reserve the final frame so the figure does not move while it grows.
+  rect((0, -r(3) * 0.8), (2 * r(3), r(3) * 0.8), stroke: none)
+  for i in range(upto).rev() {
+    circle((r(i), 0), radius: (r(i), r(i) * 0.8), fill: white, stroke: 3.5pt + ring-colours.at(i))
+  }
+  for p in ((1.6, -0.2), (2.6, -0.9), (2.1, -1.4), (3.2, -0.5)) {
+    circle(p, radius: 0.13, fill: ink, stroke: none)
+  }
+})
+
+#talk-slide(
+  15,
+  [Soundness is a chain of #b(blue)[set inclusions]],
+  50,
+  section: [Proof],
+  steps: 4,
+  step => grid(
+    columns: (460pt, 1fr),
+    rows: 480pt,
+    align: (left + horizon, center + horizon),
+    [
+      #checklist(rungs, step, colours: ring-colours)
+      #v(20pt)
+      #small[Each step may add states: precision lost.\ None may drop one: soundness kept.]
+    ],
+    nested(step),
+  ),
+  notes: [
+    Putting the pieces together at one program point. Every source run is a
+    run on the compiled graph (a simulation proof). Every graph run is a
+    valid trace, grouped by context. The contract puts every context's
+    stores into the cover. The solver's result is such a cover, by the
+    inherited solver theorem plus our equation soundness. Each inclusion is
+    its own theorem; each may lose precision; none may lose a state.
+  ],
+)
+
+#talk-slide(
+  16,
+  [The end-to-end theorem, #b(green)[as Isabelle states it]],
+  55,
+  section: [Proof],
+  [
+    #grid(
+      columns: (1fr, 380pt),
+      column-gutter: 30pt,
+      align: horizon,
+      block(width: 100%, radius: 12pt, fill: rgb("#132A33"), inset: 20pt, {
+        set text(fill: rgb("#E6EEF0"), size: 16pt)
+        set par(leading: 0.45em)
+        raw(
+          decode-isabelle(read("/shared/generated/snippets/run_voblint_source_sound.thy")),
+          lang: "isabelle",
+          block: true,
+          syntaxes: isabelle-syntax,
+        )
+      }),
+      [
+        #set text(size: 22pt)
+        #b(blue)[Assumes]
+        - a start store (globals 0)
+        - a finite source run to $(r, s, F)$
+        - the analyzer returns a report `res`
+        #v(14pt)
+        #b(green)[Establishes] at every node $v$ the run is at:
+        - $s$ is collected at $v$
+        - $s$ is described by the report
+        - $s$ satisfies every definite verdict
+        #v(14pt)
+        #b(amber)[Trusted:] parser, code generation, OCaml, browser.
+      ],
+    )
+  ],
+  sources: [#isathm("run_voblint_source_sound") · about #isaconst("run_voblint"), the function exported to the CLI and the browser],
+  notes: [
+    Composing the chain gives one theorem about run_voblint, the function the
+    command line and the browser call. Take any start store and any finite
+    run of the source program. If the analyzer returned a report, then at
+    every node the run is at, its store is collected, described by the
+    report, and satisfies every definite verdict. The run may be a prefix of
+    a non-terminating one. If the solver does not terminate there is no
+    report and nothing is claimed: partial correctness. Outside the proof:
+    the parser, Isabelle's code generator and the OCaml and browser stack.
+  ],
+)
 
 #let c-congr = claim-check("goblint-1161-congruence", "c % 2 == 1")
 #let i-one = claim-check("goblint-1161-int", "c % 2 == 1")
 #let i-neg = claim-check("goblint-1161-int", "c % 2 == -1")
 
 #talk-slide(
-  9,
-  [The same bug, #b(blue)[with a proof obligation]],
-  75,
+  17,
+  [The remainder bug, #b(blue)[against a proof obligation]],
+  50,
   section: [Proof],
   [
     #grid(
       columns: (1fr, 1fr),
       column-gutter: 50pt,
       [
-        #text(size: 30pt, weight: "bold")[Unverified analyzer]
+        #text(size: 30pt, weight: "bold")[Goblint before the fix]
         #v(14pt)
         #card([Remainder operator\ returns 1], grey, w: 520pt, h: 100pt)
         #align(center, text(size: 40pt, fill: grey)[↓])
@@ -387,229 +844,222 @@
   ],
   sources: [#isathm("congruence_mod_sound") · #isathm("prefix_congruence_mod_unsound")],
   notes: [
-    This is the comparison that matters. In an unverified analyzer the
-    operator is code; nothing forces it to agree with C. In Voblint every
-    abstract remainder carries an obligation: whatever the concrete values,
-    their real remainder must lie in the abstract result. Goblint's pre-fix
-    answer cannot meet it. Isabelle proves the opposite, with minus five as
-    the witness. The bug could not have been proved sound, so it could not
-    ship. On the same program, the sound congruence domain says UNKNOWN, and
-    the combined Int domain refutes the wrong check and proves the right one.
-  ],
-)
-
-#let rungs = ([Source runs], [Graph traces], [Per-context sets], [Analyzer result])
-#let ring-colours = (ink, vb.voblint, vb.locale, vb.solver)
-#let nested(upto) = cetz.canvas(length: 1cm, {
-  import cetz.draw: *
-  let r(i) = 2.4 + 1.9 * i
-  // Reserve the final frame so the figure does not move while it grows.
-  rect((0, -r(3) * 0.8), (2 * r(3), r(3) * 0.8), stroke: none)
-  for i in range(upto).rev() {
-    circle((r(i), 0), radius: (r(i), r(i) * 0.8), fill: white, stroke: 3.5pt + ring-colours.at(i))
-  }
-  for p in ((1.6, -0.2), (2.6, -0.9), (2.1, -1.4), (3.2, -0.5)) {
-    circle(p, radius: 0.13, fill: ink, stroke: none)
-  }
-})
-
-#talk-slide(
-  10,
-  [Soundness is a chain of #b(blue)[set inclusions]],
-  90,
-  section: [Proof],
-  steps: 4,
-  step => grid(
-    columns: (460pt, 1fr),
-    rows: 480pt,
-    align: (left + horizon, center + horizon),
-    [
-      #checklist(rungs, step, colours: ring-colours)
-      #v(20pt)
-      #small[Each step may add states: precision lost.\ None may drop one: soundness kept.]
-    ],
-    nested(step),
-  ),
-  notes: [
-    How do we prove it for the whole analyzer, not just one operator? We follow
-    one program point and the states real runs have there (the dots).
-    Step one: the source program compiles to a graph, and every source run is
-    a run on the graph. Step two: the runs on the graph are grouped by calling
-    context. Step three: the solver's answer contains each group. Each step is
-    its own theorem. Each may add states, which costs precision. None may drop
-    a state. Chained together: everything a real run can do is in the answer.
+    Back to the bug from the start. In Voblint every abstract remainder
+    carries an obligation: the real remainder of any two concrete values must
+    lie in the abstract result. Goblint's pre-fix answer cannot meet it;
+    Isabelle proves the opposite, with −5 as the witness. So that operator
+    could not have been proved sound. On the same program, the sound
+    congruence domain says UNKNOWN, and the combined Int domain refutes the
+    wrong check and proves the right one.
   ],
 )
 
 #talk-slide(
-  11,
-  [What you see, and what #b(blue)[holds it up]],
-  60,
+  18,
+  [The parts of the #b(blue)[formalization]],
+  40,
   section: [Proof],
   [
     #grid(
-      columns: (440pt, 1fr),
+      columns: (1fr, 400pt),
       column-gutter: 30pt,
       align: horizon,
+      align(center, image("/assets/proof-map-treemap.png", height: 500pt)),
       [
-        #text(size: 24pt, weight: "bold")[Above the line: the verdicts]
-        #v(6pt)
-        #crop(pg("clamp.png"), 1328, 1090, 0, 0, 1328, 1090, width: 420pt)
-      ],
-      [
-        #text(size: 24pt, weight: "bold")[Below the line: one theorem per link]
-        #v(6pt)
-        #image(svg("metro"), width: 100%)
+        #set text(size: 22pt)
+        #let layer(c, name, what) = block(below: 12pt)[
+          #box(width: 18pt, height: 18pt, fill: c, radius: 3pt) #h(6pt) #text(
+            weight: "bold",
+            fill: c,
+            name,
+          ) \
+          #text(size: 19pt, fill: rgb("#444"), what)
+        ]
+        #layer(metro.sem, [Semantics], [VIMP, the graph, activation traces])
+        #layer(metro.comp, [Compiler], [VIMP to graph, simulation proof])
+        #layer(metro.dom, [Domains], [sign, interval, parity, congruence, Int])
+        #layer(metro.fw, [Framework], [analysis contract, contexts, coverage])
+        #layer(metro.sol, [Solver], [the verified TD solver (inherited)])
+        #layer(metro.res, [Result], [run_voblint and its verdicts])
+        #v(8pt)
+        #small[#stat("isabelle.lines") lines in #stat("isabelle.theories") theory files, without the vendored solver.]
       ],
     )
   ],
+  sources: [Treemap of exported Isabelle declarations from the site's proof map; areas count entities, not proof difficulty],
   notes: [
-    A user sees verdicts: PROVED, REFUTED, DEAD, a warning (left). Below the line
-    is the proof that makes those words mean something: each line on the right
-    is one component, semantics, compiler, domains, framework, solver, and each
-    interchange is a place where one theorem uses another. PROVED means the
-    check holds whenever a run reaches the point. It does not say the point is
-    reachable. DEAD says it is not.
+    What the formalization consists of. Each block is an Isabelle session,
+    each tile a theory, and the area counts exported declarations, not proof
+    effort. Semantics and compiler relate source runs to the graph; domains
+    and the framework show that the analyzer's states cover each node and
+    context; the inherited solver solves the equations; the result layer
+    composes everything into the theorem about run_voblint.
   ],
 )
 
-#talk-slide(
-  12,
-  [What is #b(amber)[trusted], not proved],
-  70,
-  section: [Proof],
-  [
-    #v(10pt)
-    #checked-chain(
-      [C-like programs\ #text(size: 20pt, weight: "regular")[what we mean]],
-      [VIMP semantics\ #text(size: 20pt, weight: "regular")[the definition]],
-      [Soundness\ theorem],
-    )
-    #v(20pt)
-    #grid(
-      columns: (1fr, 1fr),
-      column-gutter: 30pt,
-      align: horizon,
-      image(svg("island"), width: 100%),
-      [
-        #text(
-          size: 26pt,
-        )[#b(amber)[Trusted:] parser, code generation, OCaml and the browser runtime.]
-        #v(16pt)
-        #text(
-          size: 26pt,
-        )[#b(blue)[Scope:] unbounded integers, no pointers, heap or threads. Partial correctness.]
-      ],
-    )
-  ],
-  notes: [
-    Back to the picture from the start. Isabelle checks the proof against the
-    VIMP semantics. Whether VIMP models the programs we care about is an
-    argument, not a theorem. VIMP is a fragment of C (left): integers,
-    globals, recursive procedures; no pointers, heap or threads, and integers
-    do not overflow. The parser and the generated-code toolchain sit outside
-    the proof. The guarantee is partial correctness: it covers every run when
-    the solver finishes.
-  ],
-)
-
-// ================================================================ 4. Demo
+// ================================================================== Demo
 
 #talk-slide(
-  13,
-  [The proved analyzer #b(blue)[runs in your browser]],
-  150,
+  19,
+  [Live: the proved analyzer #b(blue)[in the browser]],
+  120,
   section: [Demo],
   [
     #align(center, image(svg("build"), width: 1100pt))
     #v(10pt)
-    #align(center, text(
-      size: 26pt,
-    )[Isabelle generates the analyzer's code from #b(blue)[the same definition] the theorem is about.])
+    #align(center, text(size: 28pt)[
+      #link(site("playground.html"))[#b(
+        blue,
+      )[manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html]]
+    ])
   ],
   notes: [
-    Live demo, about two minutes. Open the playground. Run the bump example
-    with contexts off: both checks UNKNOWN. Switch to entry-state contexts: both
-    PROVED, and the graph gets a box per context. Then open the overview
-    example: PROVED, REFUTED and DEAD checks, an arithmetic warning. The code
-    running here is generated by Isabelle from the function the theorem is
-    about, compiled to WebAssembly. If the network fails, show this slide.
+    Switch to the browser. 1. Open the bump example, intervals, context none:
+    two UNKNOWN. 2. Switch context to entry-state: two PROVED, and the graph
+    shows one box per context. 3. Enable solver tracing and step through the
+    replay: watch the first call into a context read its callee's seed. 4. If
+    time: the clamp example with all four verdicts, or change the remainder
+    program from slide 17 and switch between congruence and int. The code
+    running here is generated by Isabelle from run_voblint and compiled to
+    WebAssembly (the diagram). Fallback if the network fails: the backup
+    slides with the replay and the precision example.
   ],
 )
 
-#talk-slide(
-  14,
-  [Watching the solver work],
-  50,
-  section: [Demo],
-  [
-    #align(center, crop(pg("solve-replay-still.png"), 2088, 1472, 0, 0, 2088, 1472, height: 500pt))
-  ],
-  notes: [
-    The playground can replay the solve step by step: which unknown is being
-    evaluated, which call is being entered, and when a callee's entry state is
-    published. Here the first call into a context reads its callee's seed.
-    This is how we debugged the analyzer during development.
-  ],
-)
+// ============================================================ Conclusion
+
+#let alignment = json("/shared/generated/goblint-alignment.json").rows
+#let count(status) = alignment.filter(r => r.status == status).len()
 
 #talk-slide(
-  15,
-  [Combining domains #b(blue)[proves more]],
-  45,
-  section: [Demo],
-  [
-    #align(center, image(pg("int-refinement.png"), height: 500pt))
-  ],
-  notes: [
-    One precision example, not a general claim. y + 1 == 3 tells us y is 2.
-    Sign, interval and parity alone each answer UNKNOWN at the check. The
-    reduced product Int combines them and proves y == 2.
-  ],
-)
-
-// =========================================================== 5. Wrap-up
-
-#talk-slide(
-  16,
-  [What it took],
-  50,
-  section: [Wrap-up],
+  20,
+  [Relevance to Goblint, and #b(amber)[limits]],
+  55,
+  section: [Conclusion],
   [
     #grid(
-      columns: (1fr, 380pt),
-      column-gutter: 30pt,
-      align: horizon,
-      image(svg("strata"), width: 100%),
+      columns: (1fr, 1fr),
+      column-gutter: 50pt,
       [
-        #text(size: 28pt)[One layer per Isabelle session, sized by its proof.]
+        #text(
+          size: 26pt,
+          weight: "bold",
+        )[Of #alignment.len() compared aspects of Goblint's framework]
+        #v(10pt)
+        #let bar(n, c, label) = grid(
+          columns: (auto, 1fr),
+          column-gutter: 12pt,
+          align: horizon,
+          box(width: n * 26pt, height: 34pt, fill: c, radius: 4pt),
+          text(size: 24pt)[#b(c)[#n] #label],
+        )
+        #bar(count("modeled"), green, [modeled])
+        #v(6pt)
+        #bar(count("simplified"), amber, [simplified])
+        #v(6pt)
+        #bar(count("absent"), red, [absent])
         #v(24pt)
-        #text(size: 28pt)[Built with #b(blue)[heavy AI assistance].]
-        #v(12pt)
-        #small[The same question as slide 4 applies: definitions and theorem statements were reviewed by hand.]
+        #text(size: 24pt)[Goblint's architecture #b(blue)[admits a modular soundness proof].]
+      ],
+      [
+        #set text(size: 23pt)
+        #b(green)[Useful for Goblint]
+        - replay a defect as a counterexample theorem
+        - check a proposed domain operation first
+        - export verified components as OCaml
+        #v(14pt)
+        #b(red)[Limits]
+        - VIMP is not C: no pointers, heap, threads, machine integers
+        - VIMP's adequacy is argued, not proved
+        - precision only shown on examples
       ],
     )
   ],
+  sources: [Comparison rows of the project site, Goblint revision 5320a6b · thesis §15.2],
   notes: [
-    The formalization in cross-section: each layer is an Isabelle session,
-    sized by its proof. AI tools wrote much of the proof text, which is the
-    same trend as the 2026 results from the start. And the same caution
-    applies: a checked proof of the wrong statement is worthless, so the
-    definitions and the theorem statements were reviewed by hand.
+    The correspondence with Goblint is architectural: the proofs are about
+    Voblint's definitions, so they do not show Goblint correct. They show
+    that Goblint's architecture admits a soundness proof that composes along
+    its own boundaries. The comparison on the project site counts which
+    aspects are modeled, simplified or absent. For Goblint's developers it is
+    still largely a proof of concept, but it can replay a defect as a
+    counterexample theorem, check a proposed operation against its
+    obligation, or supply verified components. The largest gap is VIMP
+    versus C.
+  ],
+)
+
+#talk-slide(
+  21,
+  [Outlook: towards #b(blue)[C and Goblint]],
+  55,
+  section: [Conclusion],
+  [
+    #v(30pt)
+    #grid(
+      columns: (1fr, 1fr, 1fr),
+      column-gutter: 30pt,
+      card(
+        [#text(fill: green)[Fits the current proof]\ #text(
+            size: 21pt,
+            weight: "regular",
+          )[relational domains (octagons, polyhedra), path-sensitive analyses]],
+        green,
+        w: 360pt,
+        h: 230pt,
+      ),
+      card(
+        [#text(fill: amber)[New step functions]\ #text(
+            size: 21pt,
+            weight: "regular",
+          )[machine integers (PR 357), then a bitfield domain; a heap]],
+        amber,
+        w: 360pt,
+        h: 230pt,
+      ),
+      card(
+        [#text(fill: red)[Revisit the traces]\ #text(
+            size: 21pt,
+            weight: "regular",
+          )[pointers into a caller's frame, threads]],
+        red,
+        w: 360pt,
+        h: 230pt,
+      ),
+    )
+    #v(40pt)
+    #align(center, text(size: 26pt)[
+      AI tools wrote many of these proofs, and got #b(blue)[consistently better] during the project.
+    ])
+  ],
+  sources: [Thesis §15.3 · Voblint PR 357 · Goblint PR 1623 (bitfield domain)],
+  notes: [
+    Some extensions fit the current proof, because each soundness proof
+    stays within its own obligations: relational domains, path-sensitive
+    analyses. Others need new step functions: machine integers, developed
+    separately in pull request 357, after which Goblint's bitfield domain is
+    a natural next analysis; and a heap, which like a global passes between
+    caller and callee. Pointers into a caller's frame and threads break the
+    separation the trace semantics relies on, so they require revisiting it.
+    AI-assisted tools produced many of the proofs here and improved over the
+    project; that may bring such revisions within reach.
   ],
 )
 
 #statement-slide(
-  17,
-  40,
-  [So what is Voblint?],
+  22,
+  30,
+  [Conclusion],
   [
-    A static analyzer whose #b(blue)[every answer] is backed by a
-    #b(green)[machine-checked proof], from the #b(blue)[source program] to
-    the #b(blue)[verdict], with its #b(amber)[trusted parts] named.
+    The soundness of a #b(blue)[Goblint-style analyzer] with calling
+    contexts, side effects and a verified solver can be
+    #b(green)[machine-checked], from #b(blue)[source executions] to the
+    #b(blue)[verdicts] of the analyzer that runs.
   ],
   notes: [
-    Summary in one sentence. Then take questions. Leave this slide up.
+    One sentence summary, from the thesis conclusion. A PROVED verdict now
+    rests on a proof, not on the tests the analyzer has passed. Thank you;
+    questions.
   ],
 )
 
@@ -656,9 +1106,39 @@
   ],
   sources: [Schwarz et al., SAS 2021 · Tilscher, Graß, Seidl, NFM 2026],
   notes: [
-    If asked about the contribution: the solver and the side-effecting
-    equations come from prior work, the D/G architecture from Goblint. This
-    thesis connects them to source executions through context-indexed
-    semantics, and ships the result as an executable analyzer.
+    If asked about the contribution: the solver and side-effecting equations
+    come from prior work, the D/G architecture from Goblint, the trace idea
+    from Schwarz et al. This thesis connects them to source executions
+    through context-indexed semantics and ships the executable analyzer.
+  ],
+)
+
+#talk-slide(
+  102,
+  [Backup: watching the solver work],
+  0,
+  section: [Backup],
+  [
+    #align(center, crop(pg("solve-replay-still.png"), 2088, 1472, 0, 0, 2088, 1472, height: 500pt))
+  ],
+  notes: [
+    Demo fallback. The playground replays the solve step by step: which
+    unknown is evaluated, which call is entered, when a callee's entry state
+    is published. Here the first call into a context reads its callee's seed.
+  ],
+)
+
+#talk-slide(
+  103,
+  [Backup: combining domains #b(blue)[proves more]],
+  0,
+  section: [Backup],
+  [
+    #align(center, image(pg("int-refinement.png"), height: 500pt))
+  ],
+  notes: [
+    Demo fallback, one precision example. y + 1 == 3 implies y is 2. Sign,
+    interval and parity alone answer UNKNOWN; the reduced product Int proves
+    y == 2.
   ],
 )

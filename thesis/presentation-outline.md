@@ -2,8 +2,8 @@
 
 Working title: **Voblint: Verifying a Context-Sensitive Abstract Interpreter**
 
-Target: **20 minutes, excluding questions**, 17 main slides planned at 18:00,
-leaving two minutes for the demo and pauses. Audience: computer-science students and
+Target: **20 minutes, excluding questions**, 22 main slides planned at 18:55,
+leaving about a minute for the live demo and pauses. Audience: computer-science students and
 examiners who know programming but not necessarily abstract interpretation,
 Isabelle, or proof assistants.
 
@@ -32,34 +32,40 @@ it for Voblint.
 
 ## Narrative
 
-The talk follows the explanation pattern of Tom Wheeler's Temporal
-introduction: start from why the tool has to exist, give a small relatable
-example, let the complexity pile up ("how hard could it be?"), show the failure
-the extra machinery still misses ("is it correct now? No."), name the concept
-by comparing the ordinary and the new approach side by side, separate what the
-user sees from what holds it up ("above and below the line"), then demo.
+The opening follows the thesis introduction (wrong answers from analyzers,
+machine-checked proofs, the kernel checking only against definitions, Goblint's
+modular architecture, the verdicts). The ending follows the thesis conclusion
+(relevance to Goblint, limitations, extensions towards C). In between, the
+explanation pattern of Tom Wheeler's Temporal introduction: a small example,
+complexity that piles up, then the formal answer. The demo is live in the
+browser playground; the deck stays a PDF.
 
-| # | Slide | Time | Figure | Source status |
+| # | Slide | Time | Figure | Source |
 | --- | --- | --- | --- | --- |
 | 1 | Title | 0:20 | logo | |
-| 2 | Tests check some runs | 1:00 | explainer `runs` | thesis figure |
-| 3 | Machines now check large proofs | 1:00 | timeline (new) | see below |
-| 4 | The checker checks the proof, not the question | 1:15 | checked chain (new) | see below |
-| 5 | A question about every run | 1:00 | bump program, abstract values (new) | `contexts.vimp` |
-| 6 | Merging calls loses precision | 1:10 | playground `contexts` crops | playground manifest |
-| 7 | Infinitely many contexts | 0:45 | explainer `infinite` | thesis figure |
-| 8 | Is it correct now? No. | 1:00 | remainder bug (new) | Goblint issue 1156, PR 1161 |
-| 9 | The same bug, with a proof obligation | 1:15 | side by side (new), claim verdicts | `prefix_congruence_mod_unsound`, claims `goblint-1161-*` |
-| 10 | Soundness is a chain of set inclusions | 1:30 | checklist build, nested sets (new) | chapter 10 |
-| 11 | What you see, and what holds it up | 1:00 | playground `clamp`, explainer `metro` | thesis figures |
-| 12 | What is trusted, not proved | 1:10 | checked chain, explainer `island` | chapters 1, 3, 12 |
-| 13 | The proved analyzer runs in your browser | 2:30 | explainer `build`, live demo | chapter 12 |
-| 14 | Watching the solver work | 0:50 | playground `solve-replay-still` | playground manifest |
-| 15 | Combining domains proves more | 0:45 | playground `int-refinement` | playground manifest |
-| 16 | What it took | 0:50 | explainer `strata` | thesis figure |
-| 17 | So what is Voblint? | 0:40 | statement | |
+| 2 | Tests check some runs | 0:40 | explainer `runs` | thesis §1.1 |
+| 3 | Confident wrong answers | 0:50 | remainder bug | thesis ch. 1, Goblint issue 1156 |
+| 4 | Proofs, checked by machines | 0:45 | timeline | see below |
+| 5 | The checker checks the proof, not the definitions | 0:55 | checked chain | see below, thesis ch. 1 |
+| 6 | Goblint's architecture splits the proof | 0:55 | pipeline | thesis §1.3, §1.4 |
+| 7 | Four verdicts | 0:45 | playground `clamp` | thesis §1.5.1 |
+| 8 | VIMP, a small C | 0:50 | grammar, explainer `island` | thesis §3.1, §3.7 |
+| 9 | A question about every run | 0:45 | bump, abstract values | `contexts.vimp` |
+| 10 | Merging calls loses precision | 0:50 | playground `contexts` | playground manifest |
+| 11 | Infinitely many contexts | 0:30 | explainer `infinite` | thesis ch. 9 |
+| 12 | Trace semantics (3-step build) | 1:15 | flat run, activations, per-context sets | thesis ch. 4 |
+| 13 | Valid traces: four rules | 0:50 | inference rules | `valid_activation_trace` |
+| 14 | Five local obligations | 1:10 | obligations, contract diagram | `activation_coverage`, `activation_collect_sound` |
+| 15 | Chain of set inclusions (4-step build) | 0:50 | nested sets | thesis ch. 10 |
+| 16 | The end-to-end theorem | 0:55 | generated statement | `run_voblint_source_sound` |
+| 17 | The remainder bug against an obligation | 0:50 | side by side, claim verdicts | `prefix_congruence_mod_unsound` |
+| 18 | Parts of the formalization | 0:40 | site treemap | thesis §1.7 (`fig:intro-corpus`) |
+| 19 | Live demo | 2:00 | explainer `build`, playground link | thesis ch. 12 |
+| 20 | Relevance to Goblint, limits | 0:55 | alignment counts | thesis §15.2, site comparison |
+| 21 | Outlook | 0:55 | three effort tiers | thesis §15.3 |
+| 22 | Conclusion | 0:30 | statement | thesis ch. 15 |
 
-Total 18:00; the remaining two minutes absorb the live demo.
+Total 18:55. Backups: inherited/new split, solver replay still, Int refinement.
 
 ## Sources for slides 3 and 4
 
@@ -94,16 +100,3 @@ means only a lead.
   Last Theorem in Lean (Anthropic, September 2026), the unforced Navier–Stokes
   result (Buckmaster and Alpöge, 20 November 2026; secondary sources only),
   the Axiom formalizations, AWS Cedar.
-
-## Backup slides
-
-Built: the inherited/new split. Candidates for more:
-
-- Headline theorem, generated with `proved(...)`.
-- Why TOTAL is necessary: the machine-checked counterexample.
-- Context precision versus cost: `ctx-nest-k1` and `ctx-nest-k2` claims, and the
-  explainer cost charts.
-- Machine-integer follow-up (PR #357), at a pinned revision.
-- Related work: the explainer paper timeline (1977 to 2026, adapt) and the
-  inherited/new split (Goblint, Schwarz et al. 2021, Tilscher, Graß and Seidl
-  2026).
