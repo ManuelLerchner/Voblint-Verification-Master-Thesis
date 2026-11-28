@@ -1069,7 +1069,6 @@
   101,
   [Backup: what is inherited, what is new],
   0,
-  section: [Backup],
   [
     #v(30pt)
     #grid(
@@ -1117,7 +1116,6 @@
   102,
   [Backup: watching the solver work],
   0,
-  section: [Backup],
   [
     #align(center, crop(pg("solve-replay-still.png"), 2088, 1472, 0, 0, 2088, 1472, height: 500pt))
   ],
@@ -1132,7 +1130,6 @@
   103,
   [Backup: combining domains #b(blue)[proves more]],
   0,
-  section: [Backup],
   [
     #align(center, image(pg("int-refinement.png"), height: 500pt))
   ],

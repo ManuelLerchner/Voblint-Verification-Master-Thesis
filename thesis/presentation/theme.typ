@@ -74,7 +74,7 @@
       #block(below: 24pt, text(size: 44pt, weight: "bold", title))
       #if type(body) == function { body(step) } else { body }
       #if sources != none { place(bottom + left, cite(sources)) }
-      #place(bottom + right, small(if id < 100 { str(id) } else { "Backup" }))
+      #place(bottom + right, small(if id < 100 { str(id) } else { "B" + str(id - 100) }))
     ]
   }
 }
