@@ -2,8 +2,7 @@
 
 Working title: **Voblint: Verifying a Context-Sensitive Abstract Interpreter**
 
-Target: **20 minutes, excluding questions**, 22 main slides planned at 18:55,
-leaving about a minute for the live demo and pauses. Audience: computer-science students and
+Target: **20 minutes, excluding questions**, 26 main slides planned at exactly 20:00. Audience: computer-science students and
 examiners who know programming but not necessarily abstract interpretation,
 Isabelle, or proof assistants.
 
@@ -42,30 +41,34 @@ browser playground; the deck stays a PDF.
 
 | # | Slide | Time | Figure | Source |
 | --- | --- | --- | --- | --- |
-| 1 | Title | 0:20 | logo | |
-| 2 | Tests check some runs | 0:40 | explainer `runs` | thesis §1.1 |
-| 3 | Confident wrong answers | 0:50 | remainder bug | thesis ch. 1, Goblint issue 1156 |
-| 4 | Proofs, checked by machines | 0:45 | timeline | see below |
-| 5 | The checker checks the proof, not the definitions | 0:55 | checked chain | see below, thesis ch. 1 |
-| 6 | Goblint's architecture splits the proof | 0:55 | pipeline | thesis §1.3, §1.4 |
-| 7 | Four verdicts | 0:45 | playground `clamp` | thesis §1.5.1 |
-| 8 | VIMP, a small C | 0:50 | grammar, explainer `island` | thesis §3.1, §3.7 |
-| 9 | A question about every run | 0:45 | bump, abstract values | `contexts.vimp` |
-| 10 | Merging calls loses precision | 0:50 | playground `contexts` | playground manifest |
-| 11 | Infinitely many contexts | 0:30 | explainer `infinite` | thesis ch. 9 |
-| 12 | Trace semantics (3-step build) | 1:15 | flat run, activations, per-context sets | thesis ch. 4 |
-| 13 | Valid traces: four rules | 0:50 | inference rules | `valid_activation_trace` |
-| 14 | Five local obligations | 1:10 | obligations, contract diagram | `activation_coverage`, `activation_collect_sound` |
-| 15 | Chain of set inclusions (4-step build) | 0:50 | nested sets | thesis ch. 10 |
-| 16 | The end-to-end theorem | 0:55 | generated statement | `run_voblint_source_sound` |
-| 17 | The remainder bug against an obligation | 0:50 | side by side, claim verdicts | `prefix_congruence_mod_unsound` |
-| 18 | Parts of the formalization | 0:40 | site treemap | thesis §1.7 (`fig:intro-corpus`) |
-| 19 | Live demo | 2:00 | explainer `build`, playground link | thesis ch. 12 |
-| 20 | Relevance to Goblint, limits | 0:55 | alignment counts | thesis §15.2, site comparison |
-| 21 | Outlook | 0:55 | three effort tiers | thesis §15.3 |
-| 22 | Conclusion | 0:30 | statement | thesis ch. 15 |
+| 1 | Title | 0:20 | banner | |
+| 2 | Tests check some runs | 0:30 | explainer `runs` | thesis §1.1 |
+| 3 | Goblint | 0:40 | logo, checked properties | thesis §1.4 |
+| 4 | Confident wrong answers | 0:45 | remainder bug | thesis ch. 1, Goblint issue 1156 |
+| 5 | Proofs, checked by machines | 0:40 | timeline | see below |
+| 6 | The checker checks the proof, not the definitions | 0:50 | checked chain | see below |
+| 7 | Goblint's architecture splits the proof | 0:40 | pipeline | thesis §1.3, §1.4 |
+| 8 | Four verdicts | 0:35 | playground `clamp` | thesis §1.5.1 |
+| 9 | VIMP, a small C | 0:45 | grammar, explainer `island` | thesis §3.1, §3.7 |
+| 10 | A question about every run | 0:40 | bump, abstract values | `contexts.vimp` |
+| 11 | From the graph to equations | 0:45 | counting loop, equations | thesis ch. 2, site |
+| 12 | How many copies of a procedure (4-step build) | 1:00 | context grid | claims `ctx-demo-*` |
+| 13 | Why we need a trace semantics (4-step build) | 1:20 | CFG, split graph, flat run, datatype | thesis §4.1, §15.1 |
+| 14 | Activation traces on the example (3-step build) | 0:55 | activations, per-context sets | thesis ch. 4 |
+| 15 | Five local obligations | 1:05 | obligations, contract diagram | `activation_coverage` |
+| 16 | Chain of set inclusions (4-step build) | 0:45 | nested sets | thesis ch. 10 |
+| 17 | The end-to-end theorem | 0:50 | generated statement | `run_voblint_source_sound` |
+| 18 | What is proved, what is trusted | 0:40 | trust pipeline | site, thesis trust figure |
+| 19 | The remainder bug against an obligation | 0:45 | side by side, claim verdicts | `prefix_congruence_mod_unsound` |
+| 20 | Parts of the formalization | 0:25 | site treemap | thesis `fig:intro-corpus` |
+| 21 | What runs, what holds it up | 0:30 | iceberg | `stat()` |
+| 22 | What Voblint supports | 0:40 | domain cards, settings | thesis ch. 11 |
+| 23 | Now: the playground | 2:10 | example links | claims, playground |
+| 24 | Relevance to Goblint, limits | 0:40 | alignment counts | thesis §15.2 |
+| 25 | Outlook | 0:40 | three effort tiers | thesis §15.3 |
+| 26 | Conclusion | 0:25 | statement | thesis ch. 15 |
 
-Total 18:55. Backups: inherited/new split, solver replay still, Int refinement.
+Total 20:00, with no slack. If the demo runs long, move slide 20 or 21 to backup.
 
 ## Sources for slides 3 and 4
 

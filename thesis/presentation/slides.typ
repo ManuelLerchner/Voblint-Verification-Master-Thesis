@@ -4,9 +4,10 @@
 // the thesis conclusion (relevance to Goblint, limits, outlook).
 #import "theme.typ": *
 #import "../lib/code.typ": (
-  decode-isabelle, isabelle-scripts, isabelle-syntax, isaconst, isalocale, isathm, isatype, site,
+  claim-playground-link, decode-isabelle, isabelle-scripts, isabelle-syntax, isaconst, isalocale,
+  isathm, isatype, playground-link, site,
 )
-#import "../lib/claims.typ": claim-check
+#import "../lib/claims.typ": claim-check, claim-snapshot, snapshot-verdict
 #import "../lib/stats.typ": stat
 #import "../lib/theme.typ": metro
 
@@ -56,13 +57,13 @@
     ],
   )) <talk-slide>
   #set text(fill: white)
-  #align(center + horizon)[
-    #image("assets/voblint.png", height: 220pt)
-    #v(8pt)
-    #text(size: 72pt, weight: "bold")[Voblint]
-    #v(-12pt)
-    #text(size: 30pt)[Verifying a context-sensitive abstract interpreter]
-    #v(30pt)
+  #block(height: 400pt, clip: true, width: 100%, image("assets/banner.png", width: 100%))
+  #align(center)[
+    #v(14pt)
+    #text(size: 60pt, weight: "bold")[Voblint]
+    #v(-16pt)
+    #text(size: 28pt)[Verifying a context-sensitive abstract interpreter]
+    #v(10pt)
     #text(size: 22pt, fill: grey)[
       Manuel Lerchner · Master's thesis · Technical University of Munich\
       Supervisors: Alexandra Graß and Helmut Seidl
@@ -73,7 +74,7 @@
 #talk-slide(
   2,
   [Tests check #b(amber)[some] runs. An analysis covers #b(blue)[all] of them.],
-  40,
+  30,
   section: [Motivation],
   [
     #v(20pt)
@@ -91,8 +92,62 @@
 
 #talk-slide(
   3,
+  [Goblint: an #b(blue)[abstract interpreter for C]],
+  40,
+  section: [Motivation],
+  [
+    #grid(
+      columns: (300pt, 1fr),
+      column-gutter: 50pt,
+      align: horizon,
+      image("assets/goblint.svg", width: 280pt),
+      [
+        #set text(size: 26pt)
+        Looks for
+        #v(6pt)
+        #let tag(body) = box(
+          inset: (x: 12pt, y: 7pt),
+          radius: 8pt,
+          fill: white,
+          stroke: 1.5pt + blue,
+          text(size: 22pt, body),
+        )
+        #(
+          (
+            [user assertions],
+            [integer overflows],
+            [data races],
+            [memory-safety errors],
+            [memory leaks],
+            [nontermination],
+          )
+            .map(tag)
+            .join(h(8pt))
+        )
+        #v(26pt)
+        One architecture for all of them: #b(blue)[analyses] and the #b(blue)[solver] meet at a
+        side-effecting equation system, with #b(blue)[calling contexts].
+        #v(20pt)
+        #small[No false negative on the SV-COMP benchmarks since its first participation in 2021.]
+      ],
+    )
+  ],
+  sources: [Vojdani et al. 2016 · Seidl et al. 2026 · Saan 2026, §3.3],
+  notes: [
+    The analyzer this work is modelled on. Goblint is an abstract interpreter
+    for C, developed for many years at TUM. Besides user-written checks it
+    looks for integer overflows, data races, memory-safety errors, leaks and
+    nontermination. Despite this range, its architecture is uniform: each
+    analysis is defined independently of the solver, and they meet at a
+    side-effecting equation system with calling contexts. It is tested well:
+    no false negative on the SV-COMP benchmarks since 2021.
+  ],
+)
+
+#talk-slide(
+  4,
   [But analyzers are programs, and they give #b(red)[confident wrong answers]],
-  50,
+  45,
   section: [Motivation],
   [
     #v(10pt)
@@ -148,9 +203,9 @@
 )
 
 #talk-slide(
-  4,
+  5,
   [Fixing one bug does not rule out the next: #b(blue)[proofs, checked by machines]],
-  45,
+  40,
   section: [Motivation],
   [
     #v(10pt)
@@ -202,9 +257,9 @@
 )
 
 #talk-slide(
-  5,
+  6,
   [The checker checks the proof, #b(red)[not the definitions]],
-  55,
+  50,
   section: [Motivation],
   [
     #v(40pt)
@@ -231,9 +286,9 @@
 )
 
 #talk-slide(
-  6,
+  7,
   [Goblint's architecture lets the proof #b(blue)[split along its modules]],
-  55,
+  40,
   section: [Motivation],
   [
     #v(20pt)
@@ -279,9 +334,9 @@
 )
 
 #talk-slide(
-  7,
+  8,
   [What the user sees: #b(blue)[four verdicts]],
-  45,
+  35,
   section: [Motivation],
   [
     #grid(
@@ -304,7 +359,7 @@
       ],
     )
   ],
-  sources: [Playground run of the regression test 48-clamp_every_answer (thesis Fig. 1.2)],
+  sources: [Playground run of the regression test 48-clamp_every_answer (thesis fig:intro-answers)],
   notes: [
     From the user's side, Voblint answers each check with one of four
     verdicts. PROVED and REFUTED say nothing about reachability; only DEAD
@@ -317,9 +372,9 @@
 // ======================================================= Language, example
 
 #talk-slide(
-  8,
+  9,
   [Our language: VIMP, #b(blue)[a small C]],
-  50,
+  45,
   section: [Example],
   [
     #grid(
@@ -365,9 +420,9 @@
 )
 
 #talk-slide(
-  9,
+  10,
   [A question about #b(blue)[every run]],
-  45,
+  40,
   section: [Example],
   [
     #grid(
@@ -415,60 +470,157 @@
 )
 
 #talk-slide(
-  10,
-  [Merging calls #b(red)[loses] precision; contexts keep them apart],
-  50,
+  11,
+  [From the graph to #b(blue)[equations]],
+  45,
   section: [Example],
   [
     #grid(
-      columns: (1fr, 1fr),
+      columns: (440pt, 1fr),
       column-gutter: 40pt,
-      align(center)[
-        #text(size: 30pt, weight: "bold")[One state per procedure]\
-        #small[both calls of bump merged]
-        #v(10pt)
-        #crop(pg("contexts.png"), 1734, 1286, 28, 82, 806, 548, width: 540pt)
-      ],
-      align(center)[
-        #text(size: 30pt, weight: "bold", fill: blue)[One state per calling context]\
-        #small[a copy of bump per entry state]
-        #v(10pt)
-        #crop(pg("contexts.png"), 1734, 1286, 28, 710, 794, 548, width: 540pt)
+      align: horizon,
+      align(center, cetz.canvas(length: 1.9cm, {
+        import cetz.draw: *
+        let node(pos, name) = {
+          circle(pos, radius: 0.55, fill: white, stroke: 2.5pt + ink)
+          content(pos, text(size: 20pt, weight: "bold", name))
+        }
+        let edge(a, b, label, side, c: grey) = {
+          line(a, b, stroke: 2pt + c, mark: (end: ">", fill: c))
+          content((a, 50%, b), anchor: side, padding: 0.2, text(
+            size: 17pt,
+            font: "DejaVu Sans Mono",
+            fill: if c == grey { ink } else { c },
+            label,
+          ))
+        }
+        node((0, 0), [E])
+        node((0, -3), [H])
+        node((2.6, -5), [B])
+        node((0, -6.5), [X])
+        edge((0, -0.6), (0, -2.4), [i := 0], "west")
+        edge((0.45, -3.35), (2.15, -4.6), [i < 5], "south-west")
+        edge((0, -3.6), (0, -5.9), [i ≥ 5], "east")
+        bezier((2.9, -4.5), (0.6, -2.8), (3.6, -2.4), stroke: 2pt + red, mark: (
+          end: ">",
+          fill: red,
+        ))
+        content((3.2, -2.5), anchor: "south", text(
+          size: 17pt,
+          font: "DejaVu Sans Mono",
+          fill: red,
+        )[i := i + 1])
+      })),
+      [
+        #set text(size: 26pt)
+        #let eq(lhs, rhs, note) = block(
+          width: 100%,
+          inset: 14pt,
+          radius: 10pt,
+          fill: white,
+          below: 12pt,
+        )[
+          #text(weight: "bold", lhs) $=$ #raw(rhs) \
+          #text(size: 18pt, fill: grey, note)
+        ]
+        #eq([E], "⊤", [the entry: any store])
+        #eq([H], "[i := 0] E ⊔ [i := i + 1] B", [two incoming edges, joined])
+        #eq([B], "assume(i < 5) H", [the guard keeps only stores where it holds])
+        #eq([X], "assume(i ≥ 5) H", [the loop exit])
       ],
     )
   ],
+  sources: [The counting loop of thesis ch. 2, as on the project site],
   notes: [
-    With one state per procedure, bump sees n up to 5 and returns up to 6,
-    and both checks come back UNKNOWN (left). Analyzing bump once per calling
-    context, here per entry value, gives a = 6 and b = 5 exactly: both
-    PROVED (right). Goblint does this. The price is the proof: what does "the
-    states of bump in context n = 5" mean for real runs?
+    How does an analyzer compute? It turns the control-flow graph into one
+    equation per node. The value at the loop head H is the join of what
+    arrives along its two incoming edges: from the entry after i := 0, and
+    from the body after i := i + 1. Guards filter. A solver finds values that
+    satisfy all equations at once; with intervals, widening makes the loop
+    finish. With procedures and contexts, the unknowns become pairs of node
+    and context, which is where we go next.
   ],
 )
 
-#talk-slide(
-  11,
-  [#b(red)[Infinitely many] contexts, created while solving],
-  30,
-  section: [Example],
-  [
-    #v(10pt)
-    #grid(
-      columns: (1fr, 380pt),
-      column-gutter: 30pt,
-      align: horizon,
-      align(center, image(svg("infinite"), height: 470pt)),
-      [
-        #text(size: 28pt)[A recursive call can create a #b(blue)[new context] every time.]
-        #v(24pt)
-        #text(size: 28pt)[The solver explores only the #b(blue)[finitely many] it reaches.]
-      ],
+#let ctx-policies = (
+  ("ctx-demo-none", [None]),
+  ("ctx-demo-entry", [Entry state]),
+  ("ctx-demo-k1", [Call string, $k = 1$]),
+  ("ctx-demo-k2", [Call string, $k = 2$]),
+)
+// Call sites of the demo program, named as on the project site.
+#let site-names = ("pp18": "s1", "pp19": "s2", "pp4": "s3")
+#let ctx-label(ctx) = if ctx == "unit" or ctx == "root context" { "[ ]" } else if ctx.starts-with(
+  "call-string=",
+) {
+  "[" + ctx.slice(12).split(" ").map(x => site-names.at(x, default: x)).join(" ") + "]"
+} else { ctx }
+#let ctx-grid(claim) = {
+  let snap = claim-snapshot(claim)
+  let row(proc) = {
+    let cs = snap.clusters.filter(c => c.proc == proc)
+    grid(
+      columns: (120pt, auto),
+      column-gutter: 14pt,
+      align: (right + horizon, left + horizon),
+      text(size: 24pt, font: "DejaVu Sans Mono", proc),
+      cs
+        .map(c => box(
+          inset: (x: 12pt, y: 10pt),
+          radius: 8pt,
+          fill: red.lighten(85%),
+          stroke: 1.5pt + red,
+          text(
+            size: 20pt,
+            font: "DejaVu Sans Mono",
+            ctx-label(c.ctx),
+          ),
+        ))
+        .join(h(10pt)),
     )
-  ],
+  }
+  let verdict = snapshot-verdict(snap, "a == 2")
+  [
+    #row("main") #v(14pt) #row("wrap") #v(14pt) #row("scale")
+    #v(26pt)
+    #text(size: 26pt)[#raw("a == 2") #h(8pt) #verdict-tag(verdict)]
+  ]
+}
+
+#talk-slide(
+  12,
+  [How many #b(blue)[copies] of a procedure?],
+  60,
+  section: [Example],
+  steps: 4,
+  step => grid(
+    columns: (440pt, 1fr),
+    column-gutter: 40pt,
+    align: (left + horizon, left + horizon),
+    [
+      #code-card(
+        raw(
+          "fun scale(v) {\n  return v * 2;\n}\nfun wrap(w) {\n  r = scale(w); // s3\n  return r;\n}\nfun main() {\n  a = wrap(1);  // s1\n  b = wrap(4);  // s2\n  __voblint_check(a == 2);\n}",
+          lang: none,
+        ),
+        w: 440pt,
+        size: 21pt,
+      )
+      #v(14pt)
+      #checklist(ctx-policies.map(p => p.at(1)), step)
+    ],
+    ctx-grid(ctx-policies.at(step - 1).at(0)),
+  ),
+  sources: [Context sets and verdicts from the analyzer's graph snapshots (claims ctx-demo-none, -entry, -k1, -k2); the listing is an excerpt of the regression program],
   notes: [
-    With recursion there can be infinitely many contexts, so the equation
-    system has infinitely many unknowns, and a callee's contexts become known
-    only during solving. The solver touches only the ones it needs.
+    Context sensitivity decides how many copies of a procedure the analysis
+    keeps. With none, wrap(1) and wrap(4) share one copy, w is between 1 and
+    4, and a == 2 is UNKNOWN. Entry-state contexts key each copy by the
+    argument: two copies of wrap and of scale, and the check is PROVED. Call
+    strings of length 1 key by the most recent call site: wrap gets two
+    copies, but scale has only one call site, s3, so both calls meet there
+    again: UNKNOWN. With length 2, scale is keyed by s3 plus s1 or s2, the
+    calls stay apart, PROVED. More copies cost work and can buy precision.
   ],
 )
 
@@ -510,10 +662,141 @@
   #steps.map(s => chip(a, s)).join(h(6pt))
 ]
 
+#let story = (
+  [One state per node],
+  [Per (node, context)],
+  [A flat run],
+  [Activation traces],
+)
+#let small-cfg = cetz.canvas(length: 1.45cm, {
+  import cetz.draw: *
+  let n(pos, name, note: none) = {
+    rect(
+      (pos.at(0) - 1.6, pos.at(1) - 0.4),
+      (pos.at(0) + 1.6, pos.at(1) + 0.4),
+      radius: 0.15,
+      fill: white,
+      stroke: 1.5pt + ink,
+    )
+    content(pos, text(size: 15pt, font: "DejaVu Sans Mono", name))
+    if note != none {
+      content((pos.at(0) + 1.8, pos.at(1)), anchor: "west", text(size: 16pt, fill: blue, note))
+    }
+  }
+  n((0, 0), [entry_main])
+  n((0, -1.6), [pp2])
+  n((0, -3.2), [pp3])
+  n((0, -4.8), [pp4], note: [a ∈ [−∞, 6]])
+  n((7, -1.6), [entry_bump], note: [n ∈ [4, 5]])
+  n((7, -3.2), [pp0])
+  n((7, -4.8), [exit_bump], note: [↩ [5, 6]])
+  for (a, b) in (
+    ((0, -0.4), (0, -1.2)),
+    ((0, -2), (0, -2.8)),
+    ((0, -3.6), (0, -4.4)),
+    ((7, -2), (7, -2.8)),
+    ((7, -3.6), (7, -4.4)),
+  ) {
+    line(a, b, stroke: 1.5pt + grey, mark: (end: ">", fill: grey))
+  }
+  line(
+    (1.6, -1.6),
+    (5.4, -1.6),
+    stroke: (paint: vb.called, thickness: 1.5pt, dash: "dashed"),
+    mark: (end: ">", fill: vb.called),
+  )
+  line(
+    (1.6, -3.2),
+    (5.4, -1.8),
+    stroke: (paint: vb.called, thickness: 1.5pt, dash: "dashed"),
+    mark: (end: ">", fill: vb.called),
+  )
+  content((3.5, -1.3), text(size: 14pt, fill: vb.called)[bump(5), bump(4)])
+})
+#let trace-datatype = [
+  #set align(left)
+  #set text(size: 26pt)
+  $ t ::= "Root"(pi) | "Call"(t, pi) | "Resume"(t, t', pi) $
+  #v(4pt)
+  #small[π: the (node, store) pairs of one activation]
+  #v(14pt)
+  #set text(size: 22pt)
+  #grid(
+    columns: (auto, 1fr),
+    column-gutter: 16pt,
+    row-gutter: 12pt,
+    raw("caller_of t"), [the activation that created $t$],
+    raw("sink_node t"), [where $t$ is now],
+    raw("sink_store t"), [its current store],
+    raw("path_of t"), [its own steps],
+  )
+  #v(14pt)
+  #text(
+    size: 22pt,
+  )[A return resumes #b(blue)[exactly its creating caller], found by #raw("caller_of"); no frame stack.]
+]
+
 #talk-slide(
-  12,
-  [The trace semantics: #b(blue)[one trace per activation]],
-  75,
+  13,
+  [Why we need a #b(blue)[trace semantics]],
+  80,
+  section: [Proof],
+  steps: 4,
+  step => grid(
+    columns: (430pt, 1fr),
+    rows: 500pt,
+    column-gutter: 20pt,
+    align: (left + horizon, center + horizon),
+    [
+      #checklist(story, step)
+      #v(20pt)
+      #small[#(
+        (
+          [Classical collecting semantics: the stores reaching each node.],
+          [The analysis splits easily. But which concrete stores must state (v, c) cover?],
+          [Contexts depend on how an activation was called. A flat run interleaves activations and forgets the caller after a return.],
+          [Each activation keeps its caller; contexts can be read off a trace.],
+        ).at(step - 1)
+      )]
+    ],
+    if step == 1 { small-cfg } else if step == 2 {
+      crop(pg("contexts.png"), 1734, 1286, 862, 80, 842, 1178, height: 480pt)
+    } else if step == 3 {
+      block(width: 100%)[
+        #set align(left)
+        #run.map(((a, x)) => chip(0, x)).join(h(5pt))
+        #v(20pt)
+        #text(
+          size: 24pt,
+        )[At #raw("exit_bump"): returning #b(red)[to which call?] In #b(red)[which context]?]
+        #v(10pt)
+        #small[The first prototype spliced callee runs into the caller's run; recursion broke it.]
+      ]
+    } else { trace-datatype },
+  ),
+  sources: [#isatype("activation_trace") · after the local traces of Schwarz et al., SAS 2021 · thesis §4.1, §15.1],
+  notes: [
+    Why do we need a new semantics at all? The natural analysis computes one
+    abstract state per node of the graph, justified by the classical
+    collecting semantics: the stores that reach each node. Context
+    sensitivity splits each node into pairs of node and context, here a copy
+    of bump per entry value. For the analysis that is easy. For the proof it
+    raises a question: which concrete stores must the state at (exit_bump,
+    n = 5) cover? Only those of runs that entered bump with 5. A run as a
+    flat list of steps interleaves activations, and after a return it no
+    longer says which call it returned to. My first prototype did exactly
+    this, splicing callee runs into the caller's run; it handled single calls
+    but broke on recursion. Activation traces keep one trace per activation
+    and remember the creating caller. Accessors read off where a trace is,
+    its store, and its caller, so a return resumes exactly its caller, and
+    each trace carries its contexts.
+  ],
+)
+
+#talk-slide(
+  14,
+  [Activation traces #b(blue)[on the example]],
+  55,
   section: [Proof],
   steps: 3,
   step => [
@@ -569,58 +852,9 @@
 )
 
 #talk-slide(
-  13,
-  [Valid traces: #b(blue)[four rules]],
-  50,
-  section: [Proof],
-  [
-    #set text(size: 27pt)
-    #let rule(name, premises, conclusion) = block(
-      width: 100%,
-      inset: (x: 18pt, y: 12pt),
-      radius: 10pt,
-      fill: white,
-      stroke: 1.5pt + pale,
-      below: 12pt,
-      grid(
-        columns: (170pt, 1fr),
-        align: (left + horizon, center + horizon),
-        text(weight: "bold", fill: blue, name), $ (#premises) / (#conclusion) $,
-      ),
-    )
-    #rule([Root], $s in S$, $"Root"([(v_0, s)]) in cal(T)$)
-    #rule(
-      [Local step],
-      $t in cal(T) quad ("sink"(t), a, v) in "intra"(g) quad s' in [|a|]("store"(t))$,
-      $"extend"(t, (v, s')) in cal(T)$,
-    )
-    #rule(
-      [Call],
-      $t in cal(T) quad e = ("sink"(t), a, "entry" p, k) in "calls"(g)$,
-      $"Call"(t, [("entry" p, "enter"_e ("store"(t)))]) in cal(T)$,
-    )
-    #rule(
-      [Return],
-      $t' in cal(T) quad "caller"(t') = "Some"(t) quad "sink"(t') = "result" p quad e = ("sink"(t), a, "entry" p, k) in "calls"(g)$,
-      $"Resume"(t, t', "path"(t) dot [(k, "combine"_e ("store"(t), "store"(t')))]) in cal(T)$,
-    )
-  ],
-  sources: [#isaconst("valid_activation_trace"); shortened: sink, store, caller, enter, combine for sink_node, sink_store, caller_of, call_enter, combine_collect],
-  notes: [
-    Formally, the valid traces are an inductive set with one rule per kind of
-    step. A root starts from an initial store at the graph entry. A local
-    step follows an edge of the control-flow graph. A call starts a new trace
-    at the callee's entry and keeps the caller. A return resumes exactly the
-    caller that created the callee, at the continuation of the call edge, and
-    combines the caller's saved store with the callee's result. No frame
-    stack is needed: the Call term remembers its caller.
-  ],
-)
-
-#talk-slide(
-  14,
+  15,
   [The proof contract: #b(blue)[five local obligations]],
-  70,
+  65,
   section: [Proof],
   [
     #grid(
@@ -716,9 +950,9 @@
 })
 
 #talk-slide(
-  15,
+  16,
   [Soundness is a chain of #b(blue)[set inclusions]],
-  50,
+  45,
   section: [Proof],
   steps: 4,
   step => grid(
@@ -743,9 +977,9 @@
 )
 
 #talk-slide(
-  16,
+  17,
   [The end-to-end theorem, #b(green)[as Isabelle states it]],
-  55,
+  50,
   section: [Proof],
   [
     #grid(
@@ -795,10 +1029,97 @@
 #let i-one = claim-check("goblint-1161-int", "c % 2 == 1")
 #let i-neg = claim-check("goblint-1161-int", "c % 2 == -1")
 
+#let pipe-box(title, sub, c: ink, dashed: false) = box(
+  width: 128pt,
+  height: 84pt,
+  radius: 10pt,
+  fill: white,
+  stroke: (paint: c, thickness: 2pt, dash: if dashed { "dashed" } else { "solid" }),
+  align(center + horizon)[
+    #text(size: 19pt, weight: "bold", title)\
+    #text(size: 15pt, fill: grey, sub)
+  ],
+)
+#let arrow-r = text(size: 20pt, fill: grey)[→]
+
 #talk-slide(
-  17,
+  18,
+  [What is #b(green)[proved], what is #b(amber)[trusted]],
+  40,
+  section: [Proof],
+  [
+    #set align(center)
+    #box(inset: 12pt, radius: 10pt, stroke: (paint: ink, thickness: 1.5pt, dash: "dashed"))[
+      #text(size: 20pt, weight: "bold")[Source semantics: pstep and the operators] \
+      #text(size: 16pt, fill: grey)[the one assumption no proof covers]
+    ]
+    #v(-4pt)
+    #text(size: 26pt, fill: grey)[↓]
+    #v(-6pt)
+    #grid(
+      columns: 5,
+      column-gutter: 8pt,
+      align: horizon,
+      box(inset: 12pt, radius: 12pt, stroke: (paint: grey, thickness: 1.5pt, dash: "dashed"))[
+        #text(size: 18pt, fill: grey, weight: "bold")[Unverified input] \
+        #pipe-box([Source], [.vimp text], c: grey) #arrow-r #pipe-box(
+          [Lexer + parser],
+          [generated, tested],
+          c: grey,
+        )
+      ],
+      arrow-r,
+      box(inset: 12pt, radius: 12pt, stroke: 3pt + green, fill: green.lighten(92%))[
+        #text(size: 18pt, fill: green, weight: "bold")[Proved in Isabelle/HOL] \
+        #pipe-box([Compiler], [AST → CFG], c: green) #arrow-r #pipe-box(
+          [Equations],
+          [point + context],
+          c: green,
+        ) #arrow-r #pipe-box([TD solver], [post-solution], c: green) #arrow-r #pipe-box(
+          [Result],
+          [verdicts],
+          c: green,
+        ) \
+        #text(
+          size: 18pt,
+          fill: green,
+          weight: "bold",
+        )[theorem: if the solver finishes, the result covers every real store]
+      ],
+      arrow-r,
+      box(inset: 12pt, radius: 12pt, stroke: (paint: grey, thickness: 1.5pt, dash: "dashed"))[
+        #text(size: 18pt, fill: grey, weight: "bold")[Unverified output] \
+        #pipe-box([Adapter, editor, graph], [handwritten], c: grey)
+      ],
+    )
+    #v(10pt)
+    #box(inset: 12pt, radius: 10pt, fill: vb.called.lighten(92%), stroke: (
+      paint: vb.called,
+      thickness: 1.5pt,
+      dash: "dotted",
+    ))[
+      #text(size: 20pt, weight: "bold", fill: vb.called)[Trusted foundation] \
+      #text(
+        size: 17pt,
+      )[Isabelle kernel · code generator and its target mappings · OCaml and wasm toolchain · Zarith · your browser]
+    ]
+  ],
+  sources: [Project site, "What is verified"; the thesis's trust-boundary figure (fig:intro-trust)],
+  notes: [
+    The theorem covers the solid box: compiler, equations, solver and result.
+    The lexer and parser lie outside it; they are generated from the grammar
+    and tested. The handwritten OCaml that renders badges and graphs lies
+    outside as well. Above the box sits the one thing no proof covers: the
+    source semantics the theorem starts from. Below it, the trusted
+    foundation: Isabelle's kernel, the code generator, the OCaml and
+    WebAssembly toolchain, the bignum library, and the browser.
+  ],
+)
+
+#talk-slide(
+  19,
   [The remainder bug, #b(blue)[against a proof obligation]],
-  50,
+  45,
   section: [Proof],
   [
     #grid(
@@ -855,9 +1176,9 @@
 )
 
 #talk-slide(
-  18,
+  20,
   [The parts of the #b(blue)[formalization]],
-  40,
+  25,
   section: [Proof],
   [
     #grid(
@@ -897,32 +1218,269 @@
   ],
 )
 
+#talk-slide(
+  21,
+  [What runs, and #b(blue)[what holds it up]],
+  30,
+  section: [Proof],
+  [
+    #align(center, cetz.canvas(length: 1cm, {
+      import cetz.draw: *
+      let ice = rgb("#7A9AA3")
+      rect((-17, -9.4), (17, 0), fill: rgb("#C9D8DD"), stroke: none)
+      line((-17, 0), (17, 0), stroke: 2pt + ice)
+      line(
+        (-0.9, 0),
+        (-0.4, 4),
+        (0, 2.5),
+        (0.4, 4.8),
+        (0.9, 0),
+        close: true,
+        fill: white,
+        stroke: 2pt + ice,
+      )
+      line(
+        (-0.9, 0),
+        (-3, -1.2),
+        (-4, -4),
+        (-3.3, -7),
+        (0, -8.2),
+        (2.9, -7),
+        (3.9, -3.6),
+        (3, -1.1),
+        (0.9, 0),
+        close: true,
+        fill: rgb("#EEF3F4"),
+        stroke: 2pt + ice,
+      )
+      line(
+        (7, -5.6),
+        (8.8, -5.1),
+        (9.8, -6.4),
+        (9.3, -8.2),
+        (7.5, -8.5),
+        (6.5, -7.3),
+        close: true,
+        fill: rgb("#EEF3F4"),
+        stroke: 2pt + ice,
+      )
+      let label(pos, anchor, body) = content(pos, anchor: anchor, align(
+        if anchor.contains("east") { right } else { left },
+        body,
+      ))
+      label((1.6, 3.4), "west")[#text(
+          size: 30pt,
+          weight: "bold",
+        )[#stat("generated_ocaml") lines] \ #text(
+          size: 18pt,
+        )[generated OCaml: the analyzer that runs]]
+      label((4.4, -2.4), "west")[#text(
+          size: 30pt,
+          weight: "bold",
+        )[#stat("isabelle.lines") lines of Isabelle] \ #text(
+          size: 18pt,
+        )[#stat("isabelle.theories") theories · #stat("isabelle.proofs") lemmas · #stat("isabelle.defs") definitions]]
+      label((-4.6, -1.6), "east")[#text(
+        size: 18pt,
+      )[#stat("handwritten_ocaml") lines of handwritten OCaml \ parser glue, renderers, CLI, browser \ #emph[outside the proof]]]
+      label((-4.6, -5.4), "east")[#text(
+        size: 18pt,
+      )[#stat("corpus.cases") regression programs \ #stat("eval_witnesses") evaluation witnesses \ #emph[tested, not proved]]]
+      label((10.2, -6.8), "west")[#text(
+          size: 24pt,
+          weight: "bold",
+        )[#stat("solver.used.lines") lines] \ #text(
+          size: 16pt,
+        )[of the vendored TD solver \ proof that Voblint imports]]
+    }))
+  ],
+  sources: [Repository figures measured at build time (thesis stats)],
+  notes: [
+    What runs above the waterline is the generated OCaml, about thirteen
+    thousand lines. Below it, about sixty thousand lines of Isabelle hold it
+    up, plus the part of the verified solver proof it imports. Beside the
+    proof: handwritten OCaml glue outside the proof, and the regression
+    programs and evaluation witnesses, which are tested, not proved.
+  ],
+)
+
 // ================================================================== Demo
 
+#let domain-card(name, fig, line) = box(
+  width: 186pt,
+  height: 250pt,
+  radius: 12pt,
+  fill: white,
+  stroke: 1.5pt + pale,
+  inset: 12pt,
+)[
+  #align(center, box(height: 120pt, align(horizon, fig)))
+  #v(6pt)
+  #text(size: 22pt, weight: "bold", name)\
+  #text(size: 16pt, fill: rgb("#444"), line)
+]
+#let lattice(top, mid, bot) = cetz.canvas(length: 0.85cm, {
+  import cetz.draw: *
+  let dot(pos, label) = {
+    circle(pos, radius: 0.55, fill: white, stroke: 1.5pt + ink)
+    content(pos, text(size: 11pt, label))
+  }
+  let w = (mid.len() - 1) * 1.6
+  for (i, m) in mid.enumerate() {
+    let x = i * 1.6 - w / 2
+    line((0, 2.2), (x, 0), stroke: 1pt + grey)
+    line((x, 0), (0, -2.2), stroke: 1pt + grey)
+  }
+  dot((0, 2.2), top)
+  for (i, m) in mid.enumerate() { dot((i * 1.6 - w / 2, 0), m) }
+  dot((0, -2.2), bot)
+})
+
 #talk-slide(
-  19,
-  [Live: the proved analyzer #b(blue)[in the browser]],
-  120,
+  22,
+  [What Voblint #b(blue)[supports], all covered by the theorem],
+  40,
   section: [Demo],
   [
-    #align(center, image(svg("build"), width: 1100pt))
+    #grid(
+      columns: 6,
+      column-gutter: 10pt,
+      domain-card([Sign], lattice([⊤], ([\<0], [0], [\>0]), [⊥]), [signs and their unions]),
+      domain-card(
+        [Interval],
+        cetz.canvas(length: 1cm, {
+          import cetz.draw: *
+          line((0, 0), (4.6, 0), stroke: 1.5pt + grey)
+          rect((1.2, -0.3), (3.2, 0.3), radius: 0.1, fill: pale, stroke: 1.5pt + ink)
+          content((2.2, 0.9), text(size: 15pt, font: "DejaVu Sans Mono")[[−2, 5]])
+        }),
+        [bounds, with widening],
+      ),
+      domain-card([Parity], lattice([⊤], ([even], [odd]), [⊥]), [even or odd]),
+      domain-card(
+        [Congruence],
+        cetz.canvas(length: 1cm, {
+          import cetz.draw: *
+          line((0, 0), (4.6, 0), stroke: 1.5pt + grey)
+          for i in range(10) {
+            let hit = calc.rem(i, 3) == 2
+            circle(
+              (0.3 + i * 0.45, 0),
+              radius: if hit { 0.16 } else { 0.07 },
+              fill: if hit { amber } else { grey },
+              stroke: none,
+            )
+          }
+          content((2.3, 0.8), text(size: 15pt, font: "DejaVu Sans Mono")[x ≡ 2 mod 3])
+        }),
+        [remainders],
+      ),
+      domain-card(
+        [Int],
+        block(inset: 4pt, {
+          set text(size: 12pt, font: "DejaVu Sans Mono")
+          grid(
+            columns: 2,
+            column-gutter: 8pt,
+            row-gutter: 6pt,
+            [sign], [\>0],
+            [interval], [[1,9]],
+            [parity], [odd],
+            [congr.], [1 mod 4],
+          )
+        }),
+        [the four, refining each other],
+      ),
+      domain-card(
+        [Order],
+        text(size: 22pt)[$x < y$\ $y <= z$],
+        [relational facts between variables],
+      ),
+    )
+    #v(24pt)
+    #set text(size: 22pt)
+    #grid(
+      columns: (auto, 1fr),
+      column-gutter: 20pt,
+      row-gutter: 12pt,
+      text(weight: "bold")[Contexts], [none · entry state · call string of length $k$],
+      text(weight: "bold")[Global updates],
+      [join · join per origin · warrow · warrow per origin · bounded narrowing],
+
+      text(weight: "bold")[Program globals], [flow-sensitive · flow-insensitive],
+    )
+  ],
+  sources: [Thesis ch. 11 (instances) · the end-to-end theorem holds under every configuration run_voblint offers (§10.4)],
+  notes: [
+    What you can select, before we try it. Four non-relational numeric
+    domains: sign, interval, parity, congruence. Int is their reduced
+    product, where the components sharpen one another. Order is a relational
+    analysis that tracks facts like x < y between variables; it shows the
+    framework is not limited to per-variable maps. Analyses can be combined
+    and answer each other's queries. Contexts: none, the entry state, or
+    call strings of bounded length. Several update rules for shared values,
+    and globals kept per point or shared. The end-to-end theorem holds for
+    every one of these configurations.
+  ],
+)
+
+#let try-row(what, links) = block(below: 14pt, grid(
+  columns: (420pt, 1fr),
+  column-gutter: 20pt,
+  align: (left + horizon, left + horizon),
+  text(size: 24pt, weight: "bold", what),
+  links
+    .map(((label, url)) => link(url, box(
+      inset: (x: 12pt, y: 7pt),
+      radius: 8pt,
+      fill: white,
+      stroke: 1.5pt + blue,
+      text(size: 20pt, fill: blue)[#label ↗],
+    )))
+    .join(h(10pt)),
+))
+
+#talk-slide(
+  23,
+  [Now: #b(blue)[the playground]],
+  130,
+  section: [Demo],
+  [
     #v(10pt)
-    #align(center, text(size: 28pt)[
-      #link(site("playground.html"))[#b(
-        blue,
-      )[manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html]]
-    ])
+    #try-row([Calling contexts], (
+      ([none], claim-playground-link("ctx-demo-none")),
+      ([call string 1], claim-playground-link("ctx-demo-k1")),
+      ([call string 2], claim-playground-link("ctx-demo-k2")),
+      ([entry state], claim-playground-link("ctx-demo-entry")),
+    ))
+    #try-row([Mixed flow sensitivity: globals], (
+      ([flow-sensitive], claim-playground-link("mixed-flow-sign")),
+      ([flow-insensitive], claim-playground-link("mixed-flow-sign-shared", graph: "analysis")),
+    ))
+    #try-row([The remainder bug], (
+      ([congruence], claim-playground-link("goblint-1161-congruence")),
+      ([Int], claim-playground-link("goblint-1161-int")),
+    ))
+    #try-row([All four verdicts], (([clamp], claim-playground-link("intro-answers")),))
+    #try-row([Watch the solver], (
+      (
+        [replay bump],
+        playground-link(read(pg("contexts.vimp")), ctx: "entry-state", trace: "verbose"),
+      ),
+    ))
+    #v(16pt)
+    #small[Runs code generated by Isabelle from #raw("run_voblint"), compiled to WebAssembly. Each link opens the program with its settings.]
   ],
   notes: [
-    Switch to the browser. 1. Open the bump example, intervals, context none:
-    two UNKNOWN. 2. Switch context to entry-state: two PROVED, and the graph
-    shows one box per context. 3. Enable solver tracing and step through the
-    replay: watch the first call into a context read its callee's seed. 4. If
-    time: the clamp example with all four verdicts, or change the remainder
-    program from slide 17 and switch between congruence and int. The code
-    running here is generated by Isabelle from run_voblint and compiled to
-    WebAssembly (the diagram). Fallback if the network fails: the backup
-    slides with the replay and the precision example.
+    Live demo, about two minutes; click the links. 1. Contexts: the scale/wrap
+    program under none, call string 1, call string 2, entry state; watch the
+    graph grow a box per context and a == 2 flip to PROVED. 2. Mixed flow
+    sensitivity: the same program with globals carried in each point's state,
+    then on one shared, flow-insensitive unknown per global; 0 < y is proved
+    only in the first. This is the D/G split Goblint uses for threads. 3. The
+    remainder bug: congruence says UNKNOWN, Int refutes the wrong check. 4.
+    Clamp shows all four verdicts. 5. Turn on the trace and step through the
+    solve. Fallback: the backup slides.
   ],
 )
 
@@ -932,9 +1490,9 @@
 #let count(status) = alignment.filter(r => r.status == status).len()
 
 #talk-slide(
-  20,
+  24,
   [Relevance to Goblint, and #b(amber)[limits]],
-  55,
+  40,
   section: [Conclusion],
   [
     #grid(
@@ -990,9 +1548,9 @@
 )
 
 #talk-slide(
-  21,
+  25,
   [Outlook: towards #b(blue)[C and Goblint]],
-  55,
+  40,
   section: [Conclusion],
   [
     #v(30pt)
@@ -1047,8 +1605,8 @@
 )
 
 #statement-slide(
-  22,
-  30,
+  26,
+  25,
   [Conclusion],
   [
     The soundness of a #b(blue)[Goblint-style analyzer] with calling

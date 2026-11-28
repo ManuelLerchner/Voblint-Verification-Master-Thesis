@@ -10,8 +10,7 @@ Outputs are in `build/presentation/`: `voblint-slides.pdf` and
 `speaker-notes.txt`. CI builds the deck in the thesis job, and the site
 publishes it as `slides.pdf`, linked from every page's top navigation.
 
-The deck has 22 main slides, planned at 18:55 of a 20-minute slot, and three
-backups. `build.py` fails on any Typst warning, on main slides out of order, and
+The deck has 26 main slides, planned at 20:00, and three backups. `build.py` fails on any Typst warning, on main slides out of order, and
 on a main talk over 20 minutes.
 
 ## Style
@@ -35,8 +34,12 @@ system fonts ignored, so the deck renders the same locally and in CI.
 - Theorem names through `isathm`, which fails the build on a missing link.
 - Theorem statements through the generated snippets (`shared/generated/snippets`).
 - Goblint comparison counts from `goblint-alignment.json`, written from the site.
-- New drawings (timeline, pipeline, abstract values, traces, contract diagram,
-  nested sets) are cetz code in `slides.typ` and `theme.typ`.
+- Context grids from the analyzer's graph snapshots (`claim-snapshot`).
+- New drawings (timeline, pipelines, equations, abstract values, traces,
+  contract diagram, nested sets, iceberg) are cetz code in `slides.typ` and
+  `theme.typ`. `assets/banner.png` and `assets/goblint.svg` are copies of
+  `docs/images/banner.png` and `pages/assets/logos/goblint.svg`, since the deck
+  compiles with `thesis/` as its root.
 
 `../presentation-outline.md` records the plan and the source status of every
 external claim, in particular the 2026 results on slides 3 and 4.
